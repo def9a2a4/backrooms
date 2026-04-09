@@ -1,6 +1,7 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command.BackroomsCommand;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntitySpawner;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.EntryManager;
@@ -21,12 +22,16 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsLi
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.Bukkit;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -66,6 +71,7 @@ public class BackroomsPlugin {
     public void enable() {
         // 1. Register generators (code — these define terrain)
         generatorRegistry.registerDefaults();
+        registerLevel64637();
 
         // 2. Register built-in events
         AmbientSoundEvent ambientSound = new AmbientSoundEvent();
@@ -89,7 +95,12 @@ public class BackroomsPlugin {
         eventRegistry.register(new InventoryGlitchEvent());
         eventRegistry.register(new TorchDecayEvent());
 
-        // 3. Register built-in entry triggers
+        // 3. Register built-in entities
+        entityRegistry.register(new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl.HerobrineEntity());
+        entityRegistry.register(new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl.PursuerEntity());
+        entityRegistry.register(new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl.WrongEndermanEntity());
+
+        // 4. Register built-in entry triggers
         SuffocationEntry suffocation = new SuffocationEntry(plugin);
         VoidFallEntry voidFall = new VoidFallEntry(plugin);
         BedAnomalyEntry bedAnomaly = new BedAnomalyEntry(plugin);
@@ -184,6 +195,36 @@ public class BackroomsPlugin {
         loadLevels();
     }
 
+    private void registerLevel64637() {
+        Level64637ChunkGenerator.BookConfig bookConfig = Level64637ChunkGenerator.BookConfig.DEFAULT;
+
+        // Try to load book config from data folder first, then fall back to jar resource
+        File bookFile = new File(plugin.getDataFolder(), "levels/level_64637_books.yml");
+        if (bookFile.exists()) {
+            bookConfig = loadBookConfig(YamlConfiguration.loadConfiguration(bookFile));
+        } else {
+            InputStream resource = plugin.getResource("levels/level_64637_books.yml");
+            if (resource != null) {
+                bookConfig = loadBookConfig(YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(resource, StandardCharsets.UTF_8)));
+            }
+        }
+
+        Level64637ChunkGenerator.BookConfig finalConfig = bookConfig;
+        generatorRegistry.register("level_64637", () -> new Level64637ChunkGenerator(finalConfig));
+    }
+
+    private Level64637ChunkGenerator.BookConfig loadBookConfig(
+            org.bukkit.configuration.file.YamlConfiguration yaml) {
+        return new Level64637ChunkGenerator.BookConfig(
+                yaml.getString("gibberish_chars", "abcdefghijklmnopqrstuvwxyz .,;:'-"),
+                yaml.getDouble("cursed_chance", 0.15),
+                yaml.getStringList("cursed_snippets"),
+                yaml.getStringList("cursed_titles"),
+                yaml.getStringList("cursed_authors")
+        );
+    }
+
     private void extractDefaultLevels() {
         File levelsDir = new File(plugin.getDataFolder(), "levels");
         if (levelsDir.exists()) return;
@@ -191,7 +232,8 @@ public class BackroomsPlugin {
 
         String[] defaults = {"levels/level_0.yml", "levels/level_1.yml", "levels/level_2.yml",
                 "levels/level_3.yml", "levels/level_4.yml", "levels/level_5.yml",
-                "levels/level_6.yml", "levels/level_7.yml", "levels/level_37.yml"};
+                "levels/level_7.yml", "levels/level_37.yml",
+                "levels/level_64637.yml", "levels/level_64637_books.yml"};
         for (String path : defaults) {
             if (plugin.getResource(path) != null) {
                 plugin.saveResource(path, false);
@@ -242,6 +284,17 @@ public class BackroomsPlugin {
                     BackroomsEvent event = eventRegistry.get(eventId);
                     if (event != null) {
                         event.loadConfig(eventsCfg.getConfigurationSection(eventId));
+                    }
+                }
+            }
+
+            // Load per-level entity config
+            ConfigurationSection entitiesCfg = levelCfg.getConfigurationSection("entity_config");
+            if (entitiesCfg != null) {
+                for (String entityId : level.getEntityIds()) {
+                    BackroomsEntity entity = entityRegistry.get(entityId);
+                    if (entity != null) {
+                        entity.loadConfig(entitiesCfg.getConfigurationSection(entityId));
                     }
                 }
             }

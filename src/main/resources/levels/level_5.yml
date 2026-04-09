@@ -9,7 +9,9 @@ events:
   - footstep_echo
   - torch_decay
 
-entities: []
+entities:
+  - pursuer
+  - herobrine
 
 event_config:
   ambient_sound:

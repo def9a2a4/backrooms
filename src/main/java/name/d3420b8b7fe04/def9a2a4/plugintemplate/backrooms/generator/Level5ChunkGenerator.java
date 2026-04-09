@@ -30,29 +30,13 @@ public class Level5ChunkGenerator extends ChunkGenerator {
     private static final int MAZE_CELL = 4;
     private static final int MAZE_CELLS_PER_AXIS = 16 / MAZE_CELL; // 4 cells per chunk axis
 
-    private static final Material[] WALL_MATERIALS = {
-            Material.STONE, Material.STONE, Material.STONE,
-            Material.COBBLESTONE, Material.COBBLESTONE,
-            Material.MOSSY_COBBLESTONE
-    };
-
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
         long seed = worldInfo.getSeed();
         Random chunkRng = new Random(seed ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
 
-        // Fill everything solid
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                int worldX = chunkX * 16 + x;
-                int worldZ = chunkZ * 16 + z;
-                double matNoise = SimplexNoise.noise2(seed + 10, worldX * 0.05, worldZ * 0.05);
-                Material wallMat = WALL_MATERIALS[Math.abs((int) (matNoise * 1000)) % WALL_MATERIALS.length];
-                for (int y = FLOOR_Y; y < SOLID_HEIGHT; y++) {
-                    chunkData.setBlock(x, y, z, wallMat);
-                }
-            }
-        }
+        // Fill everything solid with uniform stone
+        chunkData.setRegion(0, FLOOR_Y, 0, 16, SOLID_HEIGHT, 16, Material.STONE);
 
         // Carve maze tunnels using noise-based connectivity
         // Each 4x4 cell can connect N, S, E, W based on noise
@@ -71,25 +55,25 @@ public class Level5ChunkGenerator extends ChunkGenerator {
                 double noiseW = SimplexNoise.noise2(seed + 21, (cellWorldX - 2) * 0.25, cellWorldZ * 0.25);
 
                 // Connect if noise > threshold (ensures ~60% connectivity)
-                if (noiseN > -0.2 && cz > 0) {
+                if (noiseN > -0.1 && cz > 0) {
                     carveRect(chunkData, cx * MAZE_CELL + 1, cz * MAZE_CELL - 1, TUNNEL_WIDTH, 2);
                 }
-                if (noiseS > -0.2 && cz < MAZE_CELLS_PER_AXIS - 1) {
+                if (noiseS > -0.1 && cz < MAZE_CELLS_PER_AXIS - 1) {
                     carveRect(chunkData, cx * MAZE_CELL + 1, cz * MAZE_CELL + TUNNEL_WIDTH + 1, TUNNEL_WIDTH, 2);
                 }
-                if (noiseE > -0.2 && cx < MAZE_CELLS_PER_AXIS - 1) {
+                if (noiseE > -0.1 && cx < MAZE_CELLS_PER_AXIS - 1) {
                     carveRect(chunkData, cx * MAZE_CELL + TUNNEL_WIDTH + 1, cz * MAZE_CELL + 1, 2, TUNNEL_WIDTH);
                 }
-                if (noiseW > -0.2 && cx > 0) {
+                if (noiseW > -0.1 && cx > 0) {
                     carveRect(chunkData, cx * MAZE_CELL - 1, cz * MAZE_CELL + 1, 2, TUNNEL_WIDTH);
                 }
 
                 // Dead-end rooms: if only 1 connection, place a jukebox room
                 int connections = 0;
-                if (noiseN > -0.2) connections++;
-                if (noiseS > -0.2) connections++;
-                if (noiseE > -0.2) connections++;
-                if (noiseW > -0.2) connections++;
+                if (noiseN > -0.1) connections++;
+                if (noiseS > -0.1) connections++;
+                if (noiseE > -0.1) connections++;
+                if (noiseW > -0.1) connections++;
 
                 if (connections <= 1 && chunkRng.nextDouble() < 0.3) {
                     // Expand to 4x4 room
@@ -109,13 +93,13 @@ public class Level5ChunkGenerator extends ChunkGenerator {
             int cellWorldX = chunkX * 16 + cx * MAZE_CELL;
             // North edge (z=0)
             double northConn = SimplexNoise.noise2(seed + 20, cellWorldX * 0.25, (chunkZ * 16 - 2) * 0.25);
-            if (northConn > -0.2) {
+            if (northConn > -0.1) {
                 carveRect(chunkData, cx * MAZE_CELL + 1, 0, TUNNEL_WIDTH, 1);
             }
             // South edge (z=15)
             int southCellZ = chunkZ * 16 + 14;
             double southConn = SimplexNoise.noise2(seed + 20, cellWorldX * 0.25, (southCellZ + 2) * 0.25);
-            if (southConn > -0.2) {
+            if (southConn > -0.1) {
                 carveRect(chunkData, cx * MAZE_CELL + 1, 15, TUNNEL_WIDTH, 1);
             }
         }
@@ -123,7 +107,7 @@ public class Level5ChunkGenerator extends ChunkGenerator {
             int cellWorldZ = chunkZ * 16 + cz * MAZE_CELL;
             // West edge
             double westConn = SimplexNoise.noise2(seed + 21, (chunkX * 16 - 2) * 0.25, cellWorldZ * 0.25);
-            if (westConn > -0.2) {
+            if (westConn > -0.1) {
                 carveRect(chunkData, 0, cz * MAZE_CELL + 1, 1, TUNNEL_WIDTH);
             }
             // East edge

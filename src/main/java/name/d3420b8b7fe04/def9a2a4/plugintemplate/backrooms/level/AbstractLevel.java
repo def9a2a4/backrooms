@@ -23,6 +23,7 @@ public abstract class AbstractLevel implements BackroomsLevel {
         world.setGameRule(GameRules.SPAWN_MOBS, false);
         world.setGameRule(GameRules.ADVANCE_TIME, false);
         world.setGameRule(GameRules.MOB_GRIEFING, false);
+        world.setGameRule(GameRules.ADVANCE_WEATHER, false);
     }
 
     @Override

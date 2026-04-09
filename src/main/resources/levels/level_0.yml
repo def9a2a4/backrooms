@@ -10,7 +10,8 @@ events:
   - blackout
   - footstep_echo
 
-entities: []
+entities:
+  - herobrine
 
 event_config:
   ambient_sound:

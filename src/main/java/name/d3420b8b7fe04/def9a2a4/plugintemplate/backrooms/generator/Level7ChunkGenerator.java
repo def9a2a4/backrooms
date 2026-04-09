@@ -20,8 +20,8 @@ import java.util.Random;
  */
 public class Level7ChunkGenerator extends ChunkGenerator {
 
-    private static final int MIN_Y = -64;
-    private static final int MAX_Y = 192;
+    private static final int MIN_Y = 0;
+    private static final int MAX_Y = 128;
 
     // Every possible block that could appear in the corruption
     private static final Material[] CHAOS_BLOCKS = {
@@ -59,12 +59,12 @@ public class Level7ChunkGenerator extends ChunkGenerator {
                 int worldZ = chunkZ * 16 + z;
 
                 // Multiple terrain height sources fighting each other
-                double h1 = SimplexNoise.noise2(seed, worldX * 0.01, worldZ * 0.01) * 60;
+                double h1 = SimplexNoise.noise2(seed, worldX * 0.01, worldZ * 0.01) * 30;
                 double h2 = SimplexNoise.noise2(seed + 1, worldX * 0.05, worldZ * 0.05) * 20;
-                double h3 = SimplexNoise.noise2(seed + 2, worldX * 0.02, worldZ * 0.003) * 40; // Stretched in Z
-                double h4 = SimplexNoise.noise2(seed + 3, worldX * 0.003, worldZ * 0.02) * 40; // Stretched in X
+                double h3 = SimplexNoise.noise2(seed + 2, worldX * 0.02, worldZ * 0.003) * 20; // Stretched in Z
+                double h4 = SimplexNoise.noise2(seed + 3, worldX * 0.003, worldZ * 0.02) * 20; // Stretched in X
 
-                double height = 64 + h1 + h2 + Math.max(h3, h4);
+                double height = 48 + h1 + h2 + Math.max(h3, h4);
                 int terrainHeight = Math.max(MIN_Y + 1, Math.min((int) height, MAX_Y - 1));
 
                 // Material selection: different noise layer picks from different palettes
@@ -129,7 +129,7 @@ public class Level7ChunkGenerator extends ChunkGenerator {
         Material wallMat = STRUCTURE_BLOCKS[rng.nextInt(STRUCTURE_BLOCKS.length)];
 
         // Find ground level
-        int groundY = 64;
+        int groundY = 48;
         for (int y = MAX_Y - 1; y > MIN_Y; y--) {
             if (chunkData.getType(sx + sizeX / 2, y, sz + sizeZ / 2) != Material.AIR) {
                 groundY = y + 1;
@@ -161,7 +161,7 @@ public class Level7ChunkGenerator extends ChunkGenerator {
 
     private void placeCalmRoom(ChunkData chunkData) {
         // Clear a 7x7 room at Y=64
-        int baseY = 64;
+        int baseY = 48;
         // Floor
         for (int x = 4; x <= 10; x++) {
             for (int z = 4; z <= 10; z++) {
@@ -224,7 +224,7 @@ public class Level7ChunkGenerator extends ChunkGenerator {
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, 8.5, 100, 8.5);
+        return new Location(world, 8.5, 64, 8.5);
     }
 
     @Override

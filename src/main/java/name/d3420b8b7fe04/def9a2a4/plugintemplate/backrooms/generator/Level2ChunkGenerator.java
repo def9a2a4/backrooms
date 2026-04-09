@@ -14,133 +14,123 @@ import java.util.Random;
 
 /**
  * Level 2 — "The Pipe Works"
- * Long dark hallways with copper/oxidized copper pipes running along walls and ceilings.
- * Industrial utility tunnels. Narrow corridors, occasional wider junction rooms.
- * Lots of copper blocks, cut copper, oxidized variants, chains, iron bars.
+ * Long parallel utility hallways with copper pipes running along walls and ceilings.
+ * Repeating 6-block pattern creates 3-wide hallways separated by 1-block walls.
+ * Large-scale noise rotates hallway direction between E-W and N-S regions.
+ * Cross-corridors every 20 blocks create T-junctions.
  */
 public class Level2ChunkGenerator extends ChunkGenerator {
 
     private static final int FLOOR_Y = 0;
     private static final int FLOOR_HEIGHT = 8;
     private static final int AIR_MIN_Y = 8;
-    private static final int AIR_MAX_Y = 13;
     private static final int CEILING_MIN_Y = 13;
     private static final int CEILING_MAX_Y = 20;
 
-    private static final double CORRIDOR_SCALE = 1.0 / 48.0;
-    private static final double PIPE_SCALE = 1.0 / 12.0;
-    private static final double ROOM_SCALE = 1.0 / 120.0;
+    // Hallway pattern: repeats every 6 blocks
+    // [wall, hall, hall, hall, wall, hall, hall, hall] but offset so we get:
+    // 0=wall, 1-3=hallway, 4=wall, 5=hallway (wraps to next period)
+    private static final int HALLWAY_PERIOD = 6;
+    private static final int CROSS_CORRIDOR_PERIOD = 20;
+    private static final int CROSS_CORRIDOR_WIDTH = 2;
+
+    private static final double REGION_SCALE = 1.0 / 96.0;
 
     private static final Material[] PIPE_MATERIALS = {
             Material.COPPER_BLOCK, Material.EXPOSED_COPPER, Material.WEATHERED_COPPER,
-            Material.OXIDIZED_COPPER, Material.CUT_COPPER, Material.EXPOSED_CUT_COPPER,
-            Material.WEATHERED_CUT_COPPER, Material.OXIDIZED_CUT_COPPER
-    };
-
-    private static final Material[] WALL_MATERIALS = {
-            Material.SMOOTH_STONE, Material.STONE_BRICKS, Material.CRACKED_STONE_BRICKS,
-            Material.DEEPSLATE_BRICKS, Material.DEEPSLATE_TILES
+            Material.OXIDIZED_COPPER, Material.CUT_COPPER, Material.EXPOSED_CUT_COPPER
     };
 
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
         long seed = worldInfo.getSeed();
-        Random chunkRng = new Random(seed ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
 
-        // Fill floor and ceiling
+        // Floor
         chunkData.setRegion(0, FLOOR_Y, 0, 16, FLOOR_HEIGHT, 16, Material.DEEPSLATE);
+
+        // Ceiling
         chunkData.setRegion(0, CEILING_MIN_Y, 0, 16, CEILING_MAX_Y, 16, Material.DEEPSLATE_BRICKS);
 
-        // Default: fill air space with walls (carve out corridors)
-        chunkData.setRegion(0, AIR_MIN_Y, 0, 16, CEILING_MIN_Y, 16, Material.STONE_BRICKS);
+        // Pipe material for this chunk region
+        double pipeRegionNoise = SimplexNoise.noise2(seed + 4, chunkX * 0.3, chunkZ * 0.3);
+        Material pipeMat = PIPE_MATERIALS[Math.abs((int) (pipeRegionNoise * 1000)) % PIPE_MATERIALS.length];
 
-        // Carve corridors using noise
+        // Structure pass: determine wall vs air per column
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
 
-                // Two perpendicular corridor networks
-                double corridorX = SimplexNoise.noise2(seed, worldX * CORRIDOR_SCALE, worldZ * CORRIDOR_SCALE * 0.15);
-                double corridorZ = SimplexNoise.noise2(seed + 100, worldX * CORRIDOR_SCALE * 0.15, worldZ * CORRIDOR_SCALE);
-                double room = SimplexNoise.noise2(seed + 200, worldX * ROOM_SCALE, worldZ * ROOM_SCALE);
+                // Region direction from large-scale noise
+                double regionNoise = SimplexNoise.noise2(seed + 1, worldX * REGION_SCALE, worldZ * REGION_SCALE);
+                boolean eastWest = regionNoise > 0.0;
 
-                boolean isOpen = false;
+                boolean isWall;
+                if (eastWest) {
+                    // E-W hallways: walls run along Z axis
+                    int zMod = Math.floorMod(worldZ, HALLWAY_PERIOD);
+                    boolean isMainWall = (zMod == 0);
+                    // Cross-corridors cut through walls perpendicular (N-S)
+                    int xMod = Math.floorMod(worldX, CROSS_CORRIDOR_PERIOD);
+                    boolean isCross = (xMod < CROSS_CORRIDOR_WIDTH);
+                    isWall = isMainWall && !isCross;
+                } else {
+                    // N-S hallways: walls run along X axis
+                    int xMod = Math.floorMod(worldX, HALLWAY_PERIOD);
+                    boolean isMainWall = (xMod == 0);
+                    // Cross-corridors cut through walls perpendicular (E-W)
+                    int zMod = Math.floorMod(worldZ, CROSS_CORRIDOR_PERIOD);
+                    boolean isCross = (zMod < CROSS_CORRIDOR_WIDTH);
+                    isWall = isMainWall && !isCross;
+                }
 
-                // Main X-aligned corridors (2-3 blocks wide)
-                if (Math.abs(corridorX) < 0.15) {
-                    isOpen = true;
-                }
-                // Main Z-aligned corridors
-                if (Math.abs(corridorZ) < 0.12) {
-                    isOpen = true;
-                }
-                // Junction rooms at intersections
-                if (room > 0.4) {
-                    isOpen = true;
-                }
-
-                if (isOpen) {
-                    // Carve air space
+                if (isWall) {
+                    // Solid wall floor to ceiling
+                    for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
+                        chunkData.setBlock(x, y, z, Material.DEEPSLATE_BRICKS);
+                    }
+                } else {
+                    // Open hallway
                     for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);
                     }
 
                     // Floor surface variety
                     double floorDetail = SimplexNoise.noise2(seed + 3, worldX * 0.2, worldZ * 0.2);
-                    if (floorDetail > 0.4) {
+                    if (floorDetail > 0.3) {
                         chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, Material.DEEPSLATE_TILES);
-                    } else if (floorDetail > 0.1) {
+                    } else if (floorDetail > 0.0) {
                         chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, Material.DEEPSLATE_BRICKS);
                     }
 
-                    // Pipe runs along ceiling
-                    double pipeNoise = SimplexNoise.noise2(seed + 4, worldX * PIPE_SCALE, worldZ * PIPE_SCALE);
-                    if (pipeNoise > 0.3) {
-                        Material pipeMat = PIPE_MATERIALS[Math.abs((int) (pipeNoise * 1000)) % PIPE_MATERIALS.length];
-                        chunkData.setBlock(x, CEILING_MIN_Y - 1, z, pipeMat);
-
-                        // Occasional dripping
-                        if (pipeNoise > 0.55 && chunkRng.nextDouble() < 0.1) {
-                            chunkData.setBlock(x, CEILING_MIN_Y - 2, z, Material.IRON_CHAIN);
+                    // Pipes along ceiling: run along hallway direction
+                    if (eastWest) {
+                        // Pipe runs E-W: place on blocks adjacent to walls
+                        int zMod = Math.floorMod(worldZ, HALLWAY_PERIOD);
+                        if (zMod == 1 || zMod == HALLWAY_PERIOD - 1) {
+                            chunkData.setBlock(x, CEILING_MIN_Y - 1, z, pipeMat);
                         }
-                    }
-
-                    // Pipe runs along walls (where corridor meets solid)
-                    boolean nearWall = false;
-                    for (int[] offset : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
-                        int nx = x + offset[0];
-                        int nz = z + offset[1];
-                        if (nx < 0 || nx >= 16 || nz < 0 || nz >= 16) {
-                            nearWall = true;
-                            break;
+                    } else {
+                        // Pipe runs N-S: place on blocks adjacent to walls
+                        int xMod = Math.floorMod(worldX, HALLWAY_PERIOD);
+                        if (xMod == 1 || xMod == HALLWAY_PERIOD - 1) {
+                            chunkData.setBlock(x, CEILING_MIN_Y - 1, z, pipeMat);
                         }
-                        int nwx = chunkX * 16 + nx;
-                        int nwz = chunkZ * 16 + nz;
-                        double ncX = SimplexNoise.noise2(seed, nwx * CORRIDOR_SCALE, nwz * CORRIDOR_SCALE * 0.3);
-                        double ncZ = SimplexNoise.noise2(seed + 100, nwx * CORRIDOR_SCALE * 0.3, nwz * CORRIDOR_SCALE);
-                        double nRoom = SimplexNoise.noise2(seed + 200, nwx * ROOM_SCALE, nwz * ROOM_SCALE);
-                        if (Math.abs(ncX) >= 0.15 && Math.abs(ncZ) >= 0.12 && nRoom <= 0.4) {
-                            nearWall = true;
-                            break;
-                        }
-                    }
-                    if (nearWall && chunkRng.nextDouble() < 0.4) {
-                        Material pipeMat = PIPE_MATERIALS[chunkRng.nextInt(PIPE_MATERIALS.length)];
-                        chunkData.setBlock(x, AIR_MIN_Y + 3, z, pipeMat);
                     }
                 }
             }
         }
 
-        // Sparse lighting: redstone lamps in ceiling at junctions
+        // Lighting: soul lanterns on chains every 12 blocks in open areas
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
                 if (worldX % 12 == 0 && worldZ % 12 == 0) {
-                    if (chunkData.getType(x, AIR_MIN_Y, z) == Material.AIR) {
-                        chunkData.setBlock(x, CEILING_MIN_Y - 1, z, Material.REDSTONE_LAMP);
+                    if (chunkData.getType(x, AIR_MIN_Y, z) == Material.AIR
+                            && chunkData.getType(x, CEILING_MIN_Y - 1, z) != Material.SEA_LANTERN) {
+                        chunkData.setBlock(x, CEILING_MIN_Y - 1, z, Material.IRON_CHAIN);
+                        chunkData.setBlock(x, CEILING_MIN_Y - 2, z, Material.SOUL_LANTERN);
                     }
                 }
             }

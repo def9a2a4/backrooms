@@ -14,27 +14,30 @@ import java.util.Random;
 
 /**
  * Level 3 — "The Server Room" / err_redstone_overflow
- * Iron blocks, observer blocks, redstone lamps, command blocks, stone bricks.
- * Narrow 2-3 block tall corridors. Redstone dust everywhere. Observers facing inward.
- * Feels like being inside Minecraft's nervous system.
+ * Uniform iron block walls, polished blackstone floor. 3 blocks tall — claustrophobic.
+ * Cell-based grid like Level 0: noise classifies regions → rectangular structures.
+ * Observer blocks as server racks, redstone lamps in ceiling, redstone_block cable runs.
  */
 public class Level3ChunkGenerator extends ChunkGenerator {
 
     private static final int FLOOR_Y = 0;
     private static final int FLOOR_HEIGHT = 10;
     private static final int AIR_MIN_Y = 10;
-    private static final int AIR_MAX_Y = 13; // only 3 blocks tall — claustrophobic
-    private static final int CEILING_MIN_Y = 13;
+    private static final int CEILING_MIN_Y = 13; // 3 blocks tall — claustrophobic
     private static final int CEILING_MAX_Y = 20;
 
     private static final int CELL_SIZE = 4;
     private static final int CELLS_PER_AXIS = 16 / CELL_SIZE;
     private static final double REGION_SCALE = 1.0 / 32.0;
 
+    private static final int REGION_RACK = 0;     // open room with server racks
+    private static final int REGION_CORRIDOR = 1;  // 2-wide corridor
+    private static final int REGION_EQUIPMENT = 2; // solid with doorway
+    private static final int REGION_CORNER = 3;    // L-corner walls
+
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
         long seed = worldInfo.getSeed();
-        Random chunkRng = new Random(seed ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
 
         // Floor: polished blackstone
         chunkData.setRegion(0, FLOOR_Y, 0, 16, FLOOR_HEIGHT, 16, Material.POLISHED_BLACKSTONE);
@@ -42,21 +45,28 @@ public class Level3ChunkGenerator extends ChunkGenerator {
         // Ceiling: iron blocks
         chunkData.setRegion(0, CEILING_MIN_Y, 0, 16, CEILING_MAX_Y, 16, Material.IRON_BLOCK);
 
-        // Generate corridor structure
+        // Fill air space with iron block walls (carve out like Level 0)
+        chunkData.setRegion(0, AIR_MIN_Y, 0, 16, CEILING_MIN_Y, 16, Material.IRON_BLOCK);
+
+        // Cell-based structure placement
         for (int cx = 0; cx < CELLS_PER_AXIS; cx++) {
             for (int cz = 0; cz < CELLS_PER_AXIS; cz++) {
                 int baseX = cx * CELL_SIZE;
                 int baseZ = cz * CELL_SIZE;
 
+                int cellWorldCol = chunkX * CELLS_PER_AXIS + cx;
+                int cellWorldRow = chunkZ * CELLS_PER_AXIS + cz;
+
                 double worldCenterX = (chunkX * 16 + baseX + CELL_SIZE / 2.0) * REGION_SCALE;
                 double worldCenterZ = (chunkZ * 16 + baseZ + CELL_SIZE / 2.0) * REGION_SCALE;
                 double noise = SimplexNoise.noise2(seed, worldCenterX, worldCenterZ);
 
-                placeCell(chunkData, chunkRng, baseX, baseZ, noise, seed, chunkX, chunkZ);
+                int region = classifyRegion(noise);
+                placeStructure(chunkData, baseX, baseZ, region, cellWorldCol, cellWorldRow);
             }
         }
 
-        // Redstone lamp lighting grid
+        // Redstone lamps in ceiling on 6x6 grid
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
@@ -67,121 +77,95 @@ public class Level3ChunkGenerator extends ChunkGenerator {
             }
         }
 
-        // Redstone dust on floor surface
+        // Redstone block cable runs along corridor walls at floor level
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
-                double redstoneNoise = SimplexNoise.noise2(seed + 10, worldX * 0.3, worldZ * 0.3);
-                if (redstoneNoise > 0.2 && chunkData.getType(x, AIR_MIN_Y, z) == Material.AIR) {
-                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.REDSTONE_WIRE);
+                // Place redstone_block at floor level next to walls
+                if (chunkData.getType(x, AIR_MIN_Y, z) == Material.AIR) {
+                    boolean adjacentWall = false;
+                    if (x > 0 && chunkData.getType(x - 1, AIR_MIN_Y, z) == Material.IRON_BLOCK) adjacentWall = true;
+                    if (x < 15 && chunkData.getType(x + 1, AIR_MIN_Y, z) == Material.IRON_BLOCK) adjacentWall = true;
+                    if (z > 0 && chunkData.getType(x, AIR_MIN_Y, z - 1) == Material.IRON_BLOCK) adjacentWall = true;
+                    if (z < 15 && chunkData.getType(x, AIR_MIN_Y, z + 1) == Material.IRON_BLOCK) adjacentWall = true;
+                    // Only every other block to keep it tidy
+                    if (adjacentWall && (worldX + worldZ) % 2 == 0) {
+                        chunkData.setBlock(x, AIR_MIN_Y, z, Material.REDSTONE_BLOCK);
+                    }
                 }
             }
         }
     }
 
-    private void placeCell(ChunkData chunkData, Random rng, int baseX, int baseZ, double noise,
-                           long seed, int chunkX, int chunkZ) {
-        if (noise < -0.2) {
-            // Open server rack room
-            for (int x = baseX; x < baseX + CELL_SIZE && x < 16; x++) {
-                for (int z = baseZ; z < baseZ + CELL_SIZE && z < 16; z++) {
+    private int classifyRegion(double noise) {
+        if (noise < -0.2) return REGION_RACK;
+        if (noise < 0.2) return REGION_CORRIDOR;
+        if (noise < 0.45) return REGION_EQUIPMENT;
+        return REGION_CORNER;
+    }
+
+    private void placeStructure(ChunkData chunkData, int baseX, int baseZ,
+                                int region, int cellWorldCol, int cellWorldRow) {
+        switch (region) {
+            case REGION_RACK -> placeRackRoom(chunkData, baseX, baseZ, cellWorldCol, cellWorldRow);
+            case REGION_CORRIDOR -> placeCorridor(chunkData, baseX, baseZ, cellWorldRow);
+            case REGION_EQUIPMENT -> placeEquipmentRoom(chunkData, baseX, baseZ, cellWorldCol, cellWorldRow);
+            case REGION_CORNER -> placeLCorner(chunkData, baseX, baseZ, cellWorldCol, cellWorldRow);
+        }
+    }
+
+    private void placeRackRoom(ChunkData chunkData, int baseX, int baseZ,
+                               int cellWorldCol, int cellWorldRow) {
+        // Clear the cell
+        for (int x = baseX; x < baseX + CELL_SIZE && x < 16; x++) {
+            for (int z = baseZ; z < baseZ + CELL_SIZE && z < 16; z++) {
+                for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
+                    chunkData.setBlock(x, y, z, Material.AIR);
+                }
+            }
+        }
+        // Observer server rack along one wall edge (deterministic: north or east)
+        boolean northRack = (cellWorldCol + cellWorldRow) % 2 == 0;
+        for (int i = 0; i < CELL_SIZE; i++) {
+            int x, z;
+            if (northRack) {
+                x = baseX + i;
+                z = baseZ;
+            } else {
+                x = baseX + CELL_SIZE - 1;
+                z = baseZ + i;
+            }
+            if (x < 16 && z < 16) {
+                chunkData.setBlock(x, AIR_MIN_Y, z, Material.OBSERVER);
+                chunkData.setBlock(x, AIR_MIN_Y + 1, z, Material.OBSERVER);
+            }
+        }
+    }
+
+    private void placeCorridor(ChunkData chunkData, int baseX, int baseZ, int cellWorldRow) {
+        int dir = cellWorldRow % 2; // 0 = E-W, 1 = N-S
+        for (int x = baseX; x < baseX + CELL_SIZE && x < 16; x++) {
+            for (int z = baseZ; z < baseZ + CELL_SIZE && z < 16; z++) {
+                boolean isPath;
+                if (dir == 0) {
+                    isPath = (z - baseZ) >= 1 && (z - baseZ) <= 2;
+                } else {
+                    isPath = (x - baseX) >= 1 && (x - baseX) <= 2;
+                }
+                if (isPath) {
                     for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);
                     }
                 }
             }
-            // Place observer "server racks" facing inward on edges
-            placeObserverWalls(chunkData, rng, baseX, baseZ);
-
-        } else if (noise < 0.2) {
-            // Corridor with walls
-            int dir = rng.nextInt(2);
-            for (int x = baseX; x < baseX + CELL_SIZE && x < 16; x++) {
-                for (int z = baseZ; z < baseZ + CELL_SIZE && z < 16; z++) {
-                    // Create 2-wide corridors
-                    boolean isPath;
-                    if (dir == 0) {
-                        isPath = (z - baseZ) >= 1 && (z - baseZ) <= 2;
-                    } else {
-                        isPath = (x - baseX) >= 1 && (x - baseX) <= 2;
-                    }
-                    if (isPath) {
-                        for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                            chunkData.setBlock(x, y, z, Material.AIR);
-                        }
-                    } else {
-                        // Walls made of iron/stone bricks with embedded components
-                        for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                            Material wallMat = pickWallMaterial(rng);
-                            chunkData.setBlock(x, y, z, wallMat);
-                        }
-                    }
-                }
-            }
-        } else {
-            // Dense equipment room
-            for (int x = baseX; x < baseX + CELL_SIZE && x < 16; x++) {
-                for (int z = baseZ; z < baseZ + CELL_SIZE && z < 16; z++) {
-                    for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                        Material mat = pickEquipmentMaterial(rng);
-                        chunkData.setBlock(x, y, z, mat);
-                    }
-                }
-            }
-            // Carve a 2x3 doorway on a random side
-            int side = rng.nextInt(4);
-            carveDoorway(chunkData, baseX, baseZ, side);
         }
     }
 
-    private void placeObserverWalls(ChunkData chunkData, Random rng, int baseX, int baseZ) {
-        // Place observers on the perimeter of the cell facing inward
-        for (int i = 0; i < CELL_SIZE; i++) {
-            // North wall
-            if (baseX + i < 16 && baseZ < 16 && rng.nextDouble() < 0.6) {
-                chunkData.setBlock(baseX + i, AIR_MIN_Y + 1, baseZ, Material.OBSERVER);
-            }
-            // South wall
-            if (baseX + i < 16 && baseZ + CELL_SIZE - 1 < 16 && rng.nextDouble() < 0.6) {
-                chunkData.setBlock(baseX + i, AIR_MIN_Y + 1, baseZ + CELL_SIZE - 1, Material.OBSERVER);
-            }
-            // West wall
-            if (baseX < 16 && baseZ + i < 16 && rng.nextDouble() < 0.6) {
-                chunkData.setBlock(baseX, AIR_MIN_Y + 1, baseZ + i, Material.OBSERVER);
-            }
-            // East wall
-            if (baseX + CELL_SIZE - 1 < 16 && baseZ + i < 16 && rng.nextDouble() < 0.6) {
-                chunkData.setBlock(baseX + CELL_SIZE - 1, AIR_MIN_Y + 1, baseZ + i, Material.OBSERVER);
-            }
-        }
-    }
-
-    private Material pickWallMaterial(Random rng) {
-        double roll = rng.nextDouble();
-        if (roll < 0.4) return Material.IRON_BLOCK;
-        if (roll < 0.6) return Material.STONE_BRICKS;
-        if (roll < 0.7) return Material.OBSERVER;
-        if (roll < 0.8) return Material.COMMAND_BLOCK;
-        if (roll < 0.85) return Material.REPEATING_COMMAND_BLOCK;
-        if (roll < 0.9) return Material.CHAIN_COMMAND_BLOCK;
-        if (roll < 0.95) return Material.REDSTONE_LAMP;
-        return Material.CRACKED_STONE_BRICKS;
-    }
-
-    private Material pickEquipmentMaterial(Random rng) {
-        double roll = rng.nextDouble();
-        if (roll < 0.3) return Material.IRON_BLOCK;
-        if (roll < 0.5) return Material.OBSERVER;
-        if (roll < 0.6) return Material.COMMAND_BLOCK;
-        if (roll < 0.7) return Material.REDSTONE_LAMP;
-        if (roll < 0.8) return Material.STONE_BRICKS;
-        if (roll < 0.85) return Material.REPEATER;
-        if (roll < 0.9) return Material.COMPARATOR;
-        return Material.REDSTONE_BLOCK;
-    }
-
-    private void carveDoorway(ChunkData chunkData, int baseX, int baseZ, int side) {
+    private void placeEquipmentRoom(ChunkData chunkData, int baseX, int baseZ,
+                                    int cellWorldCol, int cellWorldRow) {
+        // Solid iron block (already filled), carve a 2-wide doorway on one side
+        int side = Math.abs((cellWorldCol * 3 + cellWorldRow * 7) % 4);
         int x1, z1;
         switch (side) {
             case 0 -> { x1 = baseX + 1; z1 = baseZ; }
@@ -189,12 +173,52 @@ public class Level3ChunkGenerator extends ChunkGenerator {
             case 2 -> { x1 = baseX; z1 = baseZ + 1; }
             default -> { x1 = baseX + CELL_SIZE - 1; z1 = baseZ + 1; }
         }
-        for (int dx = 0; dx < 2; dx++) {
-            for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                int x = (side <= 1) ? x1 + dx : x1;
-                int z = (side >= 2) ? z1 + dx : z1;
-                if (x >= 0 && x < 16 && z >= 0 && z < 16) {
+        for (int d = 0; d < 2; d++) {
+            int x = (side <= 1) ? x1 + d : x1;
+            int z = (side >= 2) ? z1 + d : z1;
+            if (x >= 0 && x < 16 && z >= 0 && z < 16) {
+                for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
                     chunkData.setBlock(x, y, z, Material.AIR);
+                }
+            }
+        }
+    }
+
+    private void placeLCorner(ChunkData chunkData, int baseX, int baseZ,
+                              int cellWorldCol, int cellWorldRow) {
+        int corner = Math.abs((cellWorldCol * 3 + cellWorldRow * 7) % 4);
+        switch (corner) {
+            case 0 -> {
+                placeWall(chunkData, baseX, baseZ, 0);
+                placeWall(chunkData, baseX, baseZ, 2);
+            }
+            case 1 -> {
+                placeWall(chunkData, baseX, baseZ, 0);
+                placeWall(chunkData, baseX, baseZ, 3);
+            }
+            case 2 -> {
+                placeWall(chunkData, baseX, baseZ, 1);
+                placeWall(chunkData, baseX, baseZ, 2);
+            }
+            default -> {
+                placeWall(chunkData, baseX, baseZ, 1);
+                placeWall(chunkData, baseX, baseZ, 3);
+            }
+        }
+    }
+
+    private void placeWall(ChunkData chunkData, int baseX, int baseZ, int direction) {
+        for (int i = 0; i < CELL_SIZE; i++) {
+            int x, z;
+            switch (direction) {
+                case 0 -> { x = baseX + i; z = baseZ; }
+                case 1 -> { x = baseX + i; z = baseZ + CELL_SIZE - 1; }
+                case 2 -> { x = baseX; z = baseZ + i; }
+                default -> { x = baseX + CELL_SIZE - 1; z = baseZ + i; }
+            }
+            if (x < 16 && z < 16) {
+                for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
+                    chunkData.setBlock(x, y, z, Material.IRON_BLOCK);
                 }
             }
         }

@@ -1,15 +1,15 @@
-id: level_1
-display_name: "The Habitable Zone"
-generator: level_1
+id: level_64637
+display_name: "The Library"
+generator: level_64637
 environment: THE_END
-enter_message: "§7Something drips in the distance."
+fixed_time: 18000
+enter_message: "§8§kxxxx§r §7You find yourself among infinite shelves. §8§kxxxx"
 
 events:
   - ambient_sound
   - footstep_echo
 
-entities:
-  - herobrine
+entities: []
 
 event_config:
   ambient_sound:
@@ -18,7 +18,7 @@ event_config:
     chance: 0.2
     sounds:
       - AMBIENT_CAVE
-      - AMBIENT_BASALT_DELTAS_MOOD
+      - AMBIENT_WARPED_FOREST_MOOD
   footstep_echo:
     enabled: true
     check_interval_seconds: 3

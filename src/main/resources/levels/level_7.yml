@@ -6,6 +6,7 @@ enter_message: "§4§k||§r §c[FATAL] WorldGen has encountered an unrecoverable
 
 events:
   - ambient_sound
+  - fake_chat_message
   - light_blink
   - random_potion
   - block_corruption
@@ -23,6 +24,17 @@ event_config:
       - AMBIENT_CRIMSON_FOREST_MOOD
       - AMBIENT_NETHER_WASTES_MOOD
       - AMBIENT_BASALT_DELTAS_MOOD
+  fake_chat_message:
+    enabled: true
+    check_interval_seconds: 20
+    chance: 0.3
+    messages:
+      - "§c[FATAL] §fChunkLoadError at region r.4.7.mca"
+      - "§c[FATAL] §fjava.lang.NullPointerException"
+      - "§e[WARN] §fEntity tick overflow"
+      - "§e[WARN] §fBlock update cascade exceeded maximum depth"
+      - "§c[ERR] §fWorldGen seed mismatch — expected: 0, got: ∞"
+      - "§7[Server] §fAttempting world recovery... failed."
   light_blink:
     enabled: true
     check_interval_seconds: 10

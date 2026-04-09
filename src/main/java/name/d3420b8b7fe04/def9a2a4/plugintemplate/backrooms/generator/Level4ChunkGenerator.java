@@ -20,8 +20,8 @@ import java.util.Random;
  */
 public class Level4ChunkGenerator extends ChunkGenerator {
 
-    private static final int MIN_Y = -64;
-    private static final int MAX_Y = 256;
+    private static final int MIN_Y = 0;
+    private static final int MAX_Y = 128;
 
     // Multiple noise layers at different scales for Far Lands effect
     private static final double MACRO_SCALE = 1.0 / 200.0;
@@ -57,7 +57,7 @@ public class Level4ChunkGenerator extends ChunkGenerator {
 
                 // Far Lands: extreme amplification causing vertical walls
                 double amplifiedMacro = macro * macro * Math.signum(macro) * 3.0;
-                double height = 64 + amplifiedMacro * 120 + meso * 30 + micro * 8;
+                double height = 48 + amplifiedMacro * 60 + meso * 20 + micro * 6;
                 int terrainHeight = Math.max(1, Math.min((int) height, MAX_Y - 1));
 
                 // Swiss cheese: holes through terrain
@@ -139,7 +139,7 @@ public class Level4ChunkGenerator extends ChunkGenerator {
         if (chunkRng.nextDouble() < 0.15) {
             int gx = chunkRng.nextInt(16);
             int gz = chunkRng.nextInt(16);
-            int gy = 80 + chunkRng.nextInt(100);
+            int gy = 60 + chunkRng.nextInt(40);
             for (int dx = 0; dx < 2 + chunkRng.nextInt(3); dx++) {
                 for (int dz = 0; dz < 2 + chunkRng.nextInt(3); dz++) {
                     if (gx + dx < 16 && gz + dz < 16 && gy < MAX_Y) {
@@ -186,7 +186,7 @@ public class Level4ChunkGenerator extends ChunkGenerator {
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, 8.5, 100, 8.5);
+        return new Location(world, 8.5, 64, 8.5);
     }
 
     @Override

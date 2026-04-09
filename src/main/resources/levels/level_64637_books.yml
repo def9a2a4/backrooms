@@ -1,0 +1,44 @@
+# ─── Library of Babel — Book Text Configuration ───
+# All text content for books found in chiseled bookshelves on Level 64637.
+# Server admins can freely add, remove, or edit entries here.
+
+# Characters used to generate random gibberish pages (Babel-style)
+gibberish_chars: "abcdefghijklmnopqrstuvwxyz .,;:'-"
+
+# Chance (0.0-1.0) that a book contains a cursed snippet instead of pure gibberish
+cursed_chance: 0.15
+
+# Cursed snippets — one is randomly embedded in a page of gibberish
+cursed_snippets:
+  - "you have been here before and you will be here again"
+  - "the exit was removed from the index on purpose"
+  - "someone is reading over your shoulder right now"
+  - "this book was written for you specifically"
+  - "the pages change when you look away"
+  - "level 64637 does not exist in any catalogue"
+  - "you cannot unread this"
+  - "the librarian knows your name"
+  - "do not trust the one who brought you here"
+  - "the shelves go deeper than the world allows"
+  - "every book here is a copy of a book that does not exist"
+  - "the last person who read this sentence never left"
+  - "you are not the first to stand in this exact spot"
+  - "this room was not here a moment ago"
+  - "the walls are listening"
+
+# Cursed book titles — rarely used instead of a gibberish title
+cursed_titles:
+  - "FOR YOU"
+  - "DO NOT OPEN"
+  - "INDEX OF THE LOST"
+  - "FINAL ENTRY"
+  - "BOOK OF NAMES"
+  - "CATALOGUE OF EXITS"
+
+# Cursed author names — rarely used instead of a gibberish author
+cursed_authors:
+  - "The Librarian"
+  - "You"
+  - "No One"
+  - "The Archivist"
+  - "Unknown"
