@@ -42,9 +42,9 @@ public class Level6ChunkGenerator extends ChunkGenerator {
         chunkData.setRegion(0, CEILING_Y, 0, 16, CEILING_MAX_Y, 16, Material.GLOWSTONE);
 
         // Determine if this chunk is a room or corridor
-        // Rooms are on a 2-chunk grid (every other chunk pair)
-        boolean isCorridorX = (Math.floorMod(chunkX, 3) == 2);
-        boolean isCorridorZ = (Math.floorMod(chunkZ, 3) == 2);
+        // Every other chunk is a corridor
+        boolean isCorridorX = (Math.floorMod(chunkX, 2) == 1);
+        boolean isCorridorZ = (Math.floorMod(chunkZ, 2) == 1);
 
         if (isCorridorX || isCorridorZ) {
             // Nether brick corridor
@@ -107,8 +107,21 @@ public class Level6ChunkGenerator extends ChunkGenerator {
             }
         }
 
+        // Nether brick border frame around room edges
+        for (int x = 0; x < 16; x++) {
+            chunkData.setBlock(x, AIR_MIN_Y, 0, Material.NETHER_BRICKS);
+            chunkData.setBlock(x, AIR_MIN_Y, 15, Material.NETHER_BRICKS);
+        }
+        for (int z = 0; z < 16; z++) {
+            chunkData.setBlock(0, AIR_MIN_Y, z, Material.NETHER_BRICKS);
+            chunkData.setBlock(15, AIR_MIN_Y, z, Material.NETHER_BRICKS);
+        }
+
+        // Sea lantern at room center for better lighting
+        chunkData.setBlock(7, FLOOR_HEIGHT - 1, 7, Material.SEA_LANTERN);
+        chunkData.setBlock(8, FLOOR_HEIGHT - 1, 8, Material.SEA_LANTERN);
+
         // Nether reactor core pattern on floor (3x3 cobblestone cross + gold corners)
-        // Center of room
         placeReactorCore(chunkData, 6, FLOOR_HEIGHT - 1, 6);
 
         // Room type based on chunk coordinates

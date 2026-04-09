@@ -7,6 +7,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateMa
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -75,6 +76,16 @@ public class EntitySpawner {
 
             // Check if target left the backrooms
             if (!levelRegistry.isBackroomsWorld(target.getWorld())) {
+                BackroomsEntity type = entityRegistry.get(handle.entityId());
+                if (type != null) type.despawn(handle);
+                iter.remove();
+                continue;
+            }
+
+            // Check if target moved to a different world than the entity
+            Entity primaryEntity = handle.bukkitEntities().isEmpty() ? null : handle.bukkitEntities().get(0);
+            if (primaryEntity != null && !primaryEntity.isDead()
+                    && !primaryEntity.getWorld().equals(target.getWorld())) {
                 BackroomsEntity type = entityRegistry.get(handle.entityId());
                 if (type != null) type.despawn(handle);
                 iter.remove();

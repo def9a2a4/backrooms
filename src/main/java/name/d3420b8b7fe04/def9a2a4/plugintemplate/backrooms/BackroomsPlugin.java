@@ -19,6 +19,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorR
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.Bukkit;
@@ -71,7 +72,7 @@ public class BackroomsPlugin {
     public void enable() {
         // 1. Register generators (code — these define terrain)
         generatorRegistry.registerDefaults();
-        registerLevel64637();
+        generatorRegistry.register("level_64637", Level64637ChunkGenerator::new);
 
         // 2. Register built-in events
         AmbientSoundEvent ambientSound = new AmbientSoundEvent();
@@ -131,6 +132,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(playerStateManager, plugin);
         Bukkit.getPluginManager().registerEvents(entryManager, plugin);
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
+        Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(loadLibraryBookConfig()), plugin);
 
         // 9. Register commands
         BackroomsCommand command = new BackroomsCommand(levelRegistry, playerStateManager, transitionManager,
@@ -195,27 +197,21 @@ public class BackroomsPlugin {
         loadLevels();
     }
 
-    private void registerLevel64637() {
-        Level64637ChunkGenerator.BookConfig bookConfig = Level64637ChunkGenerator.BookConfig.DEFAULT;
-
-        // Try to load book config from data folder first, then fall back to jar resource
+    private Level64637ChunkGenerator.BookConfig loadLibraryBookConfig() {
+        // Try data folder first, then fall back to jar resource
         File bookFile = new File(plugin.getDataFolder(), "levels/level_64637_books.yml");
+        YamlConfiguration yaml;
         if (bookFile.exists()) {
-            bookConfig = loadBookConfig(YamlConfiguration.loadConfiguration(bookFile));
+            yaml = YamlConfiguration.loadConfiguration(bookFile);
         } else {
             InputStream resource = plugin.getResource("levels/level_64637_books.yml");
             if (resource != null) {
-                bookConfig = loadBookConfig(YamlConfiguration.loadConfiguration(
-                        new InputStreamReader(resource, StandardCharsets.UTF_8)));
+                yaml = YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(resource, StandardCharsets.UTF_8));
+            } else {
+                return Level64637ChunkGenerator.BookConfig.DEFAULT;
             }
         }
-
-        Level64637ChunkGenerator.BookConfig finalConfig = bookConfig;
-        generatorRegistry.register("level_64637", () -> new Level64637ChunkGenerator(finalConfig));
-    }
-
-    private Level64637ChunkGenerator.BookConfig loadBookConfig(
-            org.bukkit.configuration.file.YamlConfiguration yaml) {
         return new Level64637ChunkGenerator.BookConfig(
                 yaml.getString("gibberish_chars", "abcdefghijklmnopqrstuvwxyz .,;:'-"),
                 yaml.getDouble("cursed_chance", 0.15),
@@ -230,14 +226,20 @@ public class BackroomsPlugin {
         if (levelsDir.exists()) return;
         levelsDir.mkdirs();
 
-        String[] defaults = {"levels/level_0.yml", "levels/level_1.yml", "levels/level_2.yml",
-                "levels/level_3.yml", "levels/level_4.yml", "levels/level_5.yml",
-                "levels/level_7.yml", "levels/level_37.yml",
-                "levels/level_64637.yml", "levels/level_64637_books.yml"};
-        for (String path : defaults) {
-            if (plugin.getResource(path) != null) {
-                plugin.saveResource(path, false);
-            }
+        // Scan the plugin jar for all files under levels/
+        try (java.util.jar.JarFile jar = new java.util.jar.JarFile(
+                plugin.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().getPath())) {
+            jar.stream()
+                    .filter(e -> e.getName().startsWith("levels/") && !e.isDirectory())
+                    .forEach(e -> {
+                        try {
+                            plugin.saveResource(e.getName(), false);
+                        } catch (Exception ex) {
+                            plugin.getLogger().warning("Failed to extract " + e.getName() + ": " + ex.getMessage());
+                        }
+                    });
+        } catch (Exception e) {
+            plugin.getLogger().warning("Could not scan jar for level files: " + e.getMessage());
         }
     }
 

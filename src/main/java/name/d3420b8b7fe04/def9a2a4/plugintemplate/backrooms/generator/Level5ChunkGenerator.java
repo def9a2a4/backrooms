@@ -78,6 +78,16 @@ public class Level5ChunkGenerator extends ChunkGenerator {
                 if (connections <= 1 && chunkRng.nextDouble() < 0.3) {
                     // Expand to 4x4 room
                     carveRect(chunkData, cx * MAZE_CELL, cz * MAZE_CELL, MAZE_CELL, MAZE_CELL);
+                    // Mossy cobblestone floor for jukebox rooms
+                    for (int dx = 0; dx < MAZE_CELL; dx++) {
+                        for (int dz = 0; dz < MAZE_CELL; dz++) {
+                            int fx = cx * MAZE_CELL + dx;
+                            int fz = cz * MAZE_CELL + dz;
+                            if (fx < 16 && fz < 16) {
+                                chunkData.setBlock(fx, AIR_MIN_Y - 1, fz, Material.MOSSY_COBBLESTONE);
+                            }
+                        }
+                    }
                     // Place jukebox
                     int jx = cx * MAZE_CELL + 1;
                     int jz = cz * MAZE_CELL + 1;
@@ -113,7 +123,7 @@ public class Level5ChunkGenerator extends ChunkGenerator {
             // East edge
             int eastCellX = chunkX * 16 + 14;
             double eastConn = SimplexNoise.noise2(seed + 21, (eastCellX + 2) * 0.25, cellWorldZ * 0.25);
-            if (eastConn > -0.2) {
+            if (eastConn > -0.1) {
                 carveRect(chunkData, 15, cz * MAZE_CELL + 1, 1, TUNNEL_WIDTH);
             }
         }
@@ -121,7 +131,7 @@ public class Level5ChunkGenerator extends ChunkGenerator {
         // Very sparse torches (most will go out via events anyway)
         for (int cx = 0; cx < MAZE_CELLS_PER_AXIS; cx++) {
             for (int cz = 0; cz < MAZE_CELLS_PER_AXIS; cz++) {
-                if (chunkRng.nextDouble() < 0.15) {
+                if (chunkRng.nextDouble() < 0.20) {
                     int tx = cx * MAZE_CELL + 1;
                     int tz = cz * MAZE_CELL + 1;
                     if (tx < 16 && tz < 16 && chunkData.getType(tx, AIR_MIN_Y, tz) == Material.AIR) {

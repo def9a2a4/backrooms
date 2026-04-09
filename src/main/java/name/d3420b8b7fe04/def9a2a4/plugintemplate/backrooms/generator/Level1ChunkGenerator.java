@@ -65,9 +65,9 @@ public class Level1ChunkGenerator extends ChunkGenerator {
                 // Surface
                 chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, floorMat);
 
-                // Occasional puddles
-                double puddleNoise = SimplexNoise.noise2(seed + 2, (chunkX * 16 + x) * 0.15, (chunkZ * 16 + z) * 0.15);
-                if (puddleNoise > 0.55) {
+                // Very sparse water source blocks that flow when updated
+                double waterNoise = SimplexNoise.noise2(seed + 2, (chunkX * 16 + x) * 0.05, (chunkZ * 16 + z) * 0.05);
+                if (waterNoise > 0.75) {
                     chunkData.setBlock(x, AIR_MIN_Y, z, Material.WATER);
                 }
             }
@@ -143,9 +143,10 @@ public class Level1ChunkGenerator extends ChunkGenerator {
         Material mat = WALL_MATERIALS[rng.nextInt(WALL_MATERIALS.length)];
         int dir = rng.nextInt(2); // 0=X, 1=Z
         int height = AIR_MIN_Y + 2 + rng.nextInt(2); // 2-3 blocks tall
+        int offset = rng.nextInt(2); // fixed offset for cross-axis
         for (int i = 0; i < CELL_SIZE && baseX + (dir == 0 ? i : 0) < 16 && baseZ + (dir == 1 ? i : 0) < 16; i++) {
-            int x = baseX + (dir == 0 ? i : rng.nextInt(2));
-            int z = baseZ + (dir == 1 ? i : rng.nextInt(2));
+            int x = baseX + (dir == 0 ? i : offset);
+            int z = baseZ + (dir == 1 ? i : offset);
             if (x < 16 && z < 16) {
                 for (int y = AIR_MIN_Y; y < height; y++) {
                     chunkData.setBlock(x, y, z, mat);

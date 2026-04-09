@@ -96,6 +96,8 @@ public class HerobrineEntity implements BackroomsEntity {
         Entity primary = handle.bukkitEntities().isEmpty() ? null : handle.bukkitEntities().get(0);
         if (primary == null || primary.isDead()) return;
 
+        if (!primary.getWorld().equals(target.getWorld())) return;
+
         double distance = primary.getLocation().distance(target.getLocation());
 
         // If player is looking at Herobrine, vanish
