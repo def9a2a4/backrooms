@@ -11,8 +11,8 @@ commands:
     usage: /plugintemplate <reload|help>
     permission: plugintemplate.admin
   backrooms:
-    description: Enter or leave the Backrooms
-    usage: /backrooms [leave]
+    description: Backrooms dimension commands
+    usage: /backrooms [leave|goto <level>|regenerate [level|all]|status]
     permission: backrooms.use
 
 permissions:
@@ -25,3 +25,9 @@ permissions:
   backrooms.use:
     description: Allows entering and leaving the Backrooms
     default: true
+  backrooms.admin:
+    description: Allows admin backrooms commands (goto, regenerate)
+    default: op
+  backrooms.regenerate:
+    description: Allows regenerating backrooms worlds
+    default: op

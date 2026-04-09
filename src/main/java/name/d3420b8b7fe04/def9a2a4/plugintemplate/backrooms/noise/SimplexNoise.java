@@ -1,4 +1,4 @@
-package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms;
+package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise;
 
 /**
  * OpenSimplex2S noise (smooth variant). Public domain.
