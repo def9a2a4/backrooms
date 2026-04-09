@@ -82,6 +82,12 @@ public class BackroomsPlugin {
         eventRegistry.register(blackout);
         eventRegistry.register(fakeChat);
         eventRegistry.register(footstepEcho);
+        eventRegistry.register(new FakeCoordinatesEvent());
+        eventRegistry.register(new PlayerDriftEvent());
+        eventRegistry.register(new RandomPotionEvent());
+        eventRegistry.register(new BlockCorruptionEvent());
+        eventRegistry.register(new InventoryGlitchEvent());
+        eventRegistry.register(new TorchDecayEvent());
 
         // 3. Register built-in entry triggers
         SuffocationEntry suffocation = new SuffocationEntry(plugin);
@@ -173,16 +179,28 @@ public class BackroomsPlugin {
             }
         }
 
-        // Load levels from levels/ folder — each .yml file defines one level
+        // Extract default levels from jar if needed, then load
+        extractDefaultLevels();
         loadLevels();
+    }
+
+    private void extractDefaultLevels() {
+        File levelsDir = new File(plugin.getDataFolder(), "levels");
+        if (levelsDir.exists()) return;
+        levelsDir.mkdirs();
+
+        String[] defaults = {"levels/level_0.yml", "levels/level_1.yml", "levels/level_2.yml",
+                "levels/level_3.yml", "levels/level_4.yml", "levels/level_5.yml",
+                "levels/level_6.yml", "levels/level_7.yml", "levels/level_37.yml"};
+        for (String path : defaults) {
+            if (plugin.getResource(path) != null) {
+                plugin.saveResource(path, false);
+            }
+        }
     }
 
     private void loadLevels() {
         File levelsDir = new File(plugin.getDataFolder(), "levels");
-        if (!levelsDir.exists()) {
-            // Fall back: look in project root levels/ folder (dev mode)
-            levelsDir = new File(plugin.getDataFolder().getParentFile().getParentFile(), "levels");
-        }
         if (!levelsDir.exists() || !levelsDir.isDirectory()) {
             plugin.getLogger().warning("No levels/ directory found — no levels loaded.");
             return;

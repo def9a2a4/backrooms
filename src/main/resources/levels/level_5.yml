@@ -7,6 +7,7 @@ enter_message: "§8You hear footsteps."
 events:
   - ambient_sound
   - footstep_echo
+  - torch_decay
 
 entities: []
 
