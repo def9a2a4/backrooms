@@ -34,6 +34,10 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
             return handleLeave(player);
         }
 
+        if (args.length > 0 && args[0].equalsIgnoreCase("regenerate")) {
+            return handleRegenerate(player);
+        }
+
         return handleEnter(player);
     }
 
@@ -74,10 +78,22 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean handleRegenerate(Player player) {
+        if (!player.hasPermission("backrooms.regenerate") && !player.isOp()) {
+            player.sendMessage("You don't have permission to regenerate the Backrooms.");
+            return true;
+        }
+
+        player.sendMessage("Regenerating the Backrooms...");
+        manager.regenerateWorld();
+        player.sendMessage("The Backrooms have been regenerated.");
+        return true;
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 1) {
-            return List.of("leave");
+            return List.of("leave", "regenerate");
         }
         return List.of();
     }

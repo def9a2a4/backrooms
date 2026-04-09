@@ -17,12 +17,19 @@ public class BackroomsChunkGenerator extends ChunkGenerator {
     private static final int FLOOR_MAX_Y = 20;   // exclusive: 0-19
     private static final int AIR_MIN_Y = 20;      // walkable floor surface
     private static final int AIR_MAX_Y = 24;      // exclusive: 20-23
-    private static final int CEILING_MIN_Y = 24;
+    public static final int CEILING_MIN_Y = 24;
     private static final int CEILING_MAX_Y = 44;  // exclusive: 24-43
 
     private static final int CELL_SIZE = 4;
     private static final int CELLS_PER_AXIS = 16 / CELL_SIZE; // 4
-    private static final int LIGHT_SPACING = 4;
+    public static final int LIGHT_SPACING = 4;
+
+    private static final double REGION_SCALE = 1.0 / 64.0; // noise sampling scale
+
+    // Region types
+    private static final int REGION_EMPTY = 0;
+    private static final int REGION_WALLS = 1;
+    private static final int REGION_PILLARS = 2;
 
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
@@ -30,26 +37,23 @@ public class BackroomsChunkGenerator extends ChunkGenerator {
         chunkData.setRegion(0, FLOOR_MIN_Y, 0, 16, FLOOR_MAX_Y, 16, Material.YELLOW_TERRACOTTA);
         chunkData.setRegion(0, CEILING_MIN_Y, 0, 16, CEILING_MAX_Y, 16, Material.YELLOW_TERRACOTTA);
 
+        long seed = worldInfo.getSeed();
+
         // Walls and pillars
-        Random chunkRng = new Random(worldInfo.getSeed() ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
+        Random chunkRng = new Random(seed ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
 
         for (int cx = 0; cx < CELLS_PER_AXIS; cx++) {
             for (int cz = 0; cz < CELLS_PER_AXIS; cz++) {
                 int baseX = cx * CELL_SIZE;
                 int baseZ = cz * CELL_SIZE;
-                double roll = chunkRng.nextDouble();
 
-                if (roll < 0.30) {
-                    // empty
-                } else if (roll < 0.50) {
-                    placePillar(chunkData, chunkRng, baseX, baseZ);
-                } else if (roll < 0.70) {
-                    placeWall(chunkData, baseX, baseZ, chunkRng.nextInt(4), AIR_MIN_Y, AIR_MAX_Y);
-                } else if (roll < 0.85) {
-                    placeWall(chunkData, baseX, baseZ, chunkRng.nextInt(4), AIR_MIN_Y, AIR_MIN_Y + 2);
-                } else {
-                    placeLCorner(chunkData, baseX, baseZ, chunkRng.nextInt(4));
-                }
+                // Sample noise at cell center in world coords
+                double worldCenterX = (chunkX * 16 + baseX + CELL_SIZE / 2.0) * REGION_SCALE;
+                double worldCenterZ = (chunkZ * 16 + baseZ + CELL_SIZE / 2.0) * REGION_SCALE;
+                double noise = SimplexNoise.noise2(seed, worldCenterX, worldCenterZ);
+
+                int region = classifyRegion(noise);
+                placeStructure(chunkData, chunkRng, baseX, baseZ, region);
             }
         }
 
@@ -64,6 +68,102 @@ public class BackroomsChunkGenerator extends ChunkGenerator {
             }
         }
     }
+
+    private int classifyRegion(double noise) {
+        if (noise < -0.3) return REGION_PILLARS;
+        if (noise > 0.3) return REGION_EMPTY;
+        return REGION_WALLS;
+    }
+
+    private void placeStructure(ChunkData chunkData, Random rng, int baseX, int baseZ, int region) {
+        double roll = rng.nextDouble();
+
+        switch (region) {
+            case REGION_EMPTY -> placeEmpty(chunkData, rng, baseX, baseZ, roll);
+            case REGION_WALLS -> placeWallRegion(chunkData, rng, baseX, baseZ, roll);
+            case REGION_PILLARS -> placePillarRegion(chunkData, rng, baseX, baseZ, roll);
+        }
+    }
+
+    // --- Region: mostly empty ---
+    private void placeEmpty(ChunkData chunkData, Random rng, int baseX, int baseZ, double roll) {
+        if (roll < 0.60) {
+            // empty — consume rng to keep stream consistent
+            rng.nextInt(4);
+        } else if (roll < 0.75) {
+            placePillar(chunkData, rng, baseX, baseZ);
+        } else if (roll < 0.90) {
+            placeRandomWall(chunkData, rng, baseX, baseZ);
+        } else {
+            placeLCorner(chunkData, baseX, baseZ, rng.nextInt(4));
+        }
+    }
+
+    // --- Region: wall-heavy ---
+    private void placeWallRegion(ChunkData chunkData, Random rng, int baseX, int baseZ, double roll) {
+        if (roll < 0.10) {
+            // empty
+            rng.nextInt(4);
+        } else if (roll < 0.20) {
+            placePillar(chunkData, rng, baseX, baseZ);
+        } else if (roll < 0.55) {
+            placeRandomWall(chunkData, rng, baseX, baseZ);
+        } else if (roll < 0.75) {
+            placeCeilingWall(chunkData, rng, baseX, baseZ);
+        } else {
+            placeLCorner(chunkData, baseX, baseZ, rng.nextInt(4));
+        }
+    }
+
+    // --- Region: pillar-heavy ---
+    private void placePillarRegion(ChunkData chunkData, Random rng, int baseX, int baseZ, double roll) {
+        if (roll < 0.15) {
+            // empty
+            rng.nextInt(4);
+        } else if (roll < 0.70) {
+            placePillar(chunkData, rng, baseX, baseZ);
+        } else if (roll < 0.85) {
+            placeRandomWall(chunkData, rng, baseX, baseZ);
+        } else {
+            placeLCorner(chunkData, baseX, baseZ, rng.nextInt(4));
+        }
+    }
+
+    // --- Wall placement with height variety ---
+
+    private void placeRandomWall(ChunkData chunkData, Random rng, int baseX, int baseZ) {
+        int dir = rng.nextInt(4);
+        double heightRoll = rng.nextDouble();
+
+        if (heightRoll < 0.35) {
+            // full height (4 blocks)
+            placeWall(chunkData, baseX, baseZ, dir, AIR_MIN_Y, AIR_MAX_Y);
+        } else if (heightRoll < 0.65) {
+            // 3-high from floor
+            placeWall(chunkData, baseX, baseZ, dir, AIR_MIN_Y, AIR_MIN_Y + 3);
+        } else {
+            // 1-high from floor
+            placeWall(chunkData, baseX, baseZ, dir, AIR_MIN_Y, AIR_MIN_Y + 1);
+        }
+    }
+
+    private void placeCeilingWall(ChunkData chunkData, Random rng, int baseX, int baseZ) {
+        int dir = rng.nextInt(4);
+        double heightRoll = rng.nextDouble();
+
+        if (heightRoll < 0.30) {
+            // full height from ceiling (same as full wall visually)
+            placeWall(chunkData, baseX, baseZ, dir, AIR_MIN_Y, AIR_MAX_Y);
+        } else if (heightRoll < 0.70) {
+            // 3-high from ceiling
+            placeWall(chunkData, baseX, baseZ, dir, AIR_MAX_Y - 3, AIR_MAX_Y);
+        } else {
+            // 1-high from ceiling
+            placeWall(chunkData, baseX, baseZ, dir, AIR_MAX_Y - 1, AIR_MAX_Y);
+        }
+    }
+
+    // --- Primitive structure placement ---
 
     private void placePillar(ChunkData chunkData, Random rng, int baseX, int baseZ) {
         int px = baseX + 1 + rng.nextInt(2);
@@ -89,11 +189,10 @@ public class BackroomsChunkGenerator extends ChunkGenerator {
     }
 
     private void placeLCorner(ChunkData chunkData, int baseX, int baseZ, int corner) {
-        // Two perpendicular walls meeting at a corner
         switch (corner) {
             case 0 -> { // NW
-                placeWall(chunkData, baseX, baseZ, 0, AIR_MIN_Y, AIR_MAX_Y); // north edge
-                placeWall(chunkData, baseX, baseZ, 2, AIR_MIN_Y, AIR_MAX_Y); // west edge
+                placeWall(chunkData, baseX, baseZ, 0, AIR_MIN_Y, AIR_MAX_Y);
+                placeWall(chunkData, baseX, baseZ, 2, AIR_MIN_Y, AIR_MAX_Y);
             }
             case 1 -> { // NE
                 placeWall(chunkData, baseX, baseZ, 0, AIR_MIN_Y, AIR_MAX_Y);

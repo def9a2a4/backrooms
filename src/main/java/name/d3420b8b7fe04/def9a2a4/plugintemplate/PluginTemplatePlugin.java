@@ -1,6 +1,7 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsCommand;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsManager;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -19,6 +20,8 @@ public class PluginTemplatePlugin extends JavaPlugin {
 
         backroomsManager = new BackroomsManager();
         backroomsManager.loadOrCreateWorld();
+
+        getServer().getPluginManager().registerEvents(new BackroomsListener(backroomsManager), this);
 
         BackroomsCommand backroomsCommand = new BackroomsCommand(backroomsManager);
         getCommand("backrooms").setExecutor(backroomsCommand);
