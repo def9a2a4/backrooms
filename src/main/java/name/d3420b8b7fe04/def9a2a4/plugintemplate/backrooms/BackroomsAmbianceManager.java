@@ -3,6 +3,8 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
@@ -63,9 +65,11 @@ public class BackroomsAmbianceManager {
         ambientSounds = new ArrayList<>();
         if (soundsCfg != null && soundsCfg.contains("sounds")) {
             for (String name : soundsCfg.getStringList("sounds")) {
-                try {
-                    ambientSounds.add(Sound.valueOf(name));
-                } catch (IllegalArgumentException e) {
+                String key = name.toLowerCase(java.util.Locale.ROOT).replace('_', '.');
+                Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(key));
+                if (sound != null) {
+                    ambientSounds.add(sound);
+                } else {
                     plugin.getLogger().warning("Unknown sound in config: " + name);
                 }
             }

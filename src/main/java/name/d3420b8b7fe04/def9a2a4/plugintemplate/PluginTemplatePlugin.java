@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsAmbianceManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsCommand;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsManager;
@@ -12,6 +13,7 @@ public class PluginTemplatePlugin extends JavaPlugin {
     private static final int BSTATS_ID = 00000;
 
     private BackroomsManager backroomsManager;
+    private BackroomsAmbianceManager ambianceManager;
 
     @Override
     public void onEnable() {
@@ -20,6 +22,9 @@ public class PluginTemplatePlugin extends JavaPlugin {
 
         backroomsManager = new BackroomsManager();
         backroomsManager.loadOrCreateWorld();
+
+        ambianceManager = new BackroomsAmbianceManager(this, backroomsManager);
+        ambianceManager.start();
 
         getServer().getPluginManager().registerEvents(new BackroomsListener(backroomsManager), this);
 
@@ -32,6 +37,7 @@ public class PluginTemplatePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        ambianceManager.stop();
         backroomsManager.unloadWorld();
         getLogger().info("PluginTemplate disabled.");
     }

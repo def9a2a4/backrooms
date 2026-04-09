@@ -1,2 +1,29 @@
 settings:
   example_option: true
+
+backrooms:
+  ambient_sounds:
+    enabled: true
+    check_interval_seconds: 5
+    chance: 0.3
+    sounds:
+      - AMBIENT_CAVE
+      - AMBIENT_WARPED_FOREST_MOOD
+      - AMBIENT_CRIMSON_FOREST_MOOD
+      - AMBIENT_NETHER_WASTES_MOOD
+      - AMBIENT_BASALT_DELTAS_MOOD
+
+  light_blink:
+    enabled: true
+    check_interval_seconds: 30
+    chance: 0.15
+    radius: 20
+    cycles: 4
+    toggle_delay_ticks: 5
+
+  blackout:
+    enabled: true
+    check_interval_seconds: 120
+    chance: 0.05
+    radius: 30
+    duration_seconds: 15
