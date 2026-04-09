@@ -1,0 +1,27 @@
+name: PluginTemplate
+main: name.d3420b8b7fe04.def9a2a4.plugintemplate.PluginTemplatePlugin
+version: ${version}
+api-version: 1.21
+author: You
+description: A Paper plugin.
+
+commands:
+  plugintemplate:
+    description: PluginTemplate commands
+    usage: /plugintemplate <reload|help>
+    permission: plugintemplate.admin
+  backrooms:
+    description: Enter or leave the Backrooms
+    usage: /backrooms [leave]
+    permission: backrooms.use
+
+permissions:
+  plugintemplate.admin:
+    description: Allows access to all PluginTemplate commands
+    default: op
+  plugintemplate.reload:
+    description: Allows reloading the config
+    default: op
+  backrooms.use:
+    description: Allows entering and leaving the Backrooms
+    default: true

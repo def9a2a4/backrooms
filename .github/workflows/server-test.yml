@@ -1,0 +1,48 @@
+name: Server Integration Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        minecraft: ['1.21.11']
+        server: ['paper']
+
+    name: ${{ matrix.server }} ${{ matrix.minecraft }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build plugin
+        run: make build
+
+      - name: Download server
+        run: make test-server-download-all SERVER_VARIANT=${{ matrix.server }} MINECRAFT_VERSION=${{ matrix.minecraft }}
+
+      - name: Setup test server
+        run: make test-server-setup
+
+      - name: Start server and verify plugin loads
+        run: make test-server-ci MINECRAFT_VERSION=${{ matrix.minecraft }}
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.server }}-${{ matrix.minecraft }}
+          path: |
+            test-server/server.log
+            test-server/errors.log
