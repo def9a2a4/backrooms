@@ -27,9 +27,9 @@ public class Level2ChunkGenerator extends ChunkGenerator {
     private static final int CEILING_MIN_Y = 13;
     private static final int CEILING_MAX_Y = 20;
 
-    private static final double CORRIDOR_SCALE = 1.0 / 24.0;
+    private static final double CORRIDOR_SCALE = 1.0 / 48.0;
     private static final double PIPE_SCALE = 1.0 / 12.0;
-    private static final double ROOM_SCALE = 1.0 / 80.0;
+    private static final double ROOM_SCALE = 1.0 / 120.0;
 
     private static final Material[] PIPE_MATERIALS = {
             Material.COPPER_BLOCK, Material.EXPOSED_COPPER, Material.WEATHERED_COPPER,
@@ -61,8 +61,8 @@ public class Level2ChunkGenerator extends ChunkGenerator {
                 int worldZ = chunkZ * 16 + z;
 
                 // Two perpendicular corridor networks
-                double corridorX = SimplexNoise.noise2(seed, worldX * CORRIDOR_SCALE, worldZ * CORRIDOR_SCALE * 0.3);
-                double corridorZ = SimplexNoise.noise2(seed + 100, worldX * CORRIDOR_SCALE * 0.3, worldZ * CORRIDOR_SCALE);
+                double corridorX = SimplexNoise.noise2(seed, worldX * CORRIDOR_SCALE, worldZ * CORRIDOR_SCALE * 0.15);
+                double corridorZ = SimplexNoise.noise2(seed + 100, worldX * CORRIDOR_SCALE * 0.15, worldZ * CORRIDOR_SCALE);
                 double room = SimplexNoise.noise2(seed + 200, worldX * ROOM_SCALE, worldZ * ROOM_SCALE);
 
                 boolean isOpen = false;

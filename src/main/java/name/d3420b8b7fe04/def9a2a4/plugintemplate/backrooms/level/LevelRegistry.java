@@ -3,6 +3,7 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
+import org.bukkit.entity.EnderDragon;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -66,6 +67,7 @@ public class LevelRegistry {
             World world = creator.createWorld();
             if (world != null) {
                 level.configureWorld(world);
+                cleanEndFeatures(world);
                 worldToLevel.put(world, level);
                 levelToWorld.put(level.getId(), world);
                 logger.info("Loaded backrooms level: " + level.getId() + " (world: " + worldName + ")");
@@ -117,6 +119,7 @@ public class LevelRegistry {
         World newWorld = creator.createWorld();
         if (newWorld != null) {
             level.configureWorld(newWorld);
+            cleanEndFeatures(newWorld);
             worldToLevel.put(newWorld, level);
             levelToWorld.put(levelId, newWorld);
         }
@@ -125,6 +128,14 @@ public class LevelRegistry {
     public void regenerateAll() {
         for (String levelId : levels.keySet()) {
             regenerateLevel(levelId);
+        }
+    }
+
+    private void cleanEndFeatures(World world) {
+        if (world.getEnvironment() != World.Environment.THE_END) return;
+        // Remove all ender dragons
+        for (EnderDragon dragon : world.getEntitiesByClass(EnderDragon.class)) {
+            dragon.remove();
         }
     }
 

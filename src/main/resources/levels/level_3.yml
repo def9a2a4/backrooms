@@ -7,7 +7,7 @@ enter_message: "§c[ERR] §7Unauthorized access detected."
 events:
   - ambient_sound
   - light_blink
-  - fake_chat_message
+  - inventory_glitch
 
 entities: []
 
@@ -26,14 +26,9 @@ event_config:
     radius: 15
     cycles: 6
     toggle_delay_ticks: 3
-  fake_chat_message:
+  inventory_glitch:
     enabled: true
-    check_interval_seconds: 45
-    chance: 0.15
-    messages:
-      - "§7[Server] §fRunning garbage collection..."
-      - "§c[ERR] §fEntity tick overflow at region r.0.0.mca"
-      - "§e[WARN] §fChunk data corrupted — attempting recovery"
-      - "§7> kill @e[type=Herobrine]"
-      - "§7> gamerule showDeathMessages false"
-      - "§c[FATAL] §fWorldGen seed mismatch"
+    check_interval_seconds: 60
+    chance: 0.1
+    swap_count: 3
+    restore_delay_ticks: 40

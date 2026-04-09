@@ -25,3 +25,9 @@ event_config:
     chance: 0.6
     delay_ticks: 15
     offset_blocks: 12
+  torch_decay:
+    enabled: true
+    check_interval_seconds: 90
+    chance: 0.4
+    radius: 20
+    extinguish_chance: 0.3
