@@ -1,0 +1,34 @@
+id: level_2
+display_name: "The Pipe Works"
+generator: level_2
+environment: THE_END
+enter_message: "§7The pipes groan."
+
+events:
+  - ambient_sound
+  - blackout
+  - footstep_echo
+
+entities: []
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 6
+    chance: 0.25
+    sounds:
+      - AMBIENT_CAVE
+      - AMBIENT_NETHER_WASTES_MOOD
+      - AMBIENT_BASALT_DELTAS_MOOD
+  blackout:
+    enabled: true
+    check_interval_seconds: 90
+    chance: 0.08
+    radius: 25
+    duration_seconds: 10
+  footstep_echo:
+    enabled: true
+    check_interval_seconds: 4
+    chance: 0.3
+    delay_ticks: 6
+    offset_blocks: 4

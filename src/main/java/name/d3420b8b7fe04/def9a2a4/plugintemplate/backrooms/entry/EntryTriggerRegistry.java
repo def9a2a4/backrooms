@@ -13,6 +13,10 @@ public class EntryTriggerRegistry {
         triggers.put(trigger.getId(), trigger);
     }
 
+    public EntryTrigger get(String id) {
+        return triggers.get(id);
+    }
+
     public Collection<EntryTrigger> getAll() {
         return Collections.unmodifiableCollection(triggers.values());
     }

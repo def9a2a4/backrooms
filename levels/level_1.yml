@@ -1,0 +1,26 @@
+id: level_1
+display_name: "The Habitable Zone"
+generator: level_1
+environment: THE_END
+enter_message: "§7Something drips in the distance."
+
+events:
+  - ambient_sound
+  - footstep_echo
+
+entities: []
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 8
+    chance: 0.2
+    sounds:
+      - AMBIENT_CAVE
+      - AMBIENT_BASALT_DELTAS_MOOD
+  footstep_echo:
+    enabled: true
+    check_interval_seconds: 3
+    chance: 0.5
+    delay_ticks: 12
+    offset_blocks: 8

@@ -66,6 +66,14 @@ public class BackroomsPlayerState {
         this.totalTicksInBackrooms += ticks;
     }
 
+    public void setTotalTicksInBackrooms(long ticks) {
+        this.totalTicksInBackrooms = ticks;
+    }
+
+    public static int[] getEscalationThresholds() {
+        return escalationThresholds;
+    }
+
     public Set<String> getLevelsVisited() {
         return levelsVisited;
     }

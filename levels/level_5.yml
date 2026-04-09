@@ -1,0 +1,26 @@
+id: level_5
+display_name: "Disc 11"
+generator: level_5
+environment: THE_END
+enter_message: "§8You hear footsteps."
+
+events:
+  - ambient_sound
+  - footstep_echo
+
+entities: []
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 8
+    chance: 0.2
+    sounds:
+      - AMBIENT_CAVE
+      - AMBIENT_CRIMSON_FOREST_MOOD
+  footstep_echo:
+    enabled: true
+    check_interval_seconds: 2
+    chance: 0.6
+    delay_ticks: 15
+    offset_blocks: 12

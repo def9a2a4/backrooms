@@ -136,6 +136,14 @@ public class EntitySpawner {
         return new Location(base.getWorld(), x, base.getY(), z);
     }
 
+    public EntityHandle spawnFor(Player player, BackroomsEntity entity) {
+        Location spawnLoc = findSpawnLocation(player);
+        if (spawnLoc == null) return null;
+        EntityHandle handle = entity.spawn(spawnLoc, player);
+        if (handle != null) activeEntities.add(handle);
+        return handle;
+    }
+
     public List<EntityHandle> getActiveEntities() {
         return activeEntities;
     }

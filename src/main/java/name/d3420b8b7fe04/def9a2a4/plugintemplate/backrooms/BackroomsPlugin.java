@@ -14,16 +14,20 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.EventRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.EventScheduler;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.impl.*;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.impl.Level0;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +35,7 @@ import java.util.Set;
 public class BackroomsPlugin {
 
     private final JavaPlugin plugin;
+    private final GeneratorRegistry generatorRegistry;
     private final LevelRegistry levelRegistry;
     private final EventRegistry eventRegistry;
     private final EntryTriggerRegistry entryTriggerRegistry;
@@ -45,6 +50,7 @@ public class BackroomsPlugin {
 
     public BackroomsPlugin(JavaPlugin plugin) {
         this.plugin = plugin;
+        this.generatorRegistry = new GeneratorRegistry();
         this.levelRegistry = new LevelRegistry(plugin.getLogger());
         this.eventRegistry = new EventRegistry();
         this.entryTriggerRegistry = new EntryTriggerRegistry();
@@ -58,14 +64,16 @@ public class BackroomsPlugin {
     }
 
     public void enable() {
-        // 1. Register built-in events
+        // 1. Register generators (code — these define terrain)
+        generatorRegistry.registerDefaults();
+
+        // 2. Register built-in events
         AmbientSoundEvent ambientSound = new AmbientSoundEvent();
         LightBlinkEvent lightBlink = new LightBlinkEvent();
         BlackoutEvent blackout = new BlackoutEvent();
         FakeChatMessageEvent fakeChat = new FakeChatMessageEvent();
         FootstepEchoEvent footstepEcho = new FootstepEchoEvent();
 
-        // Wire event scheduler into light events
         lightBlink.setEventScheduler(eventScheduler);
         blackout.setEventScheduler(eventScheduler);
 
@@ -75,7 +83,7 @@ public class BackroomsPlugin {
         eventRegistry.register(fakeChat);
         eventRegistry.register(footstepEcho);
 
-        // 2. Register built-in entry triggers
+        // 3. Register built-in entry triggers
         SuffocationEntry suffocation = new SuffocationEntry(plugin);
         VoidFallEntry voidFall = new VoidFallEntry(plugin);
         BedAnomalyEntry bedAnomaly = new BedAnomalyEntry(plugin);
@@ -86,10 +94,7 @@ public class BackroomsPlugin {
         entryTriggerRegistry.register(bedAnomaly);
         entryTriggerRegistry.register(portalMislink);
 
-        // 3. Register levels
-        levelRegistry.register(new Level0(this));
-
-        // 4. Load config
+        // 4. Load config — creates levels from config using generator registry
         loadConfig();
 
         // 5. Init events
@@ -111,7 +116,8 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
 
         // 9. Register commands
-        BackroomsCommand command = new BackroomsCommand(levelRegistry, playerStateManager, transitionManager);
+        BackroomsCommand command = new BackroomsCommand(levelRegistry, playerStateManager, transitionManager,
+                eventRegistry, entityRegistry, entryTriggerRegistry, entitySpawner, generatorRegistry);
         plugin.getCommand("backrooms").setExecutor(command);
         plugin.getCommand("backrooms").setTabCompleter(command);
 
@@ -131,7 +137,6 @@ public class BackroomsPlugin {
         entitySpawner.stop();
         transitionManager.stop();
 
-        // Restore lights before unloading
         for (BackroomsEvent event : eventRegistry.getAll()) {
             event.shutdown();
         }
@@ -168,12 +173,52 @@ public class BackroomsPlugin {
             }
         }
 
-        // Load per-level event config
-        for (var level : levelRegistry.getAll()) {
-            ConfigurationSection levelCfg = cfg.getConfigurationSection(level.getId());
-            if (levelCfg == null) continue;
+        // Load levels from levels/ folder — each .yml file defines one level
+        loadLevels();
+    }
 
-            ConfigurationSection eventsCfg = levelCfg.getConfigurationSection("events");
+    private void loadLevels() {
+        File levelsDir = new File(plugin.getDataFolder(), "levels");
+        if (!levelsDir.exists()) {
+            // Fall back: look in project root levels/ folder (dev mode)
+            levelsDir = new File(plugin.getDataFolder().getParentFile().getParentFile(), "levels");
+        }
+        if (!levelsDir.exists() || !levelsDir.isDirectory()) {
+            plugin.getLogger().warning("No levels/ directory found — no levels loaded.");
+            return;
+        }
+
+        File[] levelFiles = levelsDir.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (levelFiles == null || levelFiles.length == 0) {
+            plugin.getLogger().warning("No .yml files found in levels/ — no levels loaded.");
+            return;
+        }
+
+        // Sort by filename for deterministic load order
+        Arrays.sort(levelFiles);
+
+        for (File levelFile : levelFiles) {
+            YamlConfiguration levelCfg = YamlConfiguration.loadConfiguration(levelFile);
+
+            String levelId = levelCfg.getString("id");
+            if (levelId == null || levelId.isEmpty()) {
+                plugin.getLogger().warning("Level file " + levelFile.getName() + " missing 'id' — skipping.");
+                continue;
+            }
+
+            String generatorId = levelCfg.getString("generator", levelId);
+            if (!generatorRegistry.has(generatorId)) {
+                plugin.getLogger().warning("No generator '" + generatorId
+                        + "' for level " + levelId + " (" + levelFile.getName() + ") — skipping.");
+                continue;
+            }
+
+            ConfigDrivenLevel level = new ConfigDrivenLevel(this, levelId, generatorId, generatorRegistry);
+            level.loadFromConfig(levelCfg);
+            levelRegistry.register(level);
+
+            // Load per-level event config
+            ConfigurationSection eventsCfg = levelCfg.getConfigurationSection("event_config");
             if (eventsCfg != null) {
                 for (String eventId : level.getEventIds()) {
                     BackroomsEvent event = eventRegistry.get(eventId);
@@ -182,11 +227,15 @@ public class BackroomsPlugin {
                     }
                 }
             }
+
+            plugin.getLogger().info("Loaded level: " + levelId + " (" + level.getDisplayName()
+                    + ") from " + levelFile.getName());
         }
     }
 
-    // Accessors for other components
+    // Accessors
     public JavaPlugin getJavaPlugin() { return plugin; }
+    public GeneratorRegistry getGeneratorRegistry() { return generatorRegistry; }
     public LevelRegistry getLevelRegistry() { return levelRegistry; }
     public EventRegistry getEventRegistry() { return eventRegistry; }
     public EntryTriggerRegistry getEntryTriggerRegistry() { return entryTriggerRegistry; }

@@ -1,0 +1,18 @@
+id: level_37
+display_name: "The Poolrooms"
+generator: level_37
+environment: THE_END
+enter_message: "§bYou can rest here."
+
+events:
+  - ambient_sound
+
+entities: []
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 20
+    chance: 0.1
+    sounds:
+      - AMBIENT_UNDERWATER_LOOP

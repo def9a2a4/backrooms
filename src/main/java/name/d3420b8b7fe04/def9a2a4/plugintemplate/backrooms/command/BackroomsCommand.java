@@ -1,6 +1,15 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityHandle;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntitySpawner;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.EntryTrigger;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.EntryTriggerRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.BackroomsEvent;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.EventRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
@@ -13,6 +22,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class BackroomsCommand implements CommandExecutor, TabCompleter {
@@ -20,12 +30,24 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
     private final LevelRegistry levelRegistry;
     private final PlayerStateManager playerStateManager;
     private final TransitionManager transitionManager;
+    private final EventRegistry eventRegistry;
+    private final EntityRegistry entityRegistry;
+    private final EntryTriggerRegistry entryTriggerRegistry;
+    private final EntitySpawner entitySpawner;
+    private final GeneratorRegistry generatorRegistry;
 
     public BackroomsCommand(LevelRegistry levelRegistry, PlayerStateManager playerStateManager,
-                            TransitionManager transitionManager) {
+                            TransitionManager transitionManager, EventRegistry eventRegistry,
+                            EntityRegistry entityRegistry, EntryTriggerRegistry entryTriggerRegistry,
+                            EntitySpawner entitySpawner, GeneratorRegistry generatorRegistry) {
         this.levelRegistry = levelRegistry;
         this.playerStateManager = playerStateManager;
         this.transitionManager = transitionManager;
+        this.eventRegistry = eventRegistry;
+        this.entityRegistry = entityRegistry;
+        this.entryTriggerRegistry = entryTriggerRegistry;
+        this.entitySpawner = entitySpawner;
+        this.generatorRegistry = generatorRegistry;
     }
 
     @Override
@@ -50,8 +72,39 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
             }
             case "regenerate" -> handleRegenerate(player, args.length > 1 ? args[1] : null);
             case "status" -> handleStatus(player);
+            case "event" -> {
+                if (args.length < 2) {
+                    player.sendMessage("Usage: /backrooms event <event_id>");
+                    yield true;
+                }
+                yield handleEvent(player, args[1]);
+            }
+            case "spawn" -> {
+                if (args.length < 2) {
+                    player.sendMessage("Usage: /backrooms spawn <entity_id>");
+                    yield true;
+                }
+                yield handleSpawn(player, args[1]);
+            }
+            case "despawn" -> handleDespawn(player);
+            case "enter" -> {
+                if (args.length < 2) {
+                    player.sendMessage("Usage: /backrooms enter <trigger_id>");
+                    yield true;
+                }
+                yield handleTriggerEntry(player, args[1]);
+            }
+            case "escalation" -> {
+                if (args.length < 2) {
+                    player.sendMessage("Usage: /backrooms escalation <level>");
+                    yield true;
+                }
+                yield handleEscalation(player, args[1]);
+            }
+            case "reset" -> handleReset(player);
+            case "list" -> handleList(player, args.length > 1 ? args[1] : null);
             default -> {
-                player.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status");
+                player.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status, event, spawn, despawn, enter, escalation, reset, list");
                 yield true;
             }
         };
@@ -59,7 +112,6 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleEnter(Player player, String levelId) {
         if (levelRegistry.isBackroomsWorld(player.getWorld())) {
-            // Already in backrooms - goto a specific level
             if (!player.hasPermission("backrooms.admin") && !player.isOp()) {
                 player.sendMessage("You are already in the Backrooms.");
                 return true;
@@ -154,21 +206,272 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    // --- Admin/debug subcommands ---
+
+    private boolean requireAdmin(Player player) {
+        if (!player.hasPermission("backrooms.admin") && !player.isOp()) {
+            player.sendMessage("You don't have permission to use this command.");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean handleEvent(Player player, String eventId) {
+        if (!requireAdmin(player)) return true;
+
+        if (!levelRegistry.isBackroomsWorld(player.getWorld())) {
+            player.sendMessage("You must be in the Backrooms to trigger an event.");
+            return true;
+        }
+
+        BackroomsEvent event = eventRegistry.get(eventId);
+        if (event == null) {
+            player.sendMessage("Unknown event: " + eventId);
+            return true;
+        }
+
+        BackroomsPlayerState state = playerStateManager.getOrCreate(player);
+        event.trigger(player, state);
+        player.sendMessage("Triggered event: " + eventId);
+        return true;
+    }
+
+    private boolean handleSpawn(Player player, String entityId) {
+        if (!requireAdmin(player)) return true;
+
+        if (!levelRegistry.isBackroomsWorld(player.getWorld())) {
+            player.sendMessage("You must be in the Backrooms to spawn an entity.");
+            return true;
+        }
+
+        BackroomsEntity entity = entityRegistry.get(entityId);
+        if (entity == null) {
+            player.sendMessage("Unknown entity: " + entityId);
+            return true;
+        }
+
+        EntityHandle handle = entitySpawner.spawnFor(player, entity);
+        if (handle == null) {
+            player.sendMessage("Failed to spawn entity: " + entityId);
+            return true;
+        }
+
+        player.sendMessage("Spawned entity: " + entityId);
+        return true;
+    }
+
+    private boolean handleDespawn(Player player) {
+        if (!requireAdmin(player)) return true;
+
+        int count = 0;
+        Iterator<EntityHandle> iter = entitySpawner.getActiveEntities().iterator();
+        while (iter.hasNext()) {
+            EntityHandle handle = iter.next();
+            if (handle.targetPlayerUuid().equals(player.getUniqueId())) {
+                BackroomsEntity type = entityRegistry.get(handle.entityId());
+                if (type != null) type.despawn(handle);
+                iter.remove();
+                count++;
+            }
+        }
+        player.sendMessage("Despawned " + count + " entity/entities.");
+        return true;
+    }
+
+    private boolean handleTriggerEntry(Player player, String triggerId) {
+        if (!requireAdmin(player)) return true;
+
+        if (levelRegistry.isBackroomsWorld(player.getWorld())) {
+            player.sendMessage("You are already in the Backrooms. Use /backrooms goto <level> instead.");
+            return true;
+        }
+
+        EntryTrigger trigger = entryTriggerRegistry.get(triggerId);
+        if (trigger == null) {
+            player.sendMessage("Unknown entry trigger: " + triggerId);
+            return true;
+        }
+
+        BackroomsPlayerState state = playerStateManager.getOrCreate(player);
+        state.setReturnLocation(player.getLocation());
+
+        String targetLevel = "level_0";
+        trigger.playEntrySequence(player, () ->
+                transitionManager.enterBackrooms(player, state, targetLevel));
+        player.sendMessage("Playing entry sequence: " + triggerId);
+        return true;
+    }
+
+    private boolean handleEscalation(Player player, String levelStr) {
+        if (!requireAdmin(player)) return true;
+
+        int targetLevel;
+        try {
+            targetLevel = Integer.parseInt(levelStr);
+        } catch (NumberFormatException e) {
+            player.sendMessage("Escalation level must be a number.");
+            return true;
+        }
+
+        if (targetLevel < 0) {
+            player.sendMessage("Escalation level must be >= 0.");
+            return true;
+        }
+
+        BackroomsPlayerState state = playerStateManager.getOrCreate(player);
+
+        if (targetLevel == 0) {
+            state.setTotalTicksInBackrooms(0);
+        } else {
+            int[] thresholds = BackroomsPlayerState.getEscalationThresholds();
+            if (targetLevel > thresholds.length) {
+                player.sendMessage("Max escalation level is " + thresholds.length + ".");
+                return true;
+            }
+            long ticks = (long) thresholds[targetLevel - 1] * 20 * 60;
+            state.setTotalTicksInBackrooms(ticks);
+        }
+
+        player.sendMessage("Escalation set to " + state.getEscalationLevel() + ".");
+        return true;
+    }
+
+    private boolean handleReset(Player player) {
+        if (!requireAdmin(player)) return true;
+
+        BackroomsPlayerState state = playerStateManager.getOrCreate(player);
+
+        if (levelRegistry.isBackroomsWorld(player.getWorld())) {
+            BackroomsLevel currentLevel = levelRegistry.getByWorld(player.getWorld());
+            transitionManager.returnToOverworld(player, state, currentLevel);
+        }
+
+        state.clear();
+        player.sendMessage("Player state has been reset.");
+        return true;
+    }
+
+    private boolean handleList(Player player, String category) {
+        if (!requireAdmin(player)) return true;
+
+        if (category == null) {
+            player.sendMessage("--- Backrooms Registries ---");
+            player.sendMessage("Levels: " + levelRegistry.getAll().size());
+            player.sendMessage("Events: " + eventRegistry.getAll().size());
+            player.sendMessage("Entities: " + entityRegistry.getAll().size());
+            player.sendMessage("Entry triggers: " + entryTriggerRegistry.getAll().size());
+            player.sendMessage("Generators: " + generatorRegistry.getIds().size());
+            player.sendMessage("Use /backrooms list <category> for details.");
+            return true;
+        }
+
+        switch (category.toLowerCase()) {
+            case "levels" -> {
+                player.sendMessage("--- Levels ---");
+                for (BackroomsLevel level : levelRegistry.getAll()) {
+                    player.sendMessage("  " + level.getId() + " - " + level.getDisplayName());
+                }
+            }
+            case "events" -> {
+                player.sendMessage("--- Events ---");
+                for (BackroomsEvent event : eventRegistry.getAll()) {
+                    player.sendMessage("  " + event.getId());
+                }
+            }
+            case "entities" -> {
+                player.sendMessage("--- Entities ---");
+                for (BackroomsEntity entity : entityRegistry.getAll()) {
+                    player.sendMessage("  " + entity.getId());
+                }
+            }
+            case "triggers" -> {
+                player.sendMessage("--- Entry Triggers ---");
+                for (EntryTrigger trigger : entryTriggerRegistry.getAll()) {
+                    player.sendMessage("  " + trigger.getId());
+                }
+            }
+            case "generators" -> {
+                player.sendMessage("--- Generators ---");
+                for (String id : generatorRegistry.getIds()) {
+                    player.sendMessage("  " + id);
+                }
+            }
+            default -> player.sendMessage("Unknown category. Use: levels, events, entities, triggers, generators");
+        }
+        return true;
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 1) {
-            return List.of("leave", "goto", "regenerate", "status");
+            List<String> subs = new ArrayList<>(List.of("leave", "goto", "regenerate", "status"));
+            if (sender.hasPermission("backrooms.admin") || sender.isOp()) {
+                subs.addAll(List.of("event", "spawn", "despawn", "enter", "escalation", "reset", "list"));
+            }
+            return filterStartsWith(subs, args[0]);
         }
-        if (args.length == 2 && ("goto".equalsIgnoreCase(args[0]) || "regenerate".equalsIgnoreCase(args[0]))) {
-            List<String> levels = new ArrayList<>();
-            if ("regenerate".equalsIgnoreCase(args[0])) {
-                levels.add("all");
-            }
-            for (BackroomsLevel level : levelRegistry.getAll()) {
-                levels.add(level.getId());
-            }
-            return levels;
+
+        if (args.length == 2) {
+            return switch (args[0].toLowerCase()) {
+                case "goto" -> filterStartsWith(levelIds(), args[1]);
+                case "regenerate" -> {
+                    List<String> opts = new ArrayList<>();
+                    opts.add("all");
+                    opts.addAll(levelIds());
+                    yield filterStartsWith(opts, args[1]);
+                }
+                case "event" -> filterStartsWith(eventIds(), args[1]);
+                case "spawn" -> filterStartsWith(entityIds(), args[1]);
+                case "enter" -> filterStartsWith(triggerIds(), args[1]);
+                case "escalation" -> filterStartsWith(List.of("0", "1", "2", "3", "4", "5"), args[1]);
+                case "list" -> filterStartsWith(
+                        List.of("levels", "events", "entities", "triggers", "generators"), args[1]);
+                default -> List.of();
+            };
         }
         return List.of();
+    }
+
+    private List<String> levelIds() {
+        List<String> ids = new ArrayList<>();
+        for (BackroomsLevel level : levelRegistry.getAll()) {
+            ids.add(level.getId());
+        }
+        return ids;
+    }
+
+    private List<String> eventIds() {
+        List<String> ids = new ArrayList<>();
+        for (BackroomsEvent event : eventRegistry.getAll()) {
+            ids.add(event.getId());
+        }
+        return ids;
+    }
+
+    private List<String> entityIds() {
+        List<String> ids = new ArrayList<>();
+        for (BackroomsEntity entity : entityRegistry.getAll()) {
+            ids.add(entity.getId());
+        }
+        return ids;
+    }
+
+    private List<String> triggerIds() {
+        List<String> ids = new ArrayList<>();
+        for (EntryTrigger trigger : entryTriggerRegistry.getAll()) {
+            ids.add(trigger.getId());
+        }
+        return ids;
+    }
+
+    private static List<String> filterStartsWith(List<String> options, String prefix) {
+        String lower = prefix.toLowerCase();
+        List<String> filtered = new ArrayList<>();
+        for (String option : options) {
+            if (option.toLowerCase().startsWith(lower)) {
+                filtered.add(option);
+            }
+        }
+        return filtered;
     }
 }

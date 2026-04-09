@@ -12,7 +12,7 @@ commands:
     permission: plugintemplate.admin
   backrooms:
     description: Backrooms dimension commands
-    usage: /backrooms [leave|goto <level>|regenerate [level|all]|status]
+    usage: /backrooms [leave|goto|regenerate|status|event|spawn|despawn|enter|escalation|reset|list]
     permission: backrooms.use
 
 permissions:

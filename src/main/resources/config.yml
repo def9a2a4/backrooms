@@ -2,10 +2,6 @@ settings:
   example_option: true
 
 backrooms:
-  # Enabled levels in order of progression
-  levels:
-    - level_0
-
   # Entry triggers (overworld -> backrooms)
   entry:
     enabled_worlds:
@@ -23,40 +19,6 @@ backrooms:
     portal_mislink:
       enabled: true
       chance: 0.01
-
-  # Level 0: The Lobby
-  level_0:
-    display_name: "The Lobby"
-    events:
-      ambient_sound:
-        enabled: true
-        check_interval_seconds: 5
-        chance: 0.3
-        sounds:
-          - AMBIENT_CAVE
-          - AMBIENT_WARPED_FOREST_MOOD
-          - AMBIENT_CRIMSON_FOREST_MOOD
-          - AMBIENT_NETHER_WASTES_MOOD
-          - AMBIENT_BASALT_DELTAS_MOOD
-      light_blink:
-        enabled: true
-        check_interval_seconds: 30
-        chance: 0.15
-        radius: 20
-        cycles: 4
-        toggle_delay_ticks: 5
-      blackout:
-        enabled: true
-        check_interval_seconds: 120
-        chance: 0.05
-        radius: 30
-        duration_seconds: 15
-      footstep_echo:
-        enabled: true
-        check_interval_seconds: 3
-        chance: 0.4
-        delay_ticks: 8
-        offset_blocks: 5
 
   # Player settings
   player:

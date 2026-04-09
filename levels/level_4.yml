@@ -1,0 +1,29 @@
+id: level_4
+display_name: "The Far Lands"
+generator: level_4
+environment: NORMAL
+fixed_time: 12500
+enter_message: "§6[ERR]: java.math.IntergerOverflowError"
+
+events:
+  - ambient_sound
+  - fake_chat_message
+
+entities: []
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 10
+    chance: 0.15
+    sounds:
+      - AMBIENT_CAVE
+  fake_chat_message:
+    enabled: true
+    check_interval_seconds: 60
+    chance: 0.1
+    messages:
+      - "§7Saving chunks..."
+      - "§e[WARN] Player position desynchronized"
+      - "§7Herobrine joined the game"
+      - "§7Herobrine left the game"

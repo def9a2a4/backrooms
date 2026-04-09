@@ -1,0 +1,44 @@
+id: level_0
+display_name: "The Lobby"
+generator: level_0
+environment: THE_END
+enter_message: "§7§kxx§r §7You have entered the §fBack§kr§rooms§7. §7§kxx"
+
+events:
+  - ambient_sound
+  - light_blink
+  - blackout
+  - footstep_echo
+
+entities: []
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 5
+    chance: 0.3
+    sounds:
+      - AMBIENT_CAVE
+      - AMBIENT_WARPED_FOREST_MOOD
+      - AMBIENT_CRIMSON_FOREST_MOOD
+      - AMBIENT_NETHER_WASTES_MOOD
+      - AMBIENT_BASALT_DELTAS_MOOD
+  light_blink:
+    enabled: true
+    check_interval_seconds: 30
+    chance: 0.15
+    radius: 20
+    cycles: 4
+    toggle_delay_ticks: 5
+  blackout:
+    enabled: true
+    check_interval_seconds: 120
+    chance: 0.05
+    radius: 30
+    duration_seconds: 15
+  footstep_echo:
+    enabled: true
+    check_interval_seconds: 3
+    chance: 0.4
+    delay_ticks: 8
+    offset_blocks: 5
