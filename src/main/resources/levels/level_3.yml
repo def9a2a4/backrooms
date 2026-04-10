@@ -1,7 +1,8 @@
 id: level_3
 display_name: "The Server Room"
 generator: level_3
-environment: THE_END
+environment: NETHER
+dimension_type: dark
 enter_message: "§c[ERR] §7Unauthorized access detected."
 
 events:

@@ -20,6 +20,7 @@ public class LevelRegistry {
     private final Map<String, World> levelToWorld = new HashMap<>();
     private final Logger logger;
     private DatapackInstaller datapackInstaller;
+    private DimensionTypeHelper dimensionTypeHelper;
 
     public LevelRegistry(Logger logger) {
         this.logger = logger;
@@ -27,6 +28,10 @@ public class LevelRegistry {
 
     public void setDatapackInstaller(DatapackInstaller datapackInstaller) {
         this.datapackInstaller = datapackInstaller;
+    }
+
+    public void setDimensionTypeHelper(DimensionTypeHelper dimensionTypeHelper) {
+        this.dimensionTypeHelper = dimensionTypeHelper;
     }
 
     public void register(BackroomsLevel level) {
@@ -61,10 +66,19 @@ public class LevelRegistry {
         return worldToLevel.containsKey(world);
     }
 
+    /**
+     * Install the fallback datapack to the main world.
+     * Should be called once before loadWorlds().
+     */
+    public void installDatapack() {
+        if (datapackInstaller != null) {
+            datapackInstaller.installToMainWorld();
+        }
+    }
+
     public void loadWorlds() {
         for (BackroomsLevel level : levels.values()) {
             String worldName = worldNameFor(level);
-            installDatapackIfNeeded(level, worldName);
 
             WorldCreator creator = new WorldCreator(worldName);
             creator.generator(level.createChunkGenerator());
@@ -74,6 +88,7 @@ public class LevelRegistry {
             World world = creator.createWorld();
             if (world != null) {
                 level.configureWorld(world);
+                applyDimensionType(level, world);
                 cleanEndFeatures(world);
                 worldToLevel.put(world, level);
                 levelToWorld.put(level.getId(), world);
@@ -118,8 +133,6 @@ public class LevelRegistry {
         }
 
         // Recreate
-        installDatapackIfNeeded(level, worldName);
-
         WorldCreator creator = new WorldCreator(worldName);
         creator.generator(level.createChunkGenerator());
         creator.environment(level.getEnvironment());
@@ -128,6 +141,7 @@ public class LevelRegistry {
         World newWorld = creator.createWorld();
         if (newWorld != null) {
             level.configureWorld(newWorld);
+            applyDimensionType(level, newWorld);
             cleanEndFeatures(newWorld);
             worldToLevel.put(newWorld, level);
             levelToWorld.put(levelId, newWorld);
@@ -140,28 +154,33 @@ public class LevelRegistry {
         }
     }
 
+    /**
+     * Apply the appropriate NMS dimension type to a world based on level config.
+     */
+    private void applyDimensionType(BackroomsLevel level, World world) {
+        if (dimensionTypeHelper == null) return;
+        if (!(level instanceof ConfigDrivenLevel cdl)) return;
+
+        String dimType = cdl.getDimensionType();
+        switch (dimType) {
+            case "dark" -> dimensionTypeHelper.applyDarkDimension(world);
+            case "light" -> dimensionTypeHelper.applyLightDimension(world);
+            // "default" — no NMS swap, use vanilla dimension type
+        }
+    }
+
     private void cleanEndFeatures(World world) {
         if (world.getEnvironment() != World.Environment.THE_END) return;
-        // Remove all ender dragons
         for (EnderDragon dragon : world.getEntitiesByClass(EnderDragon.class)) {
             dragon.remove();
         }
     }
 
     private String worldNameFor(BackroomsLevel level) {
-        // Level 0 keeps "backrooms" for backward compatibility
         if ("level_0".equals(level.getId())) {
             return "backrooms";
         }
         return "backrooms_" + level.getId();
-    }
-
-    private void installDatapackIfNeeded(BackroomsLevel level, String worldName) {
-        if (datapackInstaller != null
-                && level instanceof ConfigDrivenLevel cdl
-                && cdl.useDarkDimension()) {
-            datapackInstaller.installDatapack(worldName);
-        }
     }
 
     private void deleteDirectory(Path dir) {

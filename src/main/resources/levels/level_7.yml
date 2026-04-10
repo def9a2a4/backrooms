@@ -1,7 +1,8 @@
 id: level_7
 display_name: "The Corrupted Chunk"
 generator: level_7
-environment: THE_END
+environment: NETHER
+dimension_type: dark
 enter_message: "§4§k||§r §c[FATAL] WorldGen has encountered an unrecoverable error §4§k||"
 
 events:

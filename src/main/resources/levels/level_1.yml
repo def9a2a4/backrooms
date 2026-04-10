@@ -1,7 +1,8 @@
 id: level_1
 display_name: "The Habitable Zone"
 generator: level_1
-environment: THE_END
+environment: NETHER
+dimension_type: dark
 enter_message: "§7Something drips in the distance."
 
 events:

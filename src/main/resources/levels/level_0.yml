@@ -1,7 +1,8 @@
 id: level_0
 display_name: "The Lobby"
 generator: level_0
-environment: THE_END
+environment: NETHER
+dimension_type: dark
 enter_message: "§7§kxx§r §7You have entered the §fBack§kr§rooms§7. §7§kxx"
 
 events:

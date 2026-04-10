@@ -2,6 +2,7 @@ id: level_37
 display_name: "The Poolrooms"
 generator: level_37
 environment: NORMAL
+dimension_type: light
 fixed_time: 6000
 enter_message: "§bYou can rest here."
 

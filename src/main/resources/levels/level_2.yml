@@ -1,7 +1,8 @@
 id: level_2
 display_name: "The Pipe Works"
 generator: level_2
-environment: THE_END
+environment: NETHER
+dimension_type: dark
 enter_message: "§7The pipes groan."
 
 events:

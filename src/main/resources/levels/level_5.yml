@@ -1,7 +1,8 @@
 id: level_5
 display_name: "Disc 11"
 generator: level_5
-environment: THE_END
+environment: NETHER
+dimension_type: dark
 enter_message: "§8You hear footsteps."
 
 events:

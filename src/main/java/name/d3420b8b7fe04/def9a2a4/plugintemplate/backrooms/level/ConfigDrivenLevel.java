@@ -29,7 +29,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private List<String> entityIds;
     private String enterMessage;
     private long fixedTime;
-    private boolean useDarkDimension;
+    private String dimensionType;
     private final Map<String, ConfigurationSection> eventConfigs = new HashMap<>();
 
     public ConfigDrivenLevel(BackroomsPlugin plugin, String id, String generatorId,
@@ -46,7 +46,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
         this.entityIds = List.of();
         this.enterMessage = null;
         this.fixedTime = -1;
-        this.useDarkDimension = true;
+        this.dimensionType = "dark";
     }
 
     /**
@@ -86,7 +86,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
         this.entityIds = section.getStringList("entities");
         this.enterMessage = section.getString("enter_message", null);
         this.fixedTime = section.getLong("fixed_time", -1);
-        this.useDarkDimension = section.getBoolean("use_dark_dimension", true);
+        this.dimensionType = section.getString("dimension_type", "dark");
 
         ConfigurationSection eventsCfg = section.getConfigurationSection("event_config");
         if (eventsCfg != null) {
@@ -159,8 +159,8 @@ public class ConfigDrivenLevel extends AbstractLevel {
         }
     }
 
-    public boolean useDarkDimension() {
-        return useDarkDimension;
+    public String getDimensionType() {
+        return dimensionType;
     }
 
     public String getGeneratorId() {

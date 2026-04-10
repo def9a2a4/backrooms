@@ -1,6 +1,7 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -15,7 +16,7 @@ public class DatapackInstaller {
     private static final String DATAPACK_PREFIX = "datapack/backrooms_datapack/";
     private static final String[] DATAPACK_FILES = {
             "pack.mcmeta",
-            "data/backrooms/dimension_type/dark.json"
+            "data/minecraft/dimension_type/the_nether.json"
     };
 
     private final JavaPlugin plugin;
@@ -26,9 +27,18 @@ public class DatapackInstaller {
         this.logger = plugin.getLogger();
     }
 
-    public void installDatapack(String worldName) {
-        File worldDir = new File(Bukkit.getWorldContainer(), worldName);
-        File datapackDir = new File(worldDir, "datapacks/backrooms_datapack");
+    /**
+     * Install the backrooms datapack to the main world's datapacks folder.
+     * This overrides minecraft:the_nether as a fallback for dark levels
+     * when NMS dimension type swapping is unavailable.
+     */
+    public void installToMainWorld() {
+        World mainWorld = Bukkit.getWorlds().get(0);
+        if (mainWorld == null) {
+            logger.warning("Main world not available — cannot install datapack");
+            return;
+        }
+        File datapackDir = new File(mainWorld.getWorldFolder(), "datapacks/backrooms_datapack");
 
         for (String resource : DATAPACK_FILES) {
             File target = new File(datapackDir, resource);
@@ -43,5 +53,6 @@ public class DatapackInstaller {
                 logger.warning("Failed to install datapack resource " + resource + ": " + e.getMessage());
             }
         }
+        logger.info("Installed backrooms datapack to " + datapackDir.getAbsolutePath());
     }
 }
