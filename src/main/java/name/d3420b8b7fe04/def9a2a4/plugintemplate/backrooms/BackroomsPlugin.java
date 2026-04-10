@@ -55,6 +55,7 @@ public class BackroomsPlugin {
     private final EntryManager entryManager;
 
     private BukkitTask autoSaveTask;
+    private BackroomsCommand command;
 
     public BackroomsPlugin(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -139,7 +140,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);
 
         // 9. Register commands
-        BackroomsCommand command = new BackroomsCommand(levelRegistry, playerStateManager, transitionManager,
+        command = new BackroomsCommand(plugin, levelRegistry, playerStateManager, transitionManager,
                 eventRegistry, entityRegistry, entryTriggerRegistry, entitySpawner, generatorRegistry);
         plugin.getCommand("backrooms").setExecutor(command);
         plugin.getCommand("backrooms").setTabCompleter(command);
@@ -155,6 +156,9 @@ public class BackroomsPlugin {
     public void disable() {
         if (autoSaveTask != null) {
             autoSaveTask.cancel();
+        }
+        if (command != null) {
+            command.shutdown();
         }
         eventScheduler.stop();
         entitySpawner.stop();
@@ -283,16 +287,8 @@ public class BackroomsPlugin {
             level.loadFromConfig(levelCfg);
             levelRegistry.register(level);
 
-            // Load per-level event config
-            ConfigurationSection eventsCfg = levelCfg.getConfigurationSection("event_config");
-            if (eventsCfg != null) {
-                for (String eventId : level.getEventIds()) {
-                    BackroomsEvent event = eventRegistry.get(eventId);
-                    if (event != null) {
-                        event.loadConfig(eventsCfg.getConfigurationSection(eventId));
-                    }
-                }
-            }
+            // Event config is now stored in ConfigDrivenLevel and applied per-tick
+            // by EventScheduler, so each level gets the right config at trigger time.
 
             // Load per-level entity config
             ConfigurationSection entitiesCfg = levelCfg.getConfigurationSection("entity_config");

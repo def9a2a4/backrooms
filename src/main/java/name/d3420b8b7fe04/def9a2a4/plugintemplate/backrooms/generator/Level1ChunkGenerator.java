@@ -145,9 +145,21 @@ public class Level1ChunkGenerator extends ChunkGenerator {
             Material.STONE_BRICKS, Material.SMOOTH_STONE, Material.POLISHED_ANDESITE
     };
 
+    private static boolean isBeamMaterial(Material mat) {
+        for (Material m : BEAM_MATERIALS) {
+            if (m == mat) return true;
+        }
+        return false;
+    }
+
+    private static boolean canPlaceBeam(ChunkData chunkData, int x, int y, int z) {
+        Material existing = chunkData.getType(x, y, z);
+        return existing == Material.AIR || isBeamMaterial(existing);
+    }
+
     /**
-     * Places support beams along the ceiling using noise for placement and material variety.
-     * Beams run every 4 blocks in both axes, with varied materials and occasional double-height.
+     * Places support beams along the ceiling with varied cross-sections (1x1, 2x1, 1x2, 2x2),
+     * in both X and Z directions. Beams can intersect each other.
      */
     private void placeBeams(ChunkData chunkData, long seed, int chunkX, int chunkZ) {
         int beamTopY = CEILING_MIN_Y - 1; // Y=17
@@ -158,19 +170,23 @@ public class Level1ChunkGenerator extends ChunkGenerator {
             if (worldX % BEAM_SPACING != 0) continue;
 
             double presenceNoise = SimplexNoise.noise2(seed + 20, worldX * 0.04, 0);
-            if (presenceNoise < -0.3) continue; // ~70% of rows get beams
+            if (presenceNoise < -0.1) continue; // ~55% of rows get beams
 
             int matIndex = Math.abs((int) (presenceNoise * 1000)) % BEAM_MATERIALS.length;
             Material beamMat = BEAM_MATERIALS[matIndex];
 
-            double heightNoise = SimplexNoise.noise2(seed + 22, worldX * 0.08, 0);
-            boolean doubleHeight = heightNoise > 0.4; // ~30% chance of double-height
+            // Cross-section: width (along X) and height (downward from ceiling)
+            double sizeNoise = SimplexNoise.noise2(seed + 22, worldX * 0.08, 0);
+            int beamWidth = sizeNoise > 0.3 ? 2 : 1;   // 2x_ ~35%
+            int beamHeight = sizeNoise < -0.3 ? 2 : 1;  // _x2 ~35%
 
             for (int z = 0; z < 16; z++) {
-                if (chunkData.getType(x, beamTopY, z) == Material.AIR) {
-                    chunkData.setBlock(x, beamTopY, z, beamMat);
-                    if (doubleHeight && chunkData.getType(x, beamTopY - 1, z) == Material.AIR) {
-                        chunkData.setBlock(x, beamTopY - 1, z, beamMat);
+                for (int dx = 0; dx < beamWidth && x + dx < 16; dx++) {
+                    for (int dy = 0; dy < beamHeight; dy++) {
+                        int py = beamTopY - dy;
+                        if (canPlaceBeam(chunkData, x + dx, py, z)) {
+                            chunkData.setBlock(x + dx, py, z, beamMat);
+                        }
                     }
                 }
             }
@@ -182,19 +198,22 @@ public class Level1ChunkGenerator extends ChunkGenerator {
             if (worldZ % BEAM_SPACING != 0) continue;
 
             double presenceNoise = SimplexNoise.noise2(seed + 21, 0, worldZ * 0.04);
-            if (presenceNoise < -0.3) continue;
+            if (presenceNoise < -0.1) continue;
 
             int matIndex = Math.abs((int) (presenceNoise * 1000)) % BEAM_MATERIALS.length;
             Material beamMat = BEAM_MATERIALS[matIndex];
 
-            double heightNoise = SimplexNoise.noise2(seed + 23, 0, worldZ * 0.08);
-            boolean doubleHeight = heightNoise > 0.4;
+            double sizeNoise = SimplexNoise.noise2(seed + 23, 0, worldZ * 0.08);
+            int beamWidth = sizeNoise > 0.3 ? 2 : 1;   // width along Z
+            int beamHeight = sizeNoise < -0.3 ? 2 : 1;
 
             for (int x = 0; x < 16; x++) {
-                if (chunkData.getType(x, beamTopY, z) == Material.AIR) {
-                    chunkData.setBlock(x, beamTopY, z, beamMat);
-                    if (doubleHeight && chunkData.getType(x, beamTopY - 1, z) == Material.AIR) {
-                        chunkData.setBlock(x, beamTopY - 1, z, beamMat);
+                for (int dz = 0; dz < beamWidth && z + dz < 16; dz++) {
+                    for (int dy = 0; dy < beamHeight; dy++) {
+                        int py = beamTopY - dy;
+                        if (canPlaceBeam(chunkData, x, py, z + dz)) {
+                            chunkData.setBlock(x, py, z + dz, beamMat);
+                        }
                     }
                 }
             }

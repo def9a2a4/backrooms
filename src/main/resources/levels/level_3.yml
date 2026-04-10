@@ -6,7 +6,6 @@ enter_message: "§c[ERR] §7Unauthorized access detected."
 
 events:
   - ambient_sound
-  - light_blink
   - fake_chat_message
   - inventory_glitch
 
@@ -21,16 +20,6 @@ event_config:
     sounds:
       - AMBIENT_CAVE
       - AMBIENT_WARPED_FOREST_MOOD
-  light_blink:
-    enabled: true
-    check_interval_seconds: 15
-    chance: 0.25
-    radius: 15
-    cycles: 6
-    toggle_delay_ticks: 3
-    light_y: 13
-    light_spacing: 4
-    light_material: REDSTONE_LAMP
   fake_chat_message:
     enabled: true
     check_interval_seconds: 45

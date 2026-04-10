@@ -31,7 +31,7 @@ public class Level2ChunkGenerator extends ChunkGenerator {
     private static final int CEILING_TALL = 15;
     private static final int CEILING_MAX_Y = 22;
 
-    private static final int HALLWAY_PERIOD = 12;
+    private static final int HALLWAY_PERIOD = 20;
     private static final int HALLWAY_WIDTH = 2;
 
 
@@ -142,7 +142,7 @@ public class Level2ChunkGenerator extends ChunkGenerator {
                 int gridZ = Math.floorDiv(worldZ, HALLWAY_PERIOD);
 
                 double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
-                if (roomNoise <= 0.95) continue;
+                if (roomNoise <= 0.98) continue;
 
                 // Variable room size
                 int roomRadius = roomNoise > 0.6 ? 4 : 3;
@@ -308,7 +308,7 @@ public class Level2ChunkGenerator extends ChunkGenerator {
     }
 
     private boolean isLineActive(long seed, int lineIndex, int direction) {
-        return SimplexNoise.noise2(seed + 13, lineIndex * 0.8, direction * 100.0) > -0.6;
+        return SimplexNoise.noise2(seed + 13, lineIndex * 0.8, direction * 100.0) > -0.4;
     }
 
     private int getLinePipeType(long seed, int lineIndex, int direction) {

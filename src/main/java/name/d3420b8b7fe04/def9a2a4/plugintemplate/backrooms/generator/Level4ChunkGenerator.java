@@ -54,27 +54,27 @@ public class Level4ChunkGenerator extends ChunkGenerator {
                 boolean inFarLands = Math.abs(worldZ) > STRIP_HALF_WIDTH;
 
                 if (!inFarLands) {
-                    // Frequency modulation: varies between ~0.6x and ~1.4x base frequency
-                    double freqMod = 1.0 + SimplexNoise.noise3(seed + 5, worldX / 250.0, 0, worldZ / 250.0) * 0.4;
-
-                    // Strip: 3D density with vertical gradient (avoids broken noise2)
+                    // Strip: 3D density with vertical gradient
                     for (int y = MIN_Y; y < MAX_Y; y++) {
                         if (y == 0) { solid[x][y][z] = true; continue; }
                         double gradient = (STRIP_CENTER_Y - y) / 20.0;
-                        double n1 = SimplexNoise.noise3(seed + 10, worldX / 80.0 * freqMod, y / 60.0, worldZ / 80.0 * freqMod);
-                        double n2 = SimplexNoise.noise3(seed + 11, worldX / 30.0 * freqMod, y / 25.0, worldZ / 30.0 * freqMod);
+                        double n1 = SimplexNoise.noise3(seed + 10, worldX / 80.0, y / 60.0, worldZ / 80.0);
+                        double n2 = SimplexNoise.noise3(seed + 11, worldX / 30.0, y / 25.0, worldZ / 30.0);
                         double density = gradient + n1 * 0.6 + n2 * 0.25;
                         solid[x][y][z] = density > 0;
                     }
                 } else {
                     // Far lands: 3D density swiss cheese
+                    // Frequency modulation: varies between ~0.6x and ~1.4x base frequency
+                    double freqMod = 1.0 + SimplexNoise.noise3(seed + 5, worldX / 250.0, 0, worldZ / 250.0) * 0.4;
+
                     for (int y = MIN_Y; y < MAX_Y; y++) {
                         if (y == 0) { solid[x][y][z] = true; continue; }
 
                         double n1 = SimplexNoise.noise3(seed + 20,
-                                worldX * FL_SCALE_X, y * FL_SCALE_Y, worldZ * FL_SCALE_Z);
+                                worldX * FL_SCALE_X * freqMod, y * FL_SCALE_Y, worldZ * FL_SCALE_Z * freqMod);
                         double n2 = SimplexNoise.noise3(seed + 21,
-                                worldX * FL_SCALE_X * 2.3, y * FL_SCALE_Y * 2.3, worldZ * FL_SCALE_Z * 2.3);
+                                worldX * FL_SCALE_X * 2.3 * freqMod, y * FL_SCALE_Y * 2.3, worldZ * FL_SCALE_Z * 2.3 * freqMod);
                         double rawDensity = 0.7 * n1 + 0.3 * n2;
 
                         // Floor taper only — top left ragged by noise

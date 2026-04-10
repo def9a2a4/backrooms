@@ -124,13 +124,6 @@ public class Level3ChunkGenerator extends ChunkGenerator {
                     for (int y = FLOOR_HEIGHT; y < CEILING_Y; y++) {
                         chunkData.setBlock(x, y, z, BLOCK);
                     }
-                    // Wall-mounted redstone lamps
-                    int edX = cellEdgeDist(localX);
-                    int edZ = cellEdgeDist(localZ);
-                    if (edX % 6 == 0 && edZ % 6 == 0) {
-                        chunkData.setBlock(x, FLOOR_HEIGHT + 4, z, Material.REDSTONE_LAMP);
-                        chunkData.setBlock(x, CEILING_Y - 2, z, Material.REDSTONE_LAMP);
-                    }
                 } else if (isDoorX || isDoorZ) {
                     chunkData.setBlock(x, FLOOR_HEIGHT, z, BLOCK);
                     for (int y = FLOOR_HEIGHT + 1; y < CEILING_Y; y++) {
@@ -153,12 +146,6 @@ public class Level3ChunkGenerator extends ChunkGenerator {
                     chunkData.setBlock(x, y, z, BLOCK);
                 }
 
-                // Ceiling-mounted redstone lamps on a grid
-                int edCeilX = cellEdgeDist(localX);
-                int edCeilZ = cellEdgeDist(localZ);
-                if (edCeilX % 4 == 0 && edCeilZ % 4 == 0 && !isWall) {
-                    chunkData.setBlock(x, CEILING_Y, z, Material.REDSTONE_LAMP);
-                }
             }
         }
 
@@ -173,10 +160,6 @@ public class Level3ChunkGenerator extends ChunkGenerator {
     }
 
     // --- Cell helpers ---
-
-    private static int cellEdgeDist(int localPos) {
-        return Math.min(localPos, CELL_SIZE - 1 - localPos);
-    }
 
     private long wallHash(int cellAX, int cellAZ, int cellBX, int cellBZ, long seed) {
         int minX = Math.min(cellAX, cellBX);

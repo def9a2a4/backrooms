@@ -86,6 +86,9 @@ public class EventScheduler {
                     BackroomsEvent event = eventRegistry.get(eventId);
                     if (event == null) continue;
 
+                    // Apply this level's config to the shared event instance
+                    event.loadConfig(level.getEventConfig(eventId));
+
                     // Check interval
                     long lastCheck = getLastCheck(player.getUniqueId(), eventId);
                     if (currentTick - lastCheck < event.getCheckIntervalTicks()) continue;

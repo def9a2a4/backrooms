@@ -30,9 +30,10 @@ public class Level0ChunkGenerator extends ChunkGenerator {
     public static final int LIGHT_SPACING = 4;
 
     private static final double REGION_SCALE = 1.0 / 64.0;
-    private static final double CEILING_SCALE = 1.0 / 200.0;
-    private static final double CARPET_SCALE = 1.0 / 280.0;
-    private static final double WALL_MAT_SCALE = 1.0 / 240.0;
+    private static final double CEILING_SCALE = 1.0 / 2000.0;
+    private static final double CARPET_SCALE = 1.0 / 2800.0;
+    private static final double WALL_MAT_SCALE = 1.0 / 2400.0;
+    private static final double SPAWN_PLAIN_RADIUS = 200.0;
 
     private static final int REGION_EMPTY = 0;
     private static final int REGION_WALLS = 1;
@@ -51,8 +52,10 @@ public class Level0ChunkGenerator extends ChunkGenerator {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
+                double spawnBias = Math.max(0, 1.0 - (double) (worldX * worldX + worldZ * worldZ) / (SPAWN_PLAIN_RADIUS * SPAWN_PLAIN_RADIUS));
                 double ceilingNoise = SimplexNoise.noise2(seed + 100, worldX * CEILING_SCALE, worldZ * CEILING_SCALE)
-                        + 0.5 * SimplexNoise.noise2(seed + 101, worldX * CEILING_SCALE * 2, worldZ * CEILING_SCALE * 2);
+                        + 0.5 * SimplexNoise.noise2(seed + 101, worldX * CEILING_SCALE * 2, worldZ * CEILING_SCALE * 2)
+                        - spawnBias;
                 if (ceilingNoise > 0.0) {
                     chunkData.setBlock(x, CEILING_MIN_Y, z, Material.SMOOTH_STONE);
                 }
@@ -71,8 +74,10 @@ public class Level0ChunkGenerator extends ChunkGenerator {
                 double regionNoise = SimplexNoise.noise2(seed, rawCenterX * REGION_SCALE, rawCenterZ * REGION_SCALE);
                 int region = classifyRegion(regionNoise);
 
+                double wallSpawnBias = Math.max(0, 1.0 - (rawCenterX * rawCenterX + rawCenterZ * rawCenterZ) / (SPAWN_PLAIN_RADIUS * SPAWN_PLAIN_RADIUS));
                 double wallMatNoise = SimplexNoise.noise2(seed + 300, rawCenterX * WALL_MAT_SCALE, rawCenterZ * WALL_MAT_SCALE)
-                        + 0.5 * SimplexNoise.noise2(seed + 301, rawCenterX * WALL_MAT_SCALE * 2, rawCenterZ * WALL_MAT_SCALE * 2);
+                        + 0.5 * SimplexNoise.noise2(seed + 301, rawCenterX * WALL_MAT_SCALE * 2, rawCenterZ * WALL_MAT_SCALE * 2)
+                        - wallSpawnBias;
                 Material wallMat = wallMatNoise > 0.0 ? Material.BAMBOO_PLANKS : Material.YELLOW_TERRACOTTA;
 
                 placeStructure(chunkData, chunkRng, baseX, baseZ, region, wallMat);
@@ -85,8 +90,10 @@ public class Level0ChunkGenerator extends ChunkGenerator {
                 if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
+                double carpetSpawnBias = Math.max(0, 1.0 - (double) (worldX * worldX + worldZ * worldZ) / (SPAWN_PLAIN_RADIUS * SPAWN_PLAIN_RADIUS));
                 double carpetNoise = SimplexNoise.noise2(seed + 200, worldX * CARPET_SCALE, worldZ * CARPET_SCALE)
-                        + 0.5 * SimplexNoise.noise2(seed + 201, worldX * CARPET_SCALE * 2, worldZ * CARPET_SCALE * 2);
+                        + 0.5 * SimplexNoise.noise2(seed + 201, worldX * CARPET_SCALE * 2, worldZ * CARPET_SCALE * 2)
+                        - carpetSpawnBias;
                 if (carpetNoise > 0.0) {
                     chunkData.setBlock(x, AIR_MIN_Y, z, Material.YELLOW_CARPET);
                 }
@@ -121,7 +128,7 @@ public class Level0ChunkGenerator extends ChunkGenerator {
     }
 
     private void placeEmpty(ChunkData chunkData, Random rng, int baseX, int baseZ, double roll, Material wallMat) {
-        if (roll < 0.58) {
+        if (roll < 0.598) {
             rng.nextInt(4);
         } else if (roll < 0.60) {
             placeDesk(chunkData, baseX, baseZ, rng.nextInt(4));

@@ -7,6 +7,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.generator.ChunkGenerator;
 
+import org.bukkit.configuration.ConfigurationSection;
+
 import java.util.Collection;
 import java.util.List;
 
@@ -23,6 +25,10 @@ public interface BackroomsLevel {
     void configureWorld(World world);
 
     List<String> getEventIds();
+
+    default ConfigurationSection getEventConfig(String eventId) {
+        return null;
+    }
 
     List<String> getEntityIds();
 

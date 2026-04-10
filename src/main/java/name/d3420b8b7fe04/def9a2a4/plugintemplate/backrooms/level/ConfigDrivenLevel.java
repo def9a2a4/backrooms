@@ -9,7 +9,9 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.generator.ChunkGenerator;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A level whose metadata is entirely config-driven.
@@ -28,6 +30,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private String enterMessage;
     private long fixedTime;
     private boolean useDarkDimension;
+    private final Map<String, ConfigurationSection> eventConfigs = new HashMap<>();
 
     public ConfigDrivenLevel(BackroomsPlugin plugin, String id, String generatorId,
                              GeneratorRegistry generatorRegistry) {
@@ -84,6 +87,21 @@ public class ConfigDrivenLevel extends AbstractLevel {
         this.enterMessage = section.getString("enter_message", null);
         this.fixedTime = section.getLong("fixed_time", -1);
         this.useDarkDimension = section.getBoolean("use_dark_dimension", true);
+
+        ConfigurationSection eventsCfg = section.getConfigurationSection("event_config");
+        if (eventsCfg != null) {
+            for (String key : eventsCfg.getKeys(false)) {
+                ConfigurationSection eventCfg = eventsCfg.getConfigurationSection(key);
+                if (eventCfg != null) {
+                    eventConfigs.put(key, eventCfg);
+                }
+            }
+        }
+    }
+
+    @Override
+    public ConfigurationSection getEventConfig(String eventId) {
+        return eventConfigs.get(eventId);
     }
 
     @Override
