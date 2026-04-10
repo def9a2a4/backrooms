@@ -17,7 +17,6 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.impl.*;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLevel;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.DatapackInstaller;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.DimensionTypeHelper;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsListener;
@@ -124,10 +123,8 @@ public class BackroomsPlugin {
             event.init(plugin);
         }
 
-        // 6. Install datapack (fallback) & apply NMS dimension types, then create worlds
-        levelRegistry.setDatapackInstaller(new DatapackInstaller(plugin));
+        // 6. Apply NMS dimension types and create worlds
         levelRegistry.setDimensionTypeHelper(new DimensionTypeHelper(plugin.getLogger()));
-        levelRegistry.installDatapack();
         levelRegistry.loadWorlds();
 
         // 7. Start schedulers

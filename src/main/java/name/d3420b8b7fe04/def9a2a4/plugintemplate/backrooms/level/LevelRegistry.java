@@ -19,15 +19,10 @@ public class LevelRegistry {
     private final Map<World, BackroomsLevel> worldToLevel = new HashMap<>();
     private final Map<String, World> levelToWorld = new HashMap<>();
     private final Logger logger;
-    private DatapackInstaller datapackInstaller;
     private DimensionTypeHelper dimensionTypeHelper;
 
     public LevelRegistry(Logger logger) {
         this.logger = logger;
-    }
-
-    public void setDatapackInstaller(DatapackInstaller datapackInstaller) {
-        this.datapackInstaller = datapackInstaller;
     }
 
     public void setDimensionTypeHelper(DimensionTypeHelper dimensionTypeHelper) {
@@ -64,16 +59,6 @@ public class LevelRegistry {
 
     public boolean isBackroomsWorld(World world) {
         return worldToLevel.containsKey(world);
-    }
-
-    /**
-     * Install the fallback datapack to the main world.
-     * Should be called once before loadWorlds().
-     */
-    public void installDatapack() {
-        if (datapackInstaller != null) {
-            datapackInstaller.installToMainWorld();
-        }
     }
 
     public void loadWorlds() {
