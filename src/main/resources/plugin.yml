@@ -26,7 +26,7 @@ permissions:
     description: Allows entering and leaving the Backrooms
     default: true
   backrooms.admin:
-    description: Allows admin backrooms commands (goto, regenerate)
+    description: Allows admin backrooms commands (goto, event, spawn, despawn, enter, escalation, reset, list)
     default: op
   backrooms.regenerate:
     description: Allows regenerating backrooms worlds

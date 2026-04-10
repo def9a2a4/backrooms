@@ -28,20 +28,16 @@ public class Level4ChunkGenerator extends ChunkGenerator {
     // Zone boundary (measured as abs(worldZ)) — hard cutoff, no blend
     private static final int STRIP_HALF_WIDTH = 32;
 
-    // Strip heightmap noise scales
-    private static final double STRIP_MACRO = 1.0 / 200.0;
-    private static final double STRIP_MESO  = 1.0 / 50.0;
-    private static final double STRIP_MICRO = 1.0 / 15.0;
-    private static final int STRIP_BASE_HEIGHT = 64;
+    // Strip terrain center height
+    private static final double STRIP_CENTER_Y = 66.0;
 
     // Far lands 3D density scales (Z heavily stretched for wall effect)
     private static final double FL_SCALE_X = 1.0 / 40.0;
     private static final double FL_SCALE_Y = 1.0 / 30.0;
-    private static final double FL_SCALE_Z = 1.0 / 120.0;
+    private static final double FL_SCALE_Z = 1.0 / 600.0;
 
-    // Far lands vertical envelope
+    // Far lands floor taper
     private static final int FL_FLOOR_Y = 5;
-    private static final int FL_CEIL_Y  = 115;
 
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
@@ -58,15 +54,17 @@ public class Level4ChunkGenerator extends ChunkGenerator {
                 boolean inFarLands = Math.abs(worldZ) > STRIP_HALF_WIDTH;
 
                 if (!inFarLands) {
-                    // Strip: classic alpha heightmap
-                    double macro = SimplexNoise.noise2(seed + 10, worldX * STRIP_MACRO, worldZ * STRIP_MACRO);
-                    double meso  = SimplexNoise.noise2(seed + 11, worldX * STRIP_MESO,  worldZ * STRIP_MESO);
-                    double micro = SimplexNoise.noise2(seed + 12, worldX * STRIP_MICRO, worldZ * STRIP_MICRO);
-                    int stripHeight = (int) (STRIP_BASE_HEIGHT + macro * 20 + meso * 8 + micro * 3);
-                    stripHeight = Math.max(FL_FLOOR_Y + 1, Math.min(stripHeight, MAX_Y - 10));
+                    // Frequency modulation: varies between ~0.6x and ~1.4x base frequency
+                    double freqMod = 1.0 + SimplexNoise.noise3(seed + 5, worldX / 250.0, 0, worldZ / 250.0) * 0.4;
 
+                    // Strip: 3D density with vertical gradient (avoids broken noise2)
                     for (int y = MIN_Y; y < MAX_Y; y++) {
-                        solid[x][y][z] = y <= stripHeight;
+                        if (y == 0) { solid[x][y][z] = true; continue; }
+                        double gradient = (STRIP_CENTER_Y - y) / 20.0;
+                        double n1 = SimplexNoise.noise3(seed + 10, worldX / 80.0 * freqMod, y / 60.0, worldZ / 80.0 * freqMod);
+                        double n2 = SimplexNoise.noise3(seed + 11, worldX / 30.0 * freqMod, y / 25.0, worldZ / 30.0 * freqMod);
+                        double density = gradient + n1 * 0.6 + n2 * 0.25;
+                        solid[x][y][z] = density > 0;
                     }
                 } else {
                     // Far lands: 3D density swiss cheese
@@ -79,17 +77,16 @@ public class Level4ChunkGenerator extends ChunkGenerator {
                                 worldX * FL_SCALE_X * 2.3, y * FL_SCALE_Y * 2.3, worldZ * FL_SCALE_Z * 2.3);
                         double rawDensity = 0.7 * n1 + 0.3 * n2;
 
-                        // Vertical envelope: taper near floor and ceiling
+                        // Floor taper only — top left ragged by noise
                         double envelope = 1.0;
                         if (y < FL_FLOOR_Y + 10) envelope = (y - FL_FLOOR_Y) / 10.0;
-                        if (y > FL_CEIL_Y - 10)  envelope = (FL_CEIL_Y - y) / 10.0;
                         envelope = Math.max(0, Math.min(1, envelope));
 
                         // Distance bias: far lands get denser further from the strip
                         double distFromEdge = Math.abs(worldZ) - STRIP_HALF_WIDTH;
-                        double distBias = Math.min(distFromEdge / 100.0, 0.3);
+                        double distBias = Math.min(distFromEdge / 200.0, 0.15);
 
-                        solid[x][y][z] = rawDensity * envelope + distBias > 0.0;
+                        solid[x][y][z] = rawDensity * envelope + distBias > 0.15;
                     }
                 }
             }
@@ -138,7 +135,7 @@ public class Level4ChunkGenerator extends ChunkGenerator {
                     } else if (depthBelowSurface <= 3) {
                         chunkData.setBlock(x, y, z, Material.DIRT);
                     }
-                    // Stone core with ores and cobblestone
+                    // Stone core with ores
                     else {
                         int roll = chunkRng.nextInt(1000);
                         if (y < 50 && roll < 20) {
@@ -147,10 +144,6 @@ public class Level4ChunkGenerator extends ChunkGenerator {
                             chunkData.setBlock(x, y, z, Material.IRON_ORE);
                         } else if (y < 25 && roll < 33) {
                             chunkData.setBlock(x, y, z, Material.GOLD_ORE);
-                        } else if (roll < 80) {
-                            chunkData.setBlock(x, y, z, Material.COBBLESTONE);
-                        } else if (roll < 100) {
-                            chunkData.setBlock(x, y, z, Material.GRAVEL);
                         } else {
                             chunkData.setBlock(x, y, z, Material.STONE);
                         }
@@ -216,7 +209,7 @@ public class Level4ChunkGenerator extends ChunkGenerator {
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, 8.5, STRIP_BASE_HEIGHT + 1, 0.5);
+        return new Location(world, 8.5, (int) STRIP_CENTER_Y + 1, 0.5);
     }
 
     @Override

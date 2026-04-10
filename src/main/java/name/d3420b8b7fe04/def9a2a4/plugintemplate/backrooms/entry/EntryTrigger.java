@@ -18,6 +18,8 @@ public interface EntryTrigger {
     @Nullable
     String evaluate(Event event, Player player);
 
+    String getTargetLevel();
+
     void playEntrySequence(Player player, Runnable onComplete);
 
     void loadConfig(ConfigurationSection config);

@@ -5,6 +5,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Lantern;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
@@ -32,9 +34,6 @@ public class Level2ChunkGenerator extends ChunkGenerator {
     private static final int HALLWAY_PERIOD = 12;
     private static final int HALLWAY_WIDTH = 2;
 
-    private static final double REGION_SCALE = 1.0 / 48.0;
-    private static final double SUPPRESS_SCALE = 1.0 / 32.0;
-    private static final double BLEND_THRESHOLD = 0.15;
 
     private static final int PIPE_CEILING = 1;
     private static final int PIPE_WALL = 2;
@@ -83,13 +82,11 @@ public class Level2ChunkGenerator extends ChunkGenerator {
             }
         }
 
-        // Pass 1: carve hallways with variable width and height
+        // Pass 1: carve hallways — connected grid with per-line suppression
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
-
-                double regionNoise = SimplexNoise.noise2(seed + 1, worldX * REGION_SCALE, worldZ * REGION_SCALE);
 
                 int zMod = Math.floorMod(worldZ, HALLWAY_PERIOD);
                 int xMod = Math.floorMod(worldX, HALLWAY_PERIOD);
@@ -100,22 +97,10 @@ public class Level2ChunkGenerator extends ChunkGenerator {
                 int ewWidth = getLineWidth(seed, ewLineIndex, 0);
                 int nsWidth = getLineWidth(seed, nsLineIndex, 1);
 
-                boolean onEWLine = (zMod < ewWidth);
-                boolean onNSLine = (xMod < nsWidth);
+                boolean onEWLine = (zMod < ewWidth) && isLineActive(seed, ewLineIndex, 0);
+                boolean onNSLine = (xMod < nsWidth) && isLineActive(seed, nsLineIndex, 1);
 
-                boolean onHallwayLine;
-                if (Math.abs(regionNoise) < BLEND_THRESHOLD) {
-                    onHallwayLine = onEWLine || onNSLine;
-                } else if (regionNoise > 0.0) {
-                    onHallwayLine = onEWLine;
-                } else {
-                    onHallwayLine = onNSLine;
-                }
-
-                if (!onHallwayLine) continue;
-
-                double suppressNoise = SimplexNoise.noise2(seed + 2, worldX * SUPPRESS_SCALE, worldZ * SUPPRESS_SCALE);
-                if (suppressNoise < -0.4) continue;
+                if (!onEWLine && !onNSLine) continue;
 
                 // Variable ceiling height
                 int ceilingY = getCeilingHeight(seed, worldX, worldZ);
@@ -140,11 +125,6 @@ public class Level2ChunkGenerator extends ChunkGenerator {
                     }
                 }
 
-                // Rare water source blocks on floor
-                double waterNoise = SimplexNoise.noise2(seed + 10, worldX * 0.04, worldZ * 0.04);
-                if (waterNoise > 0.78) {
-                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.WATER);
-                }
             }
         }
 
@@ -162,7 +142,7 @@ public class Level2ChunkGenerator extends ChunkGenerator {
                 int gridZ = Math.floorDiv(worldZ, HALLWAY_PERIOD);
 
                 double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
-                if (roomNoise <= 0.4) continue;
+                if (roomNoise <= 0.95) continue;
 
                 // Variable room size
                 int roomRadius = roomNoise > 0.6 ? 4 : 3;
@@ -252,9 +232,9 @@ public class Level2ChunkGenerator extends ChunkGenerator {
                 if (z == 0 || chunkData.getType(x, AIR_MIN_Y, z - 1) != Material.AIR) adjWalls++;
                 if (z == 15 || chunkData.getType(x, AIR_MIN_Y, z + 1) != Material.AIR) adjWalls++;
 
-                if (adjWalls >= 2) {
+                if (adjWalls >= 3) {
                     double cobwebNoise = SimplexNoise.noise2(seed + 11, worldX * 0.15, worldZ * 0.15);
-                    if (cobwebNoise > 0.5) {
+                    if (cobwebNoise > 0.95) {
                         // Find ceiling
                         for (int y = CEILING_TALL - 1; y >= AIR_MIN_Y + 1; y--) {
                             if (chunkData.getType(x, y, z) == Material.AIR
@@ -268,20 +248,44 @@ public class Level2ChunkGenerator extends ChunkGenerator {
             }
         }
 
-        // Pass 5: lighting — lanterns on chains
+        // Pass 5: lighting — copper lanterns on copper chains
+        BlockData hangingLantern = Material.COPPER_LANTERN.createBlockData();
+        ((Lantern) hangingLantern).setHanging(true);
+
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
-                if (worldX % 12 == 0 && worldZ % 12 == 0) {
+                if (worldX % 18 == 0 && worldZ % 18 == 0) {
                     if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
 
                     // Find ceiling
                     for (int y = CEILING_TALL - 1; y >= AIR_MIN_Y + 2; y--) {
                         if (chunkData.getType(x, y + 1, z) != Material.AIR
                                 && chunkData.getType(x, y, z) == Material.AIR) {
-                            chunkData.setBlock(x, y, z, Material.IRON_CHAIN);
-                            chunkData.setBlock(x, y - 1, z, Material.LANTERN);
+                            chunkData.setBlock(x, y, z, Material.COPPER_CHAIN);
+                            chunkData.setBlock(x, y - 1, z, hangingLantern);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Pass 6: extremely rare isolated ceiling water drips
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
+
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                long hash = (worldX * 73856093L) ^ (worldZ * 19349663L) ^ seed;
+                if (Math.floorMod(hash, 400) == 0) {
+                    // Find ceiling and place water one block below it
+                    for (int y = CEILING_TALL - 1; y >= AIR_MIN_Y + 1; y--) {
+                        if (chunkData.getType(x, y + 1, z) != Material.AIR
+                                && chunkData.getType(x, y, z) == Material.AIR) {
+                            chunkData.setBlock(x, y, z, Material.WATER);
                             break;
                         }
                     }
@@ -301,6 +305,10 @@ public class Level2ChunkGenerator extends ChunkGenerator {
         double noise = SimplexNoise.noise2(seed + 9, lineIndex * 1.3, direction * 100.0);
         if (noise > 0.4 || noise < -0.4) return 3;
         return HALLWAY_WIDTH;
+    }
+
+    private boolean isLineActive(long seed, int lineIndex, int direction) {
+        return SimplexNoise.noise2(seed + 13, lineIndex * 0.8, direction * 100.0) > -0.6;
     }
 
     private int getLinePipeType(long seed, int lineIndex, int direction) {
@@ -324,15 +332,17 @@ public class Level2ChunkGenerator extends ChunkGenerator {
             default -> placeValveCluster(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
         }
 
-        // Lantern on ceiling at room center
+        // Hanging copper lantern on ceiling at room center
         int lx = centerWorldX - chunkX * 16;
         int lz = centerWorldZ - chunkZ * 16;
         if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
-            // Find ceiling
-            for (int y = ceilingY - 1; y >= AIR_MIN_Y + 1; y--) {
+            BlockData hanging = Material.COPPER_LANTERN.createBlockData();
+            ((Lantern) hanging).setHanging(true);
+            for (int y = ceilingY - 1; y >= AIR_MIN_Y + 2; y--) {
                 if (chunkData.getType(lx, y, lz) == Material.AIR
                         && chunkData.getType(lx, y + 1, lz) != Material.AIR) {
-                    chunkData.setBlock(lx, y, lz, Material.LANTERN);
+                    chunkData.setBlock(lx, y, lz, Material.COPPER_CHAIN);
+                    chunkData.setBlock(lx, y - 1, lz, hanging);
                     break;
                 }
             }

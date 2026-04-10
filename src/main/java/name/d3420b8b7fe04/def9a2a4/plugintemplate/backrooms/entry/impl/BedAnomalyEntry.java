@@ -55,6 +55,11 @@ public class BedAnomalyEntry implements EntryTrigger {
     }
 
     @Override
+    public String getTargetLevel() {
+        return targetLevel;
+    }
+
+    @Override
     public void playEntrySequence(Player player, Runnable onComplete) {
         if (blindnessDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, blindnessDuration, 1, false, false));
         if (entryMessage != null && !entryMessage.isEmpty()) player.sendMessage(entryMessage);

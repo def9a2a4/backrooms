@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level37ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityHandle;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityRegistry;
@@ -14,6 +15,9 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -63,7 +67,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return switch (args[0].toLowerCase()) {
             case "regenerate" -> handleRegenerate(sender, args.length > 1 ? args[1] : null);
             case "list" -> handleList(sender, args.length > 1 ? args[1] : null);
-            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset" -> {
+            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("This command can only be used by players.");
                     yield true;
@@ -71,6 +75,10 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
                 yield switch (args[0].toLowerCase()) {
                     case "leave" -> handleLeave(player);
                     case "goto" -> {
+                        if (!player.hasPermission("backrooms.admin") && !player.isOp()) {
+                            player.sendMessage("You don't have permission to use this command.");
+                            yield true;
+                        }
                         if (args.length < 2) {
                             player.sendMessage("Usage: /backrooms goto <level_id>");
                             yield true;
@@ -108,11 +116,12 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
                         yield handleEscalation(player, args[1]);
                     }
                     case "reset" -> handleReset(player);
+                    case "debug37" -> handleDebug37(player);
                     default -> true;
                 };
             }
             default -> {
-                sender.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status, event, spawn, despawn, enter, escalation, reset, list");
+                sender.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status, event, spawn, despawn, enter, escalation, reset, list, debug37");
                 yield true;
             }
         };
@@ -303,7 +312,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         BackroomsPlayerState state = playerStateManager.getOrCreate(player);
         state.setReturnLocation(player.getLocation());
 
-        String targetLevel = "level_0";
+        String targetLevel = trigger.getTargetLevel();
         trigger.playEntrySequence(player, () ->
                 transitionManager.enterBackrooms(player, state, targetLevel));
         player.sendMessage("Playing entry sequence: " + triggerId);
@@ -356,6 +365,25 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
 
         state.clear();
         player.sendMessage("Player state has been reset.");
+        return true;
+    }
+
+    private boolean handleDebug37(Player player) {
+        if (!requireAdmin(player)) return true;
+
+        BackroomsLevel level = levelRegistry.getByWorld(player.getWorld());
+        if (level == null || !"level_37".equals(level.getId())) {
+            player.sendMessage("You must be in Level 37 (The Poolrooms) to use this command.");
+            return true;
+        }
+
+        Location loc = player.getLocation();
+        int worldX = loc.getBlockX();
+        int worldZ = loc.getBlockZ();
+        long seed = player.getWorld().getSeed();
+
+        String info = Level37ChunkGenerator.getDebugInfo(worldX, worldZ, seed);
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(info));
         return true;
     }
 
@@ -412,9 +440,12 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(List.of("leave", "goto", "regenerate", "status"));
+            List<String> subs = new ArrayList<>(List.of("leave", "status"));
             if (sender.hasPermission("backrooms.admin") || sender.isOp()) {
-                subs.addAll(List.of("event", "spawn", "despawn", "enter", "escalation", "reset", "list"));
+                subs.addAll(List.of("goto", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "debug37"));
+            }
+            if (sender.hasPermission("backrooms.regenerate") || sender.isOp()) {
+                subs.add("regenerate");
             }
             return filterStartsWith(subs, args[0]);
         }

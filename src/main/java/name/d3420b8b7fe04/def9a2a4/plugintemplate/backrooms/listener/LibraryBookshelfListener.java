@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator.BookConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -22,19 +23,17 @@ import java.util.Random;
 
 /**
  * Populates chiseled bookshelves with books in the Library level (64637).
- * Uses ChunkLoadEvent instead of BlockPopulator because LimitedRegion
- * cannot reliably modify tile entity inventories during chunk generation.
- *
- * Shelf placement and inventory filling are deferred to the next tick to
- * avoid recursive chunk loading caused by block updates during ChunkLoadEvent.
+ * Only center-pillar bookshelves (positions 6-9) become chiseled — these are
+ * far enough from chunk boundaries to avoid the updateNeighbourForOutputSignal
+ * deadlock that occurs when setItem() triggers a 2-deep neighbor check into
+ * an unloaded chunk.
  */
 public class LibraryBookshelfListener implements Listener {
 
     private static final int CELL_SIZE = 16;
-    private static final int WALL_THICKNESS = 2;
     private static final int SHELF_MIN_Y = 11;
     private static final int SHELF_MAX_Y = 15;
-    private static final double CHISELED_CHANCE = 0.025;
+    private static final double CHISELED_CHANCE = 0.12;
 
     private final JavaPlugin plugin;
     private final BookConfig config;
@@ -50,9 +49,15 @@ public class LibraryBookshelfListener implements Listener {
         if (!event.getWorld().getName().equals("backrooms_level_64637")) return;
 
         Chunk chunk = event.getChunk();
+        long worldSeed = event.getWorld().getSeed();
+        int cellX = Math.floorDiv(chunk.getX() * 16, CELL_SIZE);
+        int cellZ = Math.floorDiv(chunk.getZ() * 16, CELL_SIZE);
+
+        // Only pillar rooms have chiseled bookshelves
+        if (!Level64637ChunkGenerator.hasCenterPillar(worldSeed, cellX, cellZ)) return;
+
         Random rng = new Random(chunk.getChunkKey());
 
-        // Collect candidates during the event — no block modifications yet
         List<ShelfCandidate> candidates = new ArrayList<>();
 
         for (int x = 0; x < 16; x++) {
@@ -72,7 +77,7 @@ public class LibraryBookshelfListener implements Listener {
 
         if (candidates.isEmpty()) return;
 
-        // Defer block modifications to next tick to avoid recursive chunk loading
+        // Defer block modifications to next tick to avoid issues during chunk loading
         Bukkit.getScheduler().runTask(plugin, () -> {
             for (ShelfCandidate candidate : candidates) {
                 Block block = candidate.location.getBlock();
@@ -85,35 +90,42 @@ public class LibraryBookshelfListener implements Listener {
                 if (block.getState() instanceof ChiseledBookshelf shelf) {
                     Random bookRng = new Random(candidate.seed);
                     fillShelf(shelf, bookRng);
-                    shelf.update(true, false);
                 }
             }
         });
     }
 
     /**
-     * Computes the facing direction for a bookshelf based on its world position
-     * within the room cell, using the same geometry as the chunk generator.
-     * This avoids cross-chunk block lookups that would trigger recursive chunk loading.
+     * Computes the facing direction for a pillar-face bookshelf.
+     * Returns null for non-pillar positions, corners, and interior blocks.
+     * All returned positions are in [6,9], safely far from chunk boundaries.
      */
     private BlockFace computeFacing(int worldX, int worldZ) {
         int localX = Math.floorMod(worldX, CELL_SIZE);
         int localZ = Math.floorMod(worldZ, CELL_SIZE);
 
-        boolean inWallX = localX < WALL_THICKNESS;
-        boolean inWallZ = localZ < WALL_THICKNESS;
+        boolean inPillarX = localX >= Level64637ChunkGenerator.PILLAR_MIN
+                && localX <= Level64637ChunkGenerator.PILLAR_MAX;
+        boolean inPillarZ = localZ >= Level64637ChunkGenerator.PILLAR_MIN
+                && localZ <= Level64637ChunkGenerator.PILLAR_MAX;
 
-        if (inWallX && inWallZ) {
-            return null; // Corner post — no bookshelf here
-        } else if (inWallX) {
-            // localX=0 is chunk boundary — skip to avoid neighbor-update deadlock
-            return localX == 0 ? null : BlockFace.EAST;
-        } else if (inWallZ) {
-            // localZ=0 is chunk boundary — skip to avoid neighbor-update deadlock
-            return localZ == 0 ? null : BlockFace.SOUTH;
+        if (!inPillarX || !inPillarZ) return null;
+
+        boolean onEdgeX = localX == Level64637ChunkGenerator.PILLAR_MIN
+                || localX == Level64637ChunkGenerator.PILLAR_MAX;
+        boolean onEdgeZ = localZ == Level64637ChunkGenerator.PILLAR_MIN
+                || localZ == Level64637ChunkGenerator.PILLAR_MAX;
+
+        if (onEdgeX && onEdgeZ) return null; // corner pilaster
+
+        if (onEdgeX) {
+            return localX == Level64637ChunkGenerator.PILLAR_MIN ? BlockFace.WEST : BlockFace.EAST;
+        }
+        if (onEdgeZ) {
+            return localZ == Level64637ChunkGenerator.PILLAR_MIN ? BlockFace.NORTH : BlockFace.SOUTH;
         }
 
-        return null; // Interior block — not a wall bookshelf
+        return null; // interior
     }
 
     private record ShelfCandidate(Location location, BlockFace facing, long seed) {}

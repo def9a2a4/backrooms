@@ -9,7 +9,6 @@ enter_message: "§6[ERR]: java.math.IntergerOverflowError"
 events:
   - ambient_sound
   - fake_chat_message
-  - fake_coordinates
   - player_drift
 
 entities:
@@ -32,13 +31,6 @@ event_config:
       - "§e[WARN] Player position desynchronized"
       - "§7Herobrine joined the game"
       - "§7Herobrine left the game"
-  fake_coordinates:
-    enabled: true
-    check_interval_seconds: 1
-    chance: 1.0
-    base_x: 12550821
-    base_z: -8371022
-    drift_range: 500
   player_drift:
     enabled: true
     check_interval_seconds: 15

@@ -14,8 +14,8 @@ import java.util.Random;
 
 /**
  * Level 1 — "The Habitable Zone"
- * Massive concrete/stone warehouse-like spaces. Very open compared to L0.
- * Smooth stone floors, concrete pillars, occasional puddles, dim lighting.
+ * Massive stone warehouse-like spaces. Very open compared to L0.
+ * Large continuous stone regions, ceiling drips, support beams, embedded froglight lighting.
  * Think: parking garage at 3 AM, industrial basement, liminal warehouse.
  */
 public class Level1ChunkGenerator extends ChunkGenerator {
@@ -33,11 +33,7 @@ public class Level1ChunkGenerator extends ChunkGenerator {
     private static final double REGION_SCALE = 1.0 / 48.0;
     private static final double DETAIL_SCALE = 1.0 / 16.0;
 
-    private static final Material[] FLOOR_MATERIALS = {
-            Material.SMOOTH_STONE, Material.SMOOTH_STONE, Material.SMOOTH_STONE,
-            Material.STONE, Material.STONE,
-            Material.POLISHED_ANDESITE, Material.ANDESITE
-    };
+    public static final int LIGHT_SPACING = 12;
 
     private static final Material[] PILLAR_MATERIALS = {
             Material.SMOOTH_STONE, Material.STONE_BRICKS, Material.POLISHED_ANDESITE
@@ -45,36 +41,44 @@ public class Level1ChunkGenerator extends ChunkGenerator {
 
     private static final Material[] WALL_MATERIALS = {
             Material.SMOOTH_STONE, Material.STONE, Material.STONE_BRICKS,
-            Material.CRACKED_STONE_BRICKS, Material.ANDESITE
+            Material.ANDESITE
     };
+
+    // Noise scale for large continuous stone regions
+    private static final double MATERIAL_SCALE = 0.02;
+    // Noise scale for accent block variation
+    private static final double ACCENT_SCALE = 0.15;
 
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
         long seed = worldInfo.getSeed();
         Random chunkRng = new Random(seed ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
 
-        // Floor: varied stone types
+        // Floor and ceiling: large continuous stone regions
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                double floorNoise = SimplexNoise.noise2(seed + 1, (chunkX * 16 + x) * 0.1, (chunkZ * 16 + z) * 0.1);
-                int matIndex = Math.abs((int) (floorNoise * 1000)) % FLOOR_MATERIALS.length;
-                Material floorMat = FLOOR_MATERIALS[matIndex];
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
 
-                // Sub-floor fill
-                chunkData.setRegion(x, FLOOR_Y, z, x + 1, FLOOR_HEIGHT, z + 1, Material.STONE);
-                // Surface
-                chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, floorMat);
+                Material baseMat = getRegionMaterial(seed, worldX, worldZ);
+                Material accentedMat = applyAccent(seed, worldX, worldZ, baseMat);
 
-                // Very sparse water source blocks that flow when updated
-                double waterNoise = SimplexNoise.noise2(seed + 2, (chunkX * 16 + x) * 0.05, (chunkZ * 16 + z) * 0.05);
-                if (waterNoise > 0.75) {
-                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.WATER);
-                }
+                // Sub-floor fill + surface
+                chunkData.setRegion(x, FLOOR_Y, z, x + 1, FLOOR_HEIGHT, z + 1, baseMat);
+                chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, accentedMat);
+
+                // Ceiling: same material system
+                chunkData.setRegion(x, CEILING_MIN_Y, z, x + 1, CEILING_MAX_Y, z + 1, baseMat);
+                chunkData.setBlock(x, CEILING_MIN_Y, z, accentedMat);
             }
         }
 
-        // Ceiling: concrete
-        chunkData.setRegion(0, CEILING_MIN_Y, 0, 16, CEILING_MAX_Y, 16, Material.GRAY_CONCRETE);
+        // Very rare single water source in ceiling — ~20% of chunks get one drip
+        if (chunkRng.nextInt(5) == 0) {
+            int wx = chunkRng.nextInt(16);
+            int wz = chunkRng.nextInt(16);
+            chunkData.setBlock(wx, CEILING_MIN_Y, wz, Material.WATER);
+        }
 
         // Structural elements per cell
         for (int cx = 0; cx < CELLS_PER_AXIS; cx++) {
@@ -91,15 +95,107 @@ public class Level1ChunkGenerator extends ChunkGenerator {
             }
         }
 
-        // Sparse dim lighting: soul lanterns on ceiling, widely spaced
+        // Support beams along ceiling between pillars
+        placeBeams(chunkData, seed, chunkX, chunkZ);
+
+        // Embedded ceiling lights: verdant froglights in ceiling grid
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
-                if (worldX % 8 == 0 && worldZ % 8 == 0) {
-                    // Lantern hangs from ceiling
-                    chunkData.setBlock(x, CEILING_MIN_Y - 1, z, Material.IRON_CHAIN);
-                    chunkData.setBlock(x, CEILING_MIN_Y - 2, z, Material.SOUL_LANTERN);
+                if (worldX % LIGHT_SPACING == 0 && worldZ % LIGHT_SPACING == 0) {
+                    chunkData.setBlock(x, CEILING_MIN_Y, z, Material.VERDANT_FROGLIGHT);
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the base material for a world position using low-frequency noise
+     * to create large continuous stone regions.
+     */
+    private Material getRegionMaterial(long seed, int worldX, int worldZ) {
+        double noise = SimplexNoise.noise2(seed + 1, worldX * MATERIAL_SCALE, worldZ * MATERIAL_SCALE);
+        if (noise < -0.2) {
+            return Material.STONE;
+        } else if (noise < 0.2) {
+            return Material.SMOOTH_STONE;
+        } else {
+            return Material.STONE_BRICKS;
+        }
+    }
+
+    /**
+     * Applies accent blocks: cracked stone bricks replace some stone brick areas,
+     * diorite replaces some stone areas.
+     */
+    private Material applyAccent(long seed, int worldX, int worldZ, Material baseMat) {
+        double accentNoise = SimplexNoise.noise2(seed + 10, worldX * ACCENT_SCALE, worldZ * ACCENT_SCALE);
+        if (baseMat == Material.STONE_BRICKS && accentNoise > 0.55) {
+            return Material.CRACKED_STONE_BRICKS;
+        }
+        if (baseMat == Material.STONE && accentNoise > 0.6) {
+            return Material.POLISHED_DIORITE;
+        }
+        return baseMat;
+    }
+
+    private static final int BEAM_SPACING = 4;
+    private static final Material[] BEAM_MATERIALS = {
+            Material.STONE_BRICKS, Material.SMOOTH_STONE, Material.POLISHED_ANDESITE
+    };
+
+    /**
+     * Places support beams along the ceiling using noise for placement and material variety.
+     * Beams run every 4 blocks in both axes, with varied materials and occasional double-height.
+     */
+    private void placeBeams(ChunkData chunkData, long seed, int chunkX, int chunkZ) {
+        int beamTopY = CEILING_MIN_Y - 1; // Y=17
+
+        // Beams running along Z (placed on X grid lines)
+        for (int x = 0; x < 16; x++) {
+            int worldX = chunkX * 16 + x;
+            if (worldX % BEAM_SPACING != 0) continue;
+
+            double presenceNoise = SimplexNoise.noise2(seed + 20, worldX * 0.04, 0);
+            if (presenceNoise < -0.3) continue; // ~70% of rows get beams
+
+            int matIndex = Math.abs((int) (presenceNoise * 1000)) % BEAM_MATERIALS.length;
+            Material beamMat = BEAM_MATERIALS[matIndex];
+
+            double heightNoise = SimplexNoise.noise2(seed + 22, worldX * 0.08, 0);
+            boolean doubleHeight = heightNoise > 0.4; // ~30% chance of double-height
+
+            for (int z = 0; z < 16; z++) {
+                if (chunkData.getType(x, beamTopY, z) == Material.AIR) {
+                    chunkData.setBlock(x, beamTopY, z, beamMat);
+                    if (doubleHeight && chunkData.getType(x, beamTopY - 1, z) == Material.AIR) {
+                        chunkData.setBlock(x, beamTopY - 1, z, beamMat);
+                    }
+                }
+            }
+        }
+
+        // Beams running along X (placed on Z grid lines)
+        for (int z = 0; z < 16; z++) {
+            int worldZ = chunkZ * 16 + z;
+            if (worldZ % BEAM_SPACING != 0) continue;
+
+            double presenceNoise = SimplexNoise.noise2(seed + 21, 0, worldZ * 0.04);
+            if (presenceNoise < -0.3) continue;
+
+            int matIndex = Math.abs((int) (presenceNoise * 1000)) % BEAM_MATERIALS.length;
+            Material beamMat = BEAM_MATERIALS[matIndex];
+
+            double heightNoise = SimplexNoise.noise2(seed + 23, 0, worldZ * 0.08);
+            boolean doubleHeight = heightNoise > 0.4;
+
+            for (int x = 0; x < 16; x++) {
+                if (chunkData.getType(x, beamTopY, z) == Material.AIR) {
+                    chunkData.setBlock(x, beamTopY, z, beamMat);
+                    if (doubleHeight && chunkData.getType(x, beamTopY - 1, z) == Material.AIR) {
+                        chunkData.setBlock(x, beamTopY - 1, z, beamMat);
+                    }
                 }
             }
         }

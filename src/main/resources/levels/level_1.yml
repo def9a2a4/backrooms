@@ -7,6 +7,8 @@ enter_message: "§7Something drips in the distance."
 events:
   - ambient_sound
   - footstep_echo
+  - light_blink
+  - blackout
 
 entities:
   - herobrine
@@ -25,3 +27,22 @@ event_config:
     chance: 0.5
     delay_ticks: 12
     offset_blocks: 8
+  light_blink:
+    enabled: true
+    check_interval_seconds: 30
+    chance: 0.15
+    radius: 20
+    cycles: 4
+    toggle_delay_ticks: 5
+    light_y: 18
+    light_spacing: 12
+    light_material: VERDANT_FROGLIGHT
+  blackout:
+    enabled: true
+    check_interval_seconds: 120
+    chance: 0.05
+    radius: 30
+    duration_seconds: 15
+    light_y: 18
+    light_spacing: 12
+    light_material: VERDANT_FROGLIGHT

@@ -1,10 +1,13 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Directional;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
@@ -13,216 +16,344 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Level 3 — "The Server Room" / err_redstone_overflow
- * Uniform iron block walls, polished blackstone floor. 3 blocks tall — claustrophobic.
- * Cell-based grid like Level 0: noise classifies regions → rectangular structures.
- * Observer blocks as server racks, redstone lamps in ceiling, redstone_block cable runs.
+ * Level 3 — "The Server Room"
+ * Tall white concrete halls on a 24x24 grid. Open floor plan with sparse
+ * noise-driven orthogonal walls. Redstone component chains on the floor
+ * form one big complicated circuit in patches.
  */
 public class Level3ChunkGenerator extends ChunkGenerator {
 
+    // Y layout
     private static final int FLOOR_Y = 0;
-    private static final int FLOOR_HEIGHT = 10;
-    private static final int AIR_MIN_Y = 10;
-    private static final int CEILING_MIN_Y = 13; // 3 blocks tall — claustrophobic
-    private static final int CEILING_MAX_Y = 20;
+    private static final int FLOOR_HEIGHT = 4;
+    private static final int CEILING_Y = 24;
+    private static final int CEILING_MAX_Y = 28;
 
-    private static final int CELL_SIZE = 4;
-    private static final int CELLS_PER_AXIS = 16 / CELL_SIZE;
-    private static final double REGION_SCALE = 1.0 / 32.0;
+    // Grid constants
+    private static final int CELL_SIZE = 24;
+    private static final int WALL_THICK = 2;
+    private static final int DOOR_WIDTH = 6;
+    private static final int DOOR_START = (CELL_SIZE - DOOR_WIDTH) / 2;
+    private static final int DOOR_END = DOOR_START + DOOR_WIDTH;
 
-    private static final int REGION_RACK = 0;     // open room with server racks
-    private static final int REGION_CORRIDOR = 1;  // 2-wide corridor
-    private static final int REGION_EQUIPMENT = 2; // solid with doorway
-    private static final int REGION_CORNER = 3;    // L-corner walls
+    // Single material — sterile white concrete
+    private static final Material BLOCK = Material.WHITE_CONCRETE;
+
+    // Interior wall noise
+    private static final double WALL_NOISE_SCALE = 1.0 / 32.0;
+    private static final double WALL_AXIS_SCALE = 1.0 / 24.0;
+    private static final double WALL_THRESHOLD = 0.6;
+
+    // Redstone chain grid
+    private static final int CHAIN_SPACING = 4;
+    private static final int CHAIN_PERIOD = 3; // component, dust, dust
+
+    private static final Material[] REDSTONE_COMPONENTS = {
+        Material.REPEATER,
+        Material.COMPARATOR,
+        Material.REDSTONE_TORCH,
+        Material.REDSTONE_LAMP,
+        Material.TARGET,
+        Material.OBSERVER,
+        Material.DAYLIGHT_DETECTOR,
+        Material.NOTE_BLOCK,
+        Material.DROPPER,
+        Material.DISPENSER,
+        Material.HOPPER,
+        Material.PISTON,
+        Material.STICKY_PISTON,
+        Material.LECTERN,
+        Material.TNT,
+        Material.LEVER,
+        Material.TRIPWIRE_HOOK,
+        Material.REDSTONE_BLOCK,
+    };
 
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
         long seed = worldInfo.getSeed();
 
-        // Floor: polished blackstone
-        chunkData.setRegion(0, FLOOR_Y, 0, 16, FLOOR_HEIGHT, 16, Material.POLISHED_BLACKSTONE);
-
-        // Ceiling: iron blocks
-        chunkData.setRegion(0, CEILING_MIN_Y, 0, 16, CEILING_MAX_Y, 16, Material.IRON_BLOCK);
-
-        // Fill air space with iron block walls (carve out like Level 0)
-        chunkData.setRegion(0, AIR_MIN_Y, 0, 16, CEILING_MIN_Y, 16, Material.IRON_BLOCK);
-
-        // Cell-based structure placement
-        for (int cx = 0; cx < CELLS_PER_AXIS; cx++) {
-            for (int cz = 0; cz < CELLS_PER_AXIS; cz++) {
-                int baseX = cx * CELL_SIZE;
-                int baseZ = cz * CELL_SIZE;
-
-                int cellWorldCol = chunkX * CELLS_PER_AXIS + cx;
-                int cellWorldRow = chunkZ * CELLS_PER_AXIS + cz;
-
-                double worldCenterX = (chunkX * 16 + baseX + CELL_SIZE / 2.0) * REGION_SCALE;
-                double worldCenterZ = (chunkZ * 16 + baseZ + CELL_SIZE / 2.0) * REGION_SCALE;
-                double noise = SimplexNoise.noise2(seed, worldCenterX, worldCenterZ);
-
-                int region = classifyRegion(noise);
-                placeStructure(chunkData, baseX, baseZ, region, cellWorldCol, cellWorldRow);
-            }
-        }
-
-        // Redstone lamps in ceiling on 6x6 grid
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
-                if (worldX % 6 == 0 && worldZ % 6 == 0) {
-                    chunkData.setBlock(x, CEILING_MIN_Y, z, Material.REDSTONE_LAMP);
-                }
-            }
-        }
 
-        // Redstone block cable runs along corridor walls at floor level
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                int worldX = chunkX * 16 + x;
-                int worldZ = chunkZ * 16 + z;
-                // Place redstone_block at floor level next to walls
-                if (chunkData.getType(x, AIR_MIN_Y, z) == Material.AIR) {
-                    boolean adjacentWall = false;
-                    if (x > 0 && chunkData.getType(x - 1, AIR_MIN_Y, z) == Material.IRON_BLOCK) adjacentWall = true;
-                    if (x < 15 && chunkData.getType(x + 1, AIR_MIN_Y, z) == Material.IRON_BLOCK) adjacentWall = true;
-                    if (z > 0 && chunkData.getType(x, AIR_MIN_Y, z - 1) == Material.IRON_BLOCK) adjacentWall = true;
-                    if (z < 15 && chunkData.getType(x, AIR_MIN_Y, z + 1) == Material.IRON_BLOCK) adjacentWall = true;
-                    // Only every other block to keep it tidy
-                    if (adjacentWall && (worldX + worldZ) % 2 == 0) {
-                        chunkData.setBlock(x, AIR_MIN_Y, z, Material.REDSTONE_BLOCK);
+                int cellX = Math.floorDiv(worldX, CELL_SIZE);
+                int cellZ = Math.floorDiv(worldZ, CELL_SIZE);
+                int localX = Math.floorMod(worldX, CELL_SIZE);
+                int localZ = Math.floorMod(worldZ, CELL_SIZE);
+
+                boolean inWallX = localX < WALL_THICK || localX >= CELL_SIZE - WALL_THICK;
+                boolean inWallZ = localZ < WALL_THICK || localZ >= CELL_SIZE - WALL_THICK;
+
+                boolean wallRemovedX = false;
+                boolean wallRemovedZ = false;
+                boolean isDoorX = false;
+                boolean isDoorZ = false;
+
+                if (inWallX) {
+                    int neighborCellX = localX < WALL_THICK ? cellX - 1 : cellX + 1;
+                    wallRemovedX = isWallRemoved(cellX, cellZ, neighborCellX, cellZ, seed);
+                    if (!wallRemovedX && localZ >= DOOR_START && localZ < DOOR_END) {
+                        isDoorX = isDoorOpen(cellX, cellZ, neighborCellX, cellZ, seed);
                     }
                 }
-            }
-        }
-    }
-
-    private int classifyRegion(double noise) {
-        if (noise < -0.2) return REGION_RACK;
-        if (noise < 0.2) return REGION_CORRIDOR;
-        if (noise < 0.45) return REGION_EQUIPMENT;
-        return REGION_CORNER;
-    }
-
-    private void placeStructure(ChunkData chunkData, int baseX, int baseZ,
-                                int region, int cellWorldCol, int cellWorldRow) {
-        switch (region) {
-            case REGION_RACK -> placeRackRoom(chunkData, baseX, baseZ, cellWorldCol, cellWorldRow);
-            case REGION_CORRIDOR -> placeCorridor(chunkData, baseX, baseZ, cellWorldRow);
-            case REGION_EQUIPMENT -> placeEquipmentRoom(chunkData, baseX, baseZ, cellWorldCol, cellWorldRow);
-            case REGION_CORNER -> placeLCorner(chunkData, baseX, baseZ, cellWorldCol, cellWorldRow);
-        }
-    }
-
-    private void placeRackRoom(ChunkData chunkData, int baseX, int baseZ,
-                               int cellWorldCol, int cellWorldRow) {
-        // Clear the cell
-        for (int x = baseX; x < baseX + CELL_SIZE && x < 16; x++) {
-            for (int z = baseZ; z < baseZ + CELL_SIZE && z < 16; z++) {
-                for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                    chunkData.setBlock(x, y, z, Material.AIR);
+                if (inWallZ) {
+                    int neighborCellZ = localZ < WALL_THICK ? cellZ - 1 : cellZ + 1;
+                    wallRemovedZ = isWallRemoved(cellX, cellZ, cellX, neighborCellZ, seed);
+                    if (!wallRemovedZ && localX >= DOOR_START && localX < DOOR_END) {
+                        isDoorZ = isDoorOpen(cellX, cellZ, cellX, neighborCellZ, seed);
+                    }
                 }
-            }
-        }
-        // Observer server rack along one wall edge (deterministic: north or east)
-        boolean northRack = (cellWorldCol + cellWorldRow) % 2 == 0;
-        for (int i = 0; i < CELL_SIZE; i++) {
-            int x, z;
-            if (northRack) {
-                x = baseX + i;
-                z = baseZ;
-            } else {
-                x = baseX + CELL_SIZE - 1;
-                z = baseZ + i;
-            }
-            if (x < 16 && z < 16) {
-                chunkData.setBlock(x, AIR_MIN_Y, z, Material.OBSERVER);
-                chunkData.setBlock(x, AIR_MIN_Y + 1, z, Material.OBSERVER);
-            }
-        }
-    }
 
-    private void placeCorridor(ChunkData chunkData, int baseX, int baseZ, int cellWorldRow) {
-        int dir = cellWorldRow % 2; // 0 = E-W, 1 = N-S
-        for (int x = baseX; x < baseX + CELL_SIZE && x < 16; x++) {
-            for (int z = baseZ; z < baseZ + CELL_SIZE && z < 16; z++) {
-                boolean isPath;
-                if (dir == 0) {
-                    isPath = (z - baseZ) >= 1 && (z - baseZ) <= 2;
+                boolean isWall;
+                if (inWallX && inWallZ) {
+                    isWall = !(wallRemovedX && wallRemovedZ);
+                } else if (inWallX) {
+                    isWall = !wallRemovedX && !isDoorX;
+                } else if (inWallZ) {
+                    isWall = !wallRemovedZ && !isDoorZ;
                 } else {
-                    isPath = (x - baseX) >= 1 && (x - baseX) <= 2;
+                    isWall = false;
                 }
-                if (isPath) {
-                    for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
+
+                // Sub-floor fill
+                chunkData.setRegion(x, FLOOR_Y, z, x + 1, FLOOR_HEIGHT, z + 1, BLOCK);
+
+                if (isWall) {
+                    for (int y = FLOOR_HEIGHT; y < CEILING_Y; y++) {
+                        chunkData.setBlock(x, y, z, BLOCK);
+                    }
+                    // Wall-mounted redstone lamps
+                    int edX = cellEdgeDist(localX);
+                    int edZ = cellEdgeDist(localZ);
+                    if (edX % 6 == 0 && edZ % 6 == 0) {
+                        chunkData.setBlock(x, FLOOR_HEIGHT + 4, z, Material.REDSTONE_LAMP);
+                        chunkData.setBlock(x, CEILING_Y - 2, z, Material.REDSTONE_LAMP);
+                    }
+                } else if (isDoorX || isDoorZ) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, BLOCK);
+                    for (int y = FLOOR_HEIGHT + 1; y < CEILING_Y; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);
                     }
+                    placeArchBlock(chunkData, x, z, localX, localZ, inWallX);
+                } else {
+                    // Interior — floor + air
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, BLOCK);
+                    for (int y = FLOOR_HEIGHT + 1; y < CEILING_Y; y++) {
+                        chunkData.setBlock(x, y, z, Material.AIR);
+                    }
+
+                    // Sparse noise-based interior walls
+                    placeInteriorWall(chunkData, x, z, worldX, worldZ, localX, localZ, seed);
+                }
+
+                // Ceiling slab
+                for (int y = CEILING_Y; y < CEILING_MAX_Y; y++) {
+                    chunkData.setBlock(x, y, z, BLOCK);
+                }
+
+                // Ceiling-mounted redstone lamps on a grid
+                int edCeilX = cellEdgeDist(localX);
+                int edCeilZ = cellEdgeDist(localZ);
+                if (edCeilX % 4 == 0 && edCeilZ % 4 == 0 && !isWall) {
+                    chunkData.setBlock(x, CEILING_Y, z, Material.REDSTONE_LAMP);
+                }
+            }
+        }
+
+        // Second pass: redstone chains on the floor
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                placeRedstoneChain(chunkData, x, z, worldX, worldZ, seed);
+            }
+        }
+    }
+
+    // --- Cell helpers ---
+
+    private static int cellEdgeDist(int localPos) {
+        return Math.min(localPos, CELL_SIZE - 1 - localPos);
+    }
+
+    private long wallHash(int cellAX, int cellAZ, int cellBX, int cellBZ, long seed) {
+        int minX = Math.min(cellAX, cellBX);
+        int maxX = Math.max(cellAX, cellBX);
+        int minZ = Math.min(cellAZ, cellBZ);
+        int maxZ = Math.max(cellAZ, cellBZ);
+        return seed ^ ((long) minX * 735632791L + (long) maxX * 524287L
+                + (long) minZ * 433494437L + (long) maxZ * 291371L);
+    }
+
+    private boolean isWallRemoved(int cellAX, int cellAZ, int cellBX, int cellBZ, long seed) {
+        long h = wallHash(cellAX, cellAZ, cellBX, cellBZ, seed);
+        return Math.floorMod(h, 100) < 25;
+    }
+
+    private boolean isDoorOpen(int cellAX, int cellAZ, int cellBX, int cellBZ, long seed) {
+        long h = wallHash(cellAX, cellAZ, cellBX, cellBZ, seed + 7);
+        return Math.floorMod(h, 100) < 80;
+    }
+
+    // --- Structure placement ---
+
+    private void placeArchBlock(ChunkData chunkData, int x, int z,
+                                int localX, int localZ, boolean inWallX) {
+        int doorLocalPos = inWallX ? localZ : localX;
+        int distFromEdge = Math.min(doorLocalPos - DOOR_START, DOOR_END - 1 - doorLocalPos);
+
+        if (distFromEdge == 0) {
+            chunkData.setBlock(x, CEILING_Y - 1, z, BLOCK);
+            chunkData.setBlock(x, CEILING_Y - 2, z, BLOCK);
+            chunkData.setBlock(x, CEILING_Y - 3, z, BLOCK);
+        } else if (distFromEdge == 1) {
+            chunkData.setBlock(x, CEILING_Y - 1, z, BLOCK);
+            chunkData.setBlock(x, CEILING_Y - 2, z, BLOCK);
+        } else if (distFromEdge == 2) {
+            chunkData.setBlock(x, CEILING_Y - 1, z, BLOCK);
+        }
+    }
+
+    private void placeInteriorWall(ChunkData chunkData, int x, int z,
+                                   int worldX, int worldZ,
+                                   int localX, int localZ,
+                                   long seed) {
+        // Don't place interior walls too close to perimeter walls
+        if (localX < WALL_THICK + 1 || localX >= CELL_SIZE - WALL_THICK - 1
+                || localZ < WALL_THICK + 1 || localZ >= CELL_SIZE - WALL_THICK - 1) {
+            return;
+        }
+
+        double noise = SimplexNoise.noise2(seed + 555L, worldX * WALL_NOISE_SCALE, worldZ * WALL_NOISE_SCALE);
+        if (noise < WALL_THRESHOLD) {
+            return;
+        }
+
+        // Second noise layer determines wall axis
+        double axisNoise = SimplexNoise.noise2(seed + 777L, worldX * WALL_AXIS_SCALE, worldZ * WALL_AXIS_SCALE);
+
+        if (axisNoise >= 0) {
+            // N-S wall: only place if aligned to even X positions
+            if (Math.floorMod(worldX, 2) == 0) {
+                for (int y = FLOOR_HEIGHT; y < CEILING_Y; y++) {
+                    chunkData.setBlock(x, y, z, BLOCK);
+                }
+            }
+        } else {
+            // E-W wall: only place if aligned to even Z positions
+            if (Math.floorMod(worldZ, 2) == 0) {
+                for (int y = FLOOR_HEIGHT; y < CEILING_Y; y++) {
+                    chunkData.setBlock(x, y, z, BLOCK);
                 }
             }
         }
     }
 
-    private void placeEquipmentRoom(ChunkData chunkData, int baseX, int baseZ,
-                                    int cellWorldCol, int cellWorldRow) {
-        // Solid iron block (already filled), carve a 2-wide doorway on one side
-        int side = Math.abs((cellWorldCol * 3 + cellWorldRow * 7) % 4);
-        int x1, z1;
-        switch (side) {
-            case 0 -> { x1 = baseX + 1; z1 = baseZ; }
-            case 1 -> { x1 = baseX + 1; z1 = baseZ + CELL_SIZE - 1; }
-            case 2 -> { x1 = baseX; z1 = baseZ + 1; }
-            default -> { x1 = baseX + CELL_SIZE - 1; z1 = baseZ + 1; }
+    /** Hash a single chain line coordinate to decide if that line is active. */
+    private boolean isChainLineActive(long seed, int lineCoord, boolean isXLine) {
+        long h = seed ^ ((long) lineCoord * (isXLine ? 198491317L : 6542989L) + 99999L);
+        return Math.floorMod(h, 100) < 40;
+    }
+
+    private void placeRedstoneChain(ChunkData chunkData, int x, int z,
+                                    int worldX, int worldZ,
+                                    long seed) {
+        boolean onNSLine = Math.floorMod(worldX, CHAIN_SPACING) == 0;
+        boolean onEWLine = Math.floorMod(worldZ, CHAIN_SPACING) == 0;
+
+        if (!onNSLine && !onEWLine) {
+            return;
         }
-        for (int d = 0; d < 2; d++) {
-            int x = (side <= 1) ? x1 + d : x1;
-            int z = (side >= 2) ? z1 + d : z1;
-            if (x >= 0 && x < 16 && z >= 0 && z < 16) {
-                for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                    chunkData.setBlock(x, y, z, Material.AIR);
-                }
-            }
+
+        // Per-line activation: hash the line's fixed coordinate
+        boolean nsActive = onNSLine && isChainLineActive(seed, worldX / CHAIN_SPACING, true);
+        boolean ewActive = onEWLine && isChainLineActive(seed, worldZ / CHAIN_SPACING, false);
+
+        if (!nsActive && !ewActive) {
+            return;
+        }
+
+        // Guard: only place on floor, not inside walls
+        if (chunkData.getType(x, FLOOR_HEIGHT, z) != BLOCK) {
+            return;
+        }
+        if (chunkData.getType(x, FLOOR_HEIGHT + 1, z) != Material.AIR) {
+            return;
+        }
+
+        // Determine if this is a component or dust position
+        boolean isComponent;
+        if (nsActive && ewActive) {
+            // Intersection of two active lines: always a component
+            isComponent = true;
+        } else if (nsActive) {
+            isComponent = Math.floorMod(worldZ, CHAIN_PERIOD) == 0;
+        } else {
+            isComponent = Math.floorMod(worldX, CHAIN_PERIOD) == 0;
+        }
+
+        if (isComponent) {
+            placeComponent(chunkData, x, z, worldX, worldZ, seed, nsActive, ewActive);
+        } else {
+            placeDust(chunkData, x, z, nsActive);
         }
     }
 
-    private void placeLCorner(ChunkData chunkData, int baseX, int baseZ,
-                              int cellWorldCol, int cellWorldRow) {
-        int corner = Math.abs((cellWorldCol * 3 + cellWorldRow * 7) % 4);
-        switch (corner) {
-            case 0 -> {
-                placeWall(chunkData, baseX, baseZ, 0);
-                placeWall(chunkData, baseX, baseZ, 2);
+    private void placeComponent(ChunkData chunkData, int x, int z,
+                                int worldX, int worldZ, long seed,
+                                boolean nsActive, boolean ewActive) {
+        long posHash = seed ^ ((long) worldX * 198491317L + (long) worldZ * 6542989L + 12345L);
+        int compIndex = Math.floorMod(posHash, REDSTONE_COMPONENTS.length);
+        Material component = REDSTONE_COMPONENTS[compIndex];
+
+        // Determine facing along the chain direction
+        BlockFace facing;
+        if (nsActive && !ewActive) {
+            facing = Math.floorMod(worldZ, 2) == 0 ? BlockFace.NORTH : BlockFace.SOUTH;
+        } else if (ewActive && !nsActive) {
+            facing = Math.floorMod(worldX, 2) == 0 ? BlockFace.EAST : BlockFace.WEST;
+        } else {
+            facing = BlockFace.NORTH;
+        }
+
+        try {
+            org.bukkit.block.data.BlockData blockData = Bukkit.createBlockData(component);
+            if (blockData instanceof Directional directional) {
+                if (directional.getFaces().contains(facing)) {
+                    directional.setFacing(facing);
+                }
             }
-            case 1 -> {
-                placeWall(chunkData, baseX, baseZ, 0);
-                placeWall(chunkData, baseX, baseZ, 3);
-            }
-            case 2 -> {
-                placeWall(chunkData, baseX, baseZ, 1);
-                placeWall(chunkData, baseX, baseZ, 2);
-            }
-            default -> {
-                placeWall(chunkData, baseX, baseZ, 1);
-                placeWall(chunkData, baseX, baseZ, 3);
-            }
+            chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, blockData);
+        } catch (Exception e) {
+            chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, component);
         }
     }
 
-    private void placeWall(ChunkData chunkData, int baseX, int baseZ, int direction) {
-        for (int i = 0; i < CELL_SIZE; i++) {
-            int x, z;
-            switch (direction) {
-                case 0 -> { x = baseX + i; z = baseZ; }
-                case 1 -> { x = baseX + i; z = baseZ + CELL_SIZE - 1; }
-                case 2 -> { x = baseX; z = baseZ + i; }
-                default -> { x = baseX + CELL_SIZE - 1; z = baseZ + i; }
-            }
-            if (x < 16 && z < 16) {
-                for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                    chunkData.setBlock(x, y, z, Material.IRON_BLOCK);
+    private void placeDust(ChunkData chunkData, int x, int z, boolean nsChain) {
+        try {
+            org.bukkit.block.data.BlockData wireData = Bukkit.createBlockData(Material.REDSTONE_WIRE);
+            if (wireData instanceof org.bukkit.block.data.type.RedstoneWire wire) {
+                if (nsChain) {
+                    wire.setFace(BlockFace.NORTH, org.bukkit.block.data.type.RedstoneWire.Connection.SIDE);
+                    wire.setFace(BlockFace.SOUTH, org.bukkit.block.data.type.RedstoneWire.Connection.SIDE);
+                    wire.setFace(BlockFace.EAST, org.bukkit.block.data.type.RedstoneWire.Connection.NONE);
+                    wire.setFace(BlockFace.WEST, org.bukkit.block.data.type.RedstoneWire.Connection.NONE);
+                } else {
+                    wire.setFace(BlockFace.EAST, org.bukkit.block.data.type.RedstoneWire.Connection.SIDE);
+                    wire.setFace(BlockFace.WEST, org.bukkit.block.data.type.RedstoneWire.Connection.SIDE);
+                    wire.setFace(BlockFace.NORTH, org.bukkit.block.data.type.RedstoneWire.Connection.NONE);
+                    wire.setFace(BlockFace.SOUTH, org.bukkit.block.data.type.RedstoneWire.Connection.NONE);
                 }
             }
+            chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, wireData);
+        } catch (Exception e) {
+            chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, Material.REDSTONE_WIRE);
         }
     }
+
+    // --- Standard overrides ---
 
     @Override public boolean shouldGenerateNoise() { return false; }
     @Override public boolean shouldGenerateSurface() { return false; }
@@ -234,7 +365,7 @@ public class Level3ChunkGenerator extends ChunkGenerator {
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, 8.5, AIR_MIN_Y, 8.5);
+        return new Location(world, 8.5, FLOOR_HEIGHT + 2, 8.5);
     }
 
     @Override
