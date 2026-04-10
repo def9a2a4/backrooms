@@ -2,7 +2,7 @@ PLUGIN_NAME := PluginTemplate
 
 .PHONY: build
 build:
-	gradle shadowJar
+	gradle clean shadowJar
 	mkdir -p bin
 	cp build/libs/$(PLUGIN_NAME)*.jar bin/
 
