@@ -4,10 +4,12 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsPlugin;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTrigger;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.generator.ChunkGenerator;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +32,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private String enterMessage;
     private long fixedTime;
     private String dimensionType;
+    private @Nullable NamespacedKey biomeKey;
     private final Map<String, ConfigurationSection> eventConfigs = new HashMap<>();
 
     public ConfigDrivenLevel(BackroomsPlugin plugin, String id, String generatorId,
@@ -88,6 +91,12 @@ public class ConfigDrivenLevel extends AbstractLevel {
         this.fixedTime = section.getLong("fixed_time", -1);
         this.dimensionType = section.getString("dimension_type", "dark");
 
+        String biomeStr = section.getString("biome", null);
+        if (biomeStr != null && biomeStr.contains(":")) {
+            String[] parts = biomeStr.split(":", 2);
+            this.biomeKey = new NamespacedKey(parts[0], parts[1]);
+        }
+
         ConfigurationSection eventsCfg = section.getConfigurationSection("event_config");
         if (eventsCfg != null) {
             for (String key : eventsCfg.getKeys(false)) {
@@ -116,7 +125,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
 
     @Override
     public ChunkGenerator createChunkGenerator() {
-        ChunkGenerator gen = generatorRegistry.create(generatorId);
+        ChunkGenerator gen = generatorRegistry.create(generatorId, biomeKey);
         if (gen == null) {
             throw new IllegalStateException("No generator registered for id: " + generatorId
                     + " (level: " + id + ")");

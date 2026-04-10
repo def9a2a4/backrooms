@@ -3,6 +3,7 @@ display_name: "The Far Lands"
 generator: level_4
 environment: NORMAL
 dimension_type: default
+biome: "backrooms:far_lands"
 fixed_time: 12500
 enter_message: "§6[ERR]: java.math.IntergerOverflowError"
 

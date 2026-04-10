@@ -3,6 +3,7 @@ display_name: "Disc 11"
 generator: level_5
 environment: NETHER
 dimension_type: dark
+biome: "backrooms:disc_11"
 enter_message: "§8You hear footsteps."
 
 events:

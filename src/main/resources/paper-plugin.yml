@@ -1,19 +1,10 @@
 name: PluginTemplate
 main: name.d3420b8b7fe04.def9a2a4.plugintemplate.PluginTemplatePlugin
+bootstrapper: name.d3420b8b7fe04.def9a2a4.plugintemplate.PluginTemplateBootstrap
 version: ${version}
-api-version: 1.21
+api-version: "1.21"
 author: You
 description: A Paper plugin.
-
-commands:
-  plugintemplate:
-    description: PluginTemplate commands
-    usage: /plugintemplate <reload|help>
-    permission: plugintemplate.admin
-  backrooms:
-    description: Backrooms dimension commands
-    usage: /backrooms [leave|goto|regenerate|status|event|spawn|despawn|enter|escalation|reset|list]
-    permission: backrooms.use
 
 permissions:
   plugintemplate.admin:

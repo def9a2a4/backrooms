@@ -3,6 +3,7 @@ display_name: "The Poolrooms"
 generator: level_37
 environment: NORMAL
 dimension_type: light
+biome: "backrooms:poolrooms"
 fixed_time: 6000
 enter_message: "§bYou can rest here."
 

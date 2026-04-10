@@ -1,246 +1,254 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 
+import org.bukkit.Bukkit;
 import org.bukkit.World;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.RecordComponent;
 import java.util.logging.Logger;
 
 /**
- * Uses NMS reflection to swap the DimensionType on a world's ServerLevel.
- * This allows per-world custom dimension types without overriding vanilla types.
- *
- * Falls back gracefully — if reflection fails, the datapack nether override
- * serves as a fallback for dark levels.
+ * Looks up datapack-registered dimension types (backrooms:dark, backrooms:light)
+ * from the registry and swaps the holder on each backrooms world's Level.
+ * The dimension types themselves are defined in the bundled datapack JSON files.
  */
 public class DimensionTypeHelper {
 
     private final Logger logger;
 
-    // Cached reflection targets (resolved once)
     private boolean resolved = false;
     private boolean available = false;
-    private Method getHandleMethod;
     private Field dimensionTypeField;
-    private Method holderDirectMethod;
-    private Constructor<?> dimTypeConstructor;
-    private RecordComponent[] dimTypeComponents;
-    private Class<?> dimTypeClass;
+
+    // Holders looked up from the registry (registered by the datapack)
+    private Object darkHolder;
+    private Object lightHolder;
 
     public DimensionTypeHelper(Logger logger) {
         this.logger = logger;
     }
 
-    /**
-     * Apply the dark dimension type to a world.
-     * Properties: ambient_light=0, skybox=END, no skylight, has ceiling, no dragon fight.
-     */
     public boolean applyDarkDimension(World world) {
-        return applyDimension(world, "dark", dimType -> {
-            Object[] values = copyComponents(dimType);
-            if (values == null) return null;
-
-            for (int i = 0; i < dimTypeComponents.length; i++) {
-                String name = dimTypeComponents[i].getName();
-                switch (name) {
-                    case "ambientLight" -> values[i] = 0.0f;
-                    case "hasSkyLight" -> values[i] = false;
-                    case "hasCeiling" -> values[i] = true;
-                    case "hasFixedTime" -> values[i] = false;
-                    case "coordinateScale" -> values[i] = 1.0;
-                    case "skybox" -> values[i] = resolveEnum(dimTypeComponents[i].getType(), "END");
-                    case "cardinalLightType" -> values[i] = resolveEnum(dimTypeComponents[i].getType(), "DEFAULT");
-                    case "monsterSettings" -> values[i] = createMonsterSettings(0, 0);
-                }
-            }
-            return dimTypeConstructor.newInstance(values);
-        });
+        return applyDimension(world, "dark", darkHolder);
     }
 
-    /**
-     * Apply the light dimension type to a world.
-     * Properties: ambient_light=1.0, skybox=OVERWORLD, skylight, no ceiling, fixed noon.
-     */
     public boolean applyLightDimension(World world) {
-        return applyDimension(world, "light", dimType -> {
-            Object[] values = copyComponents(dimType);
-            if (values == null) return null;
-
-            for (int i = 0; i < dimTypeComponents.length; i++) {
-                String name = dimTypeComponents[i].getName();
-                switch (name) {
-                    case "ambientLight" -> values[i] = 1.0f;
-                    case "hasSkyLight" -> values[i] = true;
-                    case "hasCeiling" -> values[i] = false;
-                    case "hasFixedTime" -> values[i] = true;
-                    case "coordinateScale" -> values[i] = 1.0;
-                    case "skybox" -> values[i] = resolveEnum(dimTypeComponents[i].getType(), "OVERWORLD");
-                    case "cardinalLightType" -> values[i] = resolveEnum(dimTypeComponents[i].getType(), "DEFAULT");
-                    case "monsterSettings" -> values[i] = createMonsterSettings(0, 0);
-                }
-            }
-            return dimTypeConstructor.newInstance(values);
-        });
+        return applyDimension(world, "light", lightHolder);
     }
 
-    private boolean applyDimension(World world, String label, DimTypeFactory factory) {
-        if (!ensureResolved()) {
+    private boolean applyDimension(World world, String label, Object holder) {
+        if (!ensureResolved()) return false;
+        if (holder == null) {
+            logger.warning("No " + label + " holder available — datapack dimension type not loaded?");
             return false;
         }
         try {
-            Object craftWorld = world.getClass().getMethod("getHandle").invoke(world);
-            Object currentDimType = getCurrentDimType(craftWorld);
-            Object newDimType = factory.create(currentDimType);
-            if (newDimType == null) {
-                logger.warning("Failed to construct " + label + " DimensionType");
-                return false;
-            }
-            Object holder = holderDirectMethod.invoke(null, newDimType);
-            dimensionTypeField.set(craftWorld, holder);
+            Object serverLevel = world.getClass().getMethod("getHandle").invoke(world);
+            dimensionTypeField.set(serverLevel, holder);
             logger.info("Applied " + label + " dimension type to world: " + world.getName());
             return true;
         } catch (Exception e) {
-            logger.warning("NMS dimension type swap failed for " + world.getName()
+            logger.warning("Dimension type swap failed for " + world.getName()
                     + " (" + label + "): " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
 
-    private Object getCurrentDimType(Object serverLevel) throws Exception {
-        // Find dimensionType() accessor method on the Level hierarchy
-        Method accessor = findMethod(serverLevel.getClass(), "dimensionType");
-        if (accessor == null) {
-            throw new RuntimeException("Cannot find dimensionType() method on ServerLevel");
-        }
-        return accessor.invoke(serverLevel);
-    }
-
-    private Object[] copyComponents(Object dimType) {
-        try {
-            Object[] values = new Object[dimTypeComponents.length];
-            for (int i = 0; i < dimTypeComponents.length; i++) {
-                values[i] = dimTypeComponents[i].getAccessor().invoke(dimType);
-            }
-            return values;
-        } catch (Exception e) {
-            logger.warning("Failed to copy DimensionType components: " + e.getMessage());
-            return null;
-        }
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private Object resolveEnum(Class<?> enumClass, String name) {
-        if (!enumClass.isEnum()) {
-            logger.warning("Expected enum type for " + name + " but got " + enumClass.getName());
-            return null;
-        }
-        return Enum.valueOf((Class<Enum>) enumClass, name);
-    }
-
-    /**
-     * Create a MonsterSettings record with constant light level and block light limit.
-     */
-    private Object createMonsterSettings(int lightLevel, int blockLightLimit) throws Exception {
-        // Find the MonsterSettings inner class
-        Class<?> msClass = null;
-        for (Class<?> inner : dimTypeClass.getDeclaredClasses()) {
-            if (inner.getSimpleName().equals("MonsterSettings")) {
-                msClass = inner;
-                break;
-            }
-        }
-        if (msClass == null) {
-            throw new RuntimeException("Cannot find MonsterSettings inner class");
-        }
-
-        // MonsterSettings(IntProvider monsterSpawnLightTest, int monsterSpawnBlockLightLimit)
-        Constructor<?> msCtor = msClass.getDeclaredConstructors()[0];
-        Class<?>[] paramTypes = msCtor.getParameterTypes();
-
-        // First param is IntProvider — create a ConstantInt
-        Object intProvider = createConstantInt(paramTypes[0], lightLevel);
-        return msCtor.newInstance(intProvider, blockLightLimit);
-    }
-
-    /**
-     * Create a ConstantInt (IntProvider subclass) for the given value.
-     */
-    private Object createConstantInt(Class<?> intProviderClass, int value) throws Exception {
-        // Look for ConstantInt subclass with static of(int) method
-        // ConstantInt is in net.minecraft.util.valueproviders
-        String pkg = intProviderClass.getPackageName();
-        Class<?> constantIntClass;
-        try {
-            constantIntClass = Class.forName(pkg + ".ConstantInt");
-        } catch (ClassNotFoundException e) {
-            // Try alternate naming
-            constantIntClass = Class.forName("net.minecraft.util.valueproviders.ConstantInt");
-        }
-        Method ofMethod = constantIntClass.getMethod("of", int.class);
-        return ofMethod.invoke(null, value);
-    }
-
-    /**
-     * Resolve all reflection targets once. Returns true if NMS is available.
-     */
     private boolean ensureResolved() {
         if (resolved) return available;
         resolved = true;
         try {
-            // 1. Find CraftWorld.getHandle() -> ServerLevel
+            // 1. Get ServerLevel class
             Class<?> craftWorldClass = Class.forName("org.bukkit.craftbukkit.CraftWorld");
-            getHandleMethod = craftWorldClass.getMethod("getHandle");
+            Method getHandleMethod = craftWorldClass.getMethod("getHandle");
             Class<?> serverLevelClass = getHandleMethod.getReturnType();
 
             // 2. Find DimensionType class via dimensionType() method
             Method dimTypeMethod = findMethod(serverLevelClass, "dimensionType");
             if (dimTypeMethod == null) {
-                throw new RuntimeException("Cannot find dimensionType() method");
+                throw new RuntimeException("Cannot find dimensionType() method on ServerLevel");
             }
-            dimTypeClass = dimTypeMethod.getReturnType();
+            Class<?> dimTypeClass = dimTypeMethod.getReturnType();
 
-            // 3. Verify it's a record and get components
-            if (!dimTypeClass.isRecord()) {
-                throw new RuntimeException("DimensionType is not a record: " + dimTypeClass.getName());
-            }
-            dimTypeComponents = dimTypeClass.getRecordComponents();
-            dimTypeConstructor = dimTypeClass.getDeclaredConstructors()[0];
-            dimTypeConstructor.setAccessible(true);
-
-            // 4. Find the dimensionTypeRegistration field (Holder<DimensionType>) on Level
-            // Walk up the class hierarchy to find it
-            Class<?> levelClass = serverLevelClass;
-            dimensionTypeField = null;
-            while (levelClass != null && dimensionTypeField == null) {
-                for (Field f : levelClass.getDeclaredFields()) {
-                    // The field type should be a Holder parameterized with DimensionType
-                    String typeName = f.getGenericType().toString();
-                    if (typeName.contains("Holder") && typeName.contains(dimTypeClass.getSimpleName())) {
-                        dimensionTypeField = f;
-                        dimensionTypeField.setAccessible(true);
-                        break;
-                    }
-                }
-                levelClass = levelClass.getSuperclass();
-            }
+            // 3. Find the Holder<DimensionType> field on Level
+            dimensionTypeField = findHolderField(serverLevelClass, dimTypeClass);
             if (dimensionTypeField == null) {
-                throw new RuntimeException("Cannot find Holder<DimensionType> field on Level class");
+                throw new RuntimeException("Cannot find Holder<DimensionType> field on Level");
             }
 
-            // 5. Find Holder.direct() static method
-            Class<?> holderClass = dimensionTypeField.getType();
-            holderDirectMethod = holderClass.getMethod("direct", Object.class);
+            // 4. Look up our datapack-registered dimension types from the registry
+            lookupDatapackHolders();
 
             available = true;
-            logger.info("NMS dimension type reflection resolved successfully");
+            logger.info("Dimension type helper resolved (dark=" + (darkHolder != null)
+                    + ", light=" + (lightHolder != null) + ")");
         } catch (Exception e) {
             available = false;
-            logger.warning("NMS dimension type reflection unavailable: " + e.getMessage());
-            logger.warning("Falling back to datapack-based dimension type overrides");
+            logger.warning("Dimension type helper failed: " + e.getMessage());
+            e.printStackTrace();
         }
         return available;
+    }
+
+    /**
+     * Look up backrooms:dark and backrooms:light from the dimension type registry.
+     * These are registered by the bundled datapack's dimension_type JSONs.
+     */
+    private void lookupDatapackHolders() throws Exception {
+        // Get MinecraftServer
+        Object craftServer = Bukkit.getServer();
+        Object minecraftServer = craftServer.getClass().getMethod("getServer").invoke(craftServer);
+
+        // Get registryAccess
+        Method registryAccessMethod = findMethod(minecraftServer.getClass(), "registryAccess");
+        if (registryAccessMethod == null) {
+            throw new RuntimeException("Cannot find registryAccess() method");
+        }
+        Object registryAccess = registryAccessMethod.invoke(minecraftServer);
+
+        // Get Registries.DIMENSION_TYPE key
+        Class<?> registriesClass = Class.forName("net.minecraft.core.registries.Registries");
+        Object dimTypeRegistryKey = registriesClass.getField("DIMENSION_TYPE").get(null);
+
+        // Look up the registry
+        Method registryMethod = findRegistryMethod(registryAccess);
+        if (registryMethod == null) {
+            throw new RuntimeException("Cannot find registry lookup method");
+        }
+        Object registry = registryMethod.invoke(registryAccess, dimTypeRegistryKey);
+        if (registry != null && registry.getClass().getName().equals("java.util.Optional")) {
+            registry = registry.getClass().getMethod("orElseThrow").invoke(registry);
+        }
+
+        // Derive ResourceLocation and ResourceKey classes from existing objects
+        Class<?> resourceKeyClass = dimTypeRegistryKey.getClass();
+        Class<?> resourceLocationClass = deriveResourceLocationClass(resourceKeyClass, dimTypeRegistryKey);
+
+        // Find ResourceLocation factory and ResourceKey.create
+        Method fromNsAndPath = findStaticFactory(resourceLocationClass);
+        Method createKey = findCreateKeyMethod(resourceKeyClass);
+
+        // Create resource keys for our dimension types
+        Object darkLocation = fromNsAndPath.invoke(null, "backrooms", "dark");
+        Object lightLocation = fromNsAndPath.invoke(null, "backrooms", "light");
+        Object darkKey = createKey.invoke(null, dimTypeRegistryKey, darkLocation);
+        Object lightKey = createKey.invoke(null, dimTypeRegistryKey, lightLocation);
+
+        // Look up holders: registry.getHolder(ResourceKey) -> Optional<Holder.Reference>
+        Method getHolderMethod = findGetHolderMethod(registry, resourceKeyClass);
+        if (getHolderMethod != null) {
+            darkHolder = unwrapOptional(getHolderMethod.invoke(registry, darkKey));
+            lightHolder = unwrapOptional(getHolderMethod.invoke(registry, lightKey));
+        }
+
+        if (darkHolder == null || lightHolder == null) {
+            // Dump registered keys for debugging
+            StringBuilder sb = new StringBuilder("Registered dimension types: ");
+            try {
+                Method keySetMethod = findMethod(registry.getClass(), "keySet");
+                if (keySetMethod == null) keySetMethod = findMethod(registry.getClass(), "registryKeySet");
+                if (keySetMethod != null) {
+                    Object keySet = keySetMethod.invoke(registry);
+                    sb.append(keySet);
+                }
+            } catch (Exception ignored) {}
+            throw new RuntimeException("backrooms:dark or backrooms:light not found in dimension type registry. "
+                    + sb + ". Is the datapack loaded?");
+        }
+    }
+
+    // --- Reflection helpers ---
+
+    private Field findHolderField(Class<?> startClass, Class<?> dimTypeClass) {
+        Class<?> current = startClass;
+        while (current != null) {
+            for (Field f : current.getDeclaredFields()) {
+                String typeName = f.getGenericType().toString();
+                if (typeName.contains("Holder") && typeName.contains(dimTypeClass.getSimpleName())) {
+                    f.setAccessible(true);
+                    logger.info("Found dimension type field: " + f.getName()
+                            + " on " + current.getSimpleName());
+                    return f;
+                }
+            }
+            current = current.getSuperclass();
+        }
+        return null;
+    }
+
+    private Method findRegistryMethod(Object registryAccess) {
+        for (String name : new String[]{"registryOrThrow", "lookupOrThrow", "registry"}) {
+            for (Method m : registryAccess.getClass().getMethods()) {
+                if (m.getName().equals(name) && m.getParameterCount() == 1) {
+                    return m;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Class<?> deriveResourceLocationClass(Class<?> resourceKeyClass, Object resourceKeyInstance) throws Exception {
+        // Scan all zero-param methods returning a non-JDK, non-ResourceKey type
+        for (Method m : resourceKeyClass.getMethods()) {
+            if (m.getParameterCount() == 0
+                    && !m.getReturnType().isPrimitive()
+                    && !m.getReturnType().getName().startsWith("java.")
+                    && !m.getName().equals("getClass")
+                    && m.getReturnType() != resourceKeyClass) {
+                Object result = m.invoke(resourceKeyInstance);
+                if (result != null) {
+                    return result.getClass();
+                }
+            }
+        }
+        throw new RuntimeException("Cannot derive ResourceLocation class from ResourceKey");
+    }
+
+    private Method findStaticFactory(Class<?> resourceLocationClass) {
+        for (Method m : resourceLocationClass.getMethods()) {
+            if (m.getParameterCount() == 2
+                    && m.getParameterTypes()[0] == String.class
+                    && m.getParameterTypes()[1] == String.class
+                    && m.getReturnType() == resourceLocationClass) {
+                return m;
+            }
+        }
+        throw new RuntimeException("Cannot find ResourceLocation factory method");
+    }
+
+    private Method findCreateKeyMethod(Class<?> resourceKeyClass) {
+        for (Method m : resourceKeyClass.getMethods()) {
+            if (m.getName().equals("create") && m.getParameterCount() == 2) {
+                return m;
+            }
+        }
+        throw new RuntimeException("Cannot find ResourceKey.create() method");
+    }
+
+    private Method findGetHolderMethod(Object registry, Class<?> resourceKeyClass) {
+        // Try getHolder(ResourceKey) -> Optional<Holder.Reference>
+        for (String name : new String[]{"getHolder", "getHolderOrThrow", "get", "wrapAsHolder"}) {
+            for (Method m : registry.getClass().getMethods()) {
+                if (m.getName().equals(name) && m.getParameterCount() == 1
+                        && m.getParameterTypes()[0].isAssignableFrom(resourceKeyClass)) {
+                    return m;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Object unwrapOptional(Object result) throws Exception {
+        if (result == null) return null;
+        if (result.getClass().getName().equals("java.util.Optional")) {
+            Method isPresent = result.getClass().getMethod("isPresent");
+            if ((boolean) isPresent.invoke(result)) {
+                return result.getClass().getMethod("get").invoke(result);
+            }
+            return null;
+        }
+        return result;
     }
 
     private Method findMethod(Class<?> clazz, String name) {
@@ -254,15 +262,15 @@ public class DimensionTypeHelper {
             }
             current = current.getSuperclass();
         }
+        for (Method m : clazz.getMethods()) {
+            if (m.getName().equals(name) && m.getParameterCount() == 0) {
+                return m;
+            }
+        }
         return null;
     }
 
     public boolean isAvailable() {
         return ensureResolved();
-    }
-
-    @FunctionalInterface
-    private interface DimTypeFactory {
-        Object create(Object currentDimType) throws Exception;
     }
 }

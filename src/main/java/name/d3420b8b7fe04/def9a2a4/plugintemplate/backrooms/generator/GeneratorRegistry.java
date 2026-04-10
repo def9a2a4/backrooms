@@ -1,12 +1,13 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
+import org.bukkit.NamespacedKey;
 import org.bukkit.generator.ChunkGenerator;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * Maps string IDs to ChunkGenerator factories.
@@ -14,16 +15,16 @@ import java.util.function.Supplier;
  */
 public class GeneratorRegistry {
 
-    private final Map<String, Supplier<ChunkGenerator>> generators = new HashMap<>();
+    private final Map<String, Function<NamespacedKey, ChunkGenerator>> generators = new HashMap<>();
 
-    public void register(String id, Supplier<ChunkGenerator> factory) {
+    public void register(String id, Function<NamespacedKey, ChunkGenerator> factory) {
         generators.put(id, factory);
     }
 
     @Nullable
-    public ChunkGenerator create(String id) {
-        Supplier<ChunkGenerator> factory = generators.get(id);
-        return factory != null ? factory.get() : null;
+    public ChunkGenerator create(String id, @Nullable NamespacedKey biomeKey) {
+        Function<NamespacedKey, ChunkGenerator> factory = generators.get(id);
+        return factory != null ? factory.apply(biomeKey) : null;
     }
 
     public boolean has(String id) {

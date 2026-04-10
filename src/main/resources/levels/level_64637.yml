@@ -3,6 +3,7 @@ display_name: "The Library"
 generator: level_64637
 environment: NETHER
 dimension_type: dark
+biome: "backrooms:library"
 fixed_time: 18000
 enter_message: "§8§kxxxx§r §7You find yourself among infinite shelves. §8§kxxxx"
 

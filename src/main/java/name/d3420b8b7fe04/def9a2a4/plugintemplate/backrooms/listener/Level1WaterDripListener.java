@@ -44,11 +44,13 @@ public class Level1WaterDripListener implements Listener {
 
         if (waterPositions.isEmpty()) return;
 
-        // Defer to next tick so the chunk is fully loaded before triggering physics
+        // Defer to next tick so the chunk is fully loaded before triggering physics.
+        // Must clear to AIR first — setType to the same material is a no-op in Bukkit.
         Bukkit.getScheduler().runTask(plugin, () -> {
             for (int[] pos : waterPositions) {
                 Block block = chunk.getBlock(pos[0], CEILING_Y, pos[1]);
                 if (block.getType() == Material.WATER) {
+                    block.setType(Material.AIR, false);
                     block.setType(Material.WATER, true);
                 }
             }

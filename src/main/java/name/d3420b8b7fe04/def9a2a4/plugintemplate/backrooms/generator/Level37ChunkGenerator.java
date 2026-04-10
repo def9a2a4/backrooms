@@ -4,12 +4,9 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Biome;
-import org.bukkit.generator.BiomeProvider;
-import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.NamespacedKey;
 import org.bukkit.generator.WorldInfo;
 
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -17,7 +14,11 @@ import java.util.Random;
  * 24x24 symmetric rooms on a grid with large palette regions.
  * Rooms can merge. Clean, symmetric aesthetic. Overworld at midday.
  */
-public class Level37ChunkGenerator extends ChunkGenerator {
+public class Level37ChunkGenerator extends BackroomsChunkGenerator {
+
+    public Level37ChunkGenerator(NamespacedKey biomeKey) {
+        super(biomeKey);
+    }
 
     // Y layout
     private static final int FLOOR_Y = 0;
@@ -932,33 +933,8 @@ public class Level37ChunkGenerator extends ChunkGenerator {
         return "§e" + className + " §7| §b" + paletteName + " §7| §a" + typeName;
     }
 
-    // --- Standard overrides ---
-
-    @Override public boolean shouldGenerateNoise() { return false; }
-    @Override public boolean shouldGenerateSurface() { return false; }
-    @Override public boolean shouldGenerateBedrock() { return false; }
-    @Override public boolean shouldGenerateCaves() { return false; }
-    @Override public boolean shouldGenerateDecorations() { return false; }
-    @Override public boolean shouldGenerateMobs() { return false; }
-    @Override public boolean shouldGenerateStructures() { return false; }
-
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
         return new Location(world, 8.5, FLOOR_HEIGHT + 2, 8.5);
-    }
-
-    @Override
-    public BiomeProvider getDefaultBiomeProvider(WorldInfo worldInfo) {
-        return new BiomeProvider() {
-            @Override
-            public Biome getBiome(WorldInfo worldInfo, int x, int y, int z) {
-                return Biome.PLAINS;
-            }
-
-            @Override
-            public List<Biome> getBiomes(WorldInfo worldInfo) {
-                return List.of(Biome.PLAINS);
-            }
-        };
     }
 }

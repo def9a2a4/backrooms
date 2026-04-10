@@ -4,12 +4,9 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Biome;
-import org.bukkit.generator.BiomeProvider;
-import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.NamespacedKey;
 import org.bukkit.generator.WorldInfo;
 
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -18,7 +15,11 @@ import java.util.Random;
  * Large continuous stone regions, ceiling drips, support beams, embedded froglight lighting.
  * Think: parking garage at 3 AM, industrial basement, liminal warehouse.
  */
-public class Level1ChunkGenerator extends ChunkGenerator {
+public class Level1ChunkGenerator extends BackroomsChunkGenerator {
+
+    public Level1ChunkGenerator(NamespacedKey biomeKey) {
+        super(biomeKey);
+    }
 
     private static final int FLOOR_Y = 0;
     private static final int FLOOR_HEIGHT = 10;
@@ -33,7 +34,7 @@ public class Level1ChunkGenerator extends ChunkGenerator {
     private static final double REGION_SCALE = 1.0 / 48.0;
     private static final double DETAIL_SCALE = 1.0 / 16.0;
 
-    public static final int LIGHT_SPACING = 12;
+    public static final int LIGHT_SPACING = 11;
 
     private static final Material[] PILLAR_MATERIALS = {
             Material.SMOOTH_STONE, Material.STONE_BRICKS, Material.POLISHED_ANDESITE
@@ -140,7 +141,7 @@ public class Level1ChunkGenerator extends ChunkGenerator {
         return baseMat;
     }
 
-    private static final int BEAM_SPACING = 4;
+    private static final int BEAM_SPACING = 5;
     private static final Material[] BEAM_MATERIALS = {
             Material.STONE_BRICKS, Material.SMOOTH_STONE, Material.POLISHED_ANDESITE
     };
@@ -289,31 +290,8 @@ public class Level1ChunkGenerator extends ChunkGenerator {
         }
     }
 
-    @Override public boolean shouldGenerateNoise() { return false; }
-    @Override public boolean shouldGenerateSurface() { return false; }
-    @Override public boolean shouldGenerateBedrock() { return false; }
-    @Override public boolean shouldGenerateCaves() { return false; }
-    @Override public boolean shouldGenerateDecorations() { return false; }
-    @Override public boolean shouldGenerateMobs() { return false; }
-    @Override public boolean shouldGenerateStructures() { return false; }
-
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
         return new Location(world, 8.5, AIR_MIN_Y, 8.5);
-    }
-
-    @Override
-    public BiomeProvider getDefaultBiomeProvider(WorldInfo worldInfo) {
-        return new BiomeProvider() {
-            @Override
-            public Biome getBiome(WorldInfo worldInfo, int x, int y, int z) {
-                return Biome.THE_VOID;
-            }
-
-            @Override
-            public List<Biome> getBiomes(WorldInfo worldInfo) {
-                return List.of(Biome.THE_VOID);
-            }
-        };
     }
 }

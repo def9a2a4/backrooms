@@ -4,12 +4,10 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Biome;
-import org.bukkit.generator.BiomeProvider;
+import org.bukkit.NamespacedKey;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
 
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -18,7 +16,11 @@ import java.util.Random;
  * next to coral next to ice. Structure fragments placed partially, rotated, overlapping.
  * The world generator has lost its mind.
  */
-public class Level7ChunkGenerator extends ChunkGenerator {
+public class Level7ChunkGenerator extends BackroomsChunkGenerator {
+
+    public Level7ChunkGenerator(NamespacedKey biomeKey) {
+        super(biomeKey);
+    }
 
     private static final int MIN_Y = 0;
     private static final int MAX_Y = 128;
@@ -214,31 +216,8 @@ public class Level7ChunkGenerator extends ChunkGenerator {
         chunkData.setBlock(7, baseY - 2, 7, Material.AIR);
     }
 
-    @Override public boolean shouldGenerateNoise() { return false; }
-    @Override public boolean shouldGenerateSurface() { return false; }
-    @Override public boolean shouldGenerateBedrock() { return false; }
-    @Override public boolean shouldGenerateCaves() { return false; }
-    @Override public boolean shouldGenerateDecorations() { return false; }
-    @Override public boolean shouldGenerateMobs() { return false; }
-    @Override public boolean shouldGenerateStructures() { return false; }
-
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
         return new Location(world, 8.5, 64, 8.5);
-    }
-
-    @Override
-    public BiomeProvider getDefaultBiomeProvider(WorldInfo worldInfo) {
-        return new BiomeProvider() {
-            @Override
-            public Biome getBiome(WorldInfo worldInfo, int x, int y, int z) {
-                return Biome.THE_VOID;
-            }
-
-            @Override
-            public List<Biome> getBiomes(WorldInfo worldInfo) {
-                return List.of(Biome.THE_VOID);
-            }
-        };
     }
 }

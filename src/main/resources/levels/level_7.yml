@@ -3,6 +3,7 @@ display_name: "The Corrupted Chunk"
 generator: level_7
 environment: NETHER
 dimension_type: dark
+biome: "backrooms:corrupted_chunk"
 enter_message: "§4§k||§r §c[FATAL] WorldGen has encountered an unrecoverable error §4§k||"
 
 events:

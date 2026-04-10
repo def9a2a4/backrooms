@@ -3,6 +3,7 @@ display_name: "The Server Room"
 generator: level_3
 environment: NETHER
 dimension_type: dark
+biome: "backrooms:server_room"
 enter_message: "§c[ERR] §7Unauthorized access detected."
 
 events:

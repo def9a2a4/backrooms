@@ -3,6 +3,7 @@ display_name: "The Habitable Zone"
 generator: level_1
 environment: NETHER
 dimension_type: dark
+biome: "backrooms:habitable_zone"
 enter_message: "§7Something drips in the distance."
 
 events:
@@ -36,7 +37,7 @@ event_config:
     cycles: 4
     toggle_delay_ticks: 5
     light_y: 18
-    light_spacing: 12
+    light_spacing: 11
     light_material: VERDANT_FROGLIGHT
   blackout:
     enabled: true
@@ -45,5 +46,5 @@ event_config:
     radius: 30
     duration_seconds: 15
     light_y: 18
-    light_spacing: 12
+    light_spacing: 11
     light_material: VERDANT_FROGLIGHT

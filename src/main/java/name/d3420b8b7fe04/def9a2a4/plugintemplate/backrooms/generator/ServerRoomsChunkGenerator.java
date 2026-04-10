@@ -5,14 +5,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Biome;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Directional;
-import org.bukkit.generator.BiomeProvider;
-import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
 
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -21,7 +18,11 @@ import java.util.Random;
  * noise-driven orthogonal walls. Redstone component chains run along
  * a world-aligned grid on the floor.
  */
-public class ServerRoomsChunkGenerator extends ChunkGenerator {
+public class ServerRoomsChunkGenerator extends BackroomsChunkGenerator {
+
+    public ServerRoomsChunkGenerator(NamespacedKey biomeKey) {
+        super(biomeKey);
+    }
 
     // Y layout
     private static final int FLOOR_Y = 0;
@@ -711,33 +712,8 @@ public class ServerRoomsChunkGenerator extends ChunkGenerator {
         }
     }
 
-    // --- Standard overrides ---
-
-    @Override public boolean shouldGenerateNoise() { return false; }
-    @Override public boolean shouldGenerateSurface() { return false; }
-    @Override public boolean shouldGenerateBedrock() { return false; }
-    @Override public boolean shouldGenerateCaves() { return false; }
-    @Override public boolean shouldGenerateDecorations() { return false; }
-    @Override public boolean shouldGenerateMobs() { return false; }
-    @Override public boolean shouldGenerateStructures() { return false; }
-
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
         return new Location(world, 8.5, FLOOR_HEIGHT + 2, 8.5);
-    }
-
-    @Override
-    public BiomeProvider getDefaultBiomeProvider(WorldInfo worldInfo) {
-        return new BiomeProvider() {
-            @Override
-            public Biome getBiome(WorldInfo worldInfo, int x, int y, int z) {
-                return Biome.DEEP_DARK;
-            }
-
-            @Override
-            public List<Biome> getBiomes(WorldInfo worldInfo) {
-                return List.of(Biome.DEEP_DARK);
-            }
-        };
     }
 }

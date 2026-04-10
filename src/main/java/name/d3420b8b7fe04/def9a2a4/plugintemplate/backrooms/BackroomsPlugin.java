@@ -139,11 +139,25 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);
 
-        // 9. Register commands
+        // 9. Register commands (Paper plugins don't support YAML-based commands)
         command = new BackroomsCommand(plugin, levelRegistry, playerStateManager, transitionManager,
                 eventRegistry, entityRegistry, entryTriggerRegistry, entitySpawner, generatorRegistry);
-        plugin.getCommand("backrooms").setExecutor(command);
-        plugin.getCommand("backrooms").setTabCompleter(command);
+        org.bukkit.command.Command backroomsCmd = new org.bukkit.command.Command(
+                "backrooms", "Backrooms dimension commands",
+                "/backrooms [leave|goto|regenerate|status|event|spawn|despawn|enter|escalation|reset|list]",
+                java.util.List.of()) {
+            @Override
+            public boolean execute(org.bukkit.command.CommandSender sender, String label, String[] args) {
+                return command.onCommand(sender, this, label, args);
+            }
+            @Override
+            public java.util.List<String> tabComplete(org.bukkit.command.CommandSender sender, String alias, String[] args) {
+                java.util.List<String> result = command.onTabComplete(sender, this, alias, args);
+                return result != null ? result : java.util.List.of();
+            }
+        };
+        backroomsCmd.setPermission("backrooms.use");
+        Bukkit.getCommandMap().register("backrooms", backroomsCmd);
 
         // 10. Auto-save player state every 5 minutes
         autoSaveTask = Bukkit.getScheduler().runTaskTimer(plugin,

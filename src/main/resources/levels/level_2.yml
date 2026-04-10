@@ -3,6 +3,7 @@ display_name: "The Pipe Works"
 generator: level_2
 environment: NETHER
 dimension_type: dark
+biome: "backrooms:pipe_works"
 enter_message: "§7The pipes groan."
 
 events:
