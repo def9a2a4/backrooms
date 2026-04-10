@@ -1,10 +1,9 @@
 id: level_37
-display_name: "The Server Rooms"
+display_name: "The Poolrooms"
 generator: level_37
 environment: NORMAL
-use_dark_dimension: false
-fixed_time: 18000
-enter_message: "§7The hum of machines fills the air."
+fixed_time: 6000
+enter_message: "§bYou can rest here."
 
 events:
   - ambient_sound
@@ -17,4 +16,4 @@ event_config:
     check_interval_seconds: 45
     chance: 0.03
     sounds:
-      - BLOCK_BEACON_AMBIENT
+      - AMBIENT_UNDERWATER_LOOP
