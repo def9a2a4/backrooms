@@ -20,6 +20,13 @@ backrooms:
       enabled: true
       chance: 0.01
 
+  # Entity spawner settings
+  entity_spawner:
+    max_entities_per_player: 3
+    spawn_check_interval_ticks: 100
+    spawn_distance_min: 30
+    spawn_distance_max: 60
+
   # Player settings
   player:
     death_respawn_level: level_0

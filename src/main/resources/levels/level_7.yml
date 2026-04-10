@@ -42,6 +42,9 @@ event_config:
     radius: 30
     cycles: 8
     toggle_delay_ticks: 2
+    light_y: 13
+    light_spacing: 4
+    light_material: GLOWSTONE
   random_potion:
     enabled: true
     check_interval_seconds: 20

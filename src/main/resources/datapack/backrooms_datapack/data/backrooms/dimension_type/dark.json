@@ -1,0 +1,15 @@
+{
+  "ambient_light": 0.0,
+  "skybox": "end",
+  "cardinal_light": "default",
+  "has_skylight": false,
+  "has_ceiling": true,
+  "natural": false,
+  "coordinate_scale": 1.0,
+  "height": 384,
+  "min_y": -64,
+  "logical_height": 256,
+  "infiniburn": "#minecraft:infiniburn_end",
+  "monster_spawn_block_light_limit": 0,
+  "monster_spawn_light_level": 0
+}

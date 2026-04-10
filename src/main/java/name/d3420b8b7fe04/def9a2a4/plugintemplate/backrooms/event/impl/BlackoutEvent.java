@@ -57,6 +57,13 @@ public class BlackoutEvent extends AbstractTimedEvent {
         if (config == null) return;
         radius = config.getInt("radius", 30);
         durationTicks = config.getInt("duration_seconds", 15) * 20;
+        lightY = config.getInt("light_y", lightY);
+        lightSpacing = config.getInt("light_spacing", lightSpacing);
+        String matName = config.getString("light_material", null);
+        if (matName != null) {
+            Material mat = Material.matchMaterial(matName);
+            if (mat != null) lightMaterial = mat;
+        }
     }
 
     @Override

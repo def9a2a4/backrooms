@@ -12,6 +12,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import org.bukkit.configuration.ConfigurationSection;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -20,8 +22,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class EntitySpawner {
 
-    private static final int MAX_ENTITIES_PER_PLAYER = 3;
-    private static final int SPAWN_CHECK_INTERVAL_TICKS = 100;
+    private int maxEntitiesPerPlayer = 3;
+    private int spawnCheckIntervalTicks = 100;
+    private int spawnDistanceMin = 30;
+    private int spawnDistanceMax = 60;
 
     private final JavaPlugin plugin;
     private final LevelRegistry levelRegistry;
@@ -39,8 +43,16 @@ public class EntitySpawner {
         this.playerStateManager = playerStateManager;
     }
 
+    public void loadConfig(ConfigurationSection config) {
+        if (config == null) return;
+        maxEntitiesPerPlayer = config.getInt("max_entities_per_player", maxEntitiesPerPlayer);
+        spawnCheckIntervalTicks = config.getInt("spawn_check_interval_ticks", spawnCheckIntervalTicks);
+        spawnDistanceMin = config.getInt("spawn_distance_min", spawnDistanceMin);
+        spawnDistanceMax = config.getInt("spawn_distance_max", spawnDistanceMax);
+    }
+
     public void start() {
-        tickTask = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, SPAWN_CHECK_INTERVAL_TICKS, 20L);
+        tickTask = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, spawnCheckIntervalTicks, 20L);
     }
 
     public void stop() {
@@ -106,12 +118,12 @@ public class EntitySpawner {
 
             for (Player player : world.getPlayers()) {
                 int activeCount = countActiveFor(player.getUniqueId());
-                if (activeCount >= MAX_ENTITIES_PER_PLAYER) continue;
+                if (activeCount >= maxEntitiesPerPlayer) continue;
 
                 BackroomsPlayerState state = playerStateManager.getOrCreate(player);
 
                 for (String entityId : level.getEntityIds()) {
-                    if (activeCount >= MAX_ENTITIES_PER_PLAYER) break;
+                    if (activeCount >= maxEntitiesPerPlayer) break;
                     BackroomsEntity entity = entityRegistry.get(entityId);
                     if (entity == null) continue;
                     if (!entity.shouldSpawn(player, state)) continue;
@@ -141,7 +153,7 @@ public class EntitySpawner {
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         Location base = player.getLocation();
         double angle = rng.nextDouble() * 2 * Math.PI;
-        double distance = 30 + rng.nextDouble() * 30; // 30-60 blocks away
+        double distance = spawnDistanceMin + rng.nextDouble() * (spawnDistanceMax - spawnDistanceMin);
         double x = base.getX() + Math.cos(angle) * distance;
         double z = base.getZ() + Math.sin(angle) * distance;
         return new Location(base.getWorld(), x, base.getY(), z);

@@ -19,9 +19,14 @@ public class LevelRegistry {
     private final Map<World, BackroomsLevel> worldToLevel = new HashMap<>();
     private final Map<String, World> levelToWorld = new HashMap<>();
     private final Logger logger;
+    private DatapackInstaller datapackInstaller;
 
     public LevelRegistry(Logger logger) {
         this.logger = logger;
+    }
+
+    public void setDatapackInstaller(DatapackInstaller datapackInstaller) {
+        this.datapackInstaller = datapackInstaller;
     }
 
     public void register(BackroomsLevel level) {
@@ -59,6 +64,8 @@ public class LevelRegistry {
     public void loadWorlds() {
         for (BackroomsLevel level : levels.values()) {
             String worldName = worldNameFor(level);
+            installDatapackIfNeeded(level, worldName);
+
             WorldCreator creator = new WorldCreator(worldName);
             creator.generator(level.createChunkGenerator());
             creator.environment(level.getEnvironment());
@@ -111,6 +118,8 @@ public class LevelRegistry {
         }
 
         // Recreate
+        installDatapackIfNeeded(level, worldName);
+
         WorldCreator creator = new WorldCreator(worldName);
         creator.generator(level.createChunkGenerator());
         creator.environment(level.getEnvironment());
@@ -145,6 +154,14 @@ public class LevelRegistry {
             return "backrooms";
         }
         return "backrooms_" + level.getId();
+    }
+
+    private void installDatapackIfNeeded(BackroomsLevel level, String worldName) {
+        if (datapackInstaller != null
+                && level instanceof ConfigDrivenLevel cdl
+                && cdl.useDarkDimension()) {
+            datapackInstaller.installDatapack(worldName);
+        }
     }
 
     private void deleteDirectory(Path dir) {

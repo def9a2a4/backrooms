@@ -60,6 +60,13 @@ public class LightBlinkEvent extends AbstractTimedEvent {
         radius = config.getInt("radius", 20);
         cycles = config.getInt("cycles", 4);
         toggleDelayTicks = config.getInt("toggle_delay_ticks", 5);
+        lightY = config.getInt("light_y", lightY);
+        lightSpacing = config.getInt("light_spacing", lightSpacing);
+        String matName = config.getString("light_material", null);
+        if (matName != null) {
+            Material mat = Material.matchMaterial(matName);
+            if (mat != null) lightMaterial = mat;
+        }
     }
 
     @Override

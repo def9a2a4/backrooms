@@ -23,4 +23,6 @@ public interface EntryTrigger {
     void loadConfig(ConfigurationSection config);
 
     Set<String> getEnabledWorlds();
+
+    void setEnabledWorlds(Set<String> worlds);
 }

@@ -2,6 +2,7 @@ id: level_4
 display_name: "The Far Lands"
 generator: level_4
 environment: NORMAL
+use_dark_dimension: false
 fixed_time: 12500
 enter_message: "§6[ERR]: java.math.IntergerOverflowError"
 

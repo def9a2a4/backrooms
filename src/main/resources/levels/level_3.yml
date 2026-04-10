@@ -28,6 +28,9 @@ event_config:
     radius: 15
     cycles: 6
     toggle_delay_ticks: 3
+    light_y: 13
+    light_spacing: 4
+    light_material: REDSTONE_LAMP
   fake_chat_message:
     enabled: true
     check_interval_seconds: 45

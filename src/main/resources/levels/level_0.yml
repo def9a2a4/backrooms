@@ -31,12 +31,18 @@ event_config:
     radius: 20
     cycles: 4
     toggle_delay_ticks: 5
+    light_y: 24
+    light_spacing: 4
+    light_material: OCHRE_FROGLIGHT
   blackout:
     enabled: true
     check_interval_seconds: 120
     chance: 0.05
     radius: 30
     duration_seconds: 15
+    light_y: 24
+    light_spacing: 4
+    light_material: OCHRE_FROGLIGHT
   footstep_echo:
     enabled: true
     check_interval_seconds: 3

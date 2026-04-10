@@ -8,6 +8,7 @@ import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class BlockCorruptionEvent extends AbstractTimedEvent {
@@ -15,7 +16,7 @@ public class BlockCorruptionEvent extends AbstractTimedEvent {
     private int radius = 20;
     private int cubeSize = 4;
 
-    private static final Material[] CORRUPT_MATERIALS = {
+    private static final Material[] DEFAULT_CORRUPT_MATERIALS = {
             Material.NETHERRACK, Material.GRASS_BLOCK, Material.END_STONE,
             Material.SAND, Material.GRAVEL, Material.ICE, Material.MAGMA_BLOCK,
             Material.COBBLESTONE, Material.OAK_PLANKS, Material.OBSIDIAN,
@@ -24,6 +25,8 @@ public class BlockCorruptionEvent extends AbstractTimedEvent {
             Material.TERRACOTTA, Material.DEEPSLATE, Material.TUFF,
             Material.CALCITE, Material.DRIPSTONE_BLOCK
     };
+
+    private Material[] corruptMaterials = DEFAULT_CORRUPT_MATERIALS;
 
     public BlockCorruptionEvent() {
         this.chance = 0.15;
@@ -41,6 +44,14 @@ public class BlockCorruptionEvent extends AbstractTimedEvent {
         if (config != null) {
             radius = config.getInt("radius", radius);
             cubeSize = config.getInt("cube_size", cubeSize);
+            List<String> materialNames = config.getStringList("materials");
+            if (!materialNames.isEmpty()) {
+                Material[] parsed = materialNames.stream()
+                        .map(Material::matchMaterial)
+                        .filter(m -> m != null)
+                        .toArray(Material[]::new);
+                if (parsed.length > 0) corruptMaterials = parsed;
+            }
         }
     }
 
@@ -58,7 +69,7 @@ public class BlockCorruptionEvent extends AbstractTimedEvent {
                 for (int dz = 0; dz < cubeSize; dz++) {
                     Block block = center.clone().add(dx, dy, dz).getBlock();
                     if (!block.getType().isAir()) {
-                        block.setType(CORRUPT_MATERIALS[rng.nextInt(CORRUPT_MATERIALS.length)], false);
+                        block.setType(corruptMaterials[rng.nextInt(corruptMaterials.length)], false);
                     }
                 }
             }

@@ -17,6 +17,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.impl.*;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLevel;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.DatapackInstaller;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
@@ -120,7 +121,8 @@ public class BackroomsPlugin {
             event.init(plugin);
         }
 
-        // 6. Create worlds
+        // 6. Install datapack & create worlds
+        levelRegistry.setDatapackInstaller(new DatapackInstaller(plugin));
         levelRegistry.loadWorlds();
 
         // 7. Start schedulers
@@ -132,7 +134,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(playerStateManager, plugin);
         Bukkit.getPluginManager().registerEvents(entryManager, plugin);
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
-        Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(loadLibraryBookConfig()), plugin);
+        Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
 
         // 9. Register commands
         BackroomsCommand command = new BackroomsCommand(levelRegistry, playerStateManager, transitionManager,
@@ -176,6 +178,9 @@ public class BackroomsPlugin {
             }
         }
 
+        // Load entity spawner config
+        entitySpawner.loadConfig(cfg.getConfigurationSection("entity_spawner"));
+
         // Load entry trigger config
         ConfigurationSection entryCfg = cfg.getConfigurationSection("entry");
         Set<String> enabledWorlds = new HashSet<>();
@@ -185,10 +190,7 @@ public class BackroomsPlugin {
             for (var trigger : entryTriggerRegistry.getAll()) {
                 ConfigurationSection triggerCfg = entryCfg.getConfigurationSection(trigger.getId());
                 trigger.loadConfig(triggerCfg);
-                if (trigger instanceof SuffocationEntry s) s.setEnabledWorlds(enabledWorlds);
-                if (trigger instanceof VoidFallEntry v) v.setEnabledWorlds(enabledWorlds);
-                if (trigger instanceof BedAnomalyEntry b) b.setEnabledWorlds(enabledWorlds);
-                if (trigger instanceof PortalMislinkEntry p) p.setEnabledWorlds(enabledWorlds);
+                trigger.setEnabledWorlds(enabledWorlds);
             }
         }
 

@@ -20,6 +20,11 @@ public class SuffocationEntry implements EntryTrigger {
 
     private boolean enabled = true;
     private double chance = 0.02;
+    private String targetLevel = "level_0";
+    private String entryMessage = "\u00a77\u00a7oInternal server error: java.lang.NullPointerException at WorldGenLayer.class";
+    private int blindnessDuration = 40;
+    private int nauseaDuration = 60;
+    private int delayTicks = 40;
     private Set<String> enabledWorlds = new HashSet<>();
     private final JavaPlugin plugin;
 
@@ -45,15 +50,15 @@ public class SuffocationEntry implements EntryTrigger {
         if (damageEvent.getCause() != EntityDamageEvent.DamageCause.SUFFOCATION) return null;
         if (ThreadLocalRandom.current().nextDouble() >= chance) return null;
         damageEvent.setCancelled(true);
-        return "level_0";
+        return targetLevel;
     }
 
     @Override
     public void playEntrySequence(Player player, Runnable onComplete) {
-        player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 1, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 60, 0, false, false));
-        player.sendMessage("\u00a77\u00a7oInternal server error: java.lang.NullPointerException at WorldGenLayer.class");
-        Bukkit.getScheduler().runTaskLater(plugin, onComplete, 40L);
+        if (blindnessDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, blindnessDuration, 1, false, false));
+        if (nauseaDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, nauseaDuration, 0, false, false));
+        if (entryMessage != null && !entryMessage.isEmpty()) player.sendMessage(entryMessage);
+        Bukkit.getScheduler().runTaskLater(plugin, onComplete, delayTicks);
     }
 
     @Override
@@ -61,6 +66,11 @@ public class SuffocationEntry implements EntryTrigger {
         if (config == null) return;
         enabled = config.getBoolean("enabled", true);
         chance = config.getDouble("chance", 0.02);
+        targetLevel = config.getString("target_level", "level_0");
+        entryMessage = config.getString("entry_message", entryMessage);
+        blindnessDuration = config.getInt("blindness_duration", blindnessDuration);
+        nauseaDuration = config.getInt("nausea_duration", nauseaDuration);
+        delayTicks = config.getInt("delay_ticks", delayTicks);
     }
 
     @Override

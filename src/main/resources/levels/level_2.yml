@@ -6,7 +6,7 @@ enter_message: "§7The pipes groan."
 
 events:
   - ambient_sound
-  - blackout
+  # - blackout
   - footstep_echo
 
 entities:
@@ -21,12 +21,15 @@ event_config:
       - AMBIENT_CAVE
       - AMBIENT_NETHER_WASTES_MOOD
       - AMBIENT_BASALT_DELTAS_MOOD
-  blackout:
-    enabled: true
-    check_interval_seconds: 90
-    chance: 0.08
-    radius: 25
-    duration_seconds: 10
+  # blackout:
+  #   enabled: true
+  #   check_interval_seconds: 90
+  #   chance: 0.08
+  #   radius: 25
+  #   duration_seconds: 10
+  #   light_y: 11
+  #   light_spacing: 8
+  #   light_material: LANTERN
   footstep_echo:
     enabled: true
     check_interval_seconds: 4

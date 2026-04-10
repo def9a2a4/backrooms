@@ -52,59 +52,67 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("This command can only be used by players.");
-            return true;
-        }
-
         if (args.length == 0) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage("This command can only be used by players.");
+                return true;
+            }
             return handleEnter(player, "level_0");
         }
 
         return switch (args[0].toLowerCase()) {
-            case "leave" -> handleLeave(player);
-            case "goto" -> {
-                if (args.length < 2) {
-                    player.sendMessage("Usage: /backrooms goto <level_id>");
+            case "regenerate" -> handleRegenerate(sender, args.length > 1 ? args[1] : null);
+            case "list" -> handleList(sender, args.length > 1 ? args[1] : null);
+            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("This command can only be used by players.");
                     yield true;
                 }
-                yield handleEnter(player, args[1]);
+                yield switch (args[0].toLowerCase()) {
+                    case "leave" -> handleLeave(player);
+                    case "goto" -> {
+                        if (args.length < 2) {
+                            player.sendMessage("Usage: /backrooms goto <level_id>");
+                            yield true;
+                        }
+                        yield handleEnter(player, args[1]);
+                    }
+                    case "status" -> handleStatus(player);
+                    case "event" -> {
+                        if (args.length < 2) {
+                            player.sendMessage("Usage: /backrooms event <event_id>");
+                            yield true;
+                        }
+                        yield handleEvent(player, args[1]);
+                    }
+                    case "spawn" -> {
+                        if (args.length < 2) {
+                            player.sendMessage("Usage: /backrooms spawn <entity_id>");
+                            yield true;
+                        }
+                        yield handleSpawn(player, args[1]);
+                    }
+                    case "despawn" -> handleDespawn(player);
+                    case "enter" -> {
+                        if (args.length < 2) {
+                            player.sendMessage("Usage: /backrooms enter <trigger_id>");
+                            yield true;
+                        }
+                        yield handleTriggerEntry(player, args[1]);
+                    }
+                    case "escalation" -> {
+                        if (args.length < 2) {
+                            player.sendMessage("Usage: /backrooms escalation <level>");
+                            yield true;
+                        }
+                        yield handleEscalation(player, args[1]);
+                    }
+                    case "reset" -> handleReset(player);
+                    default -> true;
+                };
             }
-            case "regenerate" -> handleRegenerate(player, args.length > 1 ? args[1] : null);
-            case "status" -> handleStatus(player);
-            case "event" -> {
-                if (args.length < 2) {
-                    player.sendMessage("Usage: /backrooms event <event_id>");
-                    yield true;
-                }
-                yield handleEvent(player, args[1]);
-            }
-            case "spawn" -> {
-                if (args.length < 2) {
-                    player.sendMessage("Usage: /backrooms spawn <entity_id>");
-                    yield true;
-                }
-                yield handleSpawn(player, args[1]);
-            }
-            case "despawn" -> handleDespawn(player);
-            case "enter" -> {
-                if (args.length < 2) {
-                    player.sendMessage("Usage: /backrooms enter <trigger_id>");
-                    yield true;
-                }
-                yield handleTriggerEntry(player, args[1]);
-            }
-            case "escalation" -> {
-                if (args.length < 2) {
-                    player.sendMessage("Usage: /backrooms escalation <level>");
-                    yield true;
-                }
-                yield handleEscalation(player, args[1]);
-            }
-            case "reset" -> handleReset(player);
-            case "list" -> handleList(player, args.length > 1 ? args[1] : null);
             default -> {
-                player.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status, event, spawn, despawn, enter, escalation, reset, list");
+                sender.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status, event, spawn, despawn, enter, escalation, reset, list");
                 yield true;
             }
         };
@@ -164,24 +172,24 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean handleRegenerate(Player player, String levelId) {
-        if (!player.hasPermission("backrooms.regenerate") && !player.isOp()) {
-            player.sendMessage("You don't have permission to regenerate the Backrooms.");
+    private boolean handleRegenerate(CommandSender sender, String levelId) {
+        if (!sender.hasPermission("backrooms.regenerate") && !sender.isOp()) {
+            sender.sendMessage("You don't have permission to regenerate the Backrooms.");
             return true;
         }
 
         if (levelId != null && !"all".equalsIgnoreCase(levelId)) {
             if (levelRegistry.get(levelId) == null) {
-                player.sendMessage("Unknown level: " + levelId);
+                sender.sendMessage("Unknown level: " + levelId);
                 return true;
             }
-            player.sendMessage("Regenerating level: " + levelId + "...");
+            sender.sendMessage("Regenerating level: " + levelId + "...");
             levelRegistry.regenerateLevel(levelId);
-            player.sendMessage("Level " + levelId + " has been regenerated.");
+            sender.sendMessage("Level " + levelId + " has been regenerated.");
         } else {
-            player.sendMessage("Regenerating all Backrooms levels...");
+            sender.sendMessage("Regenerating all Backrooms levels...");
             levelRegistry.regenerateAll();
-            player.sendMessage("All Backrooms levels have been regenerated.");
+            sender.sendMessage("All Backrooms levels have been regenerated.");
         }
         return true;
     }
@@ -208,9 +216,9 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
 
     // --- Admin/debug subcommands ---
 
-    private boolean requireAdmin(Player player) {
-        if (!player.hasPermission("backrooms.admin") && !player.isOp()) {
-            player.sendMessage("You don't have permission to use this command.");
+    private boolean requireAdmin(CommandSender sender) {
+        if (!sender.hasPermission("backrooms.admin") && !sender.isOp()) {
+            sender.sendMessage("You don't have permission to use this command.");
             return false;
         }
         return true;
@@ -351,52 +359,52 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean handleList(Player player, String category) {
-        if (!requireAdmin(player)) return true;
+    private boolean handleList(CommandSender sender, String category) {
+        if (!requireAdmin(sender)) return true;
 
         if (category == null) {
-            player.sendMessage("--- Backrooms Registries ---");
-            player.sendMessage("Levels: " + levelRegistry.getAll().size());
-            player.sendMessage("Events: " + eventRegistry.getAll().size());
-            player.sendMessage("Entities: " + entityRegistry.getAll().size());
-            player.sendMessage("Entry triggers: " + entryTriggerRegistry.getAll().size());
-            player.sendMessage("Generators: " + generatorRegistry.getIds().size());
-            player.sendMessage("Use /backrooms list <category> for details.");
+            sender.sendMessage("--- Backrooms Registries ---");
+            sender.sendMessage("Levels: " + levelRegistry.getAll().size());
+            sender.sendMessage("Events: " + eventRegistry.getAll().size());
+            sender.sendMessage("Entities: " + entityRegistry.getAll().size());
+            sender.sendMessage("Entry triggers: " + entryTriggerRegistry.getAll().size());
+            sender.sendMessage("Generators: " + generatorRegistry.getIds().size());
+            sender.sendMessage("Use /backrooms list <category> for details.");
             return true;
         }
 
         switch (category.toLowerCase()) {
             case "levels" -> {
-                player.sendMessage("--- Levels ---");
+                sender.sendMessage("--- Levels ---");
                 for (BackroomsLevel level : levelRegistry.getAll()) {
-                    player.sendMessage("  " + level.getId() + " - " + level.getDisplayName());
+                    sender.sendMessage("  " + level.getId() + " - " + level.getDisplayName());
                 }
             }
             case "events" -> {
-                player.sendMessage("--- Events ---");
+                sender.sendMessage("--- Events ---");
                 for (BackroomsEvent event : eventRegistry.getAll()) {
-                    player.sendMessage("  " + event.getId());
+                    sender.sendMessage("  " + event.getId());
                 }
             }
             case "entities" -> {
-                player.sendMessage("--- Entities ---");
+                sender.sendMessage("--- Entities ---");
                 for (BackroomsEntity entity : entityRegistry.getAll()) {
-                    player.sendMessage("  " + entity.getId());
+                    sender.sendMessage("  " + entity.getId());
                 }
             }
             case "triggers" -> {
-                player.sendMessage("--- Entry Triggers ---");
+                sender.sendMessage("--- Entry Triggers ---");
                 for (EntryTrigger trigger : entryTriggerRegistry.getAll()) {
-                    player.sendMessage("  " + trigger.getId());
+                    sender.sendMessage("  " + trigger.getId());
                 }
             }
             case "generators" -> {
-                player.sendMessage("--- Generators ---");
+                sender.sendMessage("--- Generators ---");
                 for (String id : generatorRegistry.getIds()) {
-                    player.sendMessage("  " + id);
+                    sender.sendMessage("  " + id);
                 }
             }
-            default -> player.sendMessage("Unknown category. Use: levels, events, entities, triggers, generators");
+            default -> sender.sendMessage("Unknown category. Use: levels, events, entities, triggers, generators");
         }
         return true;
     }

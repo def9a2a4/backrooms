@@ -20,6 +20,10 @@ public class PortalMislinkEntry implements EntryTrigger {
 
     private boolean enabled = true;
     private double chance = 0.01;
+    private String targetLevel = "level_0";
+    private int blindnessDuration = 60;
+    private int nauseaDuration = 80;
+    private int delayTicks = 50;
     private Set<String> enabledWorlds = new HashSet<>();
     private final JavaPlugin plugin;
 
@@ -44,14 +48,14 @@ public class PortalMislinkEntry implements EntryTrigger {
         if (!(event instanceof PlayerPortalEvent portalEvent)) return null;
         if (ThreadLocalRandom.current().nextDouble() >= chance) return null;
         portalEvent.setCancelled(true);
-        return "level_0";
+        return targetLevel;
     }
 
     @Override
     public void playEntrySequence(Player player, Runnable onComplete) {
-        player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 80, 0, false, false));
-        Bukkit.getScheduler().runTaskLater(plugin, onComplete, 50L);
+        if (blindnessDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, blindnessDuration, 1, false, false));
+        if (nauseaDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, nauseaDuration, 0, false, false));
+        Bukkit.getScheduler().runTaskLater(plugin, onComplete, delayTicks);
     }
 
     @Override
@@ -59,6 +63,10 @@ public class PortalMislinkEntry implements EntryTrigger {
         if (config == null) return;
         enabled = config.getBoolean("enabled", true);
         chance = config.getDouble("chance", 0.01);
+        targetLevel = config.getString("target_level", "level_0");
+        blindnessDuration = config.getInt("blindness_duration", blindnessDuration);
+        nauseaDuration = config.getInt("nausea_duration", nauseaDuration);
+        delayTicks = config.getInt("delay_ticks", delayTicks);
     }
 
     @Override
