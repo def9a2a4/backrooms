@@ -31,8 +31,6 @@ import java.util.Random;
 public class LibraryBookshelfListener implements Listener {
 
     private static final int CELL_SIZE = 16;
-    private static final int SHELF_MIN_Y = 11;
-    private static final int SHELF_MAX_Y = 15;
     private static final double CHISELED_CHANCE = 0.12;
 
     private final JavaPlugin plugin;
@@ -53,24 +51,32 @@ public class LibraryBookshelfListener implements Listener {
         int cellX = Math.floorDiv(chunk.getX() * 16, CELL_SIZE);
         int cellZ = Math.floorDiv(chunk.getZ() * 16, CELL_SIZE);
 
-        // Only pillar rooms have chiseled bookshelves
-        if (!Level64637ChunkGenerator.hasCenterPillar(worldSeed, cellX, cellZ)) return;
+        // Staircase rooms have no pillar bookshelves
+        if (Level64637ChunkGenerator.isStaircase(worldSeed, cellX, cellZ)) return;
 
         Random rng = new Random(chunk.getChunkKey());
 
         List<ShelfCandidate> candidates = new ArrayList<>();
 
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                for (int y = SHELF_MIN_Y; y <= SHELF_MAX_Y; y++) {
-                    Block block = chunk.getBlock(x, y, z);
-                    if (block.getType() != Material.BOOKSHELF) continue;
-                    if (rng.nextDouble() >= CHISELED_CHANCE) continue;
+        for (int layer = 0; layer < Level64637ChunkGenerator.NUM_LAYERS; layer++) {
+            // Only pillar rooms on this layer have chiseled bookshelves
+            if (!Level64637ChunkGenerator.hasCenterPillar(worldSeed, layer, cellX, cellZ)) continue;
 
-                    BlockFace facing = computeFacing(block.getX(), block.getZ());
-                    if (facing == null) continue;
+            int shelfMinY = layer * Level64637ChunkGenerator.FLOOR_SPACING + 4;
+            int shelfMaxY = layer * Level64637ChunkGenerator.FLOOR_SPACING + 8;
 
-                    candidates.add(new ShelfCandidate(block.getLocation(), facing, rng.nextLong()));
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    for (int y = shelfMinY; y <= shelfMaxY; y++) {
+                        Block block = chunk.getBlock(x, y, z);
+                        if (block.getType() != Material.BOOKSHELF) continue;
+                        if (rng.nextDouble() >= CHISELED_CHANCE) continue;
+
+                        BlockFace facing = computeFacing(block.getX(), block.getZ());
+                        if (facing == null) continue;
+
+                        candidates.add(new ShelfCandidate(block.getLocation(), facing, rng.nextLong()));
+                    }
                 }
             }
         }

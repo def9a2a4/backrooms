@@ -1,11 +1,11 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.NamespacedKey;
-import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.block.data.type.Stairs;
+import org.bukkit.block.BlockFace;
 import org.bukkit.generator.WorldInfo;
 
 import java.util.List;
@@ -13,50 +13,61 @@ import java.util.Random;
 
 /**
  * Level 64637 — "The Library"
- * Inspired by Borges' Library of Babel. Endless square rooms with floor-to-ceiling
- * bookshelves. Two room variants: empty rooms and rooms with a central 4x4 pillar
- * whose faces hold chiseled bookshelves with written books.
+ * Inspired by Borges' Library of Babel. 7 vertical layers of endless 16x16 rooms
+ * with floor-to-ceiling bookshelves. Three room variants: empty, center pillar
+ * (with chiseled bookshelves), and staircase (connecting layers).
  *
- * Room layout (16x16 cell, 1 per chunk):
- *   Positions 0 and 15: wall (1-block each side, 2-thick effective between rooms)
- *   Positions 1-14: interior with face pattern
+ * Layers 0 and 6 are identical (seed uses layer % 6). The world loops vertically:
+ * ascending past layer 6 wraps to layer 0, descending past layer 0 wraps to layer 6.
+ *
+ * Vertical layout per layer (10 blocks each):
+ *   Solid: layerBaseY + 0..2   (floor/ceiling mass)
+ *   Air:   layerBaseY + 3..9   (room interior, 7 blocks tall)
  *
  * Wall face pattern (positions 1-14, 14 elements, symmetric):
  *   P BBB P B DD B P BBB P
- *   where P=pilaster(oak), B=bookshelf, D=doorway
- *
- * Center pillar (variant B rooms, positions 6-9 x 6-9):
- *   P B B P
- *   B O O B    P=pilaster, B=bookshelf, O=solid oak interior
- *   B O O B
- *   P B B P
  */
 public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
     // ── Geometry ─────────────────────────────────────────────────────────
 
-    private static final int CELL_SIZE = 16;       // one room per chunk
-    private static final int WALL_THICKNESS = 1;   // one-block walls on each edge
+    private static final int CELL_SIZE = 16;
+    private static final int WALL_THICKNESS = 1;
 
-    // Vertical layout
-    private static final int SOLID_MIN_Y = 0;
-    private static final int AIR_MIN_Y = 10;       // floor surface / baseboard
-    private static final int SHELF_MIN_Y = 11;     // first bookshelf row
-    private static final int SHELF_MAX_Y = 15;     // last bookshelf row (inclusive)
-    private static final int AIR_MAX_Y = 17;       // ceiling (exclusive); crown at y=16
-    private static final int SOLID_MAX_Y = 40;
+    // Multi-layer layout
+    public static final int NUM_LAYERS = 7;
+    public static final int FLOOR_SPACING = 10;
+    private static final int SOLID_THICKNESS = 3;     // floor/ceiling mass per layer
+    // Ceiling cap above layer 6
+    private static final int CAP_MIN_Y = NUM_LAYERS * FLOOR_SPACING;  // 70
+    private static final int CAP_MAX_Y = CAP_MIN_Y + SOLID_THICKNESS; // 73
 
-    private static final int DOOR_HEIGHT = 3;      // y=10,11,12 are open
+    // Per-layer offsets (relative to layerBaseY = layer * FLOOR_SPACING)
+    private static final int REL_SOLID_MIN = 0;
+    private static final int REL_SOLID_MAX = 3;  // exclusive
+    private static final int REL_AIR_MIN = 3;    // walking surface / baseboard
+    private static final int REL_SHELF_MIN = 4;
+    private static final int REL_SHELF_MAX = 8;  // inclusive
+    private static final int REL_AIR_MAX = 10;   // exclusive (= next layer's solid start)
 
-    // Wall face pattern — positions along the 14-block span (local 1-14)
-    // Offsets from position 1:  0  1  2  3  4  5  6  7  8  9 10 11 12 13
-    // Pattern:                  P  B  B  B  P  B  D  D  B  P  B  B  B  P
-    private static final int FACE_START = WALL_THICKNESS; // local pos 1
-    private static final int FACE_LENGTH = CELL_SIZE - 2 * WALL_THICKNESS; // 14
+    private static final int DOOR_HEIGHT = 3;
+
+    // Wall face pattern
+    private static final int FACE_START = WALL_THICKNESS;
+    private static final int FACE_LENGTH = CELL_SIZE - 2 * WALL_THICKNESS;
 
     // Center pillar bounds (inclusive)
     public static final int PILLAR_MIN = 6;
     public static final int PILLAR_MAX = 9;
+
+    // Stairwell bounds (inclusive) — 6x6 footprint
+    public static final int STAIR_MIN = 5;
+    public static final int STAIR_MAX = 10;
+
+    // Wrap teleportation offset (layer 0 ↔ layer 6)
+    public static final int WRAP_OFFSET = 6 * FLOOR_SPACING; // 60
+
+    public enum RoomType { EMPTY, PILLAR, STAIRCASE }
 
     public Level64637ChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
@@ -67,16 +78,88 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
         long seed = worldInfo.getSeed();
-        Random chunkRng = new Random(seed ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
         int cellX = Math.floorDiv(chunkX * 16, CELL_SIZE);
         int cellZ = Math.floorDiv(chunkZ * 16, CELL_SIZE);
 
-        // Solid fill: floor mass and ceiling mass (oak planks)
-        chunkData.setRegion(0, SOLID_MIN_Y, 0, 16, AIR_MIN_Y, 16, Material.OAK_PLANKS);
-        chunkData.setRegion(0, AIR_MAX_Y, 0, 16, SOLID_MAX_Y, 16, Material.OAK_PLANKS);
+        boolean staircase = isStaircase(seed, cellX, cellZ);
 
-        boolean pillarRoom = hasCenterPillar(seed, cellX, cellZ);
+        // Fill entire vertical extent with oak planks first (all solids)
+        chunkData.setRegion(0, 0, 0, 16, CAP_MAX_Y, 16, Material.OAK_PLANKS);
 
+        // Generate each layer
+        for (int layer = 0; layer < NUM_LAYERS; layer++) {
+            int baseY = layer * FLOOR_SPACING;
+            int airMin = baseY + REL_AIR_MIN;
+            int airMax = baseY + REL_AIR_MAX;
+
+            RoomType roomType = staircase ? RoomType.STAIRCASE : getRoomType(seed, layer, cellX, cellZ);
+
+            // Carve room interior per column
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    int worldX = chunkX * 16 + x;
+                    int worldZ = chunkZ * 16 + z;
+                    int localX = Math.floorMod(worldX, CELL_SIZE);
+                    int localZ = Math.floorMod(worldZ, CELL_SIZE);
+
+                    boolean isWallX = localX < WALL_THICKNESS || localX >= CELL_SIZE - WALL_THICKNESS;
+                    boolean isWallZ = localZ < WALL_THICKNESS || localZ >= CELL_SIZE - WALL_THICKNESS;
+
+                    if (isWallX && isWallZ) {
+                        // Corner post — solid (already filled)
+                    } else if (isWallX) {
+                        int boundaryX = localX == 0 ? cellX : cellX + 1;
+                        placeWallColumn(chunkData, x, z, localZ, seed, boundaryX, cellZ, true, layer);
+                    } else if (isWallZ) {
+                        int boundaryZ = localZ == 0 ? cellZ : cellZ + 1;
+                        placeWallColumn(chunkData, x, z, localX, seed, cellX, boundaryZ, false, layer);
+                    } else if (roomType == RoomType.STAIRCASE
+                            && localX >= STAIR_MIN && localX <= STAIR_MAX
+                            && localZ >= STAIR_MIN && localZ <= STAIR_MAX) {
+                        placeStaircaseColumn(chunkData, x, z, localX, localZ, layer, seed);
+                    } else if (roomType == RoomType.PILLAR
+                            && localX >= PILLAR_MIN && localX <= PILLAR_MAX
+                            && localZ >= PILLAR_MIN && localZ <= PILLAR_MAX) {
+                        placePillarColumn(chunkData, x, z, localX, localZ, layer);
+                    } else {
+                        // Interior — air
+                        for (int y = airMin; y < airMax; y++) {
+                            chunkData.setBlock(x, y, z, Material.AIR);
+                        }
+                    }
+                }
+            }
+
+            // Lanterns
+            if (roomType == RoomType.PILLAR) {
+                placeLantern(chunkData, 3, 3, layer);
+                placeLantern(chunkData, 3, 12, layer);
+                placeLantern(chunkData, 12, 3, layer);
+                placeLantern(chunkData, 12, 12, layer);
+            } else if (roomType == RoomType.STAIRCASE) {
+                placeLantern(chunkData, 3, 3, layer);
+                placeLantern(chunkData, 3, 12, layer);
+                placeLantern(chunkData, 12, 3, layer);
+                placeLantern(chunkData, 12, 12, layer);
+            } else {
+                placeLantern(chunkData, 5, 5, layer);
+                placeLantern(chunkData, 5, 10, layer);
+                placeLantern(chunkData, 10, 5, layer);
+                placeLantern(chunkData, 10, 10, layer);
+            }
+        }
+
+        // Punch stairwell shaft through base (Y=0-2) and ceiling cap (Y=70-72)
+        if (staircase) {
+            punchStairwellShaft(chunkData, 0, REL_SOLID_MAX, chunkX, chunkZ);
+            punchStairwellShaft(chunkData, CAP_MIN_Y, CAP_MAX_Y, chunkX, chunkZ);
+        }
+    }
+
+    /**
+     * Punches air through a solid region at stairwell shaft positions.
+     */
+    private void punchStairwellShaft(ChunkData data, int yMin, int yMax, int chunkX, int chunkZ) {
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
@@ -84,76 +167,47 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                 int localX = Math.floorMod(worldX, CELL_SIZE);
                 int localZ = Math.floorMod(worldZ, CELL_SIZE);
 
-                boolean isWallX = localX < WALL_THICKNESS || localX >= CELL_SIZE - WALL_THICKNESS;
-                boolean isWallZ = localZ < WALL_THICKNESS || localZ >= CELL_SIZE - WALL_THICKNESS;
+                if (localX >= STAIR_MIN && localX <= STAIR_MAX
+                        && localZ >= STAIR_MIN && localZ <= STAIR_MAX) {
+                    boolean cornerX = localX == STAIR_MIN || localX == STAIR_MAX;
+                    boolean cornerZ = localZ == STAIR_MIN || localZ == STAIR_MAX;
+                    if (cornerX && cornerZ) continue; // keep pilaster corners solid
 
-                if (isWallX && isWallZ) {
-                    // Corner post — solid oak planks
-                    fillColumn(chunkData, x, z, Material.OAK_PLANKS);
-                } else if (isWallX) {
-                    // X-wall face: runs along Z axis
-                    // Boundary coordinate identifies the shared wall between adjacent rooms
-                    int boundaryX = localX == 0 ? cellX : cellX + 1;
-                    placeWallColumn(chunkData, x, z, localZ, seed, boundaryX, cellZ, true, chunkRng);
-                } else if (isWallZ) {
-                    // Z-wall face: runs along X axis
-                    int boundaryZ = localZ == 0 ? cellZ : cellZ + 1;
-                    placeWallColumn(chunkData, x, z, localX, seed, cellX, boundaryZ, false, chunkRng);
-                } else if (pillarRoom && localX >= PILLAR_MIN && localX <= PILLAR_MAX
-                        && localZ >= PILLAR_MIN && localZ <= PILLAR_MAX) {
-                    placePillarColumn(chunkData, x, z, localX, localZ);
-                } else {
-                    // Interior — air
-                    for (int y = AIR_MIN_Y; y < AIR_MAX_Y; y++) {
-                        chunkData.setBlock(x, y, z, Material.AIR);
+                    for (int y = yMin; y < yMax; y++) {
+                        data.setBlock(x, y, z, Material.AIR);
                     }
                 }
             }
         }
-
-        // Lanterns — positioned to work for both variants
-        if (pillarRoom) {
-            // Four lanterns in the gaps between pillar and walls
-            placeLantern(chunkData, 3, 3);
-            placeLantern(chunkData, 3, 12);
-            placeLantern(chunkData, 12, 3);
-            placeLantern(chunkData, 12, 12);
-        } else {
-            placeLantern(chunkData, 5, 5);
-            placeLantern(chunkData, 5, 10);
-            placeLantern(chunkData, 10, 5);
-            placeLantern(chunkData, 10, 10);
-        }
     }
 
-    /**
-     * Places a wall column at the given position along a wall face.
-     * The face spans local positions 1-14 (14 blocks).
-     * Pattern: P BBB P B DD B P BBB P (perfectly symmetric)
-     */
+    // ── Wall columns ────────────────────────────────────────────────────
+
     private void placeWallColumn(ChunkData data, int x, int z, int localPos,
-                                 long seed, int coordA, int coordB, boolean xWall, Random rng) {
+                                 long seed, int coordA, int coordB, boolean xWall, int layer) {
+        int baseY = layer * FLOOR_SPACING;
+        int airMin = baseY + REL_AIR_MIN;
+        int airMax = baseY + REL_AIR_MAX;
+        int shelfMin = baseY + REL_SHELF_MIN;
+        int shelfMax = baseY + REL_SHELF_MAX;
+
         int offset = localPos - FACE_START;
         if (offset < 0 || offset >= FACE_LENGTH) {
-            fillColumn(data, x, z, Material.OAK_PLANKS);
+            // Already solid from initial fill
             return;
         }
 
         WallElement element = getWallElement(offset);
 
         if (element == WallElement.PILASTER) {
-            fillColumn(data, x, z, Material.OAK_PLANKS);
-        } else if (element == WallElement.DOOR && hasDoor(seed, coordA, coordB, xWall)) {
-            placeDoorColumn(data, x, z);
+            // Already solid from initial fill
+        } else if (element == WallElement.DOOR && hasDoor(seed, coordA, coordB, xWall, layer)) {
+            placeDoorColumn(data, x, z, airMin, shelfMax, airMax);
         } else {
-            placeShelfColumn(data, x, z);
+            placeShelfColumn(data, x, z, airMin, shelfMin, shelfMax, airMax);
         }
     }
 
-    /**
-     * Determines the element type at a given offset (0-13) along the wall face.
-     * Pattern: P BBB P B DD B P BBB P
-     */
     private WallElement getWallElement(int offset) {
         return switch (offset) {
             case 0, 4, 9, 13 -> WallElement.PILASTER;
@@ -166,77 +220,249 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
     /**
      * Determines if a wall face has a doorway.
-     * Uses a hash for independence (no spatial correlation) and boundary coordinates
-     * so both sides of a shared wall agree.
+     * Uses a hash for independence and boundary coordinates so shared walls agree.
+     * Includes layer % 6 so layers 0 and 6 produce the same doors.
      */
-    private boolean hasDoor(long seed, int boundaryCoordA, int boundaryCoordB, boolean xWall) {
+    private boolean hasDoor(long seed, int boundaryCoordA, int boundaryCoordB, boolean xWall, int layer) {
         long hash = seed ^ ((long) boundaryCoordA * 341873128712L
                 + (long) boundaryCoordB * 132897987541L
+                + (long) (layer % 6) * 987654321L
                 + (xWall ? 30L : 31L));
         double value = new Random(hash).nextDouble();
-        return value < 0.85; // ~85% of walls get a door
+        return value < 0.85;
+    }
+
+    // ── Room type selection ─────────────────────────────────────────────
+
+    /**
+     * Determines if this XZ position is a staircase room (same on all layers).
+     */
+    public static boolean isStaircase(long seed, int cellX, int cellZ) {
+        long hash = seed ^ ((long) cellX * 6364136223846793005L
+                + (long) cellZ * 1442695040888963407L + 33L);
+        return new Random(hash).nextDouble() < 0.16;
     }
 
     /**
-     * Determines if this room has a center pillar, using noise for consistency.
+     * Determines room type for non-staircase rooms. Uses layer % 6 so layers 0 and 6 match.
      */
-    public static boolean hasCenterPillar(long seed, int cellX, int cellZ) {
-        double noise = SimplexNoise.noise2(seed + 32L, cellX * 0.5, cellZ * 0.5);
-        return noise > 0.0; // ~50% of rooms get a pillar
+    public static RoomType getRoomType(long seed, int layer, int cellX, int cellZ) {
+        if (isStaircase(seed, cellX, cellZ)) return RoomType.STAIRCASE;
+        long hash = seed ^ ((long) cellX * 341873128712L
+                + (long) cellZ * 132897987541L
+                + (long) (layer % 6) * 777777777L + 32L);
+        return new Random(hash).nextDouble() < 0.5 ? RoomType.PILLAR : RoomType.EMPTY;
     }
 
     /**
-     * Places a column within the 4x4 center pillar.
-     * Corners are pilasters, outer faces are bookshelves, interior is solid oak.
+     * Checks if this room has a center pillar (convenience for listener).
      */
-    private void placePillarColumn(ChunkData data, int x, int z, int localX, int localZ) {
+    public static boolean hasCenterPillar(long seed, int layer, int cellX, int cellZ) {
+        return getRoomType(seed, layer, cellX, cellZ) == RoomType.PILLAR;
+    }
+
+    // ── Pillar room ─────────────────────────────────────────────────────
+
+    private void placePillarColumn(ChunkData data, int x, int z, int localX, int localZ, int layer) {
+        int baseY = layer * FLOOR_SPACING;
+        int airMin = baseY + REL_AIR_MIN;
+        int airMax = baseY + REL_AIR_MAX;
+        int shelfMin = baseY + REL_SHELF_MIN;
+        int shelfMax = baseY + REL_SHELF_MAX;
+
         boolean edgeX = localX == PILLAR_MIN || localX == PILLAR_MAX;
         boolean edgeZ = localZ == PILLAR_MIN || localZ == PILLAR_MAX;
 
         if (edgeX && edgeZ) {
-            fillColumn(data, x, z, Material.OAK_PLANKS);
+            // Pilaster corner — already solid from initial fill
         } else if (edgeX || edgeZ) {
-            placeShelfColumn(data, x, z);
+            placeShelfColumn(data, x, z, airMin, shelfMin, shelfMax, airMax);
         } else {
-            fillColumn(data, x, z, Material.OAK_PLANKS);
+            // Interior — already solid from initial fill
         }
     }
 
-    private void placeShelfColumn(ChunkData data, int x, int z) {
-        data.setBlock(x, AIR_MIN_Y, z, Material.OAK_PLANKS);       // baseboard
-        for (int y = SHELF_MIN_Y; y <= SHELF_MAX_Y; y++) {
-            data.setBlock(x, y, z, Material.BOOKSHELF);
-        }
-        data.setBlock(x, AIR_MAX_Y - 1, z, Material.OAK_PLANKS);  // crown
-    }
+    // ── Staircase room ──────────────────────────────────────────────────
 
-    private void placeDoorColumn(ChunkData data, int x, int z) {
-        for (int y = AIR_MIN_Y; y < AIR_MIN_Y + DOOR_HEIGHT; y++) {
+    /**
+     * Places a column within the 6x6 stairwell (positions 5-10).
+     * 2-wide spiral staircase around a 2x2 open center shaft.
+     * The shaft also punches through the solid between floors.
+     */
+    private void placeStaircaseColumn(ChunkData data, int x, int z,
+                                       int localX, int localZ, int layer, long seed) {
+        int baseY = layer * FLOOR_SPACING;
+        int airMin = baseY + REL_AIR_MIN;
+        int airMax = baseY + REL_AIR_MAX;
+        int solidMin = baseY + REL_SOLID_MIN;
+
+        boolean cornerX = localX == STAIR_MIN || localX == STAIR_MAX;
+        boolean cornerZ = localZ == STAIR_MIN || localZ == STAIR_MAX;
+
+        if (cornerX && cornerZ) {
+            // Pilaster corners — already solid from initial fill
+            return;
+        }
+
+        // Clear air space for the stairwell room area
+        for (int y = airMin; y < airMax; y++) {
             data.setBlock(x, y, z, Material.AIR);
         }
-        data.setBlock(x, AIR_MIN_Y + DOOR_HEIGHT, z, Material.OAK_PLANKS);  // lintel
-        for (int y = AIR_MIN_Y + DOOR_HEIGHT + 1; y <= SHELF_MAX_Y; y++) {
+
+        // Also clear the solid between this layer and the one below (stairwell shaft)
+        if (layer > 0) {
+            for (int y = solidMin; y < airMin; y++) {
+                data.setBlock(x, y, z, Material.AIR);
+            }
+        }
+
+        // Place spiral stairs
+        // Stairwell inner coords: 0-5 mapped from localX/Z - STAIR_MIN
+        int sx = localX - STAIR_MIN; // 0-5
+        int sz = localZ - STAIR_MIN; // 0-5
+
+        placeSpiral(data, x, z, sx, sz, baseY);
+    }
+
+    /**
+     * Places spiral stair blocks within the 6x6 stairwell.
+     * The spiral ascends from the floor of the current layer through the
+     * solid above into the next layer's floor level.
+     *
+     * Stairwell coordinates (sx, sz) range 0-5:
+     *   Corners (0,0)(0,5)(5,0)(5,5) = pilasters (handled above)
+     *   Ring positions form the 2-wide spiral path
+     *   Center 2x2 (2-3, 2-3) = open shaft
+     *
+     * Spiral quarter-turns (clockwise when viewed from above):
+     *   South side: sz=4-5, sx ascending 0→5  (steps 0-7)
+     *   East side:  sx=4-5, sz descending 5→0 (steps 8-15)
+     *   North side: sz=0-1, sx descending 5→0 (steps 16-23)
+     *   West side:  sx=0-1, sz ascending 0→5  (steps 24-31)
+     */
+    private void placeSpiral(ChunkData data, int x, int z, int sx, int sz, int baseY) {
+        int step = getSpiralStep(sx, sz);
+        if (step < 0) return; // center shaft or invalid — leave as air
+
+        // Total height to span: room (7) + solid between floors (3) = 10
+        // 32 step positions around the ring → each step rises 10/32 blocks
+        // We place a stair block at: airMin + step * totalHeight / totalSteps
+        int airMin = baseY + REL_AIR_MIN;
+        int totalHeight = FLOOR_SPACING; // 10
+        int totalSteps = 32;
+
+        int stepY = airMin + step * totalHeight / totalSteps;
+
+        // Place the stair block
+        data.setBlock(x, stepY, z, Material.OAK_PLANKS);
+
+        // Place stair block on top for walkability
+        BlockFace facing = getSpiralFacing(sx, sz);
+        if (facing != null) {
+            Stairs stairData = (Stairs) Material.OAK_STAIRS.createBlockData();
+            stairData.setFacing(facing);
+            data.setBlock(x, stepY + 1, z, stairData);
+        }
+
+        // Fill solid below the step (so player doesn't fall through)
+        // Only fill down to airMin (or solidMin if punched through)
+        int fillMin = (baseY > 0) ? baseY : baseY + REL_AIR_MIN;
+        for (int y = fillMin; y < stepY; y++) {
+            data.setBlock(x, y, z, Material.OAK_PLANKS);
+        }
+    }
+
+    /**
+     * Maps stairwell coordinates (0-5, 0-5) to a spiral step index (0-31).
+     * Returns -1 for center shaft positions (2-3, 2-3) and pilaster corners.
+     *
+     * The 2-wide ring has 4 sides × 8 positions = 32 steps.
+     */
+    private int getSpiralStep(int sx, int sz) {
+        // Center shaft (2-3, 2-3) — open air
+        if (sx >= 2 && sx <= 3 && sz >= 2 && sz <= 3) return -1;
+
+        // Pilaster corners
+        if ((sx == 0 || sx == 5) && (sz == 0 || sz == 5)) return -1;
+
+        // South side: sz=4-5, sx=0-5 (left to right), ascending
+        // inner row (sz=4): sx 1,2,3,4 → steps 1,3,5,7 (skip corners)
+        // outer row (sz=5): sx 1,2,3,4 → steps 0,2,4,6
+        if (sz >= 4) {
+            if (sz == 5) return (sx - 1) * 2;       // outer: 0,2,4,6
+            else return (sx - 1) * 2 + 1;           // inner: 1,3,5,7
+        }
+        // East side: sx=4-5, sz=3-0 (top to bottom), ascending
+        if (sx >= 4) {
+            int progress = 3 - sz; // sz=3→0, sz=2→1, sz=1→2, sz=0→3
+            if (sx == 5) return 8 + progress * 2;    // outer: 8,10,12,14
+            else return 8 + progress * 2 + 1;        // inner: 9,11,13,15
+        }
+        // North side: sz=0-1, sx=4-1 (right to left), ascending
+        if (sz <= 1) {
+            int progress = 4 - sx; // sx=4→0, sx=3→1, sx=2→2, sx=1→3
+            if (sz == 0) return 16 + progress * 2;   // outer: 16,18,20,22
+            else return 16 + progress * 2 + 1;       // inner: 17,19,21,23
+        }
+        // West side: sx=0-1, sz=0-3 (bottom to top), ascending
+        if (sx <= 1) {
+            int progress = sz - 2; // sz=2→0, sz=3→1
+            if (sx == 0) return 24 + progress * 2;   // outer: 24,26
+            else return 24 + progress * 2 + 1;       // inner: 25,27
+        }
+
+        return -1;
+    }
+
+    /**
+     * Returns the facing direction for stair blocks on the spiral.
+     * Stairs face the direction of ascending travel.
+     */
+    private BlockFace getSpiralFacing(int sx, int sz) {
+        if (sz >= 4) return BlockFace.EAST;   // south side, ascending left→right
+        if (sx >= 4) return BlockFace.NORTH;  // east side, ascending south→north
+        if (sz <= 1) return BlockFace.WEST;   // north side, ascending right→left
+        if (sx <= 1) return BlockFace.SOUTH;  // west side, ascending bottom→top
+        return null;
+    }
+
+    // ── Shared building methods ─────────────────────────────────────────
+
+    private void placeShelfColumn(ChunkData data, int x, int z,
+                                   int airMin, int shelfMin, int shelfMax, int airMax) {
+        data.setBlock(x, airMin, z, Material.OAK_PLANKS);       // baseboard
+        for (int y = shelfMin; y <= shelfMax; y++) {
             data.setBlock(x, y, z, Material.BOOKSHELF);
         }
-        data.setBlock(x, AIR_MAX_Y - 1, z, Material.OAK_PLANKS);  // crown
+        data.setBlock(x, airMax - 1, z, Material.OAK_PLANKS);  // crown
+        // Clear remaining air between baseboard+1 area if needed
+        // (shelf covers shelfMin to shelfMax, air above shelfMax+1 to airMax-2)
+        // shelfMin = airMin+1, shelfMax = airMax-2, crown = airMax-1 → fully covered
     }
 
-    private void fillColumn(ChunkData data, int x, int z, Material material) {
-        for (int y = AIR_MIN_Y; y < AIR_MAX_Y; y++) {
-            data.setBlock(x, y, z, material);
+    private void placeDoorColumn(ChunkData data, int x, int z,
+                                  int airMin, int shelfMax, int airMax) {
+        for (int y = airMin; y < airMin + DOOR_HEIGHT; y++) {
+            data.setBlock(x, y, z, Material.AIR);
         }
+        data.setBlock(x, airMin + DOOR_HEIGHT, z, Material.OAK_PLANKS);  // lintel
+        for (int y = airMin + DOOR_HEIGHT + 1; y <= shelfMax; y++) {
+            data.setBlock(x, y, z, Material.BOOKSHELF);
+        }
+        data.setBlock(x, airMax - 1, z, Material.OAK_PLANKS);  // crown
     }
 
-    private void placeLantern(ChunkData data, int x, int z) {
+    private void placeLantern(ChunkData data, int x, int z, int layer) {
+        int y = layer * FLOOR_SPACING + REL_AIR_MAX - 1;
         org.bukkit.block.data.type.Lantern lantern =
                 (org.bukkit.block.data.type.Lantern) Material.LANTERN.createBlockData();
         lantern.setHanging(true);
-        data.setBlock(x, AIR_MAX_Y - 1, z, lantern);
+        data.setBlock(x, y, z, lantern);
     }
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, 8.5, AIR_MIN_Y, 8.5);
+        return new Location(world, 8.5, REL_AIR_MIN, 8.5); // layer 0 floor
     }
 
     // ── Book Config ──────────────────────────────────────────────────────

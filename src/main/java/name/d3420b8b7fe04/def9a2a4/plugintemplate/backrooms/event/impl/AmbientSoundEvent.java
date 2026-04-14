@@ -43,8 +43,11 @@ public class AmbientSoundEvent extends AbstractTimedEvent {
         sounds = new ArrayList<>();
         if (config != null && config.contains("sounds")) {
             for (String name : config.getStringList("sounds")) {
-                String key = name.toLowerCase(Locale.ROOT).replace('_', '.');
-                Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(key));
+                String lower = name.toLowerCase(Locale.ROOT);
+                Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(lower));
+                if (sound == null) {
+                    sound = Registry.SOUNDS.get(NamespacedKey.minecraft(lower.replace('_', '.')));
+                }
                 if (sound != null) {
                     sounds.add(sound);
                 } else if (logger != null) {
