@@ -334,22 +334,25 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
      *   Ring positions form the 2-wide spiral path
      *   Center 2x2 (2-3, 2-3) = open shaft
      *
-     * Spiral quarter-turns (clockwise when viewed from above):
-     *   South side: sz=4-5, sx ascending 0→5  (steps 0-7)
-     *   East side:  sx=4-5, sz descending 5→0 (steps 8-15)
-     *   North side: sz=0-1, sx descending 5→0 (steps 16-23)
-     *   West side:  sx=0-1, sz ascending 0→5  (steps 24-31)
+     * 28 ring positions (6x6 - 4 corners - 4 center), clockwise:
+     *   South side: sz=4-5, sx=1-4  (8 steps: 0-7)
+     *   East side:  sx=4-5, sz=1-3  (6 steps: 8-13)
+     *   North side: sz=0-1, sx=1-4  (8 steps: 14-21)
+     *   West side:  sx=0-1, sz=2-3  (4 steps: 22-25)
+     *
+     * Note: The west side has fewer positions because the corners of the
+     * adjacent sides (south sz≥4 and north sz≤1) claim the outer positions.
+     * Steps 26-27 are unused; the spiral wraps at 28 steps.
      */
     private void placeSpiral(ChunkData data, int x, int z, int sx, int sz, int baseY) {
         int step = getSpiralStep(sx, sz);
         if (step < 0) return; // center shaft or invalid — leave as air
 
         // Total height to span: room (7) + solid between floors (3) = 10
-        // 32 step positions around the ring → each step rises 10/32 blocks
-        // We place a stair block at: airMin + step * totalHeight / totalSteps
+        // 28 step positions around the ring
         int airMin = baseY + REL_AIR_MIN;
         int totalHeight = FLOOR_SPACING; // 10
-        int totalSteps = 32;
+        int totalSteps = 28;
 
         int stepY = airMin + step * totalHeight / totalSteps;
 
