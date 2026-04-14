@@ -138,6 +138,9 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);
+        Bukkit.getPluginManager().registerEvents(
+                new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level94Listener(
+                        plugin, levelRegistry, playerStateManager), plugin);
 
         // 9. Register commands (Paper plugins don't support YAML-based commands)
         command = new BackroomsCommand(plugin, levelRegistry, playerStateManager, transitionManager,

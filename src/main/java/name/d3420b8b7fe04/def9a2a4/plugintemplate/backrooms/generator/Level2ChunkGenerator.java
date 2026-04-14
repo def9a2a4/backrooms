@@ -5,7 +5,9 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.Lantern;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
@@ -208,9 +210,9 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                         } else if (pipeType == PIPE_WALL) {
                             chunkData.setBlock(x, AIR_MIN_Y + 2, z, pipeMat);
                         } else if (pipeType == PIPE_ROD_CEILING) {
-                            chunkData.setBlock(x, ceilingY - 1, z, Material.LIGHTNING_ROD);
+                            chunkData.setBlock(x, ceilingY - 1, z, makeRod(BlockFace.EAST));
                         } else if (pipeType == PIPE_ROD_WALL) {
-                            chunkData.setBlock(x, AIR_MIN_Y + 2, z, Material.LIGHTNING_ROD);
+                            chunkData.setBlock(x, AIR_MIN_Y + 2, z, makeRod(BlockFace.EAST));
                         }
                     }
                 }
@@ -224,9 +226,9 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                         } else if (pipeType == PIPE_WALL) {
                             chunkData.setBlock(x, AIR_MIN_Y + 2, z, pipeMat);
                         } else if (pipeType == PIPE_ROD_CEILING) {
-                            chunkData.setBlock(x, ceilingY - 1, z, Material.LIGHTNING_ROD);
+                            chunkData.setBlock(x, ceilingY - 1, z, makeRod(BlockFace.NORTH));
                         } else if (pipeType == PIPE_ROD_WALL) {
-                            chunkData.setBlock(x, AIR_MIN_Y + 2, z, Material.LIGHTNING_ROD);
+                            chunkData.setBlock(x, AIR_MIN_Y + 2, z, makeRod(BlockFace.NORTH));
                         }
                     }
                 }
@@ -325,6 +327,12 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
 
     private boolean isLineActive(long seed, int lineIndex, int direction) {
         return SimplexNoise.noise2(seed + 13, lineIndex * 0.8, direction * 100.0) > -0.4;
+    }
+
+    private static BlockData makeRod(BlockFace face) {
+        BlockData rod = Material.LIGHTNING_ROD.createBlockData();
+        ((Directional) rod).setFacing(face);
+        return rod;
     }
 
     private int getLinePipeType(long seed, int lineIndex, int direction) {

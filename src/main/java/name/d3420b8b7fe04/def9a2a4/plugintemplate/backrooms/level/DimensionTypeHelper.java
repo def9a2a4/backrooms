@@ -23,6 +23,8 @@ public class DimensionTypeHelper {
     // Holders looked up from the registry (registered by the datapack)
     private Object darkHolder;
     private Object lightHolder;
+    private Object fullbrightHolder;
+    private Object sunsetHolder;
 
     public DimensionTypeHelper(Logger logger) {
         this.logger = logger;
@@ -34,6 +36,14 @@ public class DimensionTypeHelper {
 
     public boolean applyLightDimension(World world) {
         return applyDimension(world, "light", lightHolder);
+    }
+
+    public boolean applyFullbrightDimension(World world) {
+        return applyDimension(world, "fullbright", fullbrightHolder);
+    }
+
+    public boolean applySunsetDimension(World world) {
+        return applyDimension(world, "sunset", sunsetHolder);
     }
 
     private boolean applyDimension(World world, String label, Object holder) {
@@ -82,7 +92,9 @@ public class DimensionTypeHelper {
 
             available = true;
             logger.info("Dimension type helper resolved (dark=" + (darkHolder != null)
-                    + ", light=" + (lightHolder != null) + ")");
+                    + ", light=" + (lightHolder != null)
+                    + ", fullbright=" + (fullbrightHolder != null)
+                    + ", sunset=" + (sunsetHolder != null) + ")");
         } catch (Exception e) {
             available = false;
             logger.warning("Dimension type helper failed: " + e.getMessage());
@@ -132,17 +144,23 @@ public class DimensionTypeHelper {
         // Create resource keys for our dimension types
         Object darkLocation = fromNsAndPath.invoke(null, "backrooms", "dark");
         Object lightLocation = fromNsAndPath.invoke(null, "backrooms", "light");
+        Object fullbrightLocation = fromNsAndPath.invoke(null, "backrooms", "fullbright");
+        Object sunsetLocation = fromNsAndPath.invoke(null, "backrooms", "sunset");
         Object darkKey = createKey.invoke(null, dimTypeRegistryKey, darkLocation);
         Object lightKey = createKey.invoke(null, dimTypeRegistryKey, lightLocation);
+        Object fullbrightKey = createKey.invoke(null, dimTypeRegistryKey, fullbrightLocation);
+        Object sunsetKey = createKey.invoke(null, dimTypeRegistryKey, sunsetLocation);
 
         // Look up holders: registry.getHolder(ResourceKey) -> Optional<Holder.Reference>
         Method getHolderMethod = findGetHolderMethod(registry, resourceKeyClass);
         if (getHolderMethod != null) {
             darkHolder = unwrapOptional(getHolderMethod.invoke(registry, darkKey));
             lightHolder = unwrapOptional(getHolderMethod.invoke(registry, lightKey));
+            fullbrightHolder = unwrapOptional(getHolderMethod.invoke(registry, fullbrightKey));
+            sunsetHolder = unwrapOptional(getHolderMethod.invoke(registry, sunsetKey));
         }
 
-        if (darkHolder == null || lightHolder == null) {
+        if (darkHolder == null || lightHolder == null || fullbrightHolder == null || sunsetHolder == null) {
             // Dump registered keys for debugging
             StringBuilder sb = new StringBuilder("Registered dimension types: ");
             try {
@@ -153,7 +171,7 @@ public class DimensionTypeHelper {
                     sb.append(keySet);
                 }
             } catch (Exception ignored) {}
-            throw new RuntimeException("backrooms:dark or backrooms:light not found in dimension type registry. "
+            throw new RuntimeException("backrooms:dark, backrooms:light, backrooms:fullbright, or backrooms:sunset not found in dimension type registry. "
                     + sb + ". Is the datapack loaded?");
         }
     }

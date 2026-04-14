@@ -1,10 +1,13 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.PointedDripstone;
 import org.bukkit.generator.WorldInfo;
 
 import java.util.Random;
@@ -43,8 +46,9 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     private static final double MATERIAL_SCALE = 0.02;
     private static final double ACCENT_SCALE = 0.15;
 
-    // Zone noise
-    private static final double ZONE_SCALE = 0.008;
+    // Zone noise — two separate layers for independent placement
+    private static final double GARDEN_ZONE_SCALE = 0.025;  // higher freq = smaller patches
+    private static final double CORRIDOR_ZONE_SCALE = 0.01; // lower freq = larger zones
 
     // Corridor constants
     private static final int CORRIDOR_PERIOD = 7;
@@ -67,11 +71,28 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             Material.STONE_BRICKS, Material.SMOOTH_STONE, Material.POLISHED_ANDESITE
     };
 
+    // Garden palettes
+    private static final Material[] GARDEN_MATERIALS = {
+            Material.MOSS_BLOCK, Material.MOSSY_COBBLESTONE, Material.MOSSY_STONE_BRICKS,
+            Material.CRACKED_STONE_BRICKS
+    };
+
+    private static final Material[] GARDEN_COPPER = {
+            Material.WAXED_WEATHERED_COPPER, Material.WAXED_WEATHERED_CUT_COPPER,
+            Material.WAXED_WEATHERED_COPPER_GRATE, Material.WAXED_WEATHERED_CHISELED_COPPER,
+            Material.WAXED_WEATHERED_COPPER_BULB
+    };
+
+    private static final Material[] LEAF_TYPES = {
+            Material.OAK_LEAVES, Material.SPRUCE_LEAVES, Material.BIRCH_LEAVES,
+            Material.JUNGLE_LEAVES, Material.DARK_OAK_LEAVES, Material.AZALEA_LEAVES
+    };
+
     // ── Zone selection ──────────────────────────────────────────────────
 
     private Zone getZone(long seed, int worldX, int worldZ) {
         double noise = SimplexNoise.noise2(seed + 50, worldX * ZONE_SCALE, worldZ * ZONE_SCALE);
-        if (noise < -0.5) return Zone.GARDEN;
+        if (noise < -0.7) return Zone.GARDEN;
         if (noise >= 0.3) return Zone.CORRIDOR;
         return Zone.WAREHOUSE;
     }
@@ -109,7 +130,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
 
-        // Pass 3: Warehouse structures (pillars, walls) — only in warehouse zones
+        // Pass 3: Structures (pillars, walls) — warehouse and garden zones
         for (int cx = 0; cx < CELLS_PER_AXIS; cx++) {
             for (int cz = 0; cz < CELLS_PER_AXIS; cz++) {
                 int baseX = cx * CELL_SIZE;
@@ -117,7 +138,8 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
                 int cellWorldX = chunkX * 16 + baseX + CELL_SIZE / 2;
                 int cellWorldZ = chunkZ * 16 + baseZ + CELL_SIZE / 2;
-                if (getZone(seed, cellWorldX, cellWorldZ) != Zone.WAREHOUSE) continue;
+                Zone cellZone = getZone(seed, cellWorldX, cellWorldZ);
+                if (cellZone == Zone.CORRIDOR) continue;
 
                 double worldCenterX = cellWorldX * REGION_SCALE;
                 double worldCenterZ = cellWorldZ * REGION_SCALE;
@@ -131,17 +153,20 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
         // Pass 4: Support beams (warehouse only)
         placeBeams(chunkData, seed, chunkX, chunkZ);
 
-        // Pass 5: Warehouse ceiling lights
+        // Pass 5: Ceiling lights — warehouse and garden zones (same grid)
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
-                if (getZone(seed, worldX, worldZ) != Zone.WAREHOUSE) continue;
+                if (getZone(seed, worldX, worldZ) == Zone.CORRIDOR) continue;
                 if (worldX % LIGHT_SPACING == 0 && worldZ % LIGHT_SPACING == 0) {
                     chunkData.setBlock(x, CEILING_MIN_Y, z, Material.VERDANT_FROGLIGHT);
                 }
             }
         }
+
+        // Pass 6: Garden floor decorations
+        placeGardenDecorations(chunkData, seed, chunkX, chunkZ, chunkRng);
     }
 
     // ── Warehouse column (existing behavior) ────────────────────────────
@@ -220,60 +245,95 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
     // ── Garden column ───────────────────────────────────────────────────
 
+    private Material randomGardenBlock(Random rng) {
+        // ~8% chance of weathered copper accent
+        if (rng.nextInt(12) == 0) {
+            return GARDEN_COPPER[rng.nextInt(GARDEN_COPPER.length)];
+        }
+        return GARDEN_MATERIALS[rng.nextInt(GARDEN_MATERIALS.length)];
+    }
+
     private void generateGardenColumn(ChunkData chunkData, long seed, Random chunkRng,
                                       int x, int z, int worldX, int worldZ) {
-        // Mossy material selection using noise
-        double matNoise = SimplexNoise.noise2(seed + 70, worldX * MATERIAL_SCALE, worldZ * MATERIAL_SCALE);
-        Material baseMat;
-        if (matNoise < -0.2) {
-            baseMat = Material.MOSSY_COBBLESTONE;
-        } else if (matNoise < 0.3) {
-            baseMat = Material.MOSSY_STONE_BRICKS;
-        } else {
-            baseMat = Material.MOSS_BLOCK;
+        // Each block independently random from the garden palette
+        for (int y = FLOOR_Y; y < FLOOR_HEIGHT; y++) {
+            chunkData.setBlock(x, y, z, randomGardenBlock(chunkRng));
         }
 
-        // Floor
-        chunkData.setRegion(x, FLOOR_Y, z, x + 1, FLOOR_HEIGHT, z + 1, baseMat);
-
-        // Ceiling
-        chunkData.setRegion(x, CEILING_MIN_Y, z, x + 1, CEILING_MAX_Y, z + 1, baseMat);
+        // Ceiling: each block independent
+        for (int y = CEILING_MIN_Y; y < CEILING_MAX_Y; y++) {
+            chunkData.setBlock(x, y, z, randomGardenBlock(chunkRng));
+        }
 
         // Hanging vegetation from ceiling
         double hangNoise = SimplexNoise.noise2(seed + 75, worldX * 0.12, worldZ * 0.12);
 
         if (hangNoise > 0.5) {
-            // Glow berries (~10% of garden positions) — natural light source
-            placeGlowBerryVine(chunkData, chunkRng, x, z);
+            // Glow berry vines (~10%)
+            int vineLength = 2 + chunkRng.nextInt(3);
+            for (int dy = 1; dy <= vineLength; dy++) {
+                int y = CEILING_MIN_Y - dy;
+                if (y <= AIR_MIN_Y) break;
+                chunkData.setBlock(x, y, z, dy == vineLength ? Material.CAVE_VINES : Material.CAVE_VINES_PLANT);
+            }
         } else if (hangNoise > 0.0) {
-            // Vines (~25% of garden positions)
+            // Vines (~25%)
             chunkData.setBlock(x, CEILING_MIN_Y - 1, z, Material.VINE);
             if (hangNoise > 0.25) {
                 chunkData.setBlock(x, CEILING_MIN_Y - 2, z, Material.VINE);
             }
-        } else if (hangNoise < -0.7) {
-            // Spore blossom (~3%)
-            chunkData.setBlock(x, CEILING_MIN_Y - 1, z, Material.SPORE_BLOSSOM);
-        }
-
-        // Occasional azalea leaf patches on ceiling
-        double leafNoise = SimplexNoise.noise2(seed + 78, worldX * 0.08, worldZ * 0.08);
-        if (leafNoise > 0.6) {
-            Material leafMat = leafNoise > 0.75 ? Material.FLOWERING_AZALEA_LEAVES : Material.AZALEA_LEAVES;
-            chunkData.setBlock(x, CEILING_MIN_Y, z, leafMat);
         }
     }
 
-    private void placeGlowBerryVine(ChunkData chunkData, Random rng, int x, int z) {
-        int vineLength = 2 + rng.nextInt(3); // 2-4 blocks long
-        for (int dy = 1; dy <= vineLength; dy++) {
-            int y = CEILING_MIN_Y - dy;
-            if (y <= AIR_MIN_Y) break;
-            if (dy == vineLength) {
-                // Tip with glow berries
-                chunkData.setBlock(x, y, z, Material.CAVE_VINES);
-            } else {
-                chunkData.setBlock(x, y, z, Material.CAVE_VINES_PLANT);
+    private void placeGardenDecorations(ChunkData chunkData, long seed, int chunkX, int chunkZ, Random chunkRng) {
+        // Pre-create persistent leaf BlockData
+        BlockData oakLeaves = Bukkit.createBlockData(Material.OAK_LEAVES, "[persistent=true]");
+        BlockData spruceLeaves = Bukkit.createBlockData(Material.SPRUCE_LEAVES, "[persistent=true]");
+
+        // First pass: water pools (need adjacency spread within chunk)
+        boolean[][] waterMap = new boolean[16][16];
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                if (getZone(seed, worldX, worldZ) != Zone.GARDEN) continue;
+                if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue; // skip pillars
+
+                if (chunkRng.nextInt(20) == 0) { // ~5% seed a water pool
+                    waterMap[x][z] = true;
+                    // Spread to 1-2 neighbors
+                    for (int s = 0; s < 2; s++) {
+                        int nx = x + chunkRng.nextInt(3) - 1;
+                        int nz = z + chunkRng.nextInt(3) - 1;
+                        if (nx >= 0 && nx < 16 && nz >= 0 && nz < 16) {
+                            waterMap[nx][nz] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Second pass: place water and floor decorations
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                if (getZone(seed, worldX, worldZ) != Zone.GARDEN) continue;
+                if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue; // skip pillars/walls
+
+                if (waterMap[x][z]) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, Material.WATER);
+                    continue;
+                }
+
+                int roll = chunkRng.nextInt(10);
+                if (roll < 2) {
+                    // ~20% moss carpet
+                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.MOSS_CARPET);
+                } else if (roll == 2) {
+                    // ~10% leaf pile
+                    chunkData.setBlock(x, AIR_MIN_Y, z, chunkRng.nextBoolean() ? oakLeaves : spruceLeaves);
+                }
             }
         }
     }

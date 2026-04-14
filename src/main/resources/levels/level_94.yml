@@ -1,0 +1,11 @@
+id: level_94
+display_name: "Skyblock"
+generator: level_94
+environment: NORMAL
+dimension_type: light
+fixed_time: 6000
+enter_message: "§aWelcome to Skyblock!"
+
+events: []
+
+entities: []

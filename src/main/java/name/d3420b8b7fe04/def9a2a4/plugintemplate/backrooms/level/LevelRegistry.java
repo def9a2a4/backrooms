@@ -150,6 +150,8 @@ public class LevelRegistry {
         switch (dimType) {
             case "dark" -> dimensionTypeHelper.applyDarkDimension(world);
             case "light" -> dimensionTypeHelper.applyLightDimension(world);
+            case "fullbright" -> dimensionTypeHelper.applyFullbrightDimension(world);
+            case "sunset" -> dimensionTypeHelper.applySunsetDimension(world);
             // "default" — no NMS swap, use vanilla dimension type
         }
     }
