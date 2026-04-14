@@ -21,8 +21,8 @@ event_config:
     check_interval_seconds: 8
     chance: 0.2
     sounds:
-      - AMBIENT_CAVE
-      - AMBIENT_BASALT_DELTAS_MOOD
+      - ambient.cave
+      - ambient.basalt_deltas.mood
   footstep_echo:
     enabled: true
     check_interval_seconds: 3

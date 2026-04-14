@@ -20,8 +20,8 @@ event_config:
     check_interval_seconds: 4
     chance: 0.35
     sounds:
-      - AMBIENT_CAVE
-      - AMBIENT_WARPED_FOREST_MOOD
+      - ambient.cave
+      - ambient.warped_forest.mood
   fake_chat_message:
     enabled: true
     check_interval_seconds: 45

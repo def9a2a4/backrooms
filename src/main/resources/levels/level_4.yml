@@ -22,7 +22,7 @@ event_config:
     check_interval_seconds: 10
     chance: 0.15
     sounds:
-      - AMBIENT_CAVE
+      - ambient.cave
   fake_chat_message:
     enabled: true
     check_interval_seconds: 60

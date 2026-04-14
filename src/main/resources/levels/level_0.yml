@@ -21,11 +21,11 @@ event_config:
     check_interval_seconds: 5
     chance: 0.3
     sounds:
-      - AMBIENT_CAVE
-      - AMBIENT_WARPED_FOREST_MOOD
-      - AMBIENT_CRIMSON_FOREST_MOOD
-      - AMBIENT_NETHER_WASTES_MOOD
-      - AMBIENT_BASALT_DELTAS_MOOD
+      - ambient.cave
+      - ambient.warped_forest.mood
+      - ambient.crimson_forest.mood
+      - ambient.nether_wastes.mood
+      - ambient.basalt_deltas.mood
   light_blink:
     enabled: true
     check_interval_seconds: 30

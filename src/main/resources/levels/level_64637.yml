@@ -19,8 +19,8 @@ event_config:
     check_interval_seconds: 8
     chance: 0.2
     sounds:
-      - AMBIENT_CAVE
-      - AMBIENT_WARPED_FOREST_MOOD
+      - ambient.cave
+      - ambient.warped_forest.mood
   footstep_echo:
     enabled: true
     check_interval_seconds: 3

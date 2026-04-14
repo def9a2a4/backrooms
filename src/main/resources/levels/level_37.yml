@@ -18,4 +18,4 @@ event_config:
     check_interval_seconds: 45
     chance: 0.03
     sounds:
-      - AMBIENT_UNDERWATER_LOOP
+      - ambient.underwater.loop

@@ -91,9 +91,14 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     // ── Zone selection ──────────────────────────────────────────────────
 
     private Zone getZone(long seed, int worldX, int worldZ) {
-        double noise = SimplexNoise.noise2(seed + 50, worldX * ZONE_SCALE, worldZ * ZONE_SCALE);
-        if (noise < -0.7) return Zone.GARDEN;
-        if (noise >= 0.3) return Zone.CORRIDOR;
+        // Garden: rare small patches (own noise layer, high frequency)
+        double gardenNoise = SimplexNoise.noise2(seed + 50, worldX * GARDEN_ZONE_SCALE, worldZ * GARDEN_ZONE_SCALE);
+        if (gardenNoise > 0.75) return Zone.GARDEN;
+
+        // Corridor: large connected zones (separate noise, low frequency)
+        double corridorNoise = SimplexNoise.noise2(seed + 51, worldX * CORRIDOR_ZONE_SCALE, worldZ * CORRIDOR_ZONE_SCALE);
+        if (corridorNoise > 0.45) return Zone.CORRIDOR;
+
         return Zone.WAREHOUSE;
     }
 
@@ -146,7 +151,8 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                 double noise = SimplexNoise.noise2(seed, worldCenterX, worldCenterZ);
                 double detail = SimplexNoise.noise2(seed + 3, worldCenterX * 3, worldCenterZ * 3);
 
-                placeStructure(chunkData, chunkRng, baseX, baseZ, noise, detail);
+                boolean gardenPalette = cellZone == Zone.GARDEN;
+                placeStructure(chunkData, chunkRng, baseX, baseZ, noise, detail, gardenPalette);
             }
         }
 
@@ -265,30 +271,42 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             chunkData.setBlock(x, y, z, randomGardenBlock(chunkRng));
         }
 
-        // Hanging vegetation from ceiling
-        double hangNoise = SimplexNoise.noise2(seed + 75, worldX * 0.12, worldZ * 0.12);
+        // Hanging vegetation from ceiling — use high-frequency noise for noisier placement
+        double hangNoise = SimplexNoise.noise2(seed + 75, worldX * 0.2, worldZ * 0.2);
 
-        if (hangNoise > 0.5) {
-            // Glow berry vines (~10%)
+        if (hangNoise > 0.65) {
+            // Glow berry vines (~5%, sparse)
             int vineLength = 2 + chunkRng.nextInt(3);
             for (int dy = 1; dy <= vineLength; dy++) {
                 int y = CEILING_MIN_Y - dy;
                 if (y <= AIR_MIN_Y) break;
                 chunkData.setBlock(x, y, z, dy == vineLength ? Material.CAVE_VINES : Material.CAVE_VINES_PLANT);
             }
-        } else if (hangNoise > 0.0) {
-            // Vines (~25%)
-            chunkData.setBlock(x, CEILING_MIN_Y - 1, z, Material.VINE);
-            if (hangNoise > 0.25) {
-                chunkData.setBlock(x, CEILING_MIN_Y - 2, z, Material.VINE);
+        } else if (hangNoise > 0.1) {
+            // Vines (~20%)
+            int vineLen = 1 + chunkRng.nextInt(3); // 1-3 blocks
+            for (int dy = 1; dy <= vineLen; dy++) {
+                int y = CEILING_MIN_Y - dy;
+                if (y <= AIR_MIN_Y) break;
+                chunkData.setBlock(x, y, z, Material.VINE);
             }
         }
     }
 
+    private BlockData persistentLeaf(Material leafMat) {
+        return Bukkit.createBlockData(leafMat, "[persistent=true]");
+    }
+
+    private BlockData randomPersistentLeaf(Random rng) {
+        return persistentLeaf(LEAF_TYPES[rng.nextInt(LEAF_TYPES.length)]);
+    }
+
     private void placeGardenDecorations(ChunkData chunkData, long seed, int chunkX, int chunkZ, Random chunkRng) {
-        // Pre-create persistent leaf BlockData
-        BlockData oakLeaves = Bukkit.createBlockData(Material.OAK_LEAVES, "[persistent=true]");
-        BlockData spruceLeaves = Bukkit.createBlockData(Material.SPRUCE_LEAVES, "[persistent=true]");
+        // Dripstone BlockData
+        BlockData dripDown = Bukkit.createBlockData(Material.POINTED_DRIPSTONE,
+                "[vertical_direction=down,thickness=tip]");
+        BlockData dripUp = Bukkit.createBlockData(Material.POINTED_DRIPSTONE,
+                "[vertical_direction=up,thickness=tip]");
 
         // First pass: water pools (need adjacency spread within chunk)
         boolean[][] waterMap = new boolean[16][16];
@@ -297,11 +315,10 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
                 if (getZone(seed, worldX, worldZ) != Zone.GARDEN) continue;
-                if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue; // skip pillars
+                if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
 
-                if (chunkRng.nextInt(20) == 0) { // ~5% seed a water pool
+                if (chunkRng.nextInt(20) == 0) {
                     waterMap[x][z] = true;
-                    // Spread to 1-2 neighbors
                     for (int s = 0; s < 2; s++) {
                         int nx = x + chunkRng.nextInt(3) - 1;
                         int nz = z + chunkRng.nextInt(3) - 1;
@@ -313,26 +330,48 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
 
-        // Second pass: place water and floor decorations
+        // Second pass: floor decorations, ceiling leaves, dripstone
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
                 if (getZone(seed, worldX, worldZ) != Zone.GARDEN) continue;
-                if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue; // skip pillars/walls
+
+                // Ceiling decorations (independent of pillars)
+                if (chunkData.getType(x, CEILING_MIN_Y - 1, z) == Material.AIR) {
+                    int ceilRoll = chunkRng.nextInt(50);
+                    if (ceilRoll < 7) {
+                        // ~15% ceiling leaves
+                        chunkData.setBlock(x, CEILING_MIN_Y, z, randomPersistentLeaf(chunkRng));
+                    } else if (ceilRoll == 7) {
+                        // ~2% ceiling dripstone (hanging)
+                        chunkData.setBlock(x, CEILING_MIN_Y - 1, z, dripDown);
+                    }
+                }
+
+                // Floor decorations — skip pillars/walls
+                if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
 
                 if (waterMap[x][z]) {
                     chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, Material.WATER);
                     continue;
                 }
 
-                int roll = chunkRng.nextInt(10);
-                if (roll < 2) {
+                int roll = chunkRng.nextInt(100);
+                if (roll < 20) {
                     // ~20% moss carpet
                     chunkData.setBlock(x, AIR_MIN_Y, z, Material.MOSS_CARPET);
-                } else if (roll == 2) {
-                    // ~10% leaf pile
-                    chunkData.setBlock(x, AIR_MIN_Y, z, chunkRng.nextBoolean() ? oakLeaves : spruceLeaves);
+                } else if (roll < 30) {
+                    // ~10% leaf pile — 1-3 blocks tall, varied types
+                    int height = 1 + chunkRng.nextInt(3);
+                    for (int dy = 0; dy < height; dy++) {
+                        int y = AIR_MIN_Y + dy;
+                        if (y >= CEILING_MIN_Y) break;
+                        chunkData.setBlock(x, y, z, randomPersistentLeaf(chunkRng));
+                    }
+                } else if (roll == 30) {
+                    // ~1% floor dripstone (pointing up)
+                    chunkData.setBlock(x, AIR_MIN_Y, z, dripUp);
                 }
             }
         }
@@ -440,40 +479,40 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
         }
     }
 
-    // ── Warehouse structures ────────────────────────────────────────────
+    // ── Structures (pillars, walls) ─────────────────────────────────────
 
     private void placeStructure(ChunkData chunkData, Random rng, int baseX, int baseZ,
-                                double noise, double detail) {
+                                double noise, double detail, boolean gardenPalette) {
         if (noise < -0.2) {
             if (detail > 0.3) {
-                placeThickPillar(chunkData, rng, baseX + 3, baseZ + 3);
+                placeThickPillar(chunkData, rng, baseX + 3, baseZ + 3, gardenPalette);
             }
         } else if (noise < 0.15) {
-            placeThickPillar(chunkData, rng, baseX + 2, baseZ + 2);
+            placeThickPillar(chunkData, rng, baseX + 2, baseZ + 2, gardenPalette);
             if (detail > 0.2) {
-                placeThickPillar(chunkData, rng, baseX + 5, baseZ + 5);
+                placeThickPillar(chunkData, rng, baseX + 5, baseZ + 5, gardenPalette);
             }
         } else if (noise < 0.4) {
-            placeLowWall(chunkData, rng, baseX, baseZ);
+            placeLowWall(chunkData, rng, baseX, baseZ, gardenPalette);
         } else {
-            placeWallSection(chunkData, rng, baseX, baseZ);
+            placeWallSection(chunkData, rng, baseX, baseZ, gardenPalette);
         }
     }
 
-    private void placeThickPillar(ChunkData chunkData, Random rng, int x, int z) {
+    private void placeThickPillar(ChunkData chunkData, Random rng, int x, int z, boolean gardenPalette) {
         if (x >= 16 || z >= 16) return;
-        Material mat = PILLAR_MATERIALS[rng.nextInt(PILLAR_MATERIALS.length)];
+        Material mat = gardenPalette ? randomGardenBlock(rng) : PILLAR_MATERIALS[rng.nextInt(PILLAR_MATERIALS.length)];
         for (int dx = 0; dx < 2 && x + dx < 16; dx++) {
             for (int dz = 0; dz < 2 && z + dz < 16; dz++) {
                 for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                    chunkData.setBlock(x + dx, y, z + dz, mat);
+                    chunkData.setBlock(x + dx, y, z + dz, gardenPalette ? randomGardenBlock(rng) : mat);
                 }
             }
         }
     }
 
-    private void placeLowWall(ChunkData chunkData, Random rng, int baseX, int baseZ) {
-        Material mat = WALL_MATERIALS[rng.nextInt(WALL_MATERIALS.length)];
+    private void placeLowWall(ChunkData chunkData, Random rng, int baseX, int baseZ, boolean gardenPalette) {
+        Material mat = gardenPalette ? randomGardenBlock(rng) : WALL_MATERIALS[rng.nextInt(WALL_MATERIALS.length)];
         int dir = rng.nextInt(2);
         int height = AIR_MIN_Y + 2 + rng.nextInt(2);
         int offset = rng.nextInt(2);
@@ -482,14 +521,14 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             int z = baseZ + (dir == 1 ? i : offset);
             if (x < 16 && z < 16) {
                 for (int y = AIR_MIN_Y; y < height; y++) {
-                    chunkData.setBlock(x, y, z, mat);
+                    chunkData.setBlock(x, y, z, gardenPalette ? randomGardenBlock(rng) : mat);
                 }
             }
         }
     }
 
-    private void placeWallSection(ChunkData chunkData, Random rng, int baseX, int baseZ) {
-        Material mat = WALL_MATERIALS[rng.nextInt(WALL_MATERIALS.length)];
+    private void placeWallSection(ChunkData chunkData, Random rng, int baseX, int baseZ, boolean gardenPalette) {
+        Material mat = gardenPalette ? randomGardenBlock(rng) : WALL_MATERIALS[rng.nextInt(WALL_MATERIALS.length)];
         int dir = rng.nextInt(4);
         for (int i = 0; i < CELL_SIZE; i++) {
             int x, z;
@@ -501,7 +540,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             }
             if (x < 16 && z < 16) {
                 for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
-                    chunkData.setBlock(x, y, z, mat);
+                    chunkData.setBlock(x, y, z, gardenPalette ? randomGardenBlock(rng) : mat);
                 }
             }
         }

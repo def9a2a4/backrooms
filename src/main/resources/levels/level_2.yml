@@ -20,9 +20,9 @@ event_config:
     check_interval_seconds: 6
     chance: 0.25
     sounds:
-      - AMBIENT_CAVE
-      - AMBIENT_NETHER_WASTES_MOOD
-      - AMBIENT_BASALT_DELTAS_MOOD
+      - ambient.cave
+      - ambient.nether_wastes.mood
+      - ambient.basalt_deltas.mood
   # blackout:
   #   enabled: true
   #   check_interval_seconds: 90

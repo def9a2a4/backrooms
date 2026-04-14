@@ -22,6 +22,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1WaterDripListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryWrapListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.Bukkit;
@@ -137,6 +138,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(entryManager, plugin);
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
+        Bukkit.getPluginManager().registerEvents(new LibraryWrapListener(), plugin);
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(
                 new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level94Listener(
