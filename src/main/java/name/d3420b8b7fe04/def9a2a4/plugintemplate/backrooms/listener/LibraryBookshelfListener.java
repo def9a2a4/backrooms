@@ -51,9 +51,6 @@ public class LibraryBookshelfListener implements Listener {
         int cellX = Math.floorDiv(chunk.getX() * 16, CELL_SIZE);
         int cellZ = Math.floorDiv(chunk.getZ() * 16, CELL_SIZE);
 
-        // Staircase rooms have no pillar bookshelves
-        if (Level64637ChunkGenerator.isStaircase(worldSeed, cellX, cellZ)) return;
-
         Random rng = new Random(chunk.getChunkKey());
 
         List<ShelfCandidate> candidates = new ArrayList<>();

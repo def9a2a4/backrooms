@@ -10,7 +10,6 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.Waterlogged;
-import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
 
 import java.util.Arrays;
@@ -30,6 +29,11 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
 
     private static final int MIN_Y = 0;
     private static final int MAX_Y = 128;
+
+    // Every block type in the game (for truly random placement)
+    private static final Material[] ALL_BLOCKS = Arrays.stream(Material.values())
+            .filter(Material::isBlock)
+            .toArray(Material[]::new);
 
     // Every possible block that could appear in the corruption
     private static final Material[] CHAOS_BLOCKS = {
@@ -53,6 +57,23 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
             Material.OAK_PLANKS, Material.SPRUCE_PLANKS, Material.DARK_OAK_PLANKS,
             Material.NETHER_BRICKS, Material.PURPUR_BLOCK, Material.END_STONE_BRICKS,
             Material.POLISHED_BLACKSTONE_BRICKS, Material.DEEPSLATE_BRICKS
+    };
+
+    // Stair materials for staircases to nowhere
+    private static final Material[] STAIR_BLOCKS = {
+            Material.OAK_STAIRS, Material.COBBLESTONE_STAIRS, Material.STONE_BRICK_STAIRS,
+            Material.NETHER_BRICK_STAIRS, Material.PURPUR_STAIRS, Material.QUARTZ_STAIRS,
+            Material.DARK_OAK_STAIRS, Material.SPRUCE_STAIRS, Material.BIRCH_STAIRS,
+            Material.SANDSTONE_STAIRS, Material.RED_SANDSTONE_STAIRS, Material.BLACKSTONE_STAIRS,
+            Material.DEEPSLATE_BRICK_STAIRS, Material.PRISMARINE_STAIRS
+    };
+
+    // Redstone components for redstone messes
+    private static final Material[] REDSTONE_COMPONENTS = {
+            Material.REDSTONE_WIRE, Material.REPEATER, Material.COMPARATOR,
+            Material.REDSTONE_TORCH, Material.REDSTONE_LAMP, Material.TARGET,
+            Material.OBSERVER, Material.PISTON, Material.STICKY_PISTON,
+            Material.LEVER, Material.STONE_BUTTON, Material.DAYLIGHT_DETECTOR
     };
 
     @Override
@@ -107,6 +128,27 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
                 for (int y = MIN_Y; y < MAX_Y; y++) {
                     if (!solid[x][y][z]) continue;
 
+                    // ~5% chance: completely random block with randomized block data
+                    if (chunkRng.nextDouble() < 0.05) {
+                        Material randMat = ALL_BLOCKS[chunkRng.nextInt(ALL_BLOCKS.length)];
+                        try {
+                            BlockData bd = Bukkit.createBlockData(randMat);
+                            if (bd instanceof Directional dir) {
+                                BlockFace[] faces = dir.getFaces().toArray(new BlockFace[0]);
+                                if (faces.length > 0) {
+                                    dir.setFacing(faces[chunkRng.nextInt(faces.length)]);
+                                }
+                            }
+                            if (bd instanceof Waterlogged wl) {
+                                wl.setWaterlogged(chunkRng.nextBoolean());
+                            }
+                            chunkData.setBlock(x, y, z, bd);
+                        } catch (Exception e) {
+                            chunkData.setBlock(x, y, z, randMat);
+                        }
+                        continue;
+                    }
+
                     double matCoarse = SimplexNoise.noise3(seed + 10, worldX * 0.03, y * 0.03, worldZ * 0.03);
                     double matFine   = SimplexNoise.noise3(seed + 11, worldX * 0.15, y * 0.15, worldZ * 0.15);
                     double matValue = matCoarse * 0.7 + matFine * 0.3;
@@ -127,9 +169,12 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
 
-        // Structure fragments: partial buildings placed randomly
-        if (chunkRng.nextDouble() < 0.4) {
-            placeStructureFragment(chunkData, chunkRng);
+        // Structure fragments: 1-3 random structures per chunk
+        int structureCount = 1 + chunkRng.nextInt(3);
+        for (int i = 0; i < structureCount; i++) {
+            if (chunkRng.nextDouble() < 0.7) {
+                placeRandomStructure(chunkData, chunkRng);
+            }
         }
 
         // The Calm Room: at world origin chunk
@@ -158,41 +203,183 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
         }
     }
 
-    private void placeStructureFragment(ChunkData chunkData, Random rng) {
+    private void placeRandomStructure(ChunkData chunkData, Random rng) {
+        switch (rng.nextInt(7)) {
+            case 0 -> placePartialWalls(chunkData, rng);
+            case 1 -> placeStaircaseToNowhere(chunkData, rng);
+            case 2 -> placePillar(chunkData, rng);
+            case 3 -> placeFloatingSlab(chunkData, rng);
+            case 4 -> placeBrokenPortalFrame(chunkData, rng);
+            case 5 -> placeRedstoneMess(chunkData, rng);
+            case 6 -> placeArch(chunkData, rng);
+        }
+    }
+
+    private int findSurface(ChunkData chunkData, int x, int z) {
+        for (int y = MAX_Y - 1; y > MIN_Y; y--) {
+            if (chunkData.getType(x, y, z) != Material.AIR) return y + 1;
+        }
+        return 48;
+    }
+
+    private void placePartialWalls(ChunkData chunkData, Random rng) {
         int sx = rng.nextInt(12);
         int sz = rng.nextInt(12);
         int sizeX = 3 + rng.nextInt(5);
         int sizeZ = 3 + rng.nextInt(5);
         int height = 3 + rng.nextInt(4);
         Material wallMat = STRUCTURE_BLOCKS[rng.nextInt(STRUCTURE_BLOCKS.length)];
+        int groundY = findSurface(chunkData, sx + sizeX / 2, sz + sizeZ / 2);
 
-        // Find ground level
-        int groundY = 48;
-        for (int y = MAX_Y - 1; y > MIN_Y; y--) {
-            if (chunkData.getType(sx + sizeX / 2, y, sz + sizeZ / 2) != Material.AIR) {
-                groundY = y + 1;
-                break;
-            }
-        }
-
-        // Place partial walls (some sides missing)
         boolean[] walls = {rng.nextBoolean(), rng.nextBoolean(), rng.nextBoolean(), rng.nextBoolean()};
         for (int dy = 0; dy < height; dy++) {
             int y = groundY + dy;
             if (y >= MAX_Y) break;
-            // North wall
             if (walls[0]) for (int dx = 0; dx < sizeX && sx + dx < 16; dx++)
                 chunkData.setBlock(sx + dx, y, sz, wallMat);
-            // South wall
             if (walls[1]) for (int dx = 0; dx < sizeX && sx + dx < 16; dx++) {
                 if (sz + sizeZ - 1 < 16) chunkData.setBlock(sx + dx, y, sz + sizeZ - 1, wallMat);
             }
-            // West wall
             if (walls[2]) for (int dz = 0; dz < sizeZ && sz + dz < 16; dz++)
                 chunkData.setBlock(sx, y, sz + dz, wallMat);
-            // East wall
             if (walls[3]) for (int dz = 0; dz < sizeZ && sz + dz < 16; dz++) {
                 if (sx + sizeX - 1 < 16) chunkData.setBlock(sx + sizeX - 1, y, sz + dz, wallMat);
+            }
+        }
+    }
+
+    private void placeStaircaseToNowhere(ChunkData chunkData, Random rng) {
+        int sx = rng.nextInt(14);
+        int sz = rng.nextInt(14);
+        int groundY = findSurface(chunkData, sx, sz);
+        int steps = 3 + rng.nextInt(4);
+        Material stairMat = STAIR_BLOCKS[rng.nextInt(STAIR_BLOCKS.length)];
+        // Pick a random direction: 0=+x, 1=-x, 2=+z, 3=-z
+        int dir = rng.nextInt(4);
+        BlockFace facing = switch (dir) {
+            case 0 -> BlockFace.EAST;
+            case 1 -> BlockFace.WEST;
+            case 2 -> BlockFace.SOUTH;
+            default -> BlockFace.NORTH;
+        };
+
+        for (int i = 0; i < steps; i++) {
+            int bx = sx + (dir == 0 ? i : dir == 1 ? -i : 0);
+            int bz = sz + (dir == 2 ? i : dir == 3 ? -i : 0);
+            int by = groundY + i;
+            if (bx < 0 || bx >= 16 || bz < 0 || bz >= 16 || by >= MAX_Y) break;
+            try {
+                BlockData bd = Bukkit.createBlockData(stairMat);
+                if (bd instanceof Directional d) d.setFacing(facing);
+                chunkData.setBlock(bx, by, bz, bd);
+            } catch (Exception e) {
+                chunkData.setBlock(bx, by, bz, stairMat);
+            }
+        }
+    }
+
+    private void placePillar(ChunkData chunkData, Random rng) {
+        int px = rng.nextInt(16);
+        int pz = rng.nextInt(16);
+        int height = 4 + rng.nextInt(9);
+        // Sometimes start mid-air, sometimes from a surface
+        int startY = rng.nextBoolean() ? findSurface(chunkData, px, pz) : 20 + rng.nextInt(80);
+        Material mat = rng.nextBoolean()
+                ? STRUCTURE_BLOCKS[rng.nextInt(STRUCTURE_BLOCKS.length)]
+                : ALL_BLOCKS[rng.nextInt(ALL_BLOCKS.length)];
+        for (int dy = 0; dy < height; dy++) {
+            int y = startY + dy;
+            if (y >= MAX_Y || y < MIN_Y) break;
+            chunkData.setBlock(px, y, pz, mat);
+        }
+    }
+
+    private void placeFloatingSlab(ChunkData chunkData, Random rng) {
+        int sx = rng.nextInt(12);
+        int sz = rng.nextInt(12);
+        int sizeX = 3 + rng.nextInt(4);
+        int sizeZ = 3 + rng.nextInt(4);
+        int slabY = 20 + rng.nextInt(90);
+        Material mat = rng.nextBoolean()
+                ? STRUCTURE_BLOCKS[rng.nextInt(STRUCTURE_BLOCKS.length)]
+                : CHAOS_BLOCKS[rng.nextInt(CHAOS_BLOCKS.length)];
+        for (int dx = 0; dx < sizeX && sx + dx < 16; dx++) {
+            for (int dz = 0; dz < sizeZ && sz + dz < 16; dz++) {
+                if (slabY < MAX_Y) chunkData.setBlock(sx + dx, slabY, sz + dz, mat);
+            }
+        }
+    }
+
+    private void placeBrokenPortalFrame(ChunkData chunkData, Random rng) {
+        int sx = rng.nextInt(12);
+        int sz = rng.nextInt(14);
+        int groundY = findSurface(chunkData, sx + 2, sz);
+        // 4 wide, 5 tall portal frame — then randomly delete some blocks
+        int[][] frame = {
+                {0, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4},  // left pillar
+                {3, 0}, {3, 1}, {3, 2}, {3, 3}, {3, 4},  // right pillar
+                {1, 4}, {2, 4},                            // top bar
+        };
+        for (int[] pos : frame) {
+            if (rng.nextDouble() < 0.3) continue; // 30% chance each block is missing
+            int bx = sx + pos[0];
+            int by = groundY + pos[1];
+            if (bx >= 16 || by >= MAX_Y) continue;
+            chunkData.setBlock(bx, by, sz, Material.OBSIDIAN);
+        }
+    }
+
+    private void placeRedstoneMess(ChunkData chunkData, Random rng) {
+        int sx = rng.nextInt(12);
+        int sz = rng.nextInt(12);
+        int groundY = findSurface(chunkData, sx + 2, sz + 2);
+        int sizeX = 3 + rng.nextInt(3);
+        int sizeZ = 3 + rng.nextInt(3);
+        // Place a solid floor first so redstone can sit on it
+        Material floorMat = STRUCTURE_BLOCKS[rng.nextInt(STRUCTURE_BLOCKS.length)];
+        for (int dx = 0; dx < sizeX && sx + dx < 16; dx++) {
+            for (int dz = 0; dz < sizeZ && sz + dz < 16; dz++) {
+                if (groundY - 1 >= MIN_Y && groundY - 1 < MAX_Y)
+                    chunkData.setBlock(sx + dx, groundY - 1, sz + dz, floorMat);
+                if (groundY < MAX_Y) {
+                    Material comp = REDSTONE_COMPONENTS[rng.nextInt(REDSTONE_COMPONENTS.length)];
+                    try {
+                        BlockData bd = Bukkit.createBlockData(comp);
+                        if (bd instanceof Directional d) {
+                            BlockFace[] faces = d.getFaces().toArray(new BlockFace[0]);
+                            if (faces.length > 0) d.setFacing(faces[rng.nextInt(faces.length)]);
+                        }
+                        chunkData.setBlock(sx + dx, groundY, sz + dz, bd);
+                    } catch (Exception e) {
+                        chunkData.setBlock(sx + dx, groundY, sz + dz, comp);
+                    }
+                }
+            }
+        }
+    }
+
+    private void placeArch(ChunkData chunkData, Random rng) {
+        int sx = rng.nextInt(10);
+        int sz = rng.nextInt(14);
+        int groundY = findSurface(chunkData, sx + 3, sz);
+        int pillarHeight = 3 + rng.nextInt(4);
+        int span = 4 + rng.nextInt(3);
+        Material mat = STRUCTURE_BLOCKS[rng.nextInt(STRUCTURE_BLOCKS.length)];
+        // Left pillar
+        for (int dy = 0; dy < pillarHeight; dy++) {
+            int y = groundY + dy;
+            if (y < MAX_Y && sx < 16) chunkData.setBlock(sx, y, sz, mat);
+        }
+        // Right pillar
+        for (int dy = 0; dy < pillarHeight; dy++) {
+            int y = groundY + dy;
+            if (y < MAX_Y && sx + span < 16) chunkData.setBlock(sx + span, y, sz, mat);
+        }
+        // Bridge across the top
+        int bridgeY = groundY + pillarHeight - 1;
+        if (bridgeY < MAX_Y) {
+            for (int dx = 0; dx <= span && sx + dx < 16; dx++) {
+                chunkData.setBlock(sx + dx, bridgeY, sz, mat);
             }
         }
     }
