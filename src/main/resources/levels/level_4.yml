@@ -2,9 +2,9 @@ id: level_4
 display_name: "The Far Lands"
 generator: level_4
 environment: NORMAL
-dimension_type: sunset
+dimension_type: day
 biome: "backrooms:far_lands"
-fixed_time: 12500
+fixed_time: 6000
 enter_message: "§6[ERR]: java.math.IntergerOverflowError"
 
 events:

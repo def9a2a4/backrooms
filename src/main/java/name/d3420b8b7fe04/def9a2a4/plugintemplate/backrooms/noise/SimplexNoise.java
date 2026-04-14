@@ -65,30 +65,47 @@ public final class SimplexNoise {
         int xsb = fastFloor(xs), ysb = fastFloor(ys);
         double xsi = xs - xsb, ysi = ys - ysb;
 
+        // Compute proper unskewed-space displacements for each lattice vertex
+        // Vertex (xsb, ysb)
+        double t0 = UNSKEW_2D * (xsb + ysb);
+        double dx0 = x - xsb - t0;
+        double dy0 = y - ysb - t0;
+
         double a = 0.5 - xsi - ysi;
         if (a > 0) {
             double aa = a * a;
-            value = aa * aa * grad(seed, xsb, ysb, xs, ys);
+            value = aa * aa * grad(seed, xsb, ysb, dx0, dy0);
         }
 
         double c = (2.0 * (1.0 - 2.0 * SKEW_2D) * (1.0 / SKEW_2D + 2.0)) * (xsi + ysi) + ((-2.0 * (1.0 - 2.0 * SKEW_2D) * (1.0 - 2.0 * SKEW_2D)) + a);
         if (c > 0) {
-            double xsi1 = xsi - (1 - 2 * SKEW_2D), ysi1 = ysi - (1 - 2 * SKEW_2D);
+            // Vertex (xsb+1, ysb+1)
+            double t1 = UNSKEW_2D * (xsb + 1 + ysb + 1);
+            double dx1 = x - (xsb + 1) - t1;
+            double dy1 = y - (ysb + 1) - t1;
             double cc = c * c;
-            value += cc * cc * grad(seed, xsb + 1, ysb + 1, xs - xsi1, ys - ysi1);
+            value += cc * cc * grad(seed, xsb + 1, ysb + 1, dx1, dy1);
         }
 
         if (ysi > xsi) {
             double b = a + ysi - 0.5;
             if (b > 0) {
+                // Vertex (xsb, ysb+1)
+                double t2 = UNSKEW_2D * (xsb + ysb + 1);
+                double dx2 = x - xsb - t2;
+                double dy2 = y - (ysb + 1) - t2;
                 double bb = b * b;
-                value += bb * bb * grad(seed, xsb, ysb + 1, xs, ys - (ysi - UNSKEW_2D * 2 - 1));
+                value += bb * bb * grad(seed, xsb, ysb + 1, dx2, dy2);
             }
         } else {
             double b = a + xsi - 0.5;
             if (b > 0) {
+                // Vertex (xsb+1, ysb)
+                double t2 = UNSKEW_2D * (xsb + 1 + ysb);
+                double dx2 = x - (xsb + 1) - t2;
+                double dy2 = y - ysb - t2;
                 double bb = b * b;
-                value += bb * bb * grad(seed, xsb + 1, ysb, xs - (xsi - UNSKEW_2D * 2 - 1), ys);
+                value += bb * bb * grad(seed, xsb + 1, ysb, dx2, dy2);
             }
         }
 

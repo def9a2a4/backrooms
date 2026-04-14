@@ -250,8 +250,7 @@ public class BackroomsPlugin {
 
     private void extractDefaultLevels() {
         File levelsDir = new File(plugin.getDataFolder(), "levels");
-        if (levelsDir.exists()) return;
-        levelsDir.mkdirs();
+        if (!levelsDir.exists()) levelsDir.mkdirs();
 
         // Scan the plugin jar for all files under levels/
         try (java.util.jar.JarFile jar = new java.util.jar.JarFile(

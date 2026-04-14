@@ -1,13 +1,19 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.Waterlogged;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
 
+import java.util.Arrays;
 import java.util.Random;
 
 /**
@@ -54,40 +60,70 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
         long seed = worldInfo.getSeed();
         Random chunkRng = new Random(seed ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
 
-        // Chaotic terrain with multiple overlapping noise functions
+        // --- Pass 1: 3D density field ---
+        boolean[][][] solid = new boolean[16][MAX_Y][16];
+
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
 
-                // Multiple terrain height sources fighting each other
-                double h1 = SimplexNoise.noise2(seed, worldX * 0.01, worldZ * 0.01) * 30;
-                double h2 = SimplexNoise.noise2(seed + 1, worldX * 0.05, worldZ * 0.05) * 20;
-                double h3 = SimplexNoise.noise2(seed + 2, worldX * 0.02, worldZ * 0.003) * 20; // Stretched in Z
-                double h4 = SimplexNoise.noise2(seed + 3, worldX * 0.003, worldZ * 0.02) * 20; // Stretched in X
+                // Domain warp XZ (low freq, computed per-column)
+                double warpX = SimplexNoise.noise3(seed + 100, worldX * 0.01, 0, worldZ * 0.01) * 12.0;
+                double warpZ = SimplexNoise.noise3(seed + 102, worldX * 0.01, 0, worldZ * 0.01) * 12.0;
 
-                double height = 48 + h1 + h2 + Math.max(h3, h4);
-                int terrainHeight = Math.max(MIN_Y + 1, Math.min((int) height, MAX_Y - 1));
+                for (int y = MIN_Y; y < MAX_Y; y++) {
+                    if (y == 0) { solid[x][y][z] = true; continue; }
 
-                // Material selection: different noise layer picks from different palettes
-                double matNoise = SimplexNoise.noise2(seed + 10, worldX * 0.08, worldZ * 0.08);
-                double matDetail = SimplexNoise.noise2(seed + 11, worldX * 0.3, worldZ * 0.3);
+                    double warpY = SimplexNoise.noise3(seed + 101, worldX * 0.01, y * 0.01, worldZ * 0.01) * 8.0;
+                    double wx = worldX + warpX;
+                    double wy = y + warpY;
+                    double wz = worldZ + warpZ;
 
-                for (int y = MIN_Y; y < terrainHeight; y++) {
-                    // Material changes with height AND position (total chaos)
-                    double yFactor = SimplexNoise.noise2(seed + 12, worldX * 0.1 + y * 0.05, worldZ * 0.1);
-                    int matIndex = Math.abs((int) ((matNoise + matDetail + yFactor) * 500)) % CHAOS_BLOCKS.length;
+                    // Vertical bias: solid at bottom, air at top
+                    double normalizedY = (double) (y - MIN_Y) / (MAX_Y - MIN_Y);
+                    double verticalBias = 0.6 - 1.0 * normalizedY;
+
+                    // 4 octaves with mismatched, anisotropic frequencies
+                    double n1 = SimplexNoise.noise3(seed + 1, wx * 0.015, wy * 0.012, wz * 0.015) * 0.5;
+                    double n2 = SimplexNoise.noise3(seed + 2, wx * 0.04,  wy * 0.02,  wz * 0.04)  * 0.3;
+                    double n3 = SimplexNoise.noise3(seed + 3, wx * 0.003, wy * 0.07,  wz * 0.07)  * 0.2;
+                    double n4 = SimplexNoise.noise3(seed + 4, wx * 0.12,  wy * 0.12,  wz * 0.12)  * 0.1;
+
+                    // Spatially varying threshold for extra chaos
+                    double threshMod = SimplexNoise.noise3(seed + 50, worldX * 0.008, y * 0.008, worldZ * 0.008) * 0.25;
+
+                    double density = verticalBias + n1 + n2 + n3 + n4 - threshMod;
+                    solid[x][y][z] = density > 0;
+                }
+            }
+        }
+
+        // --- Pass 2: material assignment ---
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                for (int y = MIN_Y; y < MAX_Y; y++) {
+                    if (!solid[x][y][z]) continue;
+
+                    double matCoarse = SimplexNoise.noise3(seed + 10, worldX * 0.03, y * 0.03, worldZ * 0.03);
+                    double matFine   = SimplexNoise.noise3(seed + 11, worldX * 0.15, y * 0.15, worldZ * 0.15);
+                    double matValue = matCoarse * 0.7 + matFine * 0.3;
+                    int matIndex = (int) ((matValue + 1.0) * 0.5 * CHAOS_BLOCKS.length);
+                    matIndex = Math.max(0, Math.min(CHAOS_BLOCKS.length - 1, matIndex));
                     chunkData.setBlock(x, y, z, CHAOS_BLOCKS[matIndex]);
                 }
+            }
+        }
 
-                // Random floating blocks above terrain
-                if (chunkRng.nextDouble() < 0.03) {
-                    int floatY = terrainHeight + 5 + chunkRng.nextInt(20);
-                    if (floatY < MAX_Y) {
-                        Material floatMat = CHAOS_BLOCKS[chunkRng.nextInt(CHAOS_BLOCKS.length)];
-                        chunkData.setBlock(x, floatY, z, floatMat);
-                    }
-                }
+        // Floating blocks scattered in air pockets
+        for (int i = 0; i < 8; i++) {
+            int fx = chunkRng.nextInt(16);
+            int fz = chunkRng.nextInt(16);
+            int fy = 40 + chunkRng.nextInt(80);
+            if (fy < MAX_Y && !solid[fx][fy][fz]) {
+                chunkData.setBlock(fx, fy, fz, CHAOS_BLOCKS[chunkRng.nextInt(CHAOS_BLOCKS.length)]);
             }
         }
 

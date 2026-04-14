@@ -56,13 +56,15 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         // White concrete
         { Material.WHITE_CONCRETE, Material.WHITE_CONCRETE, Material.WHITE_CONCRETE, Material.WHITE_CONCRETE },
         // Smooth stone
-        { Material.SMOOTH_STONE, Material.SMOOTH_STONE, Material.STONE_BRICKS, Material.SMOOTH_STONE },
+        { Material.SMOOTH_STONE, Material.SMOOTH_STONE, Material.STONE, Material.SMOOTH_STONE },
         // Dark prismarine
         { Material.DARK_PRISMARINE, Material.DARK_PRISMARINE, Material.DARK_PRISMARINE, Material.DARK_PRISMARINE },
         // End stone bricks (pillar also uses bricks, no raw end stone)
         { Material.END_STONE_BRICKS, Material.END_STONE_BRICKS, Material.END_STONE_BRICKS, Material.END_STONE_BRICKS },
         // Sandstone (chiseled, smooth, cut only)
         { Material.SMOOTH_SANDSTONE, Material.CUT_SANDSTONE, Material.CUT_SANDSTONE, Material.SMOOTH_SANDSTONE },
+        // Stone
+        { Material.STONE, Material.STONE, Material.STONE, Material.STONE },
     };
 
     // Pool types
@@ -70,11 +72,11 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private static final int POOL_SHALLOW = 1;
     private static final int POOL_DEEP = 2;
 
-    /** Dark prismarine uses sea lanterns; everything else uses yellow froglights. */
     private static Material lightBlock(Material[] palette) {
-        return palette[PAL_WALL] == Material.DARK_PRISMARINE
-                ? Material.SEA_LANTERN
-                : Material.OCHRE_FROGLIGHT;
+        if (palette[PAL_WALL] == Material.DARK_PRISMARINE) return Material.SEA_LANTERN;
+        if (palette[PAL_WALL] == Material.SMOOTH_STONE || palette[PAL_WALL] == Material.STONE)
+            return Material.PEARLESCENT_FROGLIGHT;
+        return Material.OCHRE_FROGLIGHT;
     }
 
     @Override
@@ -190,7 +192,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     int masterCellX = getMasterCellX(cellX, cellZ, seed);
                     int masterCellZ = getMasterCellZ(cellX, cellZ, seed);
                     int roomType = getRoomType(masterCellX, masterCellZ, seed, roomClass);
-                    placeInterior(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette, light, roomType, ceilingY);
+                    boolean skylight = isSkylightRoom(cellX, cellZ, seed);
+                    placeInterior(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette, light, roomType, ceilingY, skylight);
                     placePool(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette);
                 }
 
@@ -416,7 +419,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                                int localX, int localZ,
                                int masterCellX, int masterCellZ, long seed,
                                Material[] palette, Material light,
-                               int roomType, int ceilingY) {
+                               int roomType, int ceilingY, boolean skylight) {
         int ix = localX - WALL_THICK;
         int iz = localZ - WALL_THICK;
 
@@ -540,7 +543,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             }
 
             // --- SHORT room types (two-level, cases 10-14) ---
-            case 10 -> placeShortOpen(chunkData, x, z, ix, iz, edX, edZ, palette, light);
+            case 10 -> placeShortOpen(chunkData, x, z, ix, iz, edX, edZ, palette, light, skylight);
             case 11 -> placeShortPartitioned(chunkData, x, z, ix, iz, edX, edZ, palette, light);
             case 12 -> placeShortCorner(chunkData, x, z, ix, iz, edX, edZ, masterCellX, masterCellZ, seed, palette, light);
             case 13 -> placeShortMezzanine(chunkData, x, z, ix, iz, edX, edZ, palette, light);
@@ -571,16 +574,17 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 10: open two-level with center void and symmetric staircases */
     private void placeShortOpen(ChunkData chunkData, int x, int z,
                                 int ix, int iz, int edX, int edZ,
-                                Material[] palette, Material light) {
-        boolean centerOpening = edX >= 7 && edZ >= 7;
+                                Material[] palette, Material light, boolean skylight) {
+        boolean centerOpening = edX >= 6 && edZ >= 6;
         // West staircase: ix=0-2, iz=2-7 ascending
         boolean westStair = ix <= 2 && iz >= 2 && iz <= 7;
         // East staircase: ix=17-19, iz=12-17 ascending (180° rotational symmetry)
         boolean eastStair = ix >= 17 && iz >= 12 && iz <= 17;
 
         if (centerOpening) {
-            if (edX == 7 && edZ == 7) {
-                for (int y = FLOOR_HEIGHT; y < CEILING_Y; y++) {
+            if (edX == 6 && edZ == 6) {
+                int pillarTop = skylight ? MID_FLOOR_Y : CEILING_Y;
+                for (int y = FLOOR_HEIGHT; y < pillarTop; y++) {
                     chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
                 }
             }
@@ -722,27 +726,35 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         }
     }
 
-    /** Case 14: dense pillars with single central spiral staircase.
-     *  Spiral wraps clockwise around ix 7-12, iz 7-12. */
+    /** Case 14: dense pillars with 2-wide central spiral staircase.
+     *  Outer ring (ix 6-13, iz 6-13) and inner ring (ix 7-12, iz 7-12). */
     private void placeShortDensePillars(ChunkData chunkData, int x, int z,
                                         int ix, int iz, int edX, int edZ,
                                         Material[] palette, Material light) {
-        // Detect spiral perimeter (1-block-wide ring around center)
-        boolean onSpiral = false;
-        int progress = -1;
-        if (iz == 12 && ix >= 7 && ix <= 12) {
-            onSpiral = true; progress = ix - 7;            // south: 0-5
-        } else if (ix == 12 && iz >= 7 && iz <= 11) {
-            onSpiral = true; progress = 17 - iz;           // east: 6-10
-        } else if (iz == 7 && ix >= 7 && ix <= 11) {
-            onSpiral = true; progress = 22 - ix;           // north: 11-15
-        } else if (ix == 7 && iz >= 8 && iz <= 11) {
-            onSpiral = true; progress = iz + 8;            // west: 16-19
-        }
+        // Outer ring progress (28 positions, clockwise from south)
+        int outerProgress = -1;
+        if (iz == 13 && ix >= 6 && ix <= 13) { outerProgress = ix - 6; }             // S: 0-7
+        else if (ix == 13 && iz >= 6 && iz <= 12) { outerProgress = 20 - iz; }       // E: 8-14
+        else if (iz == 6 && ix >= 6 && ix <= 12) { outerProgress = 21 + (12 - ix); } // N: 15-21
+        else if (ix == 6 && iz >= 7 && iz <= 12) { outerProgress = 22 + (iz - 7); }  // W: 22-27
 
+        // Inner ring progress (20 positions, clockwise from south)
+        int innerProgress = -1;
+        if (iz == 12 && ix >= 7 && ix <= 12) { innerProgress = ix - 7; }             // S: 0-5
+        else if (ix == 12 && iz >= 7 && iz <= 11) { innerProgress = 17 - iz; }       // E: 6-10
+        else if (iz == 7 && ix >= 7 && ix <= 11) { innerProgress = 22 - ix; }        // N: 11-15
+        else if (ix == 7 && iz >= 8 && iz <= 11) { innerProgress = iz + 8; }         // W: 16-19
+
+        boolean onSpiral = outerProgress >= 0 || innerProgress >= 0;
         if (onSpiral) {
-            // 20 positions, 6 height levels (9→14)
-            int stepY = FLOOR_HEIGHT + 1 + progress * (MID_FLOOR_Y - FLOOR_HEIGHT) / 20;
+            int progress;
+            if (outerProgress >= 0) {
+                progress = outerProgress;
+            } else {
+                // Map inner ring progress to outer ring scale
+                progress = innerProgress * 28 / 20;
+            }
+            int stepY = FLOOR_HEIGHT + progress * (MID_FLOOR_Y - FLOOR_HEIGHT) / 28;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
                 chunkData.setBlock(x, y, z, palette[PAL_WALL]);
             }
@@ -773,9 +785,9 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                                       int ix, int iz, int edX, int edZ,
                                       Material[] palette, Material light) {
         boolean onRing = edX <= 3 || edZ <= 3;
-        // 4 symmetric pools in each quadrant: ix 2-5 / 14-17, iz 2-5 / 14-17
-        boolean inPool = (ix >= 2 && ix <= 5 || ix >= 14 && ix <= 17)
-                      && (iz >= 2 && iz <= 5 || iz >= 14 && iz <= 17);
+        // 4 symmetric pools: NW(4-7,4-7), NE(12-15,4-7), SW(4-7,12-15), SE(12-15,12-15)
+        boolean inPool = (ix >= 4 && ix <= 7 || ix >= 12 && ix <= 15)
+                      && (iz >= 4 && iz <= 7 || iz >= 12 && iz <= 15);
 
         if (onRing) {
             placeMidFloor(chunkData, x, z, palette);
@@ -789,7 +801,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
             chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette[PAL_FLOOR]);
         }
-        if (edX >= 8 && edZ >= 8) {
+        // Single center light
+        if (edX == 9 && edZ == 9) {
             chunkData.setBlock(x, FLOOR_HEIGHT, z, light);
         }
     }
@@ -979,7 +992,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     // --- Debug info ---
 
     private static final String[] PALETTE_NAMES = {
-        "Quartz", "White Concrete", "Smooth Stone", "Dark Prismarine", "End Stone", "Sandstone"
+        "Quartz", "White Concrete", "Smooth Stone", "Dark Prismarine", "End Stone", "Sandstone", "Stone"
     };
 
     private static final String[] ROOM_TYPE_NAMES = {

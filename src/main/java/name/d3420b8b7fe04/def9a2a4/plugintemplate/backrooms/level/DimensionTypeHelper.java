@@ -24,7 +24,8 @@ public class DimensionTypeHelper {
     private Object darkHolder;
     private Object lightHolder;
     private Object fullbrightHolder;
-    private Object sunsetHolder;
+    private Object brightBlackCrimsonHolder;
+    private Object dayHolder;
 
     public DimensionTypeHelper(Logger logger) {
         this.logger = logger;
@@ -42,8 +43,12 @@ public class DimensionTypeHelper {
         return applyDimension(world, "fullbright", fullbrightHolder);
     }
 
-    public boolean applySunsetDimension(World world) {
-        return applyDimension(world, "sunset", sunsetHolder);
+    public boolean applyBrightBlackCrimsonDimension(World world) {
+        return applyDimension(world, "bright_black_crimson", brightBlackCrimsonHolder);
+    }
+
+    public boolean applyDayDimension(World world) {
+        return applyDimension(world, "day", dayHolder);
     }
 
     private boolean applyDimension(World world, String label, Object holder) {
@@ -94,7 +99,8 @@ public class DimensionTypeHelper {
             logger.info("Dimension type helper resolved (dark=" + (darkHolder != null)
                     + ", light=" + (lightHolder != null)
                     + ", fullbright=" + (fullbrightHolder != null)
-                    + ", sunset=" + (sunsetHolder != null) + ")");
+                    + ", bright_black_crimson=" + (brightBlackCrimsonHolder != null)
+                    + ", day=" + (dayHolder != null) + ")");
         } catch (Exception e) {
             available = false;
             logger.warning("Dimension type helper failed: " + e.getMessage());
@@ -145,11 +151,13 @@ public class DimensionTypeHelper {
         Object darkLocation = fromNsAndPath.invoke(null, "backrooms", "dark");
         Object lightLocation = fromNsAndPath.invoke(null, "backrooms", "light");
         Object fullbrightLocation = fromNsAndPath.invoke(null, "backrooms", "fullbright");
-        Object sunsetLocation = fromNsAndPath.invoke(null, "backrooms", "sunset");
+        Object bbcLocation = fromNsAndPath.invoke(null, "backrooms", "bright_black_crimson");
+        Object dayLocation = fromNsAndPath.invoke(null, "backrooms", "day");
         Object darkKey = createKey.invoke(null, dimTypeRegistryKey, darkLocation);
         Object lightKey = createKey.invoke(null, dimTypeRegistryKey, lightLocation);
         Object fullbrightKey = createKey.invoke(null, dimTypeRegistryKey, fullbrightLocation);
-        Object sunsetKey = createKey.invoke(null, dimTypeRegistryKey, sunsetLocation);
+        Object bbcKey = createKey.invoke(null, dimTypeRegistryKey, bbcLocation);
+        Object dayKey = createKey.invoke(null, dimTypeRegistryKey, dayLocation);
 
         // Look up holders: registry.getHolder(ResourceKey) -> Optional<Holder.Reference>
         Method getHolderMethod = findGetHolderMethod(registry, resourceKeyClass);
@@ -157,10 +165,12 @@ public class DimensionTypeHelper {
             darkHolder = unwrapOptional(getHolderMethod.invoke(registry, darkKey));
             lightHolder = unwrapOptional(getHolderMethod.invoke(registry, lightKey));
             fullbrightHolder = unwrapOptional(getHolderMethod.invoke(registry, fullbrightKey));
-            sunsetHolder = unwrapOptional(getHolderMethod.invoke(registry, sunsetKey));
+            brightBlackCrimsonHolder = unwrapOptional(getHolderMethod.invoke(registry, bbcKey));
+            dayHolder = unwrapOptional(getHolderMethod.invoke(registry, dayKey));
         }
 
-        if (darkHolder == null || lightHolder == null || fullbrightHolder == null || sunsetHolder == null) {
+        if (darkHolder == null || lightHolder == null || fullbrightHolder == null
+                || brightBlackCrimsonHolder == null || dayHolder == null) {
             // Dump registered keys for debugging
             StringBuilder sb = new StringBuilder("Registered dimension types: ");
             try {
@@ -171,7 +181,7 @@ public class DimensionTypeHelper {
                     sb.append(keySet);
                 }
             } catch (Exception ignored) {}
-            throw new RuntimeException("backrooms:dark, backrooms:light, backrooms:fullbright, or backrooms:sunset not found in dimension type registry. "
+            throw new RuntimeException("One or more backrooms dimension types not found in dimension type registry. "
                     + sb + ". Is the datapack loaded?");
         }
     }

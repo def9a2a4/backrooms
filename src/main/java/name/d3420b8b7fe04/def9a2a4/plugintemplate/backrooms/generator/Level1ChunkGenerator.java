@@ -45,9 +45,8 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     private static final double MATERIAL_SCALE = 0.02;
     private static final double ACCENT_SCALE = 0.15;
 
-    // Zone noise — two separate layers for independent placement
-    private static final double GARDEN_ZONE_SCALE = 0.025;  // higher freq = smaller patches
-    private static final double CORRIDOR_ZONE_SCALE = 0.01; // lower freq = larger zones
+    // Zone noise
+    private static final double CORRIDOR_ZONE_SCALE = 0.01; // low freq = larger zones
 
     // Corridor constants
     private static final int CORRIDOR_PERIOD = 7;
@@ -90,9 +89,11 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     // ── Zone selection ──────────────────────────────────────────────────
 
     private Zone getZone(long seed, int worldX, int worldZ) {
-        // Garden: rare small patches (own noise layer, high frequency)
-        double gardenNoise = SimplexNoise.noise2(seed + 50, worldX * GARDEN_ZONE_SCALE, worldZ * GARDEN_ZONE_SCALE);
-        if (gardenNoise > 0.75) return Zone.GARDEN;
+        // Garden: two octaves summed to break diamond/rhombus pattern
+        double g1 = SimplexNoise.noise2(seed + 50, worldX * 0.03, worldZ * 0.03);
+        double g2 = SimplexNoise.noise2(seed + 52, worldX * 0.07, worldZ * 0.07);
+        double gardenNoise = (g1 + g2 * 0.5) / 1.5;
+        if (gardenNoise > 0.6) return Zone.GARDEN;
 
         // Corridor: large connected zones (separate noise, low frequency)
         double corridorNoise = SimplexNoise.noise2(seed + 51, worldX * CORRIDOR_ZONE_SCALE, worldZ * CORRIDOR_ZONE_SCALE);
@@ -270,10 +271,10 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             chunkData.setBlock(x, y, z, randomGardenBlock(chunkRng));
         }
 
-        // Hanging vegetation from ceiling — use high-frequency noise for noisier placement
-        double hangNoise = SimplexNoise.noise2(seed + 75, worldX * 0.2, worldZ * 0.2);
+        // Hanging vegetation from ceiling
+        double hangNoise = SimplexNoise.noise2(seed + 75, worldX * 0.08, worldZ * 0.08);
 
-        if (hangNoise > 0.65) {
+        if (hangNoise > 0.75) {
             // Glow berry vines (~5%, sparse)
             int vineLength = 2 + chunkRng.nextInt(3);
             for (int dy = 1; dy <= vineLength; dy++) {
@@ -301,12 +302,6 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private void placeGardenDecorations(ChunkData chunkData, long seed, int chunkX, int chunkZ, Random chunkRng) {
-        // Dripstone BlockData
-        BlockData dripDown = Bukkit.createBlockData(Material.POINTED_DRIPSTONE,
-                "[vertical_direction=down,thickness=tip]");
-        BlockData dripUp = Bukkit.createBlockData(Material.POINTED_DRIPSTONE,
-                "[vertical_direction=up,thickness=tip]");
-
         // First pass: water pools (need adjacency spread within chunk)
         boolean[][] waterMap = new boolean[16][16];
         for (int x = 0; x < 16; x++) {
@@ -329,22 +324,34 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
 
-        // Second pass: floor decorations, ceiling leaves, dripstone
+        // Second pass: floor decorations, ceiling leaf piles, dripstone
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
                 if (getZone(seed, worldX, worldZ) != Zone.GARDEN) continue;
 
-                // Ceiling decorations (independent of pillars)
+                // Ceiling decorations — hanging leaf piles and dripstone
                 if (chunkData.getType(x, CEILING_MIN_Y - 1, z) == Material.AIR) {
                     int ceilRoll = chunkRng.nextInt(50);
-                    if (ceilRoll < 7) {
-                        // ~15% ceiling leaves
-                        chunkData.setBlock(x, CEILING_MIN_Y, z, randomPersistentLeaf(chunkRng));
-                    } else if (ceilRoll == 7) {
-                        // ~2% ceiling dripstone (hanging)
-                        chunkData.setBlock(x, CEILING_MIN_Y - 1, z, dripDown);
+                    if (ceilRoll < 6) {
+                        // ~12% ceiling hanging leaf piles (1-3 blocks down)
+                        int height = 1 + chunkRng.nextInt(3);
+                        for (int dy = 1; dy <= height; dy++) {
+                            int y = CEILING_MIN_Y - dy;
+                            if (y <= AIR_MIN_Y) break;
+                            chunkData.setBlock(x, y, z, randomPersistentLeaf(chunkRng));
+                        }
+                    } else if (ceilRoll == 6) {
+                        // ~2% ceiling dripstone (2-3 segments hanging)
+                        int dripLen = 2 + chunkRng.nextInt(2);
+                        for (int dy = 1; dy <= dripLen; dy++) {
+                            int y = CEILING_MIN_Y - dy;
+                            if (y <= AIR_MIN_Y) break;
+                            String thickness = (dy == dripLen) ? "tip" : (dy == 1) ? "base" : "middle";
+                            chunkData.setBlock(x, y, z, Bukkit.createBlockData(Material.POINTED_DRIPSTONE,
+                                    "[vertical_direction=down,thickness=" + thickness + "]"));
+                        }
                     }
                 }
 
@@ -369,8 +376,15 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                         chunkData.setBlock(x, y, z, randomPersistentLeaf(chunkRng));
                     }
                 } else if (roll == 30) {
-                    // ~1% floor dripstone (pointing up)
-                    chunkData.setBlock(x, AIR_MIN_Y, z, dripUp);
+                    // ~1% floor dripstone (2-3 segments pointing up)
+                    int dripLen = 2 + chunkRng.nextInt(2);
+                    for (int dy = 0; dy < dripLen; dy++) {
+                        int y = AIR_MIN_Y + dy;
+                        if (y >= CEILING_MIN_Y) break;
+                        String thickness = (dy == dripLen - 1) ? "tip" : (dy == 0) ? "base" : "middle";
+                        chunkData.setBlock(x, y, z, Bukkit.createBlockData(Material.POINTED_DRIPSTONE,
+                                "[vertical_direction=up,thickness=" + thickness + "]"));
+                    }
                 }
             }
         }

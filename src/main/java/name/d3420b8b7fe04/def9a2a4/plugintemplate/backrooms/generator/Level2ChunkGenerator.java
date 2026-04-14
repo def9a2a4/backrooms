@@ -139,9 +139,9 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 int gridZ = Math.floorDiv(worldZ, HALLWAY_PERIOD);
 
                 double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
-                if (roomNoise <= 0.9) continue;
+                if (roomNoise <= 0.95) continue;
 
-                boolean isBoilerRoom = roomNoise > 0.95;
+                boolean isBoilerRoom = roomNoise > 0.98;
                 int roomRadius = isBoilerRoom ? 6 : (roomNoise > 0.93 ? 4 : 3);
                 int ceilingY = isBoilerRoom ? CEILING_TALL : getCeilingHeight(seed, worldX, worldZ);
                 if (ceilingY < CEILING_NORMAL) ceilingY = CEILING_NORMAL;
@@ -251,6 +251,8 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
                 if (worldX % 36 == 0 && worldZ % 36 == 0) {
+                    long lightHash = (worldX * 48611L) ^ (worldZ * 29423L) ^ seed;
+                    if (Math.floorMod(lightHash, 10) >= 3) continue;
                     if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
 
                     for (int y = CEILING_TALL - 1; y >= AIR_MIN_Y + 2; y--) {
@@ -306,9 +308,16 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
         if (chunkData.getType(x, y, z) != Material.AIR) return;
 
         if (isSlotRod(seed, lineIndex, direction, slot)) {
-            BlockData rod = Material.LIGHTNING_ROD.createBlockData();
-            ((Directional) rod).setFacing(rodFace);
-            chunkData.setBlock(x, y, z, rod);
+            boolean atEndpoint = (rodFace == BlockFace.EAST)
+                    ? Math.floorMod(worldX, HALLWAY_PERIOD) == 0
+                    : Math.floorMod(worldZ, HALLWAY_PERIOD) == 0;
+            if (atEndpoint) {
+                chunkData.setBlock(x, y, z, Material.CHISELED_COPPER);
+            } else {
+                BlockData rod = Material.LIGHTNING_ROD.createBlockData();
+                ((Directional) rod).setFacing(rodFace);
+                chunkData.setBlock(x, y, z, rod);
+            }
         } else {
             // Rare waterlogged grate leak
             long wHash = (worldX * 73856093L) ^ (worldZ * 19349663L) ^ (seed + slot);
@@ -351,8 +360,8 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private boolean isSlotRod(long seed, int lineIndex, int direction, int slot) {
-        double noise = SimplexNoise.noise2(seed + 30 + slot, lineIndex * 2.1, direction * 100.0);
-        return noise > 0.2;
+        long hash = (seed + 30 + slot) * 6364136223846793005L + (lineIndex * 1442695040888963407L) + (direction * 73856093L);
+        return Math.floorMod(hash, 200) == 0;
     }
 
     // --- Room placement ---

@@ -44,9 +44,17 @@ public class AmbientSoundEvent extends AbstractTimedEvent {
         if (config != null && config.contains("sounds")) {
             for (String name : config.getStringList("sounds")) {
                 String lower = name.toLowerCase(Locale.ROOT);
+                // Try as direct minecraft key (e.g. "ambient.warped_forest.mood")
                 Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(lower));
                 if (sound == null) {
-                    sound = Registry.SOUNDS.get(NamespacedKey.minecraft(lower.replace('_', '.')));
+                    // Try enum-style name: normalize both sides to underscores and compare
+                    String normalized = lower.replace('.', '_');
+                    for (Sound s : Registry.SOUNDS) {
+                        if (s.getKey().getKey().replace('.', '_').equals(normalized)) {
+                            sound = s;
+                            break;
+                        }
+                    }
                 }
                 if (sound != null) {
                     sounds.add(sound);
