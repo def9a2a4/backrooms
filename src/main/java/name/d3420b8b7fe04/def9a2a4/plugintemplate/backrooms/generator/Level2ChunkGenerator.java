@@ -37,9 +37,11 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     private static final int HALLWAY_WIDTH = 2;
 
 
+    private static final int PIPE_NONE = 0;
     private static final int PIPE_CEILING = 1;
     private static final int PIPE_WALL = 2;
-    private static final int PIPE_NONE = 0;
+    private static final int PIPE_ROD_CEILING = 3;
+    private static final int PIPE_ROD_WALL = 4;
 
     private static final Material[] PIPE_MATERIALS = {
             Material.COPPER_BLOCK, Material.CUT_COPPER, Material.COPPER_GRATE,
@@ -200,20 +202,32 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 if (onEWLine) {
                     int ewLineIndex = Math.floorDiv(worldZ, HALLWAY_PERIOD);
                     int pipeType = getLinePipeType(seed, ewLineIndex, 0);
-                    if (pipeType == PIPE_CEILING && zMod == 0) {
-                        chunkData.setBlock(x, ceilingY - 1, z, pipeMat);
-                    } else if (pipeType == PIPE_WALL && zMod == 0) {
-                        chunkData.setBlock(x, AIR_MIN_Y + 2, z, pipeMat);
+                    if (zMod == 0) {
+                        if (pipeType == PIPE_CEILING) {
+                            chunkData.setBlock(x, ceilingY - 1, z, pipeMat);
+                        } else if (pipeType == PIPE_WALL) {
+                            chunkData.setBlock(x, AIR_MIN_Y + 2, z, pipeMat);
+                        } else if (pipeType == PIPE_ROD_CEILING) {
+                            chunkData.setBlock(x, ceilingY - 1, z, Material.LIGHTNING_ROD);
+                        } else if (pipeType == PIPE_ROD_WALL) {
+                            chunkData.setBlock(x, AIR_MIN_Y + 2, z, Material.LIGHTNING_ROD);
+                        }
                     }
                 }
 
                 if (onNSLine && !onEWLine) {
                     int nsLineIndex = Math.floorDiv(worldX, HALLWAY_PERIOD);
                     int pipeType = getLinePipeType(seed, nsLineIndex, 1);
-                    if (pipeType == PIPE_CEILING && xMod == 0) {
-                        chunkData.setBlock(x, ceilingY - 1, z, pipeMat);
-                    } else if (pipeType == PIPE_WALL && xMod == 0) {
-                        chunkData.setBlock(x, AIR_MIN_Y + 2, z, pipeMat);
+                    if (xMod == 0) {
+                        if (pipeType == PIPE_CEILING) {
+                            chunkData.setBlock(x, ceilingY - 1, z, pipeMat);
+                        } else if (pipeType == PIPE_WALL) {
+                            chunkData.setBlock(x, AIR_MIN_Y + 2, z, pipeMat);
+                        } else if (pipeType == PIPE_ROD_CEILING) {
+                            chunkData.setBlock(x, ceilingY - 1, z, Material.LIGHTNING_ROD);
+                        } else if (pipeType == PIPE_ROD_WALL) {
+                            chunkData.setBlock(x, AIR_MIN_Y + 2, z, Material.LIGHTNING_ROD);
+                        }
                     }
                 }
             }
@@ -258,7 +272,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
-                if (worldX % 18 == 0 && worldZ % 18 == 0) {
+                if (worldX % 36 == 0 && worldZ % 36 == 0) {
                     if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
 
                     // Find ceiling
@@ -316,7 +330,9 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     private int getLinePipeType(long seed, int lineIndex, int direction) {
         double noise = SimplexNoise.noise2(seed + 5, lineIndex * 1.7, direction * 100.0);
         if (noise > 0.3) return PIPE_CEILING;
+        if (noise > 0.1) return PIPE_ROD_CEILING;
         if (noise < -0.3) return PIPE_WALL;
+        if (noise < -0.1) return PIPE_ROD_WALL;
         return PIPE_NONE;
     }
 

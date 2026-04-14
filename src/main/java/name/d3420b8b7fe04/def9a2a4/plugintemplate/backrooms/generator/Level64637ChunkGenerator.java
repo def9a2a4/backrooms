@@ -92,10 +92,13 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                     fillColumn(chunkData, x, z, Material.OAK_PLANKS);
                 } else if (isWallX) {
                     // X-wall face: runs along Z axis
-                    placeWallColumn(chunkData, x, z, localZ, seed, cellX, cellZ, true, chunkRng);
+                    // Boundary coordinate identifies the shared wall between adjacent rooms
+                    int boundaryX = localX == 0 ? cellX : cellX + 1;
+                    placeWallColumn(chunkData, x, z, localZ, seed, boundaryX, cellZ, true, chunkRng);
                 } else if (isWallZ) {
                     // Z-wall face: runs along X axis
-                    placeWallColumn(chunkData, x, z, localX, seed, cellX, cellZ, false, chunkRng);
+                    int boundaryZ = localZ == 0 ? cellZ : cellZ + 1;
+                    placeWallColumn(chunkData, x, z, localX, seed, cellX, boundaryZ, false, chunkRng);
                 } else if (pillarRoom && localX >= PILLAR_MIN && localX <= PILLAR_MAX
                         && localZ >= PILLAR_MIN && localZ <= PILLAR_MAX) {
                     placePillarColumn(chunkData, x, z, localX, localZ);
@@ -129,7 +132,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
      * Pattern: P BBB P B DD B P BBB P (perfectly symmetric)
      */
     private void placeWallColumn(ChunkData data, int x, int z, int localPos,
-                                 long seed, int cellX, int cellZ, boolean xWall, Random rng) {
+                                 long seed, int coordA, int coordB, boolean xWall, Random rng) {
         int offset = localPos - FACE_START;
         if (offset < 0 || offset >= FACE_LENGTH) {
             fillColumn(data, x, z, Material.OAK_PLANKS);
@@ -140,7 +143,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
         if (element == WallElement.PILASTER) {
             fillColumn(data, x, z, Material.OAK_PLANKS);
-        } else if (element == WallElement.DOOR && hasDoor(seed, cellX, cellZ, xWall)) {
+        } else if (element == WallElement.DOOR && hasDoor(seed, coordA, coordB, xWall)) {
             placeDoorColumn(data, x, z);
         } else {
             placeShelfColumn(data, x, z);
@@ -162,12 +165,16 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     private enum WallElement { PILASTER, BOOKSHELF, DOOR }
 
     /**
-     * Determines if a wall face has a doorway, using noise for cross-chunk consistency.
+     * Determines if a wall face has a doorway.
+     * Uses a hash for independence (no spatial correlation) and boundary coordinates
+     * so both sides of a shared wall agree.
      */
-    private boolean hasDoor(long seed, int cellX, int cellZ, boolean xWall) {
-        long noiseSeed = seed + (xWall ? 30L : 31L);
-        double noise = SimplexNoise.noise2(noiseSeed, cellX * 0.7, cellZ * 0.7);
-        return noise > -0.7; // ~85% of walls get a door
+    private boolean hasDoor(long seed, int boundaryCoordA, int boundaryCoordB, boolean xWall) {
+        long hash = seed ^ ((long) boundaryCoordA * 341873128712L
+                + (long) boundaryCoordB * 132897987541L
+                + (xWall ? 30L : 31L));
+        double value = new Random(hash).nextDouble();
+        return value < 0.85; // ~85% of walls get a door
     }
 
     /**
