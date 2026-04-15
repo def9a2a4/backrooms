@@ -7,9 +7,6 @@ author: You
 description: A Paper plugin.
 
 permissions:
-  backrooms.admin:
-    description: Allows access to all Backrooms commands
-    default: op
   backrooms.reload:
     description: Allows reloading the config
     default: op
