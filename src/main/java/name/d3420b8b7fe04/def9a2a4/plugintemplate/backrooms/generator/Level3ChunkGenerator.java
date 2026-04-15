@@ -8,8 +8,13 @@ import org.bukkit.World;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Directional;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.generator.WorldInfo;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 /**
@@ -72,6 +77,58 @@ public class Level3ChunkGenerator extends BackroomsChunkGenerator {
         Material.TRIPWIRE_HOOK,
         Material.REDSTONE_BLOCK,
     };
+
+    // --- Data-driven command block config ---
+
+    /** One kind of command block terminal (e.g., leads to Far Lands vs Disc 11). */
+    public record CommandBlockKind(int weight, String target, List<String> messages) {}
+
+    private int commandBlockChance = 200; // 1 in N components
+    private List<CommandBlockKind> commandBlockKinds = List.of();
+    private int totalWeight = 0;
+
+    @Override
+    public void configure(@Nullable ConfigurationSection config) {
+        if (config == null) return;
+        commandBlockChance = config.getInt("command_block_chance", 200);
+
+        List<Map<?, ?>> kindsList = config.getMapList("command_block_kinds");
+        if (!kindsList.isEmpty()) {
+            List<CommandBlockKind> kinds = new ArrayList<>();
+            int tw = 0;
+            for (Map<?, ?> map : kindsList) {
+                int weight = map.containsKey("weight") ? ((Number) map.get("weight")).intValue() : 1;
+                Object targetObj = map.get("target");
+                String target = targetObj != null ? String.valueOf(targetObj) : "unknown";
+                List<String> messages = new ArrayList<>();
+                Object msgObj = map.get("messages");
+                if (msgObj instanceof List<?> msgList) {
+                    for (Object m : msgList) messages.add(String.valueOf(m));
+                }
+                kinds.add(new CommandBlockKind(weight, target, messages));
+                tw += weight;
+            }
+            commandBlockKinds = kinds;
+            totalWeight = tw;
+        }
+    }
+
+    /** Picks a command block kind index from weighted distribution using a hash. */
+    public int pickKind(long hash) {
+        if (totalWeight == 0) return 0;
+        int roll = Math.floorMod(hash, totalWeight);
+        int cumulative = 0;
+        for (int i = 0; i < commandBlockKinds.size(); i++) {
+            cumulative += commandBlockKinds.get(i).weight();
+            if (roll < cumulative) return i;
+        }
+        return commandBlockKinds.size() - 1;
+    }
+
+    /** Returns the configured command block kinds (used by the lectern book listener). */
+    public List<CommandBlockKind> getCommandBlockKinds() {
+        return commandBlockKinds;
+    }
 
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
@@ -321,12 +378,11 @@ public class Level3ChunkGenerator extends BackroomsChunkGenerator {
             chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, component);
         }
 
-        // Rare command block + lectern combo (~0.5% of components)
-        // Command block sits on the floor, lectern on top of it
-        if (component == Material.LECTERN) {
+        // Command block terminal: independent of component type, uses separate hash
+        if (!commandBlockKinds.isEmpty()) {
             long cmdHash = posHash ^ 0xC0D_B10CL;
-            if (Math.floorMod(cmdHash, 200) == 0) {
-                // Replace this lectern position: command block on floor, lectern on top
+            if (Math.floorMod(cmdHash, commandBlockChance) == 0) {
+                // Command block ON TOP of the floor, lectern ON TOP of the command block
                 chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, Material.COMMAND_BLOCK);
                 try {
                     org.bukkit.block.data.BlockData lecternData = Bukkit.createBlockData(Material.LECTERN);

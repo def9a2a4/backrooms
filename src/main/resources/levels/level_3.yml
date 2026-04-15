@@ -6,6 +6,34 @@ dimension_type: fullbright
 biome: "backrooms:server_room"
 enter_message: "§c[ERR] §7Unauthorized access detected."
 
+generator_config:
+  command_block_chance: 200
+  command_block_kinds:
+    - weight: 1
+      target: level_4
+      messages:
+        - "§7// RUN terrain_gen --legacy --overflow\n§8// WARNING: coordinate bounds exceeded\n§7// EXEC farlands.jar"
+        - "§7> load world_alpha_1_7_3\n§8[ERR] World boundary undefined\n§7> force_load --no-limit"
+        - "§7/* TODO: fix integer overflow in\n   terrain generation */\n§8// See: JIRA-12481287"
+    - weight: 1
+      target: level_5
+      messages:
+        - "§7// PLAY audio_11.dat\n§8[WARN] File corrupted at 0x00B1\n§7// Recovered 1:05 of 1:11"
+        - "§7> extract C418/11.ogg\n§8Access denied. File locked by:\n§c  UNKNOWN_PROCESS"
+        - "§7/* The recording was never meant\n   to be found. Stop listening. */"
+    - weight: 1
+      target: level_7
+      messages:
+        - "§7// LOAD chunk r.0.0.mca\n§c[FATAL] Chunk data corrupted\n§7// Attempting recovery...\n§c// Recovery failed."
+        - "§7> /gamerule worldGenSeed ???\n§8Seed mismatch detected.\n§cAll chunks invalidated."
+        - "§7/* Every block type at once.\n   The generator has lost its mind. */"
+    - weight: 1
+      target: level_64637
+      messages:
+        - "§7// OPEN archive_64637.lib\n§8[INFO] Indexing 2^64637 entries...\n§7// Estimated time: undefined"
+        - "§7> ls /data/changelogs/\n§8  total: ∞\n§7  Every version. Every change.\n  Every line of code."
+        - "§7/* The library contains everything\n   that was ever written, and\n   everything that will be. */"
+
 events:
   - ambient_sound
   - fake_chat_message

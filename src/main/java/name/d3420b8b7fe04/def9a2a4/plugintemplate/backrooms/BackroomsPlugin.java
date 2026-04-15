@@ -34,6 +34,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBook
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Disc11JukeboxListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1GardenEffectListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LobbyBookshelfListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.ServerRoomLecternListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryWrapListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
@@ -194,6 +195,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
         Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new Disc11JukeboxListener(), plugin);
+        Bukkit.getPluginManager().registerEvents(new ServerRoomLecternListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryWrapListener(), plugin);
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);

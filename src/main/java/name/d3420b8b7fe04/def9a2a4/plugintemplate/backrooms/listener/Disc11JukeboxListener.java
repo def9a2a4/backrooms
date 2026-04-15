@@ -23,6 +23,8 @@ public class Disc11JukeboxListener implements Listener {
 
         event.setCancelled(true);
         block.setType(Material.AIR);
-        block.getWorld().createExplosion(block.getLocation(), 3.0f, false, true);
+        block.getWorld().createExplosion(block.getLocation(), 6.0f, false, true);
+        // Guaranteed kill regardless of armor/health
+        event.getPlayer().setHealth(0);
     }
 }
