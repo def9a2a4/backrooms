@@ -477,7 +477,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                 long exitHash = seed ^ ((long) worldX * 472882027L + (long) worldZ * 920419813L);
 
                 // Floor breach — 1x1 water shaft from floor through sub-floor into the void
-                if (Math.floorMod(exitHash, 2000) == 0) {
+                if (Math.floorMod(exitHash, 200) == 0) {
                     // Water column from air level all the way down to minimum world Y
                     for (int y = AIR_MIN_Y; y >= chunkData.getMinHeight(); y--) {
                         chunkData.setBlock(x, y, z, Material.WATER);
@@ -485,7 +485,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                 }
 
                 // Ceiling breach — 1x1 hole through ceiling with climbable vines inside
-                if (Math.floorMod(exitHash + 1, 2000) == 0) {
+                if (Math.floorMod(exitHash + 1, 200) == 0) {
                     // Clear the ceiling to make a 1x1 shaft
                     for (int y = CEILING_MIN_Y; y < CEILING_MAX_Y; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);

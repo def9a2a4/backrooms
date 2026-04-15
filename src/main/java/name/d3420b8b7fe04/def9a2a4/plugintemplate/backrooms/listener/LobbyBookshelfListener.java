@@ -74,6 +74,9 @@ public class LobbyBookshelfListener implements Listener {
                 Block block = chunk.getBlock(x, AIR_MIN_Y, z);
                 if (block.getType() != Material.CHISELED_BOOKSHELF) continue;
 
+                // Force tile entity creation on freshly-generated blocks
+                block.setBlockData(block.getBlockData(), false);
+
                 if (block.getState() instanceof ChiseledBookshelf shelf) {
                     // Fill 1-3 random slots with written books
                     int bookCount = 1 + rng.nextInt(3);

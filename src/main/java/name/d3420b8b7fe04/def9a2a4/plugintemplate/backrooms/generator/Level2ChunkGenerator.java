@@ -447,15 +447,19 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
         }
 
         // Very rare copper trapdoor tunnel opening (~2% of machinery rooms)
-        // Trapdoor in the floor → shaft carved down through stone to bedrock
+        // Trapdoor in the floor → shaft carved down through floor, stone, and bedrock to void
         if (Math.floorMod(leverHash + 1, 50) == 0) {
             int tx = centerWorldX - 3 - chunkX * 16;
             int tz = centerWorldZ - chunkZ * 16;
             if (tx >= 0 && tx < 16 && tz >= 0 && tz < 16) {
                 // Trapdoor at floor level
                 chunkData.setBlock(tx, AIR_MIN_Y, tz, Material.COPPER_TRAPDOOR);
-                // Carve 1x1 shaft down through the floor and stone to bedrock top
-                for (int y = FLOOR_HEIGHT - 1; y >= STONE_Y; y--) {
+                // Carve 1x1 shaft all the way down through floor, stone, and bedrock
+                for (int y = FLOOR_HEIGHT - 1; y >= BEDROCK_Y; y--) {
+                    chunkData.setBlock(tx, y, tz, Material.AIR);
+                }
+                // Air below bedrock for void fall
+                for (int y = BEDROCK_Y - 1; y >= BEDROCK_Y - 5; y--) {
                     chunkData.setBlock(tx, y, tz, Material.AIR);
                 }
             }
