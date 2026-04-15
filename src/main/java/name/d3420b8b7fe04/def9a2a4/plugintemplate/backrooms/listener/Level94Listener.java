@@ -286,6 +286,15 @@ public class Level94Listener implements Listener {
             }
 
             animating.remove(uuid);
+
+            // Schedule regeneration after all players have left
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                World w = levelRegistry.getWorld("level_94");
+                if (w != null && w.getPlayers().isEmpty()) {
+                    chestPopulated = false;
+                    levelRegistry.regenerateLevel("level_94");
+                }
+            }, 20L);
         }, 40L);
     }
 
@@ -313,6 +322,7 @@ public class Level94Listener implements Listener {
                     && chestBlock.getState() instanceof Chest chest
                     && chest.getInventory().isEmpty()) {
                 chest.getInventory().addItem(new ItemStack(Material.LAVA_BUCKET, 1));
+                chest.getInventory().addItem(new ItemStack(Material.WATER_BUCKET, 1));
             }
 
             // Remove any bonus tree / stray blocks Paper may have placed at spawn.
