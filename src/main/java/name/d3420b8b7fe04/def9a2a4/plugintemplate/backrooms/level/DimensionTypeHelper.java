@@ -32,22 +32,27 @@ public class DimensionTypeHelper {
     }
 
     public boolean applyDarkDimension(World world) {
+        ensureResolved();
         return applyDimension(world, "dark", darkHolder);
     }
 
     public boolean applyLightDimension(World world) {
+        ensureResolved();
         return applyDimension(world, "light", lightHolder);
     }
 
     public boolean applyFullbrightDimension(World world) {
+        ensureResolved();
         return applyDimension(world, "fullbright", fullbrightHolder);
     }
 
     public boolean applyBrightBlackCrimsonDimension(World world) {
+        ensureResolved();
         return applyDimension(world, "bright_black_crimson", brightBlackCrimsonHolder);
     }
 
     public boolean applyDayDimension(World world) {
+        ensureResolved();
         return applyDimension(world, "day", dayHolder);
     }
 

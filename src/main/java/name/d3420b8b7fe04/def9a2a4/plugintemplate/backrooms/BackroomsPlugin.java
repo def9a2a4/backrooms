@@ -276,7 +276,7 @@ public class BackroomsPlugin {
             return;
         }
 
-        File[] levelFiles = levelsDir.listFiles((dir, name) -> name.endsWith(".yml"));
+        File[] levelFiles = levelsDir.listFiles((dir, name) -> name.endsWith(".yml") && !name.endsWith("_books.yml"));
         if (levelFiles == null || levelFiles.length == 0) {
             plugin.getLogger().warning("No .yml files found in levels/ — no levels loaded.");
             return;
