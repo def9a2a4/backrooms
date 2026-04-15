@@ -30,7 +30,7 @@ import java.util.*;
 public class Level94Listener implements Listener {
 
     private static final String WORLD_NAME = "backrooms_level_94";
-    private static final int VOID_THRESHOLD = 0;
+    private static final int VOID_THRESHOLD = 10;
     private static final int MAX_RADIUS = 60;
 
     private final JavaPlugin plugin;
@@ -65,7 +65,7 @@ public class Level94Listener implements Listener {
 
         Location spawn = new Location(to.getWorld(),
                 Level94ChunkGenerator.SPAWN_X + 0.5,
-                Level94ChunkGenerator.SPAWN_Y,
+                256,
                 Level94ChunkGenerator.SPAWN_Z + 0.5,
                 player.getLocation().getYaw(), player.getLocation().getPitch());
         player.teleport(spawn);
@@ -77,19 +77,32 @@ public class Level94Listener implements Listener {
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.LEFT_CLICK_BLOCK) return;
-        Block block = event.getClickedBlock();
-        if (block == null) return;
-        if (!block.getWorld().getName().equals(WORLD_NAME)) return;
-        if (block.getType() != Material.BARRIER) return;
-
-        event.setCancelled(true);
+        Action action = event.getAction();
+        if (action != Action.LEFT_CLICK_BLOCK && action != Action.LEFT_CLICK_AIR) return;
+        if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
 
         Player player = event.getPlayer();
-        if (animating.contains(player.getUniqueId())) return;
+        if (!player.getWorld().getName().equals(WORLD_NAME)) return;
 
-        // Only trigger when player is standing, not falling
-        if (!player.isOnGround()) return;
+        Block block;
+        if (action == Action.LEFT_CLICK_BLOCK) {
+            block = event.getClickedBlock();
+            if (block == null || block.getType() != Material.BARRIER) return;
+        } else {
+            // Barriers are invisible in survival — client fires LEFT_CLICK_AIR instead of
+            // LEFT_CLICK_BLOCK because it doesn't send START_DESTROY_BLOCK for invisible blocks.
+            // getTargetBlockExact skips barriers (noOcclude), so iterate getLineOfSight instead.
+            block = null;
+            for (Block b : player.getLineOfSight(null, 5)) {
+                if (b.getType() == Material.BARRIER) {
+                    block = b;
+                    break;
+                }
+            }
+            if (block == null) return;
+        }
+
+        if (animating.contains(player.getUniqueId())) return;
 
         startAnimation(player, block.getLocation());
     }

@@ -119,6 +119,10 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+
+        // Bedrock boundaries: 10-block floor and 10-block ceiling
+        applyBoundaryLayer(chunkData, FLOOR_MIN_Y, FLOOR_MIN_Y + 10, Material.BEDROCK, false);
+        applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, false);
     }
 
     private int classifyRegion(double noise) {
@@ -290,6 +294,11 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
             d.setFacing(shelfFace);
         }
         chunkData.setBlock(bx, y, bz, shelf);
+    }
+
+    @Override
+    public int getSpawnY() {
+        return AIR_MIN_Y;
     }
 
     @Override

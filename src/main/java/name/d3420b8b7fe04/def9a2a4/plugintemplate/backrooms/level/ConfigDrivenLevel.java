@@ -33,6 +33,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private long fixedTime;
     private String dimensionType;
     private @Nullable NamespacedKey biomeKey;
+    private int spawnRadius = 300;
     private final Map<String, ConfigurationSection> eventConfigs = new HashMap<>();
 
     public ConfigDrivenLevel(BackroomsPlugin plugin, String id, String generatorId,
@@ -90,6 +91,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
         this.enterMessage = section.getString("enter_message", null);
         this.fixedTime = section.getLong("fixed_time", -1);
         this.dimensionType = section.getString("dimension_type", "dark");
+        this.spawnRadius = section.getInt("spawn_radius", 300);
 
         String biomeStr = section.getString("biome", null);
         if (biomeStr != null && biomeStr.contains(":")) {
@@ -174,5 +176,9 @@ public class ConfigDrivenLevel extends AbstractLevel {
 
     public String getGeneratorId() {
         return generatorId;
+    }
+
+    public int getSpawnRadius() {
+        return spawnRadius;
     }
 }

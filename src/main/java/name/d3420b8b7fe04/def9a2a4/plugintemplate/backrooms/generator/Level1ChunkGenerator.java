@@ -31,7 +31,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     private static final int FLOOR_HEIGHT = 10;
     private static final int AIR_MIN_Y = 10;
     private static final int CEILING_MIN_Y = 18;
-    private static final int CEILING_MAX_Y = 28;
+    private static final int CEILING_MAX_Y = 30;
 
     // Warehouse cell grid
     private static final int CELL_SIZE = 8;
@@ -47,6 +47,8 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
     // Zone noise
     private static final double CORRIDOR_ZONE_SCALE = 0.01; // low freq = larger zones
+    private static final double GARDEN_ZONE_SCALE = 0.004;  // lower = larger patches
+    private static final double MIN_GARDEN_DISTANCE = 200.0; // blocks from origin
 
     // Corridor constants
     private static final int CORRIDOR_PERIOD = 7;
@@ -72,7 +74,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     // Garden palettes
     private static final Material[] GARDEN_MATERIALS = {
             Material.MOSS_BLOCK, Material.MOSSY_COBBLESTONE, Material.MOSSY_STONE_BRICKS,
-            Material.CRACKED_STONE_BRICKS
+            Material.CRACKED_STONE_BRICKS, Material.PALE_MOSS_BLOCK
     };
 
     private static final Material[] GARDEN_COPPER = {
@@ -89,17 +91,20 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     // ── Zone selection ──────────────────────────────────────────────────
 
     private Zone getZone(long seed, int worldX, int worldZ) {
-        // Garden: two octaves summed to break diamond/rhombus pattern
-        double g1 = SimplexNoise.noise2(seed + 50, worldX * 0.03, worldZ * 0.03);
-        double g2 = SimplexNoise.noise2(seed + 52, worldX * 0.07, worldZ * 0.07);
-        double gardenNoise = (g1 + g2 * 0.5) / 1.5;
-        if (gardenNoise > 0.6) return Zone.GARDEN;
+        // Garden: large rare blobs (~1%), suppressed near origin
+        double distSq = (double) worldX * worldX + (double) worldZ * worldZ;
+        if (distSq >= MIN_GARDEN_DISTANCE * MIN_GARDEN_DISTANCE) {
+            double gardenNoise = SimplexNoise.noise2(seed + 50,
+                    worldX * GARDEN_ZONE_SCALE, worldZ * GARDEN_ZONE_SCALE);
+            if (gardenNoise > 0.81) return Zone.GARDEN;
+        }
 
-        // Corridor: large connected zones (separate noise, low frequency)
-        double corridorNoise = SimplexNoise.noise2(seed + 51, worldX * CORRIDOR_ZONE_SCALE, worldZ * CORRIDOR_ZONE_SCALE);
-        if (corridorNoise > 0.45) return Zone.CORRIDOR;
+        // Corridor: large connected zones (~19%)
+        double corridorNoise = SimplexNoise.noise2(seed + 51,
+                worldX * CORRIDOR_ZONE_SCALE, worldZ * CORRIDOR_ZONE_SCALE);
+        if (corridorNoise > 0.41) return Zone.CORRIDOR;
 
-        return Zone.WAREHOUSE;
+        return Zone.WAREHOUSE;  // ~80%
     }
 
     // ── Main generation ─────────────────────────────────────────────────
@@ -173,6 +178,10 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
         // Pass 6: Garden floor decorations
         placeGardenDecorations(chunkData, seed, chunkX, chunkZ, chunkRng);
+
+        // Bedrock boundaries: 8-block floor, 10-block ceiling (onlySolid to avoid corridor airspace)
+        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 8, Material.BEDROCK, false);
+        applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, true);
     }
 
     // ── Warehouse column (existing behavior) ────────────────────────────
@@ -246,7 +255,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
         // Check if this line is active (~70%)
         double activeNoise = SimplexNoise.noise2(seed + (eastWest ? 62 : 63), lineIndex * 0.15, 0);
-        return activeNoise > -0.4;
+        return activeNoise > 0.0;
     }
 
     // ── Garden column ───────────────────────────────────────────────────
@@ -271,25 +280,27 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             chunkData.setBlock(x, y, z, randomGardenBlock(chunkRng));
         }
 
-        // Hanging vegetation from ceiling
-        double hangNoise = SimplexNoise.noise2(seed + 75, worldX * 0.08, worldZ * 0.08);
-
-        if (hangNoise > 0.75) {
-            // Glow berry vines (~5%, sparse)
+        // Hanging vegetation from ceiling (iid random per column)
+        int hangRoll = chunkRng.nextInt(100);
+        if (hangRoll < 2) {
+            // ~2% glow berry vines
             int vineLength = 2 + chunkRng.nextInt(3);
             for (int dy = 1; dy <= vineLength; dy++) {
                 int y = CEILING_MIN_Y - dy;
                 if (y <= AIR_MIN_Y) break;
                 chunkData.setBlock(x, y, z, dy == vineLength ? Material.CAVE_VINES : Material.CAVE_VINES_PLANT);
             }
-        } else if (hangNoise > 0.1) {
-            // Vines (~20%)
-            int vineLen = 1 + chunkRng.nextInt(3); // 1-3 blocks
-            for (int dy = 1; dy <= vineLen; dy++) {
+        } else if (hangRoll < 10) {
+            // ~8% pale hanging moss
+            int mossLen = 1 + chunkRng.nextInt(2);
+            for (int dy = 1; dy <= mossLen; dy++) {
                 int y = CEILING_MIN_Y - dy;
                 if (y <= AIR_MIN_Y) break;
-                chunkData.setBlock(x, y, z, Material.VINE);
+                chunkData.setBlock(x, y, z, Material.PALE_HANGING_MOSS);
             }
+        } else if (hangRoll < 15) {
+            // ~5% hanging roots
+            chunkData.setBlock(x, CEILING_MIN_Y - 1, z, Material.HANGING_ROOTS);
         }
     }
 
@@ -343,8 +354,8 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                             chunkData.setBlock(x, y, z, randomPersistentLeaf(chunkRng));
                         }
                     } else if (ceilRoll == 6) {
-                        // ~2% ceiling dripstone (2-3 segments hanging)
-                        int dripLen = 2 + chunkRng.nextInt(2);
+                        // ~2% ceiling dripstone (3-5 segments hanging)
+                        int dripLen = 3 + chunkRng.nextInt(3);
                         for (int dy = 1; dy <= dripLen; dy++) {
                             int y = CEILING_MIN_Y - dy;
                             if (y <= AIR_MIN_Y) break;
@@ -364,10 +375,11 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                 }
 
                 int roll = chunkRng.nextInt(100);
-                if (roll < 20) {
-                    // ~20% moss carpet
-                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.MOSS_CARPET);
-                } else if (roll < 30) {
+                if (roll < 15) {
+                    // ~15% moss carpet (mix of regular and pale)
+                    chunkData.setBlock(x, AIR_MIN_Y, z,
+                            chunkRng.nextBoolean() ? Material.MOSS_CARPET : Material.PALE_MOSS_CARPET);
+                } else if (roll < 25) {
                     // ~10% leaf pile — 1-3 blocks tall, varied types
                     int height = 1 + chunkRng.nextInt(3);
                     for (int dy = 0; dy < height; dy++) {
@@ -375,9 +387,27 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                         if (y >= CEILING_MIN_Y) break;
                         chunkData.setBlock(x, y, z, randomPersistentLeaf(chunkRng));
                     }
-                } else if (roll == 30) {
-                    // ~1% floor dripstone (2-3 segments pointing up)
-                    int dripLen = 2 + chunkRng.nextInt(2);
+                } else if (roll < 29) {
+                    // ~4% wither rose
+                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.WITHER_ROSE);
+                } else if (roll < 34) {
+                    // ~5% warped roots
+                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.WARPED_ROOTS);
+                } else if (roll < 38) {
+                    // ~4% nether sprouts
+                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.NETHER_SPROUTS);
+                } else if (roll < 41) {
+                    // ~3% twisting vines (1-3 blocks upward)
+                    int vineLen = 1 + chunkRng.nextInt(3);
+                    for (int dy = 0; dy < vineLen; dy++) {
+                        int y = AIR_MIN_Y + dy;
+                        if (y >= CEILING_MIN_Y) break;
+                        chunkData.setBlock(x, y, z,
+                                dy == vineLen - 1 ? Material.TWISTING_VINES : Material.TWISTING_VINES_PLANT);
+                    }
+                } else if (roll == 41) {
+                    // ~1% floor dripstone (3-5 segments pointing up)
+                    int dripLen = 3 + chunkRng.nextInt(3);
                     for (int dy = 0; dy < dripLen; dy++) {
                         int y = AIR_MIN_Y + dy;
                         if (y >= CEILING_MIN_Y) break;
@@ -388,6 +418,40 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+
+        // Third pass: regular vines on the sides of leaf blocks (floor and ceiling)
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                if (getZone(seed, worldX, worldZ) != Zone.GARDEN) continue;
+
+                for (int y = AIR_MIN_Y; y < CEILING_MIN_Y; y++) {
+                    if (!isLeafBlock(chunkData.getType(x, y, z))) continue;
+
+                    // Try each horizontal direction independently (~25% per face)
+                    int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+                    String[] faces = {"south", "north", "east", "west"};
+                    for (int d = 0; d < 4; d++) {
+                        if (chunkRng.nextInt(4) != 0) continue;
+                        int nx = x + dirs[d][0];
+                        int nz = z + dirs[d][1];
+                        if (nx >= 0 && nx < 16 && nz >= 0 && nz < 16
+                                && chunkData.getType(nx, y, nz) == Material.AIR) {
+                            chunkData.setBlock(nx, y, nz, Bukkit.createBlockData(Material.VINE,
+                                    "[" + faces[d] + "=true]"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean isLeafBlock(Material mat) {
+        for (Material leaf : LEAF_TYPES) {
+            if (leaf == mat) return true;
+        }
+        return false;
     }
 
     // ── Material helpers ────────────────────────────────────────────────
@@ -557,6 +621,11 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+    }
+
+    @Override
+    public int getSpawnY() {
+        return AIR_MIN_Y;
     }
 
     @Override

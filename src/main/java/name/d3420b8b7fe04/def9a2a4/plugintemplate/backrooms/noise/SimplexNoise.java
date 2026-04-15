@@ -39,7 +39,7 @@ public final class SimplexNoise {
              1, 0, 0, 1, -1, 0, 0, -1
         };
         for (int i = 0; i < GRADIENTS_2D.length; i++) {
-            GRADIENTS_2D[i] = grad2[i % grad2.length] / 0.01001634121365712;
+            GRADIENTS_2D[i] = grad2[i % grad2.length] / 0.054940622873530;
         }
 
         GRADIENTS_3D = new double[N_GRADS_3D * 3];
@@ -60,53 +60,40 @@ public final class SimplexNoise {
         double s = SKEW_2D * (x + y);
         double xs = x + s, ys = y + s;
 
-        double value = 0;
-
         int xsb = fastFloor(xs), ysb = fastFloor(ys);
         double xsi = xs - xsb, ysi = ys - ysb;
 
-        // Compute proper unskewed-space displacements for each lattice vertex
-        // Vertex (xsb, ysb)
+        // Unskewed displacements from vertex 0
         double t0 = UNSKEW_2D * (xsb + ysb);
         double dx0 = x - xsb - t0;
         double dy0 = y - ysb - t0;
 
-        double a = 0.5 - xsi - ysi;
-        if (a > 0) {
-            double aa = a * a;
-            value = aa * aa * grad(seed, xsb, ysb, dx0, dy0);
-        }
+        double value = 0;
 
-        double c = (2.0 * (1.0 - 2.0 * SKEW_2D) * (1.0 / SKEW_2D + 2.0)) * (xsi + ysi) + ((-2.0 * (1.0 - 2.0 * SKEW_2D) * (1.0 - 2.0 * SKEW_2D)) + a);
-        if (c > 0) {
-            // Vertex (xsb+1, ysb+1)
-            double t1 = UNSKEW_2D * (xsb + 1 + ysb + 1);
-            double dx1 = x - (xsb + 1) - t1;
-            double dy1 = y - (ysb + 1) - t1;
-            double cc = c * c;
-            value += cc * cc * grad(seed, xsb + 1, ysb + 1, dx1, dy1);
-        }
+        // Vertex 0: (xsb, ysb)
+        double a0 = 2.0/3.0 - dx0*dx0 - dy0*dy0;
+        if (a0 > 0) { double a0s = a0*a0; value = a0s*a0s * grad(seed, xsb, ysb, dx0, dy0); }
 
+        // Vertex 1: (xsb+1, ysb+1) — opposite corner
+        double t1 = UNSKEW_2D * (xsb + 1 + ysb + 1);
+        double dx1 = x - (xsb + 1) - t1;
+        double dy1 = y - (ysb + 1) - t1;
+        double a1 = 2.0/3.0 - dx1*dx1 - dy1*dy1;
+        if (a1 > 0) { double a1s = a1*a1; value += a1s*a1s * grad(seed, xsb+1, ysb+1, dx1, dy1); }
+
+        // Vertex 2: third corner — which one depends on which triangle of the simplex we're in
         if (ysi > xsi) {
-            double b = a + ysi - 0.5;
-            if (b > 0) {
-                // Vertex (xsb, ysb+1)
-                double t2 = UNSKEW_2D * (xsb + ysb + 1);
-                double dx2 = x - xsb - t2;
-                double dy2 = y - (ysb + 1) - t2;
-                double bb = b * b;
-                value += bb * bb * grad(seed, xsb, ysb + 1, dx2, dy2);
-            }
+            double t2 = UNSKEW_2D * (xsb + ysb + 1);
+            double dx2 = x - xsb - t2;
+            double dy2 = y - (ysb + 1) - t2;
+            double a2 = 2.0/3.0 - dx2*dx2 - dy2*dy2;
+            if (a2 > 0) { double a2s = a2*a2; value += a2s*a2s * grad(seed, xsb, ysb+1, dx2, dy2); }
         } else {
-            double b = a + xsi - 0.5;
-            if (b > 0) {
-                // Vertex (xsb+1, ysb)
-                double t2 = UNSKEW_2D * (xsb + 1 + ysb);
-                double dx2 = x - (xsb + 1) - t2;
-                double dy2 = y - ysb - t2;
-                double bb = b * b;
-                value += bb * bb * grad(seed, xsb + 1, ysb, dx2, dy2);
-            }
+            double t2 = UNSKEW_2D * (xsb + 1 + ysb);
+            double dx2 = x - (xsb + 1) - t2;
+            double dy2 = y - ysb - t2;
+            double a2 = 2.0/3.0 - dx2*dx2 - dy2*dy2;
+            if (a2 > 0) { double a2s = a2*a2; value += a2s*a2s * grad(seed, xsb+1, ysb, dx2, dy2); }
         }
 
         return value;

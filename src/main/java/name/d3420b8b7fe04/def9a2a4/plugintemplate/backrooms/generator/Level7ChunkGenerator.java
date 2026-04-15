@@ -9,7 +9,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
-import org.bukkit.block.data.Waterlogged;
 import org.bukkit.generator.WorldInfo;
 
 import java.util.Arrays;
@@ -139,9 +138,6 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
                                     dir.setFacing(faces[chunkRng.nextInt(faces.length)]);
                                 }
                             }
-                            if (bd instanceof Waterlogged wl) {
-                                wl.setWaterlogged(chunkRng.nextBoolean());
-                            }
                             chunkData.setBlock(x, y, z, bd);
                         } catch (Exception e) {
                             chunkData.setBlock(x, y, z, randMat);
@@ -204,14 +200,306 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private void placeRandomStructure(ChunkData chunkData, Random rng) {
-        switch (rng.nextInt(7)) {
-            case 0 -> placePartialWalls(chunkData, rng);
-            case 1 -> placeStaircaseToNowhere(chunkData, rng);
-            case 2 -> placePillar(chunkData, rng);
-            case 3 -> placeFloatingSlab(chunkData, rng);
-            case 4 -> placeBrokenPortalFrame(chunkData, rng);
-            case 5 -> placeRedstoneMess(chunkData, rng);
-            case 6 -> placeArch(chunkData, rng);
+        switch (rng.nextInt(14)) {
+            case 0  -> placePartialWalls(chunkData, rng);
+            case 1  -> placeStaircaseToNowhere(chunkData, rng);
+            case 2  -> placePillar(chunkData, rng);
+            case 3  -> placeFloatingSlab(chunkData, rng);
+            case 4  -> placeBrokenPortalFrame(chunkData, rng);
+            case 5  -> placeRedstoneMess(chunkData, rng);
+            case 6  -> placeArch(chunkData, rng);
+            case 7  -> placeVanillaDungeon(chunkData, rng);
+            case 8  -> placeVanillaMineshaft(chunkData, rng);
+            case 9  -> placeVanillaDesertPyramid(chunkData, rng);
+            case 10 -> placeVanillaStrongholdCorridor(chunkData, rng);
+            case 11 -> placeVanillaNetherFortress(chunkData, rng);
+            case 12 -> placeVanillaEndCitySpike(chunkData, rng);
+            case 13 -> placeVanillaRuinedPortal(chunkData, rng);
+        }
+    }
+
+    // --- Corruption helper: place a block with chaos effects applied ---
+    // Returns true if a block was placed.
+    private void corruptedPlace(ChunkData chunkData, Random rng, int x, int y, int z, Material[] palette) {
+        if (x < 0 || x >= 16 || z < 0 || z >= 16 || y < MIN_Y || y >= MAX_Y) return;
+        double roll = rng.nextDouble();
+        if (roll < 0.08) return; // missing block
+        Material mat;
+        if (roll < 0.13) {
+            mat = CHAOS_BLOCKS[rng.nextInt(CHAOS_BLOCKS.length)];
+        } else if (roll < 0.16) {
+            // illegal random block with random facing
+            Material illegal = ALL_BLOCKS[rng.nextInt(ALL_BLOCKS.length)];
+            try {
+                BlockData bd = Bukkit.createBlockData(illegal);
+                if (bd instanceof Directional d) {
+                    BlockFace[] faces = d.getFaces().toArray(new BlockFace[0]);
+                    if (faces.length > 0) d.setFacing(faces[rng.nextInt(faces.length)]);
+                }
+                chunkData.setBlock(x, y, z, bd);
+                if (rng.nextDouble() < 0.02 && y + 1 < MAX_Y)
+                    chunkData.setBlock(x, y + 1, z, palette[rng.nextInt(palette.length)]);
+                return;
+            } catch (Exception e) {
+                mat = illegal;
+            }
+        } else {
+            mat = palette[rng.nextInt(palette.length)];
+        }
+        chunkData.setBlock(x, y, z, mat);
+        // 2% chance: extra block stacked on top
+        if (rng.nextDouble() < 0.02 && y + 1 < MAX_Y)
+            chunkData.setBlock(x, y + 1, z, palette[rng.nextInt(palette.length)]);
+    }
+
+    // Rotate dx/dz by 0, 90, 180, 270 degrees around Y
+    private int[] rotate(int dx, int dz, int rot) {
+        return switch (rot) {
+            case 1  -> new int[]{ dz, -dx};
+            case 2  -> new int[]{-dx, -dz};
+            case 3  -> new int[]{-dz,  dx};
+            default -> new int[]{ dx,  dz};
+        };
+    }
+
+    // --- Vanilla: Dungeon room (7×4×7 mossy cobblestone box, spawner, chests) ---
+    private void placeVanillaDungeon(ChunkData chunkData, Random rng) {
+        int ox = 1 + rng.nextInt(8);
+        int oz = 1 + rng.nextInt(8);
+        int oy = 20 + rng.nextInt(70);
+        int rot = rng.nextInt(4);
+        Material[] pal = {Material.MOSSY_COBBLESTONE, Material.COBBLESTONE, Material.COBBLESTONE};
+        // Floor and ceiling
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 0; dz < 7; dz++) {
+                int[] r = rotate(dx - 3, dz - 3, rot);
+                corruptedPlace(chunkData, rng, ox + r[0], oy,     oz + r[1], pal);
+                corruptedPlace(chunkData, rng, ox + r[0], oy + 4, oz + r[1], pal);
+            }
+        }
+        // Walls
+        for (int dy = 1; dy <= 3; dy++) {
+            for (int i = 0; i < 7; i++) {
+                int[] rN = rotate(i - 3, -3, rot); corruptedPlace(chunkData, rng, ox + rN[0], oy + dy, oz + rN[1], pal);
+                int[] rS = rotate(i - 3,  3, rot); corruptedPlace(chunkData, rng, ox + rS[0], oy + dy, oz + rS[1], pal);
+                int[] rW = rotate(-3, i - 3, rot); corruptedPlace(chunkData, rng, ox + rW[0], oy + dy, oz + rW[1], pal);
+                int[] rE = rotate( 3, i - 3, rot); corruptedPlace(chunkData, rng, ox + rE[0], oy + dy, oz + rE[1], pal);
+            }
+        }
+        // Spawner (centre)
+        if (oy + 1 < MAX_Y) corruptedPlace(chunkData, rng, ox, oy + 1, oz, new Material[]{Material.SPAWNER});
+        // Chests
+        int[] c1 = rotate(-2, -2, rot); if (oy + 1 < MAX_Y) corruptedPlace(chunkData, rng, ox + c1[0], oy + 1, oz + c1[1], new Material[]{Material.CHEST});
+        int[] c2 = rotate( 2,  2, rot); if (oy + 1 < MAX_Y) corruptedPlace(chunkData, rng, ox + c2[0], oy + 1, oz + c2[1], new Material[]{Material.CHEST});
+    }
+
+    // --- Vanilla: Mineshaft corridor (3×3×9 tunnel with supports, rails, cobwebs) ---
+    private void placeVanillaMineshaft(ChunkData chunkData, Random rng) {
+        int ox = rng.nextInt(10);
+        int oz = rng.nextInt(6);
+        int oy = 15 + rng.nextInt(75);
+        int rot = rng.nextInt(4);
+        int len = 7 + rng.nextInt(5);
+        Material[] pal = {Material.OAK_PLANKS, Material.OAK_PLANKS, Material.OAK_FENCE};
+        for (int dl = 0; dl < len; dl++) {
+            for (int dw = -1; dw <= 1; dw++) {
+                for (int dh = 0; dh <= 2; dh++) {
+                    int[] r = rotate(dl, dw, rot);
+                    int bx = ox + r[0], bz = oz + r[1], by = oy + dh;
+                    if (bx < 0 || bx >= 16 || bz < 0 || bz >= 16 || by >= MAX_Y) continue;
+                    boolean isFloor = dh == 0;
+                    boolean isCeiling = dh == 2;
+                    boolean isWall = dw == -1 || dw == 1;
+                    if (isFloor || isCeiling || isWall) {
+                        corruptedPlace(chunkData, rng, bx, by, bz, pal);
+                    } else {
+                        // interior: air (carve through whatever was there)
+                        chunkData.setBlock(bx, by, bz, Material.AIR);
+                    }
+                }
+            }
+            // Oak supports every 4 blocks
+            if (dl % 4 == 0) {
+                int[] rL = rotate(dl, -1, rot); if (ox + rL[0] >= 0 && ox + rL[0] < 16 && oz + rL[1] >= 0 && oz + rL[1] < 16 && oy + 2 < MAX_Y) chunkData.setBlock(ox + rL[0], oy + 2, oz + rL[1], Material.OAK_PLANKS);
+                int[] rR = rotate(dl,  1, rot); if (ox + rR[0] >= 0 && ox + rR[0] < 16 && oz + rR[1] >= 0 && oz + rR[1] < 16 && oy + 2 < MAX_Y) chunkData.setBlock(ox + rR[0], oy + 2, oz + rR[1], Material.OAK_PLANKS);
+            }
+            // Rail on floor
+            int[] rFloor = rotate(dl, 0, rot);
+            int bxF = ox + rFloor[0], bzF = oz + rFloor[1];
+            if (bxF >= 0 && bxF < 16 && bzF >= 0 && bzF < 16 && oy < MAX_Y && rng.nextDouble() > 0.1)
+                chunkData.setBlock(bxF, oy, bzF, Material.RAIL);
+            // Cobwebs scattered
+            if (rng.nextDouble() < 0.15) {
+                int[] rWeb = rotate(dl, rng.nextInt(3) - 1, rot);
+                int bxW = ox + rWeb[0], bzW = oz + rWeb[1];
+                if (bxW >= 0 && bxW < 16 && bzW >= 0 && bzW < 16 && oy + 1 < MAX_Y)
+                    chunkData.setBlock(bxW, oy + 1, bzW, Material.COBWEB);
+            }
+        }
+    }
+
+    // --- Vanilla: Desert pyramid treasure chamber (5×4×5 sandstone, TNT trap) ---
+    private void placeVanillaDesertPyramid(ChunkData chunkData, Random rng) {
+        int ox = rng.nextInt(10);
+        int oz = rng.nextInt(10);
+        int oy = 20 + rng.nextInt(70);
+        int rot = rng.nextInt(4);
+        Material[] pal = {Material.SANDSTONE, Material.SANDSTONE, Material.CUT_SANDSTONE, Material.CHISELED_SANDSTONE};
+        // Floor, ceiling, walls of 5×5 room
+        for (int dx = 0; dx < 5; dx++) {
+            for (int dz = 0; dz < 5; dz++) {
+                int[] r = rotate(dx - 2, dz - 2, rot);
+                corruptedPlace(chunkData, rng, ox + r[0], oy,     oz + r[1], pal);
+                corruptedPlace(chunkData, rng, ox + r[0], oy + 4, oz + r[1], pal);
+            }
+        }
+        for (int dy = 1; dy <= 3; dy++) {
+            for (int i = 0; i < 5; i++) {
+                int[] rN = rotate(i - 2, -2, rot); corruptedPlace(chunkData, rng, ox + rN[0], oy + dy, oz + rN[1], pal);
+                int[] rS = rotate(i - 2,  2, rot); corruptedPlace(chunkData, rng, ox + rS[0], oy + dy, oz + rS[1], pal);
+                int[] rW = rotate(-2, i - 2, rot); corruptedPlace(chunkData, rng, ox + rW[0], oy + dy, oz + rW[1], pal);
+                int[] rE = rotate( 2, i - 2, rot); corruptedPlace(chunkData, rng, ox + rE[0], oy + dy, oz + rE[1], pal);
+            }
+        }
+        // Blue terracotta centre
+        int[] rC = rotate(0, 0, rot);
+        if (ox + rC[0] >= 0 && ox + rC[0] < 16 && oz + rC[1] >= 0 && oz + rC[1] < 16 && oy + 1 < MAX_Y)
+            corruptedPlace(chunkData, rng, ox + rC[0], oy + 1, oz + rC[1], new Material[]{Material.BLUE_TERRACOTTA});
+        // TNT near centre
+        int[] rT = rotate(1, 0, rot);
+        if (ox + rT[0] >= 0 && ox + rT[0] < 16 && oz + rT[1] >= 0 && oz + rT[1] < 16 && oy + 1 < MAX_Y)
+            corruptedPlace(chunkData, rng, ox + rT[0], oy + 1, oz + rT[1], new Material[]{Material.TNT});
+        // Chests in corners
+        for (int[] corner : new int[][]{{-1,-1},{1,-1},{-1,1},{1,1}}) {
+            int[] rc = rotate(corner[0], corner[1], rot);
+            corruptedPlace(chunkData, rng, ox + rc[0], oy + 1, oz + rc[1], new Material[]{Material.CHEST});
+        }
+    }
+
+    // --- Vanilla: Stronghold corridor (4×5×8 stone brick hall, iron bars, torches) ---
+    private void placeVanillaStrongholdCorridor(ChunkData chunkData, Random rng) {
+        int ox = rng.nextInt(8);
+        int oz = rng.nextInt(6);
+        int oy = 20 + rng.nextInt(70);
+        int rot = rng.nextInt(4);
+        int len = 6 + rng.nextInt(4);
+        Material[] pal = {Material.STONE_BRICKS, Material.STONE_BRICKS, Material.CRACKED_STONE_BRICKS, Material.MOSSY_STONE_BRICKS};
+        for (int dl = 0; dl < len; dl++) {
+            for (int dw = -2; dw <= 2; dw++) {
+                for (int dh = 0; dh <= 4; dh++) {
+                    int[] r = rotate(dl, dw, rot);
+                    int bx = ox + r[0], bz = oz + r[1], by = oy + dh;
+                    if (bx < 0 || bx >= 16 || bz < 0 || bz >= 16 || by >= MAX_Y) continue;
+                    boolean isShell = dh == 0 || dh == 4 || dw == -2 || dw == 2;
+                    if (isShell) {
+                        corruptedPlace(chunkData, rng, bx, by, bz, pal);
+                    } else {
+                        chunkData.setBlock(bx, by, bz, Material.AIR);
+                    }
+                    // Iron bars at mid-height on inner walls
+                    if ((dw == -1 || dw == 1) && dh == 2 && dl % 3 == 1)
+                        corruptedPlace(chunkData, rng, bx, by, bz, new Material[]{Material.IRON_BARS});
+                    // Torches on walls
+                    if ((dw == -2 || dw == 2) && dh == 1 && dl % 4 == 0)
+                        corruptedPlace(chunkData, rng, bx, by, bz, new Material[]{Material.TORCH});
+                }
+            }
+        }
+    }
+
+    // --- Vanilla: Nether fortress bridge (3×4×8 nether brick corridor, open sides) ---
+    private void placeVanillaNetherFortress(ChunkData chunkData, Random rng) {
+        int ox = rng.nextInt(8);
+        int oz = rng.nextInt(8);
+        int oy = 25 + rng.nextInt(65);
+        int rot = rng.nextInt(4);
+        int len = 6 + rng.nextInt(4);
+        Material[] pal = {Material.NETHER_BRICKS, Material.NETHER_BRICKS, Material.CRACKED_NETHER_BRICKS};
+        for (int dl = 0; dl < len; dl++) {
+            for (int dw = -1; dw <= 1; dw++) {
+                // Floor
+                int[] rF = rotate(dl, dw, rot);
+                corruptedPlace(chunkData, rng, ox + rF[0], oy, oz + rF[1], pal);
+                // Ceiling
+                int[] rC2 = rotate(dl, dw, rot);
+                corruptedPlace(chunkData, rng, ox + rC2[0], oy + 4, oz + rC2[1], pal);
+                // Air interior
+                for (int dh = 1; dh <= 3; dh++) {
+                    int[] r = rotate(dl, dw, rot);
+                    int bx = ox + r[0], bz = oz + r[1], by = oy + dh;
+                    if (bx >= 0 && bx < 16 && bz >= 0 && bz < 16 && by < MAX_Y)
+                        chunkData.setBlock(bx, by, bz, Material.AIR);
+                }
+            }
+            // Fence railings on open sides
+            for (int side : new int[]{-2, 2}) {
+                int[] rR = rotate(dl, side, rot);
+                int bxR = ox + rR[0], bzR = oz + rR[1];
+                if (bxR >= 0 && bxR < 16 && bzR >= 0 && bzR < 16 && oy + 1 < MAX_Y)
+                    corruptedPlace(chunkData, rng, bxR, oy + 1, bzR, new Material[]{Material.NETHER_BRICK_FENCE});
+            }
+        }
+    }
+
+    // --- Vanilla: End city spike (purpur pillar column, end rods on top) ---
+    private void placeVanillaEndCitySpike(ChunkData chunkData, Random rng) {
+        int ox = rng.nextInt(16);
+        int oz = rng.nextInt(16);
+        int oy = 20 + rng.nextInt(60);
+        int height = 8 + rng.nextInt(10);
+        for (int dy = 0; dy < height; dy++) {
+            int by = oy + dy;
+            if (by >= MAX_Y) break;
+            if (ox >= 0 && ox < 16 && oz >= 0 && oz < 16)
+                corruptedPlace(chunkData, rng, ox, by, oz, new Material[]{Material.PURPUR_PILLAR, Material.PURPUR_BLOCK});
+        }
+        // End rods on top
+        for (int dy = height; dy < height + 4; dy++) {
+            int by = oy + dy;
+            if (by >= MAX_Y) break;
+            if (rng.nextBoolean() && ox < 16 && oz < 16)
+                corruptedPlace(chunkData, rng, ox, by, oz, new Material[]{Material.END_ROD});
+        }
+        // Side decorations: small ledges
+        if (rng.nextBoolean()) {
+            int ledgeY = oy + height / 2;
+            for (int[] d : new int[][]{{1,0},{-1,0},{0,1},{0,-1}}) {
+                int bx = ox + d[0], bz = oz + d[1];
+                if (bx >= 0 && bx < 16 && bz >= 0 && bz < 16 && ledgeY < MAX_Y)
+                    corruptedPlace(chunkData, rng, bx, ledgeY, bz, new Material[]{Material.PURPUR_BLOCK, Material.END_STONE_BRICKS});
+            }
+        }
+    }
+
+    // --- Vanilla: Ruined portal (partial obsidian frame, chiseled stone base, magma) ---
+    private void placeVanillaRuinedPortal(ChunkData chunkData, Random rng) {
+        int ox = rng.nextInt(10);
+        int oz = rng.nextInt(14);
+        int oy = 15 + rng.nextInt(75);
+        int rot = rng.nextInt(4);
+        Material[] portalPal = {Material.OBSIDIAN, Material.OBSIDIAN, Material.CRYING_OBSIDIAN};
+        Material[] basePal   = {Material.CHISELED_STONE_BRICKS, Material.STONE_BRICKS, Material.MAGMA_BLOCK};
+        // Base platform (3×5)
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = 0; dz < 5; dz++) {
+                int[] r = rotate(dx, dz, rot);
+                corruptedPlace(chunkData, rng, ox + r[0], oy - 1, oz + r[1], basePal);
+            }
+        }
+        // Portal frame: 4w × 5h, open in the middle
+        int[][] frameBlocks = {
+            {0,0},{0,1},{0,2},{0,3},{0,4},  // left pillar
+            {3,0},{3,1},{3,2},{3,3},{3,4},  // right pillar
+            {1,4},{2,4},                    // top bar
+        };
+        for (int[] pos : frameBlocks) {
+            int[] r = rotate(pos[0] - 1, pos[1], rot);
+            corruptedPlace(chunkData, rng, ox + r[0], oy + pos[1], oz + r[1], portalPal);
+        }
+        // Lava pool hints (magma blocks)
+        for (int dx = 0; dx <= 1; dx++) {
+            int[] r = rotate(dx, -1, rot);
+            if (oy < MAX_Y) corruptedPlace(chunkData, rng, ox + r[0], oy, oz + r[1], new Material[]{Material.MAGMA_BLOCK});
         }
     }
 
@@ -440,7 +728,12 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     @Override
+    public int getSpawnY() {
+        return MAX_Y;
+    }
+
+    @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, 8.5, 64, 8.5);
+        return new Location(world, 8.5, MAX_Y, 8.5);
     }
 }

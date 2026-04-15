@@ -141,6 +141,10 @@ public class Level5ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+
+        // Bedrock boundaries: 8-block floor, 10-block ceiling (onlySolid — maze carves some floor/ceiling)
+        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 8, Material.BEDROCK, true);
+        applyBoundaryLayer(chunkData, SOLID_HEIGHT - 10, SOLID_HEIGHT, Material.BEDROCK, true);
     }
 
     private void carveRect(ChunkData chunkData, int startX, int startZ, int width, int depth) {
@@ -155,6 +159,11 @@ public class Level5ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+    }
+
+    @Override
+    public int getSpawnY() {
+        return AIR_MIN_Y;
     }
 
     @Override

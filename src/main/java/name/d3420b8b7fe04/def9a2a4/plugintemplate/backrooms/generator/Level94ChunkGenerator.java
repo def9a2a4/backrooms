@@ -108,6 +108,9 @@ public class Level94ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     @Override
+    public int getSpawnY() { return SPAWN_Y; }
+
+    @Override
     public Location getFixedSpawnLocation(World world, Random random) {
         return new Location(world, SPAWN_X + 0.5, SPAWN_Y, SPAWN_Z + 0.5);
     }

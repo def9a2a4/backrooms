@@ -55,6 +55,31 @@ public abstract class BackroomsChunkGenerator extends ChunkGenerator {
         return Biome.THE_VOID;
     }
 
+    /**
+     * Returns the Y coordinate where a player's feet should be when spawning into this level
+     * (the first air block above the floor).
+     */
+    public abstract int getSpawnY();
+
+    /**
+     * Fills all blocks in [yMin, yMax) with {@code material}.
+     * When {@code onlySolid} is true, air blocks are skipped so carved spaces
+     * (hallways, rooms) are not filled.
+     */
+    protected static void applyBoundaryLayer(ChunkData chunkData,
+                                             int yMin, int yMax,
+                                             org.bukkit.Material material,
+                                             boolean onlySolid) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                for (int y = yMin; y < yMax; y++) {
+                    if (onlySolid && chunkData.getType(x, y, z).isAir()) continue;
+                    chunkData.setBlock(x, y, z, material);
+                }
+            }
+        }
+    }
+
     @Override public boolean shouldGenerateNoise() { return false; }
     @Override public boolean shouldGenerateSurface() { return false; }
     @Override public boolean shouldGenerateBedrock() { return false; }

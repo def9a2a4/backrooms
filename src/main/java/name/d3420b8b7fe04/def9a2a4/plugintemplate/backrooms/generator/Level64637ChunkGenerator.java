@@ -19,8 +19,8 @@ import java.util.Random;
  * Layers 0 and 6 are identical (seed uses layer % 6). The world loops vertically.
  *
  * Staircase geometry: 6x6 center box decomposed into 3x3 grid of 2x2 quadrants.
- * Center = bookshelf pillar. Corners = flat. Faces = half-block transition (oak + slabs).
- * One revolution = 2 blocks of height.
+ * Center 2x2 = open shaft (air). Corners = flat oak slabs. Faces = half-step (top/bottom slabs).
+ * blockY = startY + offset + 6*r. One full revolution = 6 blocks of height.
  */
 public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
@@ -56,8 +56,8 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     public static final int STAIR_MIN = 5;
     public static final int STAIR_MAX = 10;
 
-    // Wrap teleportation offset (layer 0 ↔ layer 6)
-    public static final int WRAP_OFFSET = 6 * FLOOR_SPACING; // 60
+    // Wrap teleportation offset (base Y=0 ↔ cap Y=70)
+    public static final int WRAP_OFFSET = NUM_LAYERS * FLOOR_SPACING; // 70
 
     public enum RoomType { EMPTY, PILLAR, STAIRCASE }
 
@@ -139,10 +139,23 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
             punchStairwellShaft(chunkData, 0, SOLID_THICKNESS, chunkX, chunkZ);
             punchStairwellShaft(chunkData, CAP_MIN_Y, CAP_MAX_Y, chunkX, chunkZ);
         }
+
+        // Bedrock boundaries: Y=0-1 floor, Y=71-72 ceiling.
+        // Y=2 and Y=70 stay as oak planks so the visible floor/ceiling surface is wood, not bedrock.
+        applyBoundaryLayer(chunkData, 0, REL_AIR_MIN - 1, Material.BEDROCK, false);
+        applyBoundaryLayer(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, Material.BEDROCK, false);
+
+        // Re-punch stairwell shaft through bedrock and line the exposed walls with oak planks.
+        if (isStaircase(seed, cellX, cellZ) && getStaircaseSpan(seed, cellX, cellZ) >= NUM_LAYERS) {
+            punchStairwellShaft(chunkData, 0, REL_AIR_MIN - 1, chunkX, chunkZ);
+            punchStairwellShaft(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, chunkX, chunkZ);
+            lineShaftWalls(chunkData, 0, REL_AIR_MIN - 1, chunkX, chunkZ);
+            lineShaftWalls(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, chunkX, chunkZ);
+        }
     }
 
     /**
-     * Punches air through a solid region at stairwell shaft positions (excluding center pillar).
+     * Punches air through a solid region at all stairwell positions (including center shaft).
      */
     private void punchStairwellShaft(ChunkData data, int yMin, int yMax, int chunkX, int chunkZ) {
         for (int x = 0; x < 16; x++) {
@@ -154,11 +167,34 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
                 if (localX >= STAIR_MIN && localX <= STAIR_MAX
                         && localZ >= STAIR_MIN && localZ <= STAIR_MAX) {
-                    int sx = localX - STAIR_MIN;
-                    int sz = localZ - STAIR_MIN;
-                    if (STAIR_OFFSETS[sz][sx] == -1) continue; // keep center pillar solid
                     for (int y = yMin; y < yMax; y++) {
                         data.setBlock(x, y, z, Material.AIR);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Replaces bedrock with oak planks on the 1-block perimeter surrounding the stairwell shaft,
+     * so raw bedrock isn't visible from inside the shaft.
+     */
+    private void lineShaftWalls(ChunkData data, int yMin, int yMax, int chunkX, int chunkZ) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                int localX = Math.floorMod(worldX, CELL_SIZE);
+                int localZ = Math.floorMod(worldZ, CELL_SIZE);
+
+                boolean adjX = localX == STAIR_MIN - 1 || localX == STAIR_MAX + 1;
+                boolean adjZ = localZ == STAIR_MIN - 1 || localZ == STAIR_MAX + 1;
+                boolean inRangeX = localX >= STAIR_MIN - 1 && localX <= STAIR_MAX + 1;
+                boolean inRangeZ = localZ >= STAIR_MIN - 1 && localZ <= STAIR_MAX + 1;
+
+                if ((adjX && inRangeZ) || (adjZ && inRangeX)) {
+                    for (int y = yMin; y < yMax; y++) {
+                        data.setBlock(x, y, z, Material.OAK_PLANKS);
                     }
                 }
             }
@@ -299,27 +335,44 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     // ── Staircase room ──────────────────────────────────────────────────
 
     /**
-     * Height offset table for the 6x6 stairwell, decomposed into 2x2 quadrants.
-     * Values are in half-blocks (0-4). -1 = center pillar (no stair block).
+     * Block Y offset for each (sx, sz) position in the 6x6 stairwell.
+     * -1 = center shaft (no slab, kept as air).
      *
-     * Clockwise spiral: SW corner(0) → S face(0→1) → SE corner(1) →
-     *   E face(1→2) → NE corner(2) → N face(2→3) → NW corner(3) → W face(3→4)
+     * Clockwise spiral (SW→S→SE→E→NE→N→NW→W→SW):
+     *   blockY(sx, sz, r) = startY + STAIR_OFFSET[sz][sx] + 6 * r
      *
-     * One full revolution = 4 half-blocks = 2 blocks of height.
+     * One full revolution = 6 blocks of height (12 steps of +0.5 each).
      */
-    private static final int[][] STAIR_OFFSETS = {
+    private static final int[][] STAIR_OFFSET = {
         //  sx=0  1    2    3    4    5
-            { 3,  3,   3,   2,   2,   2 },  // sz=0: NW corner | N face | NE corner
-            { 3,  3,   3,   2,   2,   2 },  // sz=1
-            { 3,  3,  -1,  -1,   2,   2 },  // sz=2: W face | center | E face
-            { 4,  4,  -1,  -1,   1,   1 },  // sz=3
-            { 0,  0,   0,   1,   1,   1 },  // sz=4: SW corner | S face | SE corner
+            { 4,  4,   4,   3,   3,   3 },  // sz=0: NW(4) | N near-NW(4), N near-NE(3) | NE(3)
+            { 4,  4,   4,   3,   3,   3 },  // sz=1
+            { 5,  5,  -1,  -1,   2,   2 },  // sz=2: W near-NW(5) | shaft | E near-NE(2)
+            { 5,  5,  -1,  -1,   2,   2 },  // sz=3: W near-SW(5) | shaft | E near-SE(2)
+            { 0,  0,   0,   1,   1,   1 },  // sz=4: SW(0) | S near-SW(0), S near-SE(1) | SE(1)
             { 0,  0,   0,   1,   1,   1 },  // sz=5
     };
 
     /**
-     * Places a column within the 6x6 stairwell.
-     * The staircase spans multiple layers with a half-block spiral.
+     * true = TOP slab (feet at blockY+1), false = BOTTOM slab (feet at blockY+0.5).
+     * SW corner starts as BOTTOM so entry from floor is +0.5 (walkable without jumping).
+     * Each clockwise step transitions +0.5 blocks of walking height.
+     */
+    private static final boolean[][] STAIR_IS_TOP = {
+        //     sx=0   1      2      3      4      5
+            { true,  true,  false, true,  false, false },  // sz=0: NW(T) | N near-NW(B), N near-NE(T) | NE(B)
+            { true,  true,  false, true,  false, false },  // sz=1
+            { false, false, false, false, true,  true  },  // sz=2: W near-NW(B) | shaft | E near-NE(T)
+            { true,  true,  false, false, false, false },  // sz=3: W near-SW(T) | shaft | E near-SE(B)
+            { false, false, true,  false, true,  true  },  // sz=4: SW(B) | S near-SW(T), S near-SE(B) | SE(T)
+            { false, false, true,  false, true,  true  },  // sz=5
+    };
+
+    /**
+     * Places a column within the 6x6 stairwell for one layer.
+     *
+     * Center 2×2 (sx=2-3, sz=2-3) is the open vertical shaft — just air.
+     * All other positions get oak slabs (top or bottom) at blockY = startY + offset + 6*r.
      */
     private void placeStaircaseColumn(ChunkData data, int x, int z,
                                        int localX, int localZ, int layer,
@@ -330,88 +383,39 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
         int sx = localX - STAIR_MIN; // 0-5
         int sz = localZ - STAIR_MIN; // 0-5
-        int offset = STAIR_OFFSETS[sz][sx];
+        int offset = STAIR_OFFSET[sz][sx];
 
-        // Center 2x2 pillar (positions 7-8 = sx 2-3, sz 2-3)
-        if (offset == -1) {
-            placeCenterPillar(data, x, z, airMin, airMax, seed, cellX, cellZ);
-            return;
-        }
+        // Determine vertical range for this column (may include carved floor solid below)
+        int colMin = (layer > 0 && isStaircaseOnLayer(seed, layer - 1, cellX, cellZ))
+                ? baseY : airMin;
+        int colMax = airMax;
 
-        // Clear entire air column for this stairwell position
-        for (int y = airMin; y < airMax; y++) {
+        // Clear the column to air
+        for (int y = colMin; y < colMax; y++) {
             data.setBlock(x, y, z, Material.AIR);
         }
 
-        // Also clear the solid between this layer and the one below if the staircase
-        // connects to the layer below
-        if (layer > 0 && isStaircaseOnLayer(seed, layer - 1, cellX, cellZ)) {
-            int solidMin = baseY;
-            for (int y = solidMin; y < airMin; y++) {
-                data.setBlock(x, y, z, Material.AIR);
-            }
-        }
+        // Center shaft: just air, no slabs
+        if (offset == -1) return;
 
-        // Place spiral blocks for each revolution that fits in this layer's span
-        // The staircase ascends from this layer's floor upward.
-        // Total height for one floor connection: FLOOR_SPACING (10) blocks = 20 half-blocks = 5 revolutions
+        // Compute staircase base Y (airMin of the bottom layer of this span)
         int span = getStaircaseSpan(seed, cellX, cellZ);
-        int totalFloors = (span >= NUM_LAYERS) ? NUM_LAYERS : span;
-        int maxH = totalFloors * FLOOR_SPACING * 2; // in half-blocks
+        int startY = (span >= NUM_LAYERS)
+                ? REL_AIR_MIN
+                : getStaircaseStartLayer(seed, cellX, cellZ) * FLOOR_SPACING + REL_AIR_MIN;
+        int maxBlockY = startY + 10 * (Math.min(span, NUM_LAYERS) - 1) - 1;
 
-        // Compute the absolute base of the staircase (lowest layer's airMin)
-        int startLayer = getStaircaseStartLayer(seed, cellX, cellZ);
-        int absBaseAirMin;
-        if (span >= NUM_LAYERS) {
-            absBaseAirMin = 0 + REL_AIR_MIN; // starts at layer 0
-        } else {
-            absBaseAirMin = startLayer * FLOOR_SPACING + REL_AIR_MIN;
-        }
+        boolean isTop = STAIR_IS_TOP[sz][sx];
 
-        // Place blocks for all revolutions that intersect this layer
-        for (int rev = 0; rev < maxH / 4 + 1; rev++) {
-            int h = rev * 4 + offset;
-            if (h <= 0 || h > maxH) continue;
-
-            int blockY = absBaseAirMin + (h - 1) / 2;
-
-            // Only place if this blockY falls within this layer's column range
-            int colMin = (layer > 0 && isStaircaseOnLayer(seed, layer - 1, cellX, cellZ))
-                    ? baseY : airMin;
-            int colMax = airMax;
-            if (blockY < colMin || blockY >= colMax) continue;
-
-            if (h % 2 == 1) {
-                // Bottom slab
-                Slab slabData = (Slab) Material.OAK_SLAB.createBlockData();
-                slabData.setType(Slab.Type.BOTTOM);
-                data.setBlock(x, blockY, z, slabData);
-            } else {
-                // Full block
-                data.setBlock(x, blockY, z, Material.OAK_PLANKS);
+        // Place one slab per revolution wherever it falls in this layer's column range
+        for (int r = 0; startY + offset + 6 * r <= maxBlockY; r++) {
+            int blockY = startY + offset + 6 * r;
+            if (blockY >= colMin && blockY < colMax) {
+                Slab slab = (Slab) Material.OAK_SLAB.createBlockData();
+                slab.setType(isTop ? Slab.Type.TOP : Slab.Type.BOTTOM);
+                data.setBlock(x, blockY, z, slab);
             }
         }
-    }
-
-    /**
-     * Places the center 2x2 pillar of the stairwell (bookshelves or oak).
-     */
-    private void placeCenterPillar(ChunkData data, int x, int z,
-                                    int airMin, int airMax, long seed, int cellX, int cellZ) {
-        // Most staircase rooms have bookshelf pillar
-        long hash = seed ^ ((long) cellX * 555555555L + (long) cellZ * 999999999L + 36L);
-        boolean bookshelves = new Random(hash).nextDouble() < 0.75;
-
-        if (bookshelves) {
-            int shelfMin = airMin + 1;
-            int shelfMax = airMax - 2;
-            data.setBlock(x, airMin, z, Material.OAK_PLANKS);     // baseboard
-            for (int y = shelfMin; y <= shelfMax; y++) {
-                data.setBlock(x, y, z, Material.BOOKSHELF);
-            }
-            data.setBlock(x, airMax - 1, z, Material.OAK_PLANKS); // crown
-        }
-        // else: oak planks, already filled by initial setRegion
     }
 
     // ── Shared building methods ─────────────────────────────────────────
@@ -444,6 +448,9 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         lantern.setHanging(true);
         data.setBlock(x, y, z, lantern);
     }
+
+    @Override
+    public int getSpawnY() { return REL_AIR_MIN; }
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {

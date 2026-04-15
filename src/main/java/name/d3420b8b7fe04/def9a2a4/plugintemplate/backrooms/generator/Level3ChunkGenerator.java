@@ -28,7 +28,7 @@ public class Level3ChunkGenerator extends BackroomsChunkGenerator {
     private static final int FLOOR_Y = 0;
     private static final int FLOOR_HEIGHT = 4;
     private static final int CEILING_Y = 24;
-    private static final int CEILING_MAX_Y = 28;
+    private static final int CEILING_MAX_Y = 36;
 
     // Grid constants
     private static final int CELL_SIZE = 24;
@@ -158,6 +158,10 @@ public class Level3ChunkGenerator extends BackroomsChunkGenerator {
                 placeRedstoneChain(chunkData, x, z, worldX, worldZ, seed);
             }
         }
+
+        // Bedrock boundaries: 2-block floor, 10-block ceiling (onlySolid for ceiling)
+        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 2, Material.BEDROCK, false);
+        applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, true);
     }
 
     // --- Cell helpers ---
@@ -335,6 +339,11 @@ public class Level3ChunkGenerator extends BackroomsChunkGenerator {
         } catch (Exception e) {
             chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, Material.REDSTONE_WIRE);
         }
+    }
+
+    @Override
+    public int getSpawnY() {
+        return FLOOR_HEIGHT + 2;
     }
 
     @Override

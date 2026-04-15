@@ -1,13 +1,17 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.BackroomsChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.SpawnFinder;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -77,7 +81,7 @@ public class TransitionManager {
 
         exit.playTransitionSequence(player, () -> {
             currentLevel.onPlayerLeave(player, state);
-            Location spawn = targetWorld.getSpawnLocation();
+            Location spawn = findSpawnForLevel(targetLevel, targetWorld);
             player.teleport(spawn);
             state.setCurrentLevelId(targetId);
             targetLevel.onPlayerEnter(player, state);
@@ -91,10 +95,27 @@ public class TransitionManager {
         World targetWorld = levelRegistry.getWorld(targetLevel);
         if (targetWorld == null) return;
 
-        Location spawn = targetWorld.getSpawnLocation();
+        Location spawn = findSpawnForLevel(targetLevel, targetWorld);
         player.teleport(spawn);
         state.setCurrentLevelId(targetLevelId);
         targetLevel.onPlayerEnter(player, state);
+    }
+
+    private Location findSpawnForLevel(BackroomsLevel level, World targetWorld) {
+        Location fixedSpawn = targetWorld.getSpawnLocation();
+        int radius = 300;
+        int spawnY = fixedSpawn.getBlockY();
+
+        if (level instanceof ConfigDrivenLevel cdl) {
+            radius = cdl.getSpawnRadius();
+        }
+
+        ChunkGenerator gen = targetWorld.getGenerator();
+        if (gen instanceof BackroomsChunkGenerator bGen) {
+            spawnY = bGen.getSpawnY();
+        }
+
+        return SpawnFinder.findRandomSpawn(targetWorld, radius, spawnY, fixedSpawn);
     }
 
     public void returnToOverworld(Player player, BackroomsPlayerState state,

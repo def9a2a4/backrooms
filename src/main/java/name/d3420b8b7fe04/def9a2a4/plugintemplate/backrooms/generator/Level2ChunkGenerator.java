@@ -33,7 +33,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     private static final int CEILING_LOW = 11;
     private static final int CEILING_NORMAL = 13;
     private static final int CEILING_TALL = 15;
-    private static final int CEILING_MAX_Y = 22;
+    private static final int CEILING_MAX_Y = 26;
 
     private static final int HALLWAY_PERIOD = 20;
     private static final int HALLWAY_WIDTH = 2;
@@ -108,7 +108,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 }
 
                 // Floor material
-                if ((worldX + worldZ) % 24 == 0) {
+                if (Math.floorMod(worldX + worldZ, 24) == 0) {
                     chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, Material.COPPER_GRATE);
                 } else {
                     double floorDetail = SimplexNoise.noise2(seed + 3, worldX * 0.2, worldZ * 0.2);
@@ -138,11 +138,14 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 int gridX = Math.floorDiv(worldX, HALLWAY_PERIOD);
                 int gridZ = Math.floorDiv(worldZ, HALLWAY_PERIOD);
 
-                double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
-                if (roomNoise <= 0.95) continue;
+                // Only place rooms where at least one hallway line is active
+                if (!isLineActive(seed, gridZ, 0) && !isLineActive(seed, gridX, 1)) continue;
 
-                boolean isBoilerRoom = roomNoise > 0.98;
-                int roomRadius = isBoilerRoom ? 6 : (roomNoise > 0.93 ? 4 : 3);
+                double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
+                if (roomNoise <= 0.97) continue;
+
+                boolean isBoilerRoom = roomNoise > 0.99;
+                int roomRadius = isBoilerRoom ? 6 : (roomNoise > 0.98 ? 4 : 3);
                 int ceilingY = isBoilerRoom ? CEILING_TALL : getCeilingHeight(seed, worldX, worldZ);
                 if (ceilingY < CEILING_NORMAL) ceilingY = CEILING_NORMAL;
 
@@ -166,7 +169,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 if (isBoilerRoom) {
                     placeBoilerRoom(chunkData, chunkX, chunkZ, worldX, worldZ, ceilingY, pipeMat);
                 } else {
-                    int roomType = Math.floorMod(gridX * 7 + gridZ * 13, 8);
+                    int roomType = Math.floorMod(gridX * 7 + gridZ * 13, 14);
                     placeMachinery(chunkData, chunkX, chunkZ, worldX, worldZ, roomType, pipeMat, ceilingY);
                 }
             }
@@ -250,7 +253,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
-                if (worldX % 36 == 0 && worldZ % 36 == 0) {
+                if (Math.floorMod(worldX, 72) == 0 && Math.floorMod(worldZ, 72) == 0) {
                     long lightHash = (worldX * 48611L) ^ (worldZ * 29423L) ^ seed;
                     if (Math.floorMod(lightHash, 10) >= 3) continue;
                     if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
@@ -266,6 +269,10 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+
+        // Bedrock boundaries: 6-block floor, 10-block ceiling (onlySolid for ceiling)
+        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 6, Material.BEDROCK, false);
+        applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, true);
     }
 
     /**
@@ -276,7 +283,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                                 int lineIndex, int direction,
                                 int mod, int width, int ceilingY,
                                 Material pipeMat, BlockFace rodFace) {
-        // Slot 0: ceiling, near-wall edge (mod == 0)
+        // Slot 0: ceiling, near-wall edge (mod == 0) — most common
         if (mod == 0 && isPipeSlotActive(seed, lineIndex, direction, 0)) {
             placePipeBlock(chunkData, x, ceilingY - 1, z, worldX, worldZ, seed,
                     lineIndex, direction, 0, pipeMat, rodFace);
@@ -286,15 +293,25 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
             placePipeBlock(chunkData, x, ceilingY - 1, z, worldX, worldZ, seed,
                     lineIndex, direction, 1, pipeMat, rodFace);
         }
-        // Slot 2: wall height, near-wall edge (mod == 0)
+        // Slot 2: wall height, near-wall edge (mod == 0) — rare
         if (mod == 0 && isPipeSlotActive(seed, lineIndex, direction, 2)) {
             placePipeBlock(chunkData, x, AIR_MIN_Y + 2, z, worldX, worldZ, seed,
                     lineIndex, direction, 2, pipeMat, rodFace);
         }
-        // Slot 3: wall height, far-wall edge (mod == width - 1)
+        // Slot 3: wall height, far-wall edge (mod == width - 1) — rare
         if (mod == width - 1 && isPipeSlotActive(seed, lineIndex, direction, 3)) {
             placePipeBlock(chunkData, x, AIR_MIN_Y + 2, z, worldX, worldZ, seed,
                     lineIndex, direction, 3, pipeMat, rodFace);
+        }
+        // Slot 4: floor level, near-wall edge (mod == 0) — very rare
+        if (mod == 0 && isPipeSlotActive(seed, lineIndex, direction, 4)) {
+            placePipeBlock(chunkData, x, AIR_MIN_Y + 1, z, worldX, worldZ, seed,
+                    lineIndex, direction, 4, pipeMat, rodFace);
+        }
+        // Slot 5: floor level, far-wall edge (mod == width - 1) — very rare
+        if (mod == width - 1 && isPipeSlotActive(seed, lineIndex, direction, 5)) {
+            placePipeBlock(chunkData, x, AIR_MIN_Y + 1, z, worldX, worldZ, seed,
+                    lineIndex, direction, 5, pipeMat, rodFace);
         }
     }
 
@@ -351,10 +368,12 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     private boolean isPipeSlotActive(long seed, int lineIndex, int direction, int slot) {
         double noise = SimplexNoise.noise2(seed + 20 + slot, lineIndex * 1.7, direction * 100.0);
         double threshold = switch (slot) {
-            case 0 -> -0.1;
-            case 1 -> 0.3;
-            case 2 -> 0.4;
-            default -> 0.6;
+            case 0 -> -0.1;  // ceiling near-wall: ~55%
+            case 1 ->  0.3;  // ceiling far-wall:  ~35%
+            case 2 ->  0.7;  // wall near:         ~15%
+            case 3 ->  0.7;  // wall far:          ~15%
+            case 4 ->  0.9;  // floor near:         ~5%
+            default ->  0.9; // floor far:          ~5%
         };
         return noise > threshold;
     }
@@ -364,20 +383,49 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
         return Math.floorMod(hash, 200) == 0;
     }
 
+    // --- Rotation helpers (90° CW increments viewed top-down) ---
+
+    private static int rotX(int dx, int dz, int rot) {
+        return switch (rot & 3) {
+            case 1 -> -dz;
+            case 2 -> -dx;
+            case 3 ->  dz;
+            default -> dx;
+        };
+    }
+
+    private static int rotZ(int dx, int dz, int rot) {
+        return switch (rot & 3) {
+            case 1 ->  dx;
+            case 2 -> -dz;
+            case 3 -> -dx;
+            default -> dz;
+        };
+    }
+
     // --- Room placement ---
 
     private void placeMachinery(ChunkData chunkData, int chunkX, int chunkZ,
                                 int centerWorldX, int centerWorldZ, int roomType,
                                 Material pipeMat, int ceilingY) {
+        int gridX = Math.floorDiv(centerWorldX, HALLWAY_PERIOD);
+        int gridZ = Math.floorDiv(centerWorldZ, HALLWAY_PERIOD);
+        int rot = (int) Math.floorMod(gridX * 3L + gridZ * 7L, 4);
         switch (roomType) {
-            case 0 -> placeBoiler(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
-            case 1 -> placePipeJunction(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, pipeMat);
-            case 2 -> placeOldEquipment(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
+            case 0 -> placeBoiler(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, rot);
+            case 1 -> placePipeJunction(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, pipeMat, rot);
+            case 2 -> placeOldEquipment(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, rot);
             case 3 -> placeVentUnit(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
-            case 4 -> placeControlPanel(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
-            case 5 -> placePumpStation(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, ceilingY);
+            case 4 -> placeControlPanel(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, rot);
+            case 5 -> placePumpStation(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, ceilingY, rot);
             case 6 -> placeStorageTank(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
-            default -> placeValveCluster(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
+            case 7 -> placeValveCluster(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
+            case 8 -> placeOverflowSump(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ);
+            case 9 -> placePressureManifold(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, rot);
+            case 10 -> placeFiltrationArray(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, rot);
+            case 11 -> placeEmergencyShutoff(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, rot);
+            case 12 -> placeCondenserUnit(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, rot);
+            default -> placeInspectionPit(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, rot);
         }
 
         placeRoomLantern(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, ceilingY);
@@ -454,16 +502,6 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
 
-        // Pistons along south wall
-        for (int i = -3; i <= 0; i++) {
-            int lx = centerWorldX + i - chunkX * 16;
-            int lz = centerWorldZ - 4 - chunkZ * 16;
-            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
-                chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.STICKY_PISTON);
-                chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.PISTON);
-            }
-        }
-
         // Pipe runs along ceiling from boiler to walls
         for (int i = -5; i <= 5; i++) {
             int lx = centerWorldX + i - chunkX * 16;
@@ -482,11 +520,11 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     // --- Small machinery room types ---
 
     private void placeBoiler(ChunkData chunkData, int chunkX, int chunkZ,
-                             int centerWorldX, int centerWorldZ) {
+                             int centerWorldX, int centerWorldZ, int rot) {
         for (int dx = -1; dx <= 0; dx++) {
             for (int dz = -1; dz <= 0; dz++) {
-                int lx = centerWorldX + dx - chunkX * 16;
-                int lz = centerWorldZ + dz - chunkZ * 16;
+                int lx = centerWorldX + rotX(dx, dz, rot) - chunkX * 16;
+                int lz = centerWorldZ + rotZ(dx, dz, rot) - chunkZ * 16;
                 if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
                     chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.COPPER_BLOCK);
                     chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.COPPER_BLOCK);
@@ -497,21 +535,21 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private void placePipeJunction(ChunkData chunkData, int chunkX, int chunkZ,
-                                   int centerWorldX, int centerWorldZ, Material pipeMat) {
+                                   int centerWorldX, int centerWorldZ, Material pipeMat, int rot) {
         for (int i = -2; i <= 2; i++) {
-            int lx = centerWorldX + i - chunkX * 16;
-            int lz = centerWorldZ + 2 - chunkZ * 16;
+            int lx = centerWorldX + rotX(i, 2, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(i, 2, rot) - chunkZ * 16;
             if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
                 chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.COPPER_GRATE);
             }
-            lx = centerWorldX + 2 - chunkX * 16;
-            lz = centerWorldZ + i - chunkZ * 16;
+            lx = centerWorldX + rotX(2, i, rot) - chunkX * 16;
+            lz = centerWorldZ + rotZ(2, i, rot) - chunkZ * 16;
             if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
                 chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.COPPER_GRATE);
             }
         }
-        int cx = centerWorldX + 2 - chunkX * 16;
-        int cz = centerWorldZ + 2 - chunkZ * 16;
+        int cx = centerWorldX + rotX(2, 2, rot) - chunkX * 16;
+        int cz = centerWorldZ + rotZ(2, 2, rot) - chunkZ * 16;
         if (cx >= 0 && cx < 16 && cz >= 0 && cz < 16) {
             chunkData.setBlock(cx, AIR_MIN_Y, cz, Material.CUT_COPPER);
             chunkData.setBlock(cx, AIR_MIN_Y + 1, cz, Material.CUT_COPPER);
@@ -519,16 +557,16 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private void placeOldEquipment(ChunkData chunkData, int chunkX, int chunkZ,
-                                   int centerWorldX, int centerWorldZ) {
+                                   int centerWorldX, int centerWorldZ, int rot) {
         for (int i = -2; i <= 1; i++) {
-            int lx = centerWorldX + i - chunkX * 16;
-            int lz = centerWorldZ - 2 - chunkZ * 16;
+            int lx = centerWorldX + rotX(i, -2, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(i, -2, rot) - chunkZ * 16;
             if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
                 chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.WEATHERED_CUT_COPPER);
             }
         }
-        int lx = centerWorldX + 1 - chunkX * 16;
-        int lz = centerWorldZ + 1 - chunkZ * 16;
+        int lx = centerWorldX + rotX(1, 1, rot) - chunkX * 16;
+        int lz = centerWorldZ + rotZ(1, 1, rot) - chunkZ * 16;
         if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
             chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.OXIDIZED_CHISELED_COPPER);
             chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.OXIDIZED_COPPER);
@@ -543,25 +581,25 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 int lz = centerWorldZ + dz - chunkZ * 16;
                 if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
                     chunkData.setBlock(lx, FLOOR_HEIGHT - 1, lz, Material.COPPER_GRATE);
-                    chunkData.setBlock(lx, FLOOR_HEIGHT - 2, lz, Material.COPPER_BULB);
+                    chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.COPPER_BULB);
                 }
             }
         }
     }
 
     private void placeControlPanel(ChunkData chunkData, int chunkX, int chunkZ,
-                                   int centerWorldX, int centerWorldZ) {
+                                   int centerWorldX, int centerWorldZ, int rot) {
         for (int i = -2; i <= 1; i++) {
-            int lx = centerWorldX - 2 - chunkX * 16;
-            int lz = centerWorldZ + i - chunkZ * 16;
+            int lx = centerWorldX + rotX(-2, i, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(-2, i, rot) - chunkZ * 16;
             if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
                 chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.CHISELED_COPPER);
                 chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.EXPOSED_CHISELED_COPPER);
             }
         }
         for (int i = -1; i <= 0; i++) {
-            int lx = centerWorldX - 2 - chunkX * 16;
-            int lz = centerWorldZ + i - chunkZ * 16;
+            int lx = centerWorldX + rotX(-2, i, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(-2, i, rot) - chunkZ * 16;
             if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
                 chunkData.setBlock(lx, AIR_MIN_Y + 2, lz, Material.EXPOSED_COPPER_BULB);
             }
@@ -569,7 +607,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private void placePumpStation(ChunkData chunkData, int chunkX, int chunkZ,
-                                  int centerWorldX, int centerWorldZ, int ceilingY) {
+                                  int centerWorldX, int centerWorldZ, int ceilingY, int rot) {
         int lx = centerWorldX - chunkX * 16;
         int lz = centerWorldZ - chunkZ * 16;
         if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
@@ -577,6 +615,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 chunkData.setBlock(lx, y, lz, Material.COPPER_BLOCK);
             }
         }
+        // 3x3 grate ring (symmetric, no rotation needed)
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) continue;
@@ -587,16 +626,20 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+        // First pipe arm (rotated)
         for (int i = -3; i <= -1; i++) {
-            int px = centerWorldX + i - chunkX * 16;
-            if (px >= 0 && px < 16 && lz >= 0 && lz < 16) {
-                chunkData.setBlock(px, AIR_MIN_Y + 2, lz, Material.EXPOSED_COPPER);
+            int px = centerWorldX + rotX(i, 0, rot) - chunkX * 16;
+            int pz = centerWorldZ + rotZ(i, 0, rot) - chunkZ * 16;
+            if (px >= 0 && px < 16 && pz >= 0 && pz < 16) {
+                chunkData.setBlock(px, AIR_MIN_Y + 2, pz, Material.EXPOSED_COPPER);
             }
         }
+        // Second pipe arm (rotated, 90° offset from first)
         for (int i = 1; i <= 3; i++) {
-            int pz = centerWorldZ + i - chunkZ * 16;
-            if (lx >= 0 && lx < 16 && pz >= 0 && pz < 16) {
-                chunkData.setBlock(lx, AIR_MIN_Y + 2, pz, Material.EXPOSED_COPPER);
+            int px = centerWorldX + rotX(0, i, rot) - chunkX * 16;
+            int pz = centerWorldZ + rotZ(0, i, rot) - chunkZ * 16;
+            if (px >= 0 && px < 16 && pz >= 0 && pz < 16) {
+                chunkData.setBlock(px, AIR_MIN_Y + 2, pz, Material.EXPOSED_COPPER);
             }
         }
     }
@@ -639,6 +682,168 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 chunkData.setBlock(px, AIR_MIN_Y + 1, pz, Material.COPPER_TRAPDOOR);
             }
         }
+    }
+
+    // --- New machinery room types ---
+
+    private void placeOverflowSump(ChunkData chunkData, int chunkX, int chunkZ,
+                                   int centerWorldX, int centerWorldZ) {
+        // 3x3 waterlogged grate pool
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                int lx = centerWorldX + dx - chunkX * 16;
+                int lz = centerWorldZ + dz - chunkZ * 16;
+                if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                    BlockData wg = Material.COPPER_GRATE.createBlockData();
+                    ((Waterlogged) wg).setWaterlogged(true);
+                    chunkData.setBlock(lx, FLOOR_HEIGHT - 1, lz, wg);
+                }
+            }
+        }
+        // Raised copper rim
+        int[][] rim = {{-2,-1},{-2,0},{-2,1},{2,-1},{2,0},{2,1},{-1,-2},{0,-2},{1,-2},{-1,2},{0,2},{1,2}};
+        for (int[] r : rim) {
+            int lx = centerWorldX + r[0] - chunkX * 16;
+            int lz = centerWorldZ + r[1] - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.EXPOSED_CUT_COPPER);
+            }
+        }
+    }
+
+    private void placePressureManifold(ChunkData chunkData, int chunkX, int chunkZ,
+                                       int centerWorldX, int centerWorldZ, int rot) {
+        // Row of chiseled copper gauges on one wall with chains above
+        for (int i = -2; i <= 1; i++) {
+            int lx = centerWorldX + rotX(i, -2, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(i, -2, rot) - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.WEATHERED_COPPER);
+                chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.CHISELED_COPPER);
+                chunkData.setBlock(lx, AIR_MIN_Y + 2, lz, Material.COPPER_CHAIN);
+                chunkData.setBlock(lx, AIR_MIN_Y + 3, lz, Material.COPPER_CHAIN);
+            }
+        }
+        // Copper grate floor patch in front
+        for (int i = -1; i <= 0; i++) {
+            int lx = centerWorldX + rotX(i, -1, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(i, -1, rot) - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, FLOOR_HEIGHT - 1, lz, Material.COPPER_GRATE);
+            }
+        }
+    }
+
+    private void placeFiltrationArray(ChunkData chunkData, int chunkX, int chunkZ,
+                                      int centerWorldX, int centerWorldZ, int rot) {
+        // 3 chain columns hanging floor-to-ceiling
+        int[] positions = {-2, 0, 2};
+        for (int dx : positions) {
+            int lx = centerWorldX + rotX(dx, 0, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(dx, 0, rot) - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                for (int y = AIR_MIN_Y + 1; y < CEILING_NORMAL - 1; y++) {
+                    chunkData.setBlock(lx, y, lz, Material.COPPER_CHAIN);
+                }
+            }
+        }
+        // Copper grate floor strip between chains
+        for (int i = -2; i <= 2; i++) {
+            int lx = centerWorldX + rotX(i, 0, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(i, 0, rot) - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, FLOOR_HEIGHT - 1, lz, Material.COPPER_GRATE);
+            }
+        }
+        // Waterlogged grate at one end (intake)
+        int lx = centerWorldX + rotX(-2, 1, rot) - chunkX * 16;
+        int lz = centerWorldZ + rotZ(-2, 1, rot) - chunkZ * 16;
+        if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+            BlockData wg = Material.COPPER_GRATE.createBlockData();
+            ((Waterlogged) wg).setWaterlogged(true);
+            chunkData.setBlock(lx, FLOOR_HEIGHT - 1, lz, wg);
+        }
+    }
+
+    private void placeEmergencyShutoff(ChunkData chunkData, int chunkX, int chunkZ,
+                                       int centerWorldX, int centerWorldZ, int rot) {
+        // Wall of copper trapdoors (shut valves)
+        for (int i = -2; i <= 1; i++) {
+            int lx = centerWorldX + rotX(i, -2, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(i, -2, rot) - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.WEATHERED_COPPER);
+                chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.COPPER_TRAPDOOR);
+                chunkData.setBlock(lx, AIR_MIN_Y + 2, lz, Material.COPPER_TRAPDOOR);
+            }
+        }
+        // Central shutoff handle (lightning rod)
+        int lx = centerWorldX + rotX(0, -1, rot) - chunkX * 16;
+        int lz = centerWorldZ + rotZ(0, -1, rot) - chunkZ * 16;
+        if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+            chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.OXIDIZED_COPPER);
+            chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.LIGHTNING_ROD);
+        }
+    }
+
+    private void placeCondenserUnit(ChunkData chunkData, int chunkX, int chunkZ,
+                                    int centerWorldX, int centerWorldZ, int rot) {
+        // Two copper columns with grate caps
+        int[][] cols = {{-2, 0}, {2, 0}};
+        for (int[] col : cols) {
+            int lx = centerWorldX + rotX(col[0], col[1], rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(col[0], col[1], rot) - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, AIR_MIN_Y, lz, Material.EXPOSED_COPPER);
+                chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.EXPOSED_COPPER);
+                chunkData.setBlock(lx, AIR_MIN_Y + 2, lz, Material.EXPOSED_COPPER);
+                chunkData.setBlock(lx, AIR_MIN_Y + 3, lz, Material.OXIDIZED_COPPER_GRATE);
+            }
+        }
+        // Chain bridge between columns at top
+        for (int i = -1; i <= 1; i++) {
+            int lx = centerWorldX + rotX(i, 0, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(i, 0, rot) - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, AIR_MIN_Y + 3, lz, Material.COPPER_CHAIN);
+            }
+        }
+        // Waterlogged grate between columns at floor
+        int lx = centerWorldX - chunkX * 16;
+        int lz = centerWorldZ - chunkZ * 16;
+        if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+            BlockData wg = Material.COPPER_GRATE.createBlockData();
+            ((Waterlogged) wg).setWaterlogged(true);
+            chunkData.setBlock(lx, FLOOR_HEIGHT - 1, lz, wg);
+        }
+    }
+
+    private void placeInspectionPit(ChunkData chunkData, int chunkX, int chunkZ,
+                                    int centerWorldX, int centerWorldZ, int rot) {
+        // 1x4 trench dug 1 block into the floor
+        for (int i = -2; i <= 1; i++) {
+            int lx = centerWorldX + rotX(0, i, rot) - chunkX * 16;
+            int lz = centerWorldZ + rotZ(0, i, rot) - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, FLOOR_HEIGHT - 1, lz, Material.AIR);
+                chunkData.setBlock(lx, FLOOR_HEIGHT - 2, lz, Material.COPPER_GRATE);
+            }
+        }
+        // Cut copper walkway edges alongside the trench
+        for (int i = -2; i <= 1; i++) {
+            for (int side : new int[]{-1, 1}) {
+                int lx = centerWorldX + rotX(side, i, rot) - chunkX * 16;
+                int lz = centerWorldZ + rotZ(side, i, rot) - chunkZ * 16;
+                if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                    chunkData.setBlock(lx, FLOOR_HEIGHT - 1, lz, Material.CUT_COPPER);
+                }
+            }
+        }
+    }
+
+    @Override
+    public int getSpawnY() {
+        return AIR_MIN_Y;
     }
 
     @Override

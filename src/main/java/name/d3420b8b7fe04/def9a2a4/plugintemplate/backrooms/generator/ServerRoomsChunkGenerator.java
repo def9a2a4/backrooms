@@ -8,6 +8,7 @@ import org.bukkit.World;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.type.Switch;
 import org.bukkit.generator.WorldInfo;
 
 import java.util.Random;
@@ -29,7 +30,7 @@ public class ServerRoomsChunkGenerator extends BackroomsChunkGenerator {
     private static final int FLOOR_HEIGHT = 4;
     private static final int CEILING_Y = 24;        // normal ceiling
     private static final int TALL_CEILING_Y = 32;    // tall rooms
-    private static final int CEILING_MAX_Y = 36;     // top of ceiling slab
+    private static final int CEILING_MAX_Y = 48;     // top of ceiling slab
     private static final int MID_FLOOR_Y = 14;       // second story floor for short rooms
     private static final int INTERIOR_SIZE = 20;      // CELL_SIZE - 2*WALL_THICK
 
@@ -67,6 +68,13 @@ public class ServerRoomsChunkGenerator extends BackroomsChunkGenerator {
         Material.REDSTONE_TORCH,
         Material.REDSTONE_LAMP,
         Material.TARGET,
+        Material.STONE_BUTTON,
+        Material.LEVER,
+        Material.TRIPWIRE_HOOK,
+        Material.OBSERVER,
+        Material.NOTE_BLOCK,
+        Material.DAYLIGHT_DETECTOR,
+        Material.REDSTONE_BLOCK,
     };
 
     @Override
@@ -163,6 +171,8 @@ public class ServerRoomsChunkGenerator extends BackroomsChunkGenerator {
                         int roomType = getRoomType(cellX, cellZ, seed, roomClass);
                         placeRoomStructure(chunkData, x, z, localX, localZ, cellX, cellZ, seed, ceilingY, roomType);
                     }
+
+
                 }
 
                 // Ceiling slab
@@ -187,6 +197,10 @@ public class ServerRoomsChunkGenerator extends BackroomsChunkGenerator {
                 placeRedstoneChain(chunkData, x, z, worldX, worldZ, seed);
             }
         }
+
+        // Bedrock boundaries: 2-block floor, 10-block ceiling (onlySolid for ceiling)
+        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 2, Material.BEDROCK, false);
+        applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, true);
     }
 
     // --- Cell helpers ---
@@ -681,13 +695,34 @@ public class ServerRoomsChunkGenerator extends BackroomsChunkGenerator {
             int compIndex = Math.floorMod(posHash, REDSTONE_COMPONENTS.length);
             Material component = REDSTONE_COMPONENTS[compIndex];
 
-            if (component == Material.REDSTONE_LAMP || component == Material.TARGET) {
+            if (component == Material.REDSTONE_LAMP || component == Material.TARGET
+                    || component == Material.REDSTONE_BLOCK) {
                 // Full-block components replace the floor
                 chunkData.setBlock(x, FLOOR_HEIGHT, z, component);
-            } else if (component == Material.REDSTONE_TORCH) {
-                chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, Material.REDSTONE_TORCH);
+            } else if (component == Material.REDSTONE_TORCH
+                    || component == Material.NOTE_BLOCK
+                    || component == Material.DAYLIGHT_DETECTOR) {
+                // Simple blocks sitting on the floor surface
+                chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, component);
+            } else if (component == Material.STONE_BUTTON || component == Material.LEVER) {
+                // Random face (floor/wall/ceiling) and random horizontal facing
+                long faceHash = seed ^ ((long) worldX * 8675309L + (long) worldZ * 1234567L + 99L);
+                Switch.Face[] faces = {Switch.Face.FLOOR, Switch.Face.WALL, Switch.Face.CEILING};
+                Switch.Face face = faces[(int) Math.floorMod(faceHash, 3)];
+                BlockFace[] hFaces = {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
+                BlockFace hFacing = hFaces[(int) Math.floorMod(faceHash >> 2, 4)];
+                try {
+                    org.bukkit.block.data.BlockData bd = Bukkit.createBlockData(component);
+                    if (bd instanceof Switch sw) {
+                        sw.setFace(face);
+                        sw.setFacing(hFacing);
+                    }
+                    chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, bd);
+                } catch (Exception e) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, component);
+                }
             } else {
-                // Directional components (repeater, comparator)
+                // Directional components (repeater, comparator, observer)
                 BlockFace facing;
                 if (onNSChain && !onEWChain) {
                     facing = Math.floorMod(worldZ, 2) == 0 ? BlockFace.NORTH : BlockFace.SOUTH;
@@ -710,6 +745,11 @@ public class ServerRoomsChunkGenerator extends BackroomsChunkGenerator {
             // Redstone dust
             chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, Material.REDSTONE_WIRE);
         }
+    }
+
+    @Override
+    public int getSpawnY() {
+        return FLOOR_HEIGHT + 2;
     }
 
     @Override

@@ -25,7 +25,7 @@ public class Level6ChunkGenerator extends BackroomsChunkGenerator {
     private static final int FLOOR_HEIGHT = 8;
     private static final int AIR_MIN_Y = 8;
     private static final int CEILING_Y = 16;
-    private static final int CEILING_MAX_Y = 22;
+    private static final int CEILING_MAX_Y = 28;
 
     // 16x16 rooms separated by 2-wide nether brick corridors = 18-block period
     // Approximate with chunk alignment: each chunk is one room
@@ -54,6 +54,10 @@ public class Level6ChunkGenerator extends BackroomsChunkGenerator {
             // Exhibit room
             generateRoom(chunkData, chunkRng, seed, chunkX, chunkZ);
         }
+
+        // Bedrock boundaries: 6-block floor, 10-block ceiling (onlySolid for ceiling)
+        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 6, Material.BEDROCK, false);
+        applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, true);
     }
 
     private void generateCorridor(ChunkData chunkData, Random rng, boolean isCorridorX, boolean isCorridorZ) {
@@ -242,6 +246,11 @@ public class Level6ChunkGenerator extends BackroomsChunkGenerator {
         chunkData.setBlock(9, AIR_MIN_Y, 5, Material.FURNACE);
         chunkData.setBlock(5, AIR_MIN_Y, 9, Material.CHEST);
         chunkData.setBlock(9, AIR_MIN_Y, 9, Material.BOOKSHELF);
+    }
+
+    @Override
+    public int getSpawnY() {
+        return AIR_MIN_Y;
     }
 
     @Override

@@ -50,7 +50,8 @@ public class AmbientSoundEvent extends AbstractTimedEvent {
                     // Try enum-style name: normalize both sides to underscores and compare
                     String normalized = lower.replace('.', '_');
                     for (Sound s : Registry.SOUNDS) {
-                        if (s.key().value().replace('.', '_').equals(normalized)) {
+                        NamespacedKey sk = Registry.SOUNDS.getKey(s);
+                        if (sk != null && sk.getKey().replace('.', '_').equals(normalized)) {
                             sound = s;
                             break;
                         }

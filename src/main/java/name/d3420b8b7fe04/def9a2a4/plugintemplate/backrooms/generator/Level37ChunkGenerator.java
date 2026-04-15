@@ -25,7 +25,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private static final int FLOOR_HEIGHT = 8;
     private static final int CEILING_Y = 20;        // normal ceiling
     private static final int TALL_CEILING_Y = 28;    // tall rooms
-    private static final int CEILING_MAX_Y = 34;     // universal ceiling slab top (all room types)
+    private static final int CEILING_MAX_Y = 44;     // universal ceiling slab top (all room types)
+    private static final int SKYLIGHT_MAX_Y = 34;   // skylight clears up to here (below barrier zone)
     private static final int MID_FLOOR_Y = 14;       // second story floor for short rooms
 
     // Room height classes
@@ -74,7 +75,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
     private static Material lightBlock(Material[] palette) {
         if (palette[PAL_WALL] == Material.DARK_PRISMARINE) return Material.SEA_LANTERN;
-        if (palette[PAL_WALL] == Material.SMOOTH_STONE || palette[PAL_WALL] == Material.STONE)
+        if (palette[PAL_WALL] == Material.SMOOTH_STONE || palette[PAL_WALL] == Material.STONE
+                || palette[PAL_WALL] == Material.QUARTZ_BLOCK || palette[PAL_WALL] == Material.WHITE_CONCRETE)
             return Material.PEARLESCENT_FROGLIGHT;
         return Material.OCHRE_FROGLIGHT;
     }
@@ -204,7 +206,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                         && localZ >= 8 && localZ < 16;
 
                 if (inSkylightZone && !isWall) {
-                    for (int y = ceilingY; y < CEILING_MAX_Y; y++) {
+                    for (int y = ceilingY; y < SKYLIGHT_MAX_Y; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);
                     }
                 } else {
@@ -258,6 +260,10 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+
+        // Bedrock floor (6 blocks), barrier ceiling (10 blocks including over skylights)
+        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 6, Material.BEDROCK, false);
+        applyBoundaryLayer(chunkData, SKYLIGHT_MAX_Y, CEILING_MAX_Y, Material.BARRIER, false);
     }
 
     // --- Symmetric distance helpers ---
@@ -1082,6 +1088,11 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 ? ROOM_TYPE_NAMES[roomType] : "Unknown(" + roomType + ")";
 
         return "§e" + className + " §7| §b" + paletteName + " §7| §a" + typeName;
+    }
+
+    @Override
+    public int getSpawnY() {
+        return FLOOR_HEIGHT + 2;
     }
 
     @Override
