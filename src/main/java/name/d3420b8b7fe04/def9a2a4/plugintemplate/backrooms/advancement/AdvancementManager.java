@@ -1,0 +1,131 @@
+package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement;
+
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.advancement.Advancement;
+import org.bukkit.advancement.AdvancementProgress;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class AdvancementManager {
+
+    private static final String NAMESPACE = "backrooms";
+    private static final String CRITERION = "impossible";
+
+    private final JavaPlugin plugin;
+
+    private final NamespacedKey rootKey = key("root");
+    private final NamespacedKey escapeKey = key("escape/overworld");
+    private final NamespacedKey allLevelsKey = key("escape/all_levels");
+
+    private static final Set<String> ALL_LEVEL_IDS = Set.of(
+            "level_0", "level_1", "level_2", "level_3", "level_4",
+            "level_5", "level_7", "level_37", "level_64637", "level_94"
+    );
+
+    private final Map<String, NamespacedKey> entryKeys = Map.of(
+            "suffocation_noclip", key("entry/suffocation"),
+            "void_fall", key("entry/void"),
+            "bed_anomaly", key("entry/bed"),
+            "aether_portal", key("entry/aether"),
+            "herobrine_shrine", key("entry/shrine")
+    );
+
+    private final Map<String, NamespacedKey> levelKeys = Map.ofEntries(
+            Map.entry("level_0", key("level/level_0")),
+            Map.entry("level_1", key("level/level_1")),
+            Map.entry("level_2", key("level/level_2")),
+            Map.entry("level_3", key("level/level_3")),
+            Map.entry("level_4", key("level/level_4")),
+            Map.entry("level_5", key("level/level_5")),
+            Map.entry("level_7", key("level/level_7")),
+            Map.entry("level_37", key("level/level_37")),
+            Map.entry("level_64637", key("level/level_64637")),
+            Map.entry("level_94", key("level/level_94"))
+    );
+
+    private final Map<String, List<NamespacedKey>> hintKeys = Map.ofEntries(
+            Map.entry("level_0", List.of(key("hint/hint_0"))),
+            Map.entry("level_1", List.of(key("hint/hint_1_down"), key("hint/hint_1_up"))),
+            Map.entry("level_2", List.of(key("hint/hint_2"))),
+            Map.entry("level_3", List.of(key("hint/hint_3"))),
+            Map.entry("level_4", List.of(key("hint/hint_4"))),
+            Map.entry("level_5", List.of(key("hint/hint_5"))),
+            Map.entry("level_7", List.of(key("hint/hint_7"))),
+            Map.entry("level_37", List.of(key("hint/hint_37"))),
+            Map.entry("level_64637", List.of(key("hint/hint_64637_books"), key("hint/hint_64637_fall"))),
+            Map.entry("level_94", List.of(key("hint/hint_94")))
+    );
+
+    public AdvancementManager(JavaPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    public void grantEntry(Player player, String triggerId) {
+        grant(player, rootKey);
+        NamespacedKey entryKey = entryKeys.get(triggerId);
+        if (entryKey != null) {
+            grant(player, entryKey);
+        }
+    }
+
+    public void grantLevelDiscovery(Player player, String levelId) {
+        grant(player, rootKey);
+        NamespacedKey discoveryKey = levelKeys.get(levelId);
+        if (discoveryKey != null) {
+            grant(player, discoveryKey);
+        }
+
+        // Schedule hints after a short delay so toasts don't overlap
+        List<NamespacedKey> hints = hintKeys.get(levelId);
+        if (hints != null) {
+            int delay = 60; // 3 seconds
+            for (NamespacedKey hintKey : hints) {
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (player.isOnline()) {
+                        grant(player, hintKey);
+                    }
+                }, delay);
+                delay += 40; // stagger multiple hints
+            }
+        }
+
+        checkAllLevelsVisited(player);
+    }
+
+    public void grantEscape(Player player) {
+        grant(player, escapeKey);
+    }
+
+    private void checkAllLevelsVisited(Player player) {
+        for (String levelId : ALL_LEVEL_IDS) {
+            NamespacedKey levelKey = levelKeys.get(levelId);
+            if (levelKey == null) return;
+            Advancement adv = Bukkit.getAdvancement(levelKey);
+            if (adv == null) return;
+            if (!player.getAdvancementProgress(adv).isDone()) return;
+        }
+        grant(player, allLevelsKey);
+    }
+
+    private void grant(Player player, NamespacedKey key) {
+        Advancement advancement = Bukkit.getAdvancement(key);
+        if (advancement == null) {
+            plugin.getLogger().warning("Advancement not found: " + key
+                    + " — is the backrooms datapack loaded?");
+            return;
+        }
+        AdvancementProgress progress = player.getAdvancementProgress(advancement);
+        if (!progress.isDone()) {
+            progress.awardCriteria(CRITERION);
+        }
+    }
+
+    private static NamespacedKey key(String path) {
+        return new NamespacedKey(NAMESPACE, path);
+    }
+}

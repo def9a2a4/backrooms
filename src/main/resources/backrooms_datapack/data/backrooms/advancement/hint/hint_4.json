@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_4",
+  "display": {
+    "icon": {
+      "id": "minecraft:leather_boots"
+    },
+    "title": {"text": "Walking Forward Only Takes You Back", "color": "dark_green"},
+    "description": {"text": "One thousand steps. The same room.", "color": "gray", "italic": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

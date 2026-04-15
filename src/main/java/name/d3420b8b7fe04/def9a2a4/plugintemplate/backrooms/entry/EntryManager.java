@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
@@ -22,15 +23,18 @@ public class EntryManager implements Listener {
     private final LevelRegistry levelRegistry;
     private final PlayerStateManager playerStateManager;
     private final TransitionManager transitionManager;
+    private final AdvancementManager advancementManager;
 
     public EntryManager(JavaPlugin plugin, EntryTriggerRegistry triggerRegistry,
                         LevelRegistry levelRegistry, PlayerStateManager playerStateManager,
-                        TransitionManager transitionManager) {
+                        TransitionManager transitionManager,
+                        AdvancementManager advancementManager) {
         this.plugin = plugin;
         this.triggerRegistry = triggerRegistry;
         this.levelRegistry = levelRegistry;
         this.playerStateManager = playerStateManager;
         this.transitionManager = transitionManager;
+        this.advancementManager = advancementManager;
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -69,6 +73,8 @@ public class EntryManager implements Listener {
                 state.setReturnLocation(player.getLocation());
                 trigger.playEntrySequence(player, () -> {
                     transitionManager.enterBackrooms(player, state, targetLevel);
+                    advancementManager.grantEntry(player, trigger.getId());
+                    advancementManager.grantLevelDiscovery(player, targetLevel);
                 });
                 break;
             }

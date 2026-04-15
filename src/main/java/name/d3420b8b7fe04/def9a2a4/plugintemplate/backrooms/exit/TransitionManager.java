@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.BackroomsChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLevel;
@@ -24,14 +25,17 @@ public class TransitionManager {
     private final JavaPlugin plugin;
     private final LevelRegistry levelRegistry;
     private final PlayerStateManager playerStateManager;
+    private final AdvancementManager advancementManager;
     private final Set<UUID> transitioning = new HashSet<>();
     private BukkitTask tickTask;
 
     public TransitionManager(JavaPlugin plugin, LevelRegistry levelRegistry,
-                             PlayerStateManager playerStateManager) {
+                             PlayerStateManager playerStateManager,
+                             AdvancementManager advancementManager) {
         this.plugin = plugin;
         this.levelRegistry = levelRegistry;
         this.playerStateManager = playerStateManager;
+        this.advancementManager = advancementManager;
     }
 
     public void start() {
@@ -74,6 +78,7 @@ public class TransitionManager {
         if ("overworld".equals(targetId)) {
             exit.playTransitionSequence(player, () -> {
                 try {
+                    advancementManager.grantEscape(player);
                     returnToOverworld(player, state, currentLevel);
                 } finally {
                     transitioning.remove(player.getUniqueId());
@@ -103,6 +108,7 @@ public class TransitionManager {
                 player.teleport(spawn);
                 state.setCurrentLevelId(targetId);
                 targetLevel.onPlayerEnter(player, state);
+                advancementManager.grantLevelDiscovery(player, targetId);
             } finally {
                 transitioning.remove(player.getUniqueId());
             }

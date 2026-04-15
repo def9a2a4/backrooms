@@ -1,0 +1,138 @@
+# ─── The Lobby — Book Text Configuration ───
+# All text content for books found in chiseled bookshelves on Level 0.
+# Server admins can freely add, remove, or edit entries here.
+
+# Random book titles — one is picked at random for each generated book
+titles:
+  - "Note #7"
+  - "I found this under the carpet"
+  - "Don't read this"
+  - "Memo: RE: Lights"
+  - "Employee Handbook (Rev. 14)"
+  - "Notice of Termination"
+  - "Why are the walls yellow?"
+  - "Meeting Notes (Undated)"
+  - "Incident Report #???"
+  - "To Whoever Finds This"
+  - "My Last Entry"
+  - "The Hum Won't Stop"
+  - "Floor Plan (Outdated)"
+  - "List of Names"
+  - "Instructions (Illegible)"
+  - "Someone Was Here Before"
+  - "Maintenance Request #0000"
+  - "Memo: DO NOT REPLY"
+  - "Room Assignment — VOID"
+  - "Overtime Policy (Revised)"
+  - "Fire Escape Route"
+  - "Lost & Found Log"
+  - "I Know the Way Out"
+  - "Ceiling Tile #413"
+  - "Requisition Form: Carpet"
+  - "RE: RE: RE: RE: Lights"
+  - "The Yellow Study"
+  - "Complaint Filed: Buzzing"
+  - "Who Left This Here?"
+  - "Note to Self"
+
+# Random authors — one is picked at random for each generated book
+authors:
+  - "Unknown"
+  - "Employee #2441"
+  - "Maintenance"
+  - "HR Department"
+  - "[REDACTED]"
+  - "The Previous Occupant"
+  - "M.E.G. Operative"
+  - "Night Shift"
+  - "Janitorial Staff"
+  - "You"
+
+# Random single pages — 1-3 are picked per book when not using a multi-page template
+pages:
+  - "The fluorescent lights buzz overhead. I can't remember how long I've been walking."
+  - "I thought I found a staircase today. It just led back to the same hallway."
+  - "If you are reading this, do not trust the walls. They move when you aren't looking."
+  - "Day ???: The carpet is damp. It shouldn't be damp. There's nothing above us."
+  - "I counted 847 identical rooms before I stopped counting."
+  - "The lights flicker every 23 seconds. I timed it. Then they changed to 17."
+  - "There's a smell like old almonds and mildew. It's getting stronger."
+  - "I found footprints in the dust. They were my own."
+  - "Someone left a note: 'GO DOWN.' But there is no down."
+  - "The hum is a C#. It never changes. I think it's coming from the floor."
+  - "I woke up at my desk. I don't have a desk. I don't work here."
+  - "This book was already open when I found it. It was open to this page."
+  - "The wallpaper peels in strips. Underneath is more wallpaper. Same pattern."
+  - "I left marks on the wall to track where I'd been. They were already there."
+  - "There's a room with a chair facing the corner. The chair is warm."
+  - "I can hear someone typing. There are no computers here."
+  - "Every door opens to the same room. I've checked forty-seven times."
+  - "The carpet squelches underfoot near the east wing. There is no east wing."
+  - "I found a phone on the wall. It rings sometimes. No one is on the other end."
+  - "The lights went out for six seconds. When they came back, the hallway was longer."
+  - "There's a water stain on the ceiling shaped like a face. It wasn't there yesterday."
+  - "I hear the hum in my teeth now."
+  - "Memo: All employees must report to Floor 2 by end of day. There is no Floor 2."
+  - "The fire exit leads to another fire exit. That one leads back here."
+  - "I've been here three days. Or three weeks. The lights never change."
+  - "Someone wrote 'HELP' on the wall in ballpoint pen. The ink is still wet."
+  - "I keep finding the same book. This book. On every shelf."
+  - "The vending machine hums louder than the lights. It has no plug."
+  - "I tried sleeping in one of the offices. I woke up in a different one."
+  - "My watch stopped at 3:47. Every clock I find reads 3:47."
+  - "There's a window on the third floor. It shows another hallway."
+  - "I found a photograph of this room. It was taken from where I'm standing."
+  - "The elevator only has one button. It doesn't move when I press it."
+  - "I dropped a pen and heard it hit the floor twice."
+  - "Someone has been watering the plastic plants."
+  - "The exit signs all point inward."
+  - "I found another copy of this note in my own handwriting. I didn't write it."
+  - "The ceiling tiles are numbered. They go past ten thousand."
+  - "There is a room full of filing cabinets. Every file is blank."
+  - "I can hear my footsteps coming from the floor above. There is no floor above."
+
+# Multi-page book templates — curated books with a fixed title, author, and ordered pages.
+# ~20% of generated books use one of these templates instead of random assembly.
+multi_page_chance: 0.2
+
+multi_page_books:
+  - title: "Employee Handbook (Rev. 14)"
+    author: "Management"
+    pages:
+      - "Welcome to [REDACTED] Corp. You have been assigned to Sub-Level 0. Please report to your designated workstation."
+      - "Section 2.1: In the event of a spatial anomaly, remain at your desk. Do not investigate. Do not alert others."
+      - "Section 4.7: Overtime is mandatory. Clocking out requires written approval from your floor supervisor. If your floor supervisor cannot be located, continue working."
+      - "Appendix C: The following floors do not exist and should not be sought: Floor 2, Sub-Level -1, The Yellow Wing. Any employee claiming to have visited these areas will be reassigned."
+
+  - title: "Explorer's Journal"
+    author: "M.E.G. Operative"
+    pages:
+      - "Entry 1: Dropped through the floor of my apartment. Carpet. Yellow wallpaper. Fluorescent lights. Smells like a wet office building."
+      - "Entry 2: Been walking for what feels like hours. Every hallway looks identical. Found a bookshelf — most of the books are empty inside."
+      - "Entry 3: Heard footsteps behind me for the last twenty minutes. When I stop, they stop. When I turn around, no one."
+      - "Entry 4: Found a door marked EXIT. It opened onto another identical hallway. I am beginning to think the signs are lying."
+      - "Entry 5: I am leaving this journal on a shelf. If you find it, keep moving. Do not stay in one place. The lights know when you stop."
+
+  - title: "Maintenance Log — Sub-Level 0"
+    author: "Janitorial Staff"
+    pages:
+      - "03/12: Replaced fluorescent tube in corridor 7-B. Tube was already new. Requisition form shows no prior replacement."
+      - "03/15: Carpet in east wing (?) is saturated. Source unknown. No pipes in ceiling. Submitted work order."
+      - "03/19: Work order returned. 'East wing does not exist.' Went back to check. Hallway is gone."
+      - "03/22: Lights in sector 4 cycling on their own. Electrician says wiring looks fine. Wiring looks like it was never installed."
+      - "03/??: I can't find the supply closet. I can't find the exit. I have been cleaning the same hallway for [illegible]"
+
+  - title: "The Rules"
+    author: "[REDACTED]"
+    pages:
+      - "1. Do not run.\n2. Do not look at the ceiling for too long.\n3. If you hear someone call your name, do not answer.\n4. The lights will flicker. Count to seven. If they do not come back, move."
+      - "5. Do not open any door that is warm to the touch.\n6. The hum is normal. If it stops, it is not normal.\n7. You will find notes. Not all of them were written by humans.\n8. If you find a room with a desk, do not sit down."
+      - "9. Do not count the rooms.\n10. If Rule 9 has been broken, stop counting immediately.\n11. You are not alone, but you should act as though you are.\n12. There is no Rule 12."
+
+  - title: "A Note for You"
+    author: "The Previous Occupant"
+    pages:
+      - "I know you just arrived. I know because I was where you are, standing exactly where you are standing, reading exactly what you are reading."
+      - "You are going to try to find the exit. Everyone does. You will follow the hallways and open every door and check every sign. You will not find it."
+      - "Not because there is no exit. There is. But you will not find it by looking. You find it by forgetting you were looking."
+      - "I am leaving this book for you because someone left one for me. When you are ready to leave, put it back on the shelf. Someone else will need it."

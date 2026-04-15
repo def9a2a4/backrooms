@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:prismarine"
+    },
+    "title": {"text": "The Poolrooms", "color": "aqua"},
+    "description": {"text": "Chlorine and nostalgia for a place you never visited.", "color": "gray", "italic": true},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

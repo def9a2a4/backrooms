@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_1",
+  "display": {
+    "icon": {
+      "id": "minecraft:feather"
+    },
+    "title": {"text": "Above the Ceiling, Another Sky", "color": "white"},
+    "description": {"text": "Climb. The clouds are closer than the exit.", "color": "gray", "italic": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

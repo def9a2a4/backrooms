@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:smooth_stone"
+    },
+    "title": {"text": "No Room to Breathe", "color": "gray"},
+    "description": {"text": "The walls closed in. Now they won't stop.", "color": "gray", "italic": true},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

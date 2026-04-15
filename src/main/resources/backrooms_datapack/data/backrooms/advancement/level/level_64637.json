@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:chiseled_bookshelf"
+    },
+    "title": {"text": "The Library", "color": "dark_purple"},
+    "description": {"text": "Every book is wrong. Every book is about you.", "color": "gray", "italic": true},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

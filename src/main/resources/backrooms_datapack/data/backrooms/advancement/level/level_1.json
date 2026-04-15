@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:verdant_froglight"
+    },
+    "title": {"text": "The Habitable Zone", "color": "green"},
+    "description": {"text": "Almost normal. Almost.", "color": "gray", "italic": true},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

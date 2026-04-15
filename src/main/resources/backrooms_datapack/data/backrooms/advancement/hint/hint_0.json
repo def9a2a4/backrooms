@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_0",
+  "display": {
+    "icon": {
+      "id": "minecraft:written_book"
+    },
+    "title": {"text": "Sixteen Voices Speak as One", "color": "gold"},
+    "description": {"text": "The authors left breadcrumbs. Collect their words.", "color": "gray", "italic": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

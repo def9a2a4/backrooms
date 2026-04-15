@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command.BackroomsCommand;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityRegistry;
@@ -68,6 +69,7 @@ public class BackroomsPlugin {
     private final PlayerStateManager playerStateManager;
     private final EventScheduler eventScheduler;
     private final EntitySpawner entitySpawner;
+    private final AdvancementManager advancementManager;
     private final TransitionManager transitionManager;
     private final EntryManager entryManager;
 
@@ -86,9 +88,10 @@ public class BackroomsPlugin {
         this.playerStateManager = new PlayerStateManager(plugin);
         this.eventScheduler = new EventScheduler(plugin, levelRegistry, eventRegistry, playerStateManager);
         this.entitySpawner = new EntitySpawner(plugin, levelRegistry, entityRegistry, playerStateManager);
-        this.transitionManager = new TransitionManager(plugin, levelRegistry, playerStateManager);
+        this.advancementManager = new AdvancementManager(plugin);
+        this.transitionManager = new TransitionManager(plugin, levelRegistry, playerStateManager, advancementManager);
         this.entryManager = new EntryManager(plugin, entryTriggerRegistry, levelRegistry,
-                playerStateManager, transitionManager);
+                playerStateManager, transitionManager, advancementManager);
     }
 
     public void enable() {

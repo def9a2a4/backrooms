@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_64637",
+  "display": {
+    "icon": {
+      "id": "minecraft:elytra"
+    },
+    "title": {"text": "Some Falls Have No Landing", "color": "dark_purple"},
+    "description": {"text": "Two hundred blocks of nothing. Then everything.", "color": "gray", "italic": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

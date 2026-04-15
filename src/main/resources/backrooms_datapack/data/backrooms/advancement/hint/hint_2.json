@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_2",
+  "display": {
+    "icon": {
+      "id": "minecraft:lever"
+    },
+    "title": {"text": "Copper Answers to the Lever", "color": "gold"},
+    "description": {"text": "The mechanism is simple. Finding it is not.", "color": "gray", "italic": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

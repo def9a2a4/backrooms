@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_3",
+  "display": {
+    "icon": {
+      "id": "minecraft:redstone"
+    },
+    "title": {"text": "Five Hearts Beat in Unison", "color": "red"},
+    "description": {"text": "Power the minds. Stay close. The doors are random.", "color": "gray", "italic": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

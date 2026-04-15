@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_64637",
+  "display": {
+    "icon": {
+      "id": "minecraft:written_book"
+    },
+    "title": {"text": "Sixteen Authors Wrote Your Exit", "color": "dark_purple"},
+    "description": {"text": "Gather their works. The overworld awaits the well-read.", "color": "gray", "italic": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

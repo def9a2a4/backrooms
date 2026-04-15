@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_1",
+  "display": {
+    "icon": {
+      "id": "minecraft:water_bucket"
+    },
+    "title": {"text": "The Water Remembers", "color": "blue"},
+    "description": {"text": "Submerge. Deeper than you think is safe.", "color": "gray", "italic": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

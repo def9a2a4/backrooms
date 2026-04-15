@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_5",
+  "display": {
+    "icon": {
+      "id": "minecraft:jukebox"
+    },
+    "title": {"text": "The Record Skips. There Is No Needle.", "color": "dark_gray"},
+    "description": {"text": "No one has found the way out. Yet.", "color": "gray", "italic": true},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
