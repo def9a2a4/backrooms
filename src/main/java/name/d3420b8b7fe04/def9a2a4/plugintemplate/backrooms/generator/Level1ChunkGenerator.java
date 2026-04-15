@@ -48,7 +48,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     // Zone noise
     private static final double CORRIDOR_ZONE_SCALE = 0.01; // low freq = larger zones
     private static final double GARDEN_ZONE_SCALE = 0.004;  // lower = larger patches
-    private static final double MIN_GARDEN_DISTANCE = 200.0; // blocks from origin
+    private static final double MIN_GARDEN_DISTANCE = 100.0; // blocks from origin
 
     // Corridor constants
     private static final int CORRIDOR_PERIOD = 7;
@@ -91,12 +91,12 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     // ── Zone selection ──────────────────────────────────────────────────
 
     private Zone getZone(long seed, int worldX, int worldZ) {
-        // Garden: large rare blobs (~1%), suppressed near origin
+        // Garden: large rare blobs (~2%), suppressed near origin
         double distSq = (double) worldX * worldX + (double) worldZ * worldZ;
         if (distSq >= MIN_GARDEN_DISTANCE * MIN_GARDEN_DISTANCE) {
             double gardenNoise = SimplexNoise.noise2(seed + 50,
                     worldX * GARDEN_ZONE_SCALE, worldZ * GARDEN_ZONE_SCALE);
-            if (gardenNoise > 0.81) return Zone.GARDEN;
+            if (gardenNoise > 0.77) return Zone.GARDEN;
         }
 
         // Corridor: large connected zones (~19%)

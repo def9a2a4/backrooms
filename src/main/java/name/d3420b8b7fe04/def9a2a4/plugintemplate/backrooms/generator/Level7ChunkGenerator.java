@@ -130,6 +130,9 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
                     // ~5% chance: completely random block with randomized block data
                     if (chunkRng.nextDouble() < 0.05) {
                         Material randMat = ALL_BLOCKS[chunkRng.nextInt(ALL_BLOCKS.length)];
+                        if (randMat == Material.BEACON && chunkRng.nextDouble() < 0.9) {
+                            randMat = Material.GLASS;
+                        }
                         try {
                             BlockData bd = Bukkit.createBlockData(randMat);
                             if (bd instanceof Directional dir) {

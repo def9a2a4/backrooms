@@ -1025,22 +1025,74 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             return;
         }
 
-        if (poolType == POOL_SHALLOW) {
-            chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
-            chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
-        } else {
-            // Symmetric stepped entry
-            int distFromPoolEdge = Math.min(
-                    Math.min(localX - interiorStart, interiorEnd - 1 - localX),
-                    Math.min(localZ - interiorStart, interiorEnd - 1 - localZ));
-            if (distFromPoolEdge <= 1) {
+        int ix = localX - WALL_THICK;
+        int iz = localZ - WALL_THICK;
+        int distFromPoolEdge = Math.min(
+                Math.min(localX - interiorStart, interiorEnd - 1 - localX),
+                Math.min(localZ - interiorStart, interiorEnd - 1 - localZ));
+
+        switch (poolType) {
+            case POOL_SHALLOW -> {
                 chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
                 chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
-            } else {
-                chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
-                chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, Material.WATER);
-                chunkData.setBlock(x, FLOOR_HEIGHT - 2, z, Material.WATER);
-                chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette.floor());
+            }
+            case POOL_DEEP -> {
+                if (distFromPoolEdge <= 1) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
+                } else {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 2, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette.floor());
+                }
+            }
+            case POOL_CHANNEL -> {
+                // 4-wide centered water strip along Z axis
+                boolean inStrip = symmetricMatch(ix, 0) || symmetricMatch(ix, 1);
+                if (inStrip) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
+                }
+            }
+            case POOL_MOAT -> {
+                // 3-block-wide perimeter water ring, dry center island
+                int px = localX - interiorStart;
+                int pz = localZ - interiorStart;
+                int poolZoneSize = interiorEnd - interiorStart; // 16
+                int poolEdgeDist = Math.min(Math.min(px, poolZoneSize - 1 - px),
+                                            Math.min(pz, poolZoneSize - 1 - pz));
+                if (poolEdgeDist < 3) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
+                }
+            }
+            case POOL_HALF -> {
+                // One half wet, one dry — axis chosen per cell
+                int halfAxis = (int) Math.floorMod(
+                        seed ^ ((long) masterCellX * 159265L + (long) masterCellZ * 358979L), 2);
+                boolean inWetHalf = halfAxis == 0 ? ix < INTERIOR_SIZE / 2 : iz < INTERIOR_SIZE / 2;
+                if (inWetHalf) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
+                }
+            }
+            case POOL_ABYSS -> {
+                // Extra-deep stepped pool (6 blocks at center)
+                if (distFromPoolEdge <= 1) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
+                } else if (distFromPoolEdge == 2) {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 2; y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
+                    }
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 2, z, palette.floor());
+                } else {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 6; y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
+                    }
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 6, z, palette.floor());
+                }
             }
         }
     }
@@ -1059,6 +1111,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     };
 
     private static final String[] CLASS_NAMES = { "SHORT", "NORMAL", "TALL" };
+    private static final String[] SKYLIGHT_TYPE_NAMES = { "None", "Standard", "Pinhole", "Cross", "Bars" };
+    private static final String[] POOL_TYPE_NAMES = { "Dry", "Shallow", "Deep", "Channel", "Moat", "Half", "Abyss" };
 
     public static String getDebugInfo(int worldX, int worldZ, long seed) {
         int cellX = Math.floorDiv(worldX, CELL_SIZE);
@@ -1128,12 +1182,38 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 break;
         }
 
+        // Skylight type (same RNG logic as getSkylightType)
+        Random skyRng = new Random(seed ^ ((long) cellX * 982451653L + (long) cellZ * 472882049L));
+        skyRng.nextInt(); skyRng.nextInt();
+        int skyRoll = skyRng.nextInt(100);
+        int skylightType;
+        if (skyRoll < 80) skylightType = SKY_NONE;
+        else if (skyRoll < 87) skylightType = SKY_STANDARD;
+        else if (skyRoll < 91) skylightType = SKY_PINHOLE;
+        else if (skyRoll < 95) skylightType = SKY_CROSS;
+        else skylightType = SKY_BARS;
+
+        // Pool type (same RNG logic as getPoolType, uses master cell)
+        Random poolRng = new Random(seed ^ ((long) cx * 314159265L + (long) cz * 271828182L));
+        int poolRoll = poolRng.nextInt(100);
+        int poolType;
+        if (poolRoll < 20) poolType = POOL_DRY;
+        else if (poolRoll < 45) poolType = POOL_SHALLOW;
+        else if (poolRoll < 58) poolType = POOL_DEEP;
+        else if (poolRoll < 70) poolType = POOL_CHANNEL;
+        else if (poolRoll < 80) poolType = POOL_MOAT;
+        else if (poolRoll < 90) poolType = POOL_HALF;
+        else poolType = POOL_ABYSS;
+
         String className = CLASS_NAMES[roomClass];
         String paletteName = DEFAULT_PALETTES[paletteIndex].name();
         String typeName = (roomType >= 0 && roomType < ROOM_TYPE_NAMES.length && ROOM_TYPE_NAMES[roomType] != null)
                 ? ROOM_TYPE_NAMES[roomType] : "Unknown(" + roomType + ")";
+        String skylightName = SKYLIGHT_TYPE_NAMES[skylightType];
+        String poolName = POOL_TYPE_NAMES[poolType];
 
-        return "§e" + className + " §7| §b" + paletteName + " §7| §a" + typeName;
+        return "§e" + className + " §7| §b" + paletteName + " §7| §a" + typeName
+                + " §7| §dSky:" + skylightName + " §7| §9Pool:" + poolName;
     }
 
     @Override

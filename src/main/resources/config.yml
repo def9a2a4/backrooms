@@ -10,15 +10,19 @@ backrooms:
     suffocation_noclip:
       enabled: true
       chance: 0.02
+      target_level: level_64637
     void_fall:
       enabled: true
+      target_level: level_64637
     bed_anomaly:
       enabled: true
       chance: 0.05
       require_thunderstorm: true
+      target_level: level_64637
     portal_mislink:
       enabled: true
       chance: 0.01
+      target_level: level_64637
 
   # Entity spawner settings
   entity_spawner:

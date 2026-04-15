@@ -3,13 +3,15 @@
   "downfall": 0.0,
   "has_precipitation": false,
   "effects": {
-    "sky_color": 1710592,
-    "fog_color": 4010496,
-    "water_color": 2957824,
-    "water_fog_color": 1710592
+    "water_color": 2957824
   },
   "spawners": {},
   "spawn_costs": {},
   "carvers": [],
-  "features": []
+  "features": [],
+  "attributes": {
+    "minecraft:visual/sky_color": 1710592,
+    "minecraft:visual/fog_color": 4010496,
+    "minecraft:visual/water_fog_color": 1710592
+  }
 }

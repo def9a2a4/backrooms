@@ -3,19 +3,21 @@
   "downfall": 0.8,
   "has_precipitation": false,
   "effects": {
-    "sky_color": 1710874,
-    "fog_color": 3355443,
-    "water_color": 1710874,
-    "water_fog_color": 1118481,
-    "particle": {
+    "water_color": 1710874
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": [],
+  "features": [],
+  "attributes": {
+    "minecraft:visual/sky_color": 1710874,
+    "minecraft:visual/fog_color": 3355443,
+    "minecraft:visual/water_fog_color": 1118481,
+    "minecraft:visual/ambient_particles": {
       "probability": 0.01,
       "options": {
         "type": "minecraft:dripping_water"
       }
     }
-  },
-  "spawners": {},
-  "spawn_costs": {},
-  "carvers": [],
-  "features": []
+  }
 }

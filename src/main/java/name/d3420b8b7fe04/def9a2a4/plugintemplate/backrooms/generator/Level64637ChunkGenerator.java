@@ -501,11 +501,11 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     @Override
-    public int getSpawnY() { return REL_AIR_MIN; }
+    public int getSpawnY() { return 3 * FLOOR_SPACING + REL_AIR_MIN; }
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, 8.5, REL_AIR_MIN, 8.5); // layer 0 floor
+        return new Location(world, 8.5, 3 * FLOOR_SPACING + REL_AIR_MIN, 8.5); // layer 3 floor
     }
 
     // ── Book Config ──────────────────────────────────────────────────────

@@ -66,6 +66,9 @@ public class Level3ChunkGenerator extends BackroomsChunkGenerator {
         Material.LECTERN,
         Material.TNT,
         Material.LEVER,
+        Material.STONE_BUTTON,
+        Material.OAK_BUTTON,
+        Material.POLISHED_BLACKSTONE_BUTTON,
         Material.TRIPWIRE_HOOK,
         Material.REDSTONE_BLOCK,
     };
