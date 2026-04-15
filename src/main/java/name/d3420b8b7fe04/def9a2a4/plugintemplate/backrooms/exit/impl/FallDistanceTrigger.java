@@ -50,7 +50,8 @@ public class FallDistanceTrigger extends AbstractExitTrigger {
         if (delta > 0) {
             if (delta < WRAP_THRESHOLD) {
                 // Normal descent — accumulate
-                double cumulative = Double.parseDouble(state.getCustomData(KEY_CUMULATIVE));
+                String cumStr = state.getCustomData(KEY_CUMULATIVE);
+                double cumulative = cumStr != null ? Double.parseDouble(cumStr) : 0.0;
                 cumulative += delta;
                 state.setCustomData(KEY_CUMULATIVE, String.valueOf(cumulative));
                 return cumulative >= fallDistance;

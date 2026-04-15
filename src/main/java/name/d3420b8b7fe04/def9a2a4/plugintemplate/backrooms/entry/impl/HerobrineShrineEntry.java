@@ -25,6 +25,7 @@ public class HerobrineShrineEntry implements EntryTrigger {
     private String targetLevel = "level_0";
     private int blindnessDuration = 60;
     private int delayTicks = 40;
+    private String entryMessage = "\u00a74\u00a7oYou feel a presence watching you...";
     private Set<String> enabledWorlds = new HashSet<>();
     private final JavaPlugin plugin;
 
@@ -102,7 +103,7 @@ public class HerobrineShrineEntry implements EntryTrigger {
     public void playEntrySequence(Player player, Runnable onComplete) {
         if (blindnessDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, blindnessDuration, 1, false, false));
         if (blindnessDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, blindnessDuration, 0, false, false));
-        player.sendMessage("\u00a74\u00a7oYou feel a presence watching you...");
+        player.sendMessage(entryMessage);
         Bukkit.getScheduler().runTaskLater(plugin, onComplete, delayTicks);
     }
 
@@ -113,6 +114,7 @@ public class HerobrineShrineEntry implements EntryTrigger {
         targetLevel = config.getString("target_level", "level_0");
         blindnessDuration = config.getInt("blindness_duration", blindnessDuration);
         delayTicks = config.getInt("delay_ticks", delayTicks);
+        entryMessage = config.getString("message", entryMessage);
     }
 
     @Override

@@ -5,6 +5,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManag
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -73,8 +74,13 @@ public class EntryManager implements Listener {
                 state.setReturnLocation(player.getLocation());
                 trigger.playEntrySequence(player, () -> {
                     transitionManager.enterBackrooms(player, state, targetLevel);
-                    advancementManager.grantEntry(player, trigger.getId());
-                    advancementManager.grantLevelDiscovery(player, targetLevel);
+                    // Delay advancements by 1 tick so the client finishes processing the dimension change
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (player.isOnline()) {
+                            advancementManager.grantEntry(player, trigger.getId());
+                            advancementManager.grantLevelDiscovery(player, targetLevel);
+                        }
+                    }, 1L);
                 });
                 break;
             }

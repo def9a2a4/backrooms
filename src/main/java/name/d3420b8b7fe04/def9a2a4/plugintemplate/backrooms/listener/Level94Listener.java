@@ -40,16 +40,18 @@ public class Level94Listener implements Listener {
     private final JavaPlugin plugin;
     private final LevelRegistry levelRegistry;
     private final PlayerStateManager playerStateManager;
+    private final String transitionMessage;
 
     private final Set<UUID> fallCooldown = new HashSet<>();
     private final Set<UUID> animating = new HashSet<>();
     private boolean chestPopulated = false;
 
     public Level94Listener(JavaPlugin plugin, LevelRegistry levelRegistry,
-                           PlayerStateManager playerStateManager) {
+                           PlayerStateManager playerStateManager, String transitionMessage) {
         this.plugin = plugin;
         this.levelRegistry = levelRegistry;
         this.playerStateManager = playerStateManager;
+        this.transitionMessage = transitionMessage;
         instance = this;
     }
 
@@ -254,7 +256,7 @@ public class Level94Listener implements Listener {
     private void transitionToServerRoom(Player player) {
         player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 80, 0, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 80, 0, false, false));
-        player.sendMessage("§c[ERR] §7Reality breach detected. Rerouting...");
+        player.sendMessage(transitionMessage);
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             UUID uuid = player.getUniqueId();

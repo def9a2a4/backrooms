@@ -196,7 +196,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(
                 new ExitEventListener(levelRegistry, playerStateManager, transitionManager), plugin);
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
-        Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin), plugin);
+        Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin, loadLobbyBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new Disc11JukeboxListener(), plugin);
         Bukkit.getPluginManager().registerEvents(new ServerRoomLecternListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
@@ -204,7 +204,19 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(
                 new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level94Listener(
-                        plugin, levelRegistry, playerStateManager), plugin);
+                        plugin, levelRegistry, playerStateManager,
+                        loadLevelString("level_94", "transition_message",
+                                "\u00a7c[ERR] \u00a77Reality breach detected. Rerouting...")), plugin);
+
+        // 8b. Register PoweredCommandBlockTrigger instances as Bukkit listeners
+        for (var level : levelRegistry.getAll()) {
+            for (var trigger : level.getExitTriggers()) {
+                if (trigger instanceof name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.impl.PoweredCommandBlockTrigger pct) {
+                    pct.init(levelRegistry, playerStateManager, transitionManager);
+                    Bukkit.getPluginManager().registerEvents(pct, plugin);
+                }
+            }
+        }
 
         // 9. Register commands (Paper plugins don't support YAML-based commands)
         command = new BackroomsCommand(plugin, levelRegistry, playerStateManager, transitionManager,
@@ -308,6 +320,57 @@ public class BackroomsPlugin {
                 yaml.getStringList("cursed_snippets"),
                 yaml.getStringList("cursed_titles"),
                 yaml.getStringList("cursed_authors")
+        );
+    }
+
+    private String loadLevelString(String levelId, String key, String defaultValue) {
+        File levelFile = new File(plugin.getDataFolder(), "levels/" + levelId + ".yml");
+        if (levelFile.exists()) {
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(levelFile);
+            return yaml.getString(key, defaultValue);
+        }
+        return defaultValue;
+    }
+
+    private LobbyBookshelfListener.LobbyBookConfig loadLobbyBookConfig() {
+        File bookFile = new File(plugin.getDataFolder(), "levels/level_0_books.yml");
+        YamlConfiguration yaml;
+        if (bookFile.exists()) {
+            yaml = YamlConfiguration.loadConfiguration(bookFile);
+        } else {
+            InputStream resource = plugin.getResource("levels/level_0_books.yml");
+            if (resource != null) {
+                yaml = YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(resource, StandardCharsets.UTF_8));
+            } else {
+                return LobbyBookshelfListener.LobbyBookConfig.DEFAULT;
+            }
+        }
+
+        List<LobbyBookshelfListener.LobbyBookConfig.MultiPageBook> multiPageBooks =
+                new java.util.ArrayList<>();
+        if (yaml.contains("multi_page_books")) {
+            for (Object entry : yaml.getList("multi_page_books", List.of())) {
+                if (entry instanceof java.util.Map<?, ?> map) {
+                    String title = map.containsKey("title") ? String.valueOf(map.get("title")) : "Untitled";
+                    String author = map.containsKey("author") ? String.valueOf(map.get("author")) : "Unknown";
+                    Object pagesObj = map.get("pages");
+                    List<String> pages = new java.util.ArrayList<>();
+                    if (pagesObj instanceof List<?> pageList) {
+                        for (Object p : pageList) pages.add(String.valueOf(p));
+                    }
+                    multiPageBooks.add(new LobbyBookshelfListener.LobbyBookConfig.MultiPageBook(
+                            title, author, pages));
+                }
+            }
+        }
+
+        return new LobbyBookshelfListener.LobbyBookConfig(
+                yaml.getStringList("titles"),
+                yaml.getStringList("authors"),
+                yaml.getStringList("pages"),
+                yaml.getDouble("multi_page_chance", 0.2),
+                multiPageBooks
         );
     }
 

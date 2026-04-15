@@ -78,8 +78,12 @@ public class TransitionManager {
         if ("overworld".equals(targetId)) {
             exit.playTransitionSequence(player, () -> {
                 try {
-                    advancementManager.grantEscape(player);
                     returnToOverworld(player, state, currentLevel);
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (player.isOnline()) {
+                            advancementManager.grantEscape(player);
+                        }
+                    }, 1L);
                 } finally {
                     transitioning.remove(player.getUniqueId());
                 }
@@ -108,7 +112,11 @@ public class TransitionManager {
                 player.teleport(spawn);
                 state.setCurrentLevelId(targetId);
                 targetLevel.onPlayerEnter(player, state);
-                advancementManager.grantLevelDiscovery(player, targetId);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (player.isOnline()) {
+                        advancementManager.grantLevelDiscovery(player, targetId);
+                    }
+                }, 1L);
             } finally {
                 transitioning.remove(player.getUniqueId());
             }
@@ -126,6 +134,11 @@ public class TransitionManager {
         player.teleport(spawn);
         state.setCurrentLevelId(targetLevelId);
         targetLevel.onPlayerEnter(player, state);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) {
+                advancementManager.grantLevelDiscovery(player, targetLevelId);
+            }
+        }, 1L);
     }
 
     private Location findSpawnForLevel(BackroomsLevel level, World targetWorld) {
