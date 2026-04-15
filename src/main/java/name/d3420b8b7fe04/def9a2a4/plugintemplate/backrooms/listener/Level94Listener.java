@@ -33,18 +33,33 @@ public class Level94Listener implements Listener {
     private static final int VOID_THRESHOLD = 10;
     private static final int MAX_RADIUS = 60;
 
+    private static Level94Listener instance;
+
     private final JavaPlugin plugin;
     private final LevelRegistry levelRegistry;
     private final PlayerStateManager playerStateManager;
 
     private final Set<UUID> fallCooldown = new HashSet<>();
     private final Set<UUID> animating = new HashSet<>();
+    private boolean chestPopulated = false;
 
     public Level94Listener(JavaPlugin plugin, LevelRegistry levelRegistry,
                            PlayerStateManager playerStateManager) {
         this.plugin = plugin;
         this.levelRegistry = levelRegistry;
         this.playerStateManager = playerStateManager;
+        instance = this;
+    }
+
+    public static Level94Listener getInstance() {
+        return instance;
+    }
+
+    /** Trigger the cascade animation from a command — uses the player's position as the origin. */
+    public void triggerCascade(Player player) {
+        if (!player.getWorld().getName().equals(WORLD_NAME)) return;
+        if (animating.contains(player.getUniqueId())) return;
+        startAnimation(player, player.getLocation());
     }
 
     // ── Void Fall Loop ──────────────────────────────────────────────────
@@ -252,28 +267,78 @@ public class Level94Listener implements Listener {
         }, 40L);
     }
 
-    // ── Chest Population ────────────────────────────────────────────────
+    // ── Chest Population + Bonus-Tree Cleanup ─────────────────────────
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
-        if (!event.isNewChunk()) return;
         if (!event.getWorld().getName().equals(WORLD_NAME)) return;
 
         Chunk chunk = event.getChunk();
         if (chunk.getX() != 0 || chunk.getZ() != 0) return;
+        if (chestPopulated) return;
+        chestPopulated = true;
 
         // Defer to next tick so tile entities are ready
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Block chestBlock = chunk.getBlock(
-                    Level94ChunkGenerator.SPAWN_X, // chest X in chunk-local = world X since chunk 0
+            World world = event.getWorld();
+
+            // Populate chest if empty
+            Block chestBlock = world.getBlockAt(
+                    Level94ChunkGenerator.SPAWN_X,
                     Level94ChunkGenerator.SPAWN_Y,
                     Level94ChunkGenerator.SPAWN_Z + 1);
-
-            if (chestBlock.getType() != Material.CHEST) return;
-
-            if (chestBlock.getState() instanceof Chest chest) {
+            if (chestBlock.getType() == Material.CHEST
+                    && chestBlock.getState() instanceof Chest chest
+                    && chest.getInventory().isEmpty()) {
                 chest.getInventory().addItem(new ItemStack(Material.LAVA_BUCKET, 1));
             }
+
+            // Remove any bonus tree / stray blocks Paper may have placed at spawn.
+            // Scan the island chunk and clear OAK_LOG / OAK_LEAVES / DIRT that are
+            // outside the expected island + tree geometry.
+            cleanBonusTree(world);
         });
+    }
+
+    private void cleanBonusTree(World world) {
+        int treeX = Level94ChunkGenerator.SPAWN_X; // 6
+        int treeZ = 7; // TREE_Z
+        int treeBaseY = Level94ChunkGenerator.SPAWN_Y; // 65
+
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                for (int y = 0; y < 100; y++) {
+                    Block b = world.getBlockAt(x, y, z);
+                    Material type = b.getType();
+                    if (type != Material.OAK_LOG && type != Material.OAK_LEAVES
+                            && type != Material.DIRT) continue;
+
+                    // Is this block part of our intended tree?
+                    int dx = x - treeX;
+                    int dz = z - treeZ;
+                    boolean partOfTree =
+                            // Trunk column
+                            (x == treeX && z == treeZ && y >= treeBaseY && y < treeBaseY + 4
+                                    && type == Material.OAK_LOG)
+                            // 3×3 leaf canopy at y+2, y+3
+                            || (dx >= -1 && dx <= 1 && dz >= -1 && dz <= 1
+                                    && (y == treeBaseY + 2 || y == treeBaseY + 3)
+                                    && type == Material.OAK_LEAVES)
+                            // Leaf cap
+                            || (x == treeX && z == treeZ && y == treeBaseY + 4
+                                    && type == Material.OAK_LEAVES);
+
+                    // Is this block part of the island platform?
+                    boolean partOfIsland =
+                            x >= 5 && x <= 7 && z >= 5 && z <= 10
+                            && y >= 61 && y <= 64
+                            && type == Material.DIRT;
+
+                    if (!partOfTree && !partOfIsland) {
+                        b.setType(Material.AIR, false);
+                    }
+                }
+            }
+        }
     }
 }

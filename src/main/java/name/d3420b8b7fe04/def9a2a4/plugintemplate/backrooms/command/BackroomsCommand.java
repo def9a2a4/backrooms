@@ -74,7 +74,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return switch (args[0].toLowerCase()) {
             case "regenerate" -> handleRegenerate(sender, args.length > 1 ? args[1] : null);
             case "list" -> handleList(sender, args.length > 1 ? args[1] : null);
-            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37" -> {
+            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37", "skyblock_trigger_cascade" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("This command can only be used by players.");
                     yield true;
@@ -124,6 +124,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
                     }
                     case "reset" -> handleReset(player);
                     case "debug37" -> handleDebug37(player);
+                    case "skyblock_trigger_cascade" -> handleSkyblockCascade(player);
                     default -> true;
                 };
             }
@@ -375,6 +376,19 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean handleSkyblockCascade(Player player) {
+        if (!requireAdmin(player)) return true;
+
+        var listener = name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level94Listener.getInstance();
+        if (listener == null) {
+            player.sendMessage("Level 94 listener not loaded.");
+            return true;
+        }
+        listener.triggerCascade(player);
+        player.sendMessage("§aCascade triggered.");
+        return true;
+    }
+
     private boolean handleDebug37(Player player) {
         if (!requireAdmin(player)) return true;
 
@@ -477,7 +491,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of("leave", "status"));
             if (sender.hasPermission("backrooms.admin") || sender.isOp()) {
-                subs.addAll(List.of("goto", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "debug37"));
+                subs.addAll(List.of("goto", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "debug37", "skyblock_trigger_cascade"));
             }
             if (sender.hasPermission("backrooms.regenerate") || sender.isOp()) {
                 subs.add("regenerate");

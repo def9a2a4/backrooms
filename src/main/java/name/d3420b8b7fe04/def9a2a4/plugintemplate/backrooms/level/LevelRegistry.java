@@ -1,6 +1,7 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.entity.EnderDragon;
@@ -72,6 +73,14 @@ public class LevelRegistry {
 
             World world = creator.createWorld();
             if (world != null) {
+                // Ensure spawn matches the generator, even for pre-existing worlds
+                var gen = world.getGenerator();
+                if (gen != null) {
+                    Location spawn = gen.getFixedSpawnLocation(world, new java.util.Random());
+                    if (spawn != null) {
+                        world.setSpawnLocation(spawn);
+                    }
+                }
                 level.configureWorld(world);
                 applyDimensionType(level, world);
                 cleanEndFeatures(world);

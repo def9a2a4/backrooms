@@ -280,6 +280,11 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             chunkData.setBlock(x, y, z, randomGardenBlock(chunkRng));
         }
 
+        // Spore blossom hidden one block into the ceiling (~1/64)
+        if (chunkRng.nextInt(64) == 0) {
+            chunkData.setBlock(x, CEILING_MIN_Y, z, Material.SPORE_BLOSSOM);
+        }
+
         // Hanging vegetation from ceiling (iid random per column)
         int hangRoll = chunkRng.nextInt(100);
         if (hangRoll < 2) {
@@ -431,7 +436,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
                     // Try each horizontal direction independently (~25% per face)
                     int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-                    String[] faces = {"south", "north", "east", "west"};
+                    String[] faces = {"west", "east", "north", "south"};
                     for (int d = 0; d < 4; d++) {
                         if (chunkRng.nextInt(4) != 0) continue;
                         int nx = x + dirs[d][0];

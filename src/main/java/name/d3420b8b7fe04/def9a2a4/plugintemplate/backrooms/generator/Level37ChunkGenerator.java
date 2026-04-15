@@ -25,7 +25,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     // Y layout
-    private static final int FLOOR_Y = 0;
+    private static final int FLOOR_Y = -10;
     private static final int FLOOR_HEIGHT = 8;
     private static final int CEILING_Y = 20;        // normal ceiling
     private static final int TALL_CEILING_Y = 28;    // tall rooms
