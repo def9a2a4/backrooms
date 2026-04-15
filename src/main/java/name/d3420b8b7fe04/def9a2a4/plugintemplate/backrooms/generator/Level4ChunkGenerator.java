@@ -178,35 +178,53 @@ public class Level4ChunkGenerator extends BackroomsChunkGenerator {
 
     private void placeOakTree(ChunkData chunkData, Random rng, int x, int y, int z) {
         int trunkHeight = 4 + rng.nextInt(3); // 4-6
-        int topY = y + trunkHeight - 1;
+        int topLog = y + trunkHeight - 1; // highest log block
 
-        // Trunk
+        // Bare trunk (bottom 1-3 layers have no leaves)
         for (int dy = 0; dy < trunkHeight; dy++) {
             if (y + dy < MAX_Y) {
                 chunkData.setBlock(x, y + dy, z, Material.OAK_LOG);
             }
         }
 
-        // Leaf layers: 2 wide layers, then 2 narrow layers (classic oak shape)
-        // Layer 0,1 (bottom two): radius 2 with random corner removal
-        // Layer 2,3 (top two): radius 1 with leaf on top of trunk
-        for (int layer = 0; layer < 4; layer++) {
-            int ly = topY - 2 + layer; // starts 2 below trunk top
-            if (ly < 0 || ly >= MAX_Y) continue;
-            int radius = layer < 2 ? 2 : 1;
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    if (dx == 0 && dz == 0 && layer < 3) continue; // trunk column (except top)
-                    // Skip corners randomly on wide layers
-                    if (Math.abs(dx) == radius && Math.abs(dz) == radius && rng.nextBoolean()) continue;
+        // 2 wide leaf layers (5x5, corners 50% chance) — at topLog-3 and topLog-2
+        for (int layer = 0; layer < 2; layer++) {
+            int ly = topLog - 3 + layer;
+            if (ly < y || ly >= MAX_Y) continue;
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    if (dx == 0 && dz == 0) continue; // trunk
+                    if (Math.abs(dx) == 2 && Math.abs(dz) == 2 && rng.nextBoolean()) continue;
                     int lx = x + dx, lz = z + dz;
-                    if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                    if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && ly < MAX_Y) {
                         if (chunkData.getType(lx, ly, lz) == Material.AIR) {
                             chunkData.setBlock(lx, ly, lz, Material.OAK_LEAVES);
                         }
                     }
                 }
             }
+        }
+
+        // 2 narrow leaf layers (3x3, corners 50% chance) — at topLog-1 and topLog
+        // topLog itself: trunk replaced by leaf
+        for (int layer = 0; layer < 2; layer++) {
+            int ly = topLog - 1 + layer;
+            if (ly < y || ly >= MAX_Y) continue;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dz == 0 && layer == 0) continue; // trunk at topLog-1
+                    if (Math.abs(dx) == 1 && Math.abs(dz) == 1 && rng.nextBoolean()) continue;
+                    int lx = x + dx, lz = z + dz;
+                    if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && ly < MAX_Y) {
+                        chunkData.setBlock(lx, ly, lz, Material.OAK_LEAVES);
+                    }
+                }
+            }
+        }
+
+        // Top trunk block becomes leaf
+        if (topLog < MAX_Y) {
+            chunkData.setBlock(x, topLog, z, Material.OAK_LEAVES);
         }
     }
 

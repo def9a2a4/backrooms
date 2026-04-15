@@ -31,7 +31,7 @@ public class Level94Listener implements Listener {
 
     private static final String WORLD_NAME = "backrooms_level_94";
     private static final int VOID_THRESHOLD = 10;
-    private static final int MAX_RADIUS = 60;
+    private static final int CASCADE_DURATION_TICKS = 400; // 20 seconds
 
     private static Level94Listener instance;
 
@@ -55,11 +55,11 @@ public class Level94Listener implements Listener {
         return instance;
     }
 
-    /** Trigger the cascade animation from a command — uses the player's position as the origin. */
+    /** Trigger the cascade animation from a command. */
     public void triggerCascade(Player player) {
         if (!player.getWorld().getName().equals(WORLD_NAME)) return;
         if (animating.contains(player.getUniqueId())) return;
-        startAnimation(player, player.getLocation());
+        startAnimation(player);
     }
 
     // ── Void Fall Loop ──────────────────────────────────────────────────
@@ -119,31 +119,34 @@ public class Level94Listener implements Listener {
 
         if (animating.contains(player.getUniqueId())) return;
 
-        startAnimation(player, block.getLocation());
+        startAnimation(player);
     }
 
-    // ── Floor Fill Animation ────────────────────────────────────────────
+    // ── Barrier Wall Cascade ──────────────────────────────────────────
 
-    private void startAnimation(Player player, Location breakPoint) {
+    private static final int BMIN = Level94ChunkGenerator.BARRIER_MIN;
+    private static final int BMAX = Level94ChunkGenerator.BARRIER_MAX;
+
+    private void startAnimation(Player player) {
         UUID uuid = player.getUniqueId();
         animating.add(uuid);
 
-        World world = breakPoint.getWorld();
+        World world = player.getWorld();
         Random rng = new Random();
 
-        // Origin points: the break point + 2-3 random points
+        // 1-2 origin points on each of the 4 barrier faces.
+        // Each origin: {position-along-wall, y, face}
+        //   face 0 = north (Z=BMIN), 1 = south (Z=BMAX), 2 = west (X=BMIN), 3 = east (X=BMAX)
         List<int[]> origins = new ArrayList<>();
-        origins.add(new int[]{breakPoint.getBlockX(), breakPoint.getBlockZ()});
-        int extraPoints = 2 + rng.nextInt(2);
-        for (int i = 0; i < extraPoints; i++) {
-            int rx = Level94ChunkGenerator.BARRIER_MIN + rng.nextInt(
-                    Level94ChunkGenerator.BARRIER_MAX - Level94ChunkGenerator.BARRIER_MIN);
-            int rz = Level94ChunkGenerator.BARRIER_MIN + rng.nextInt(
-                    Level94ChunkGenerator.BARRIER_MAX - Level94ChunkGenerator.BARRIER_MIN);
-            origins.add(new int[]{rx, rz});
+        for (int face = 0; face < 4; face++) {
+            int count = 1 + rng.nextInt(2);
+            for (int i = 0; i < count; i++) {
+                int pos = BMIN + rng.nextInt(BMAX - BMIN + 1);
+                int y = 10 + rng.nextInt(80);
+                origins.add(new int[]{pos, y, face});
+            }
         }
 
-        int fillY = player.getLocation().getBlockY() - 1; // floor level
         int[] radius = {0};
 
         BukkitTask[] taskHolder = new BukkitTask[1];
@@ -155,76 +158,65 @@ public class Level94Listener implements Listener {
             }
 
             for (int[] origin : origins) {
-                for (int dx = -radius[0]; dx <= radius[0]; dx++) {
-                    for (int dz = -radius[0]; dz <= radius[0]; dz++) {
-                        double dist = Math.sqrt(dx * dx + dz * dz);
-                        if ((int) dist != radius[0]) continue;
+                int face = origin[2];
 
-                        int bx = origin[0] + dx;
-                        int bz = origin[1] + dz;
-                        if (bx < Level94ChunkGenerator.BARRIER_MIN || bx > Level94ChunkGenerator.BARRIER_MAX) continue;
-                        if (bz < Level94ChunkGenerator.BARRIER_MIN || bz > Level94ChunkGenerator.BARRIER_MAX) continue;
+                for (int d1 = -radius[0]; d1 <= radius[0]; d1++) {
+                    for (int dy = -radius[0]; dy <= radius[0]; dy++) {
+                        if (d1 * d1 + dy * dy > radius[0] * radius[0]) continue;
 
+                        int by = origin[1] + dy;
+                        if (by < 0 || by > 100) continue;
+
+                        int bx, bz, behindX, behindZ;
+                        switch (face) {
+                            case 0: // North wall (Z = BMIN), expand along X
+                                bx = origin[0] + d1; bz = BMIN;
+                                behindX = bx; behindZ = bz - 1;
+                                break;
+                            case 1: // South wall (Z = BMAX), expand along X
+                                bx = origin[0] + d1; bz = BMAX;
+                                behindX = bx; behindZ = bz + 1;
+                                break;
+                            case 2: // West wall (X = BMIN), expand along Z
+                                bx = BMIN; bz = origin[0] + d1;
+                                behindX = bx - 1; behindZ = bz;
+                                break;
+                            case 3: // East wall (X = BMAX), expand along Z
+                                bx = BMAX; bz = origin[0] + d1;
+                                behindX = bx + 1; behindZ = bz;
+                                break;
+                            default: continue;
+                        }
+
+                        if (bx < BMIN || bx > BMAX || bz < BMIN || bz > BMAX) continue;
                         if (!world.isChunkLoaded(bx >> 4, bz >> 4)) continue;
 
-                        // Wavefront: blue glass
-                        Block b = world.getBlockAt(bx, fillY, bz);
-                        if (b.getType() == Material.BARRIER) continue; // don't replace barrier walls
-                        b.setType(Material.LIGHT_BLUE_STAINED_GLASS, false);
-
-                        // Also fill 2 blocks up for walls
-                        for (int wy = 1; wy <= 3; wy++) {
-                            Block wall = world.getBlockAt(bx, fillY + wy, bz);
-                            if (wall.getType() != Material.AIR && wall.getType() != Material.BARRIER) continue;
-                            if (wall.getType() == Material.BARRIER) continue;
-                            wall.setType(Material.LIGHT_BLUE_STAINED_GLASS, false);
+                        // Barrier → glass
+                        Block b = world.getBlockAt(bx, by, bz);
+                        if (b.getType() == Material.BARRIER) {
+                            b.setType(Material.LIGHT_BLUE_STAINED_GLASS, false);
                         }
-                    }
-                }
 
-                // Fill behind wavefront with concrete/command blocks
-                if (radius[0] >= 3) {
-                    int fillRadius = radius[0] - 3;
-                    for (int dx = -fillRadius; dx <= fillRadius; dx++) {
-                        for (int dz = -fillRadius; dz <= fillRadius; dz++) {
-                            double dist = Math.sqrt(dx * dx + dz * dz);
-                            if ((int) dist != fillRadius) continue;
-
-                            int bx = origin[0] + dx;
-                            int bz = origin[1] + dz;
-                            if (bx < Level94ChunkGenerator.BARRIER_MIN || bx > Level94ChunkGenerator.BARRIER_MAX) continue;
-                            if (bz < Level94ChunkGenerator.BARRIER_MIN || bz > Level94ChunkGenerator.BARRIER_MAX) continue;
-                            if (!world.isChunkLoaded(bx >> 4, bz >> 4)) continue;
-
-                            Block b = world.getBlockAt(bx, fillY, bz);
-                            if (b.getType() == Material.BARRIER) continue;
-
-                            Material fill = rng.nextDouble() < 0.3 ? Material.COMMAND_BLOCK : Material.WHITE_CONCRETE;
-                            b.setType(fill, false);
-
-                            // Walls behind wavefront
-                            for (int wy = 1; wy <= 3; wy++) {
-                                Block wall = world.getBlockAt(bx, fillY + wy, bz);
-                                if (wall.getType() == Material.BARRIER) continue;
-                                if (wall.getType() == Material.LIGHT_BLUE_STAINED_GLASS
-                                        || wall.getType() == Material.AIR) {
-                                    wall.setType(fill, false);
-                                }
-                            }
+                        // Fill behind with server-room blocks
+                        if (!world.isChunkLoaded(behindX >> 4, behindZ >> 4)) continue;
+                        Block behind = world.getBlockAt(behindX, by, behindZ);
+                        if (behind.getType() == Material.AIR) {
+                            Material fill = rng.nextDouble() < 0.3
+                                    ? Material.COMMAND_BLOCK : Material.WHITE_CONCRETE;
+                            behind.setType(fill, false);
                         }
                     }
                 }
             }
-
-            // Sound
-            player.playSound(player.getLocation(), Sound.BLOCK_GLASS_PLACE, 0.5f, 1.2f);
 
             radius[0]++;
-            if (radius[0] > MAX_RADIUS) {
-                taskHolder[0].cancel();
-                transitionToServerRoom(player);
-            }
-        }, 0L, 3L);
+        }, 0L, 10L);
+
+        // Transition after 20 seconds
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            taskHolder[0].cancel();
+            transitionToServerRoom(player);
+        }, CASCADE_DURATION_TICKS);
     }
 
     // ── Transition to Level 3 ───────────────────────────────────────────

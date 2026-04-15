@@ -443,8 +443,14 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                         int nz = z + dirs[d][1];
                         if (nx >= 0 && nx < 16 && nz >= 0 && nz < 16
                                 && chunkData.getType(nx, y, nz) == Material.AIR) {
-                            chunkData.setBlock(nx, y, nz, Bukkit.createBlockData(Material.VINE,
-                                    "[" + faces[d] + "=true]"));
+                            int vineLen = chunkRng.nextInt(5) + 1;
+                            for (int v = 0; v < vineLen; v++) {
+                                int vy = y - v;
+                                if (vy <= AIR_MIN_Y) break;
+                                if (chunkData.getType(nx, vy, nz) != Material.AIR) break;
+                                chunkData.setBlock(nx, vy, nz, Bukkit.createBlockData(Material.VINE,
+                                        "[" + faces[d] + "=true]"));
+                            }
                         }
                     }
                 }
