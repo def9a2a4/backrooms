@@ -79,8 +79,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private static final int POOL_MOAT = 4;       // perimeter water ring, dry center
     private static final int POOL_HALF = 5;       // one half wet, one dry
     private static final int POOL_ABYSS = 6;      // extra-deep stepped pool
-    private static final int POOL_ABYSS_DEEP = 7; // rare extra-extra-deep pool
-    private static final int POOL_DRAIN = 8;      // very rare: deep pool with 2x2 drain shaft to void
+    private static final int POOL_ABYSS_DEEP = 7; // rare extra-extra-deep pool with side drain tunnel
 
     @Override
     public void configure(@Nullable ConfigurationSection config) {
@@ -455,8 +454,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         if (roll < 79) return POOL_MOAT;
         if (roll < 88) return POOL_HALF;
         if (roll < 97) return POOL_ABYSS;
-        if (roll < 99) return POOL_ABYSS_DEEP;
-        return POOL_DRAIN;
+        return POOL_ABYSS_DEEP;
     }
 
     private int getSkylightType(int cellX, int cellZ, long seed) {
@@ -1106,7 +1104,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
             case POOL_ABYSS -> {
-                // Extra-deep stepped pool (6 blocks at center)
+                // Extra-deep stepped pool (5 blocks at center)
                 if (distFromPoolEdge <= 1) {
                     chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
                     chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
@@ -1116,14 +1114,14 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     }
                     chunkData.setBlock(x, FLOOR_HEIGHT - 2, z, palette.floor());
                 } else {
-                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 6; y--) {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 5; y--) {
                         chunkData.setBlock(x, y, z, Material.WATER);
                     }
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 6, z, palette.floor());
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 5, z, palette.floor());
                 }
             }
             case POOL_ABYSS_DEEP -> {
-                // Rare extra-extra-deep pool (7 blocks at center)
+                // Rare extra-extra-deep pool (6 blocks at center)
                 if (distFromPoolEdge <= 1) {
                     chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
                     chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
@@ -1133,10 +1131,10 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     }
                     chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette.floor());
                 } else {
-                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 7; y--) {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 6; y--) {
                         chunkData.setBlock(x, y, z, Material.WATER);
                     }
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 7, z, palette.floor());
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 6, z, palette.floor());
                 }
             }
             case POOL_DRAIN -> {

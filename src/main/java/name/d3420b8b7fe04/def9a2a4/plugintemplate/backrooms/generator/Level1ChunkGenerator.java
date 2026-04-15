@@ -474,45 +474,27 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                 int worldZ = chunkZ * 16 + z;
                 if (getZone(seed, worldX, worldZ) != Zone.GARDEN) continue;
 
-                // Use deterministic hash to decide exit placement (~1 per 2000 garden blocks)
                 long exitHash = seed ^ ((long) worldX * 472882027L + (long) worldZ * 920419813L);
 
-                // Deep sinkhole pool — water shaft going below floor into sub-floor
+                // Floor breach — 1x1 water shaft from floor through sub-floor into the void
                 if (Math.floorMod(exitHash, 2000) == 0) {
-                    // Carve a 2x2 water shaft from floor level down through sub-floor
-                    for (int dx = 0; dx <= 1; dx++) {
-                        for (int dz = 0; dz <= 1; dz++) {
-                            int sx = x + dx, sz = z + dz;
-                            if (sx >= 16 || sz >= 16) continue;
-                            // Water from floor level down into the sub-floor
-                            for (int y = FLOOR_HEIGHT; y >= FLOOR_Y; y--) {
-                                chunkData.setBlock(sx, y, sz, Material.WATER);
-                            }
-                            // Ensure air above the pool entry
-                            chunkData.setBlock(sx, AIR_MIN_Y, sz, Material.WATER);
-                        }
+                    // Water column from air level all the way down to minimum world Y
+                    for (int y = AIR_MIN_Y; y >= chunkData.getMinHeight(); y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
                     }
                 }
 
-                // Ceiling breach with vines — hole through ceiling with long cave vines
+                // Ceiling breach — 1x1 hole through ceiling with climbable vines inside
                 if (Math.floorMod(exitHash + 1, 2000) == 0) {
-                    // Clear a 2x2 hole through the ceiling
-                    for (int dx = 0; dx <= 1; dx++) {
-                        for (int dz = 0; dz <= 1; dz++) {
-                            int sx = x + dx, sz = z + dz;
-                            if (sx >= 16 || sz >= 16) continue;
-                            for (int y = CEILING_MIN_Y; y < CEILING_MAX_Y; y++) {
-                                chunkData.setBlock(sx, y, sz, Material.AIR);
-                            }
-                            // Long cave vines hanging down from the breach
-                            int vineLen = CEILING_MIN_Y - AIR_MIN_Y - 1;
-                            for (int dy = 0; dy < vineLen; dy++) {
-                                int y = CEILING_MIN_Y - 1 - dy;
-                                if (y <= AIR_MIN_Y) break;
-                                chunkData.setBlock(sx, y, sz,
-                                        dy == vineLen - 1 ? Material.CAVE_VINES : Material.CAVE_VINES_PLANT);
-                            }
-                        }
+                    // Clear the ceiling to make a 1x1 shaft
+                    for (int y = CEILING_MIN_Y; y < CEILING_MAX_Y; y++) {
+                        chunkData.setBlock(x, y, z, Material.AIR);
+                    }
+                    // Place cave vines INSIDE the breach (through the ceiling shaft)
+                    // Top vine at the top of the breach, hanging down through it
+                    for (int y = CEILING_MAX_Y - 1; y >= AIR_MIN_Y + 1; y--) {
+                        chunkData.setBlock(x, y, z,
+                                y == AIR_MIN_Y + 1 ? Material.CAVE_VINES : Material.CAVE_VINES_PLANT);
                     }
                 }
             }
