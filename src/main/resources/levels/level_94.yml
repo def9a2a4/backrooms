@@ -6,6 +6,8 @@ dimension_type: light
 fixed_time: 6000
 enter_message: "§aWelcome to Skyblock!"
 
+transition_message: "§c[ERR] §7Reality breach detected. Rerouting..."
+
 events: []
 
 entities: []

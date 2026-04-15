@@ -84,6 +84,14 @@ event_config:
       - "Not real"
       - "you've been here before"
       - ""
+      - "water level rising"
+      - "DO NOT DRINK"
+      - "the dripping stopped"
+      - "someone was here"
+      - "go deeper"
+      - "it followed me from Level 0"
+      - "the walls are wet"
+      - "IIII IIII IIII II"
 
 exit_triggers:
   - type: submerged_below_y

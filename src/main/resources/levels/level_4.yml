@@ -32,6 +32,12 @@ event_config:
       - "§e[WARN] Player position desynchronized"
       - "§7Herobrine joined the game"
       - "§7Herobrine left the game"
+      - "§c[ERR] Coordinate overflow at X=12550821"
+      - "§e[WARN] Chunk boundary undefined — terrain generation falling back to legacy"
+      - "§7Saving world... §c[FAILED] File exceeds maximum size"
+      - "§e[WARN] Biome ID -1 not found in registry"
+      - "§7<Notch> this wasn't supposed to generate"
+      - "§7Entity 303 joined the game"
   player_drift:
     enabled: true
     check_interval_seconds: 15

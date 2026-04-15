@@ -25,6 +25,21 @@ cursed_snippets:
   - "you are not the first to stand in this exact spot"
   - "this room was not here a moment ago"
   - "the walls are listening"
+  - "the seed was set to zero and the library grew from it"
+  - "this world was last saved by Herobrine"
+  - "the index lists a book with your coordinates as the title"
+  - "every book you have ever read is a translation of one found here"
+  - "the library predates the server"
+  - "there is a book here that describes your death. it has been checked out"
+  - "the catalogue has a section for books that will be written tomorrow"
+  - "the librarian is not a person. the librarian is the library"
+  - "you will put this book back on the shelf and forget what it said"
+  - "the library contains a complete copy of itself including this sentence"
+  - "the gaps between the shelves are getting narrower"
+  - "there is no ground floor. there is no top floor"
+  - "the lights flicker in a pattern. the pattern is your heartbeat"
+  - "one of these books contains the command to shut down the server"
+  - "the library remembers every player who has ever entered. none have left"
 
 # Cursed book titles — rarely used instead of a gibberish title
 cursed_titles:
@@ -34,6 +49,12 @@ cursed_titles:
   - "FINAL ENTRY"
   - "BOOK OF NAMES"
   - "CATALOGUE OF EXITS"
+  - "THE EXIT INDEX"
+  - "YOUR AUTOBIOGRAPHY"
+  - "CHANGELOG: REALITY"
+  - "EVERY BOOK CONTAINS THIS SENTENCE"
+  - "THE LAST BOOK"
+  - "README.TXT"
 
 # Cursed author names — rarely used instead of a gibberish author
 cursed_authors:
@@ -42,3 +63,8 @@ cursed_authors:
   - "No One"
   - "The Archivist"
   - "Unknown"
+  - "The Previous Reader"
+  - "Notch"
+  - "HEROBRINE"
+  - "Entity 303"
+  - "jeb_"

@@ -1,7 +1,7 @@
 id: level_0
 display_name: "The Lobby"
 generator: level_0
-environment: NETHER
+environment: NORMAL
 dimension_type: dark
 biome: "backrooms:lobby"
 enter_message: "§7§kxx§r §7You have entered the §fBack§kr§rooms§7. §7§kxx"
@@ -13,6 +13,7 @@ events:
   - footstep_echo
   - wall_shift
   - sign_placement
+  - fake_chat_message
 
 entities:
   - herobrine
@@ -116,6 +117,28 @@ event_config:
       - "behind you"
       - "DON'T TURN AROUND"
       - ""
+      - "the exit moved"
+      - "floor 2 does not exist"
+      - "employee of the month: you"
+      - "do not count the rooms"
+      - "the carpet remembers"
+      - "you've been here before"
+      - "the hum is getting louder"
+      - "IT SEES YOU"
+      - "check the ceiling"
+  fake_chat_message:
+    enabled: true
+    check_interval_seconds: 120
+    chance: 0.08
+    messages:
+      - "<Steve> hello?"
+      - "<Steve> is anyone there"
+      - "Steve left the game"
+      - "<xX_Player_Xx> has anyone found the exit"
+      - "<Unknown> don't look behind you"
+      - "Employee2441 joined the game"
+      - "Employee2441 left the game"
+      - "<{player}> wait what"
 
 exit_triggers:
   - type: collect_items

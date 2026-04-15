@@ -11,6 +11,7 @@ events:
   - footstep_echo
   - torch_decay
   - sign_placement
+  - fake_chat_message
 
 entities:
   - pursuer
@@ -58,3 +59,23 @@ event_config:
       - "behind you"
       - "STOP"
       - ""
+      - "it knows you're here"
+      - "don't stop moving"
+      - "play the disc"
+      - "1:05 of 1:11"
+      - "the recording knows"
+      - "do not use the jukebox"
+      - "you can hear it breathing"
+      - "it's closer now"
+      - "the footsteps aren't yours"
+  fake_chat_message:
+    enabled: true
+    check_interval_seconds: 90
+    chance: 0.10
+    messages:
+      - "§7[?] §o{player} hears breathing"
+      - "§7[?] §oSomething shifts in the dark"
+      - "<C418> you weren't supposed to find this"
+      - "§7[?] §oThe recording skips"
+      - "§7[?] §oFootsteps. Not yours."
+      - "§7[?] §oIt's closer now."

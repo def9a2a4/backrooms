@@ -12,6 +12,7 @@ events:
   - light_blink
   - random_potion
   - block_corruption
+  - sign_placement
 
 entities: []
 
@@ -48,6 +49,12 @@ event_config:
       - "§e[WARN] §fBlock update cascade exceeded maximum depth"
       - "§c[ERR] §fWorldGen seed mismatch — expected: 0, got: ∞"
       - "§7[Server] §fAttempting world recovery... failed."
+      - "§c[FATAL] §fjava.lang.StackOverflowError: reality.check()"
+      - "§c[FATAL] §fBlock ID -1 at Y=-64: invalid state"
+      - "§e[WARN] §fLight engine desynchronized — recalculating... §c[FAILED]"
+      - "§7[Server] §fWorld recovery attempt 2147483647... failed."
+      - "§c[ERR] §fEntity 'Notch' loaded with invalid NBT"
+      - "§c[FATAL] §fHeap space exhausted. Reason: infinite loop in ChunkGenerator"
   light_blink:
     enabled: true
     check_interval_seconds: 10
@@ -70,6 +77,21 @@ event_config:
     chance: 0.2
     radius: 25
     cube_size: 4
+  sign_placement:
+    enabled: true
+    check_interval_seconds: 45
+    chance: 0.15
+    messages:
+      - "§kMISSING TEXTURE"
+      - "§kchunk corrupted"
+      - "NullPointerException"
+      - "seed: 0"
+      - "§4FATAL"
+      - ""
+      - "r.0.0.mca"
+      - "§kblock_id: -1"
+      - "the generator broke"
+      - "every block at once"
 
 exit_triggers:
   - type: below_y

@@ -15,24 +15,36 @@ generator_config:
         - "§7// RUN terrain_gen --legacy --overflow\n§8// WARNING: coordinate bounds exceeded\n§7// EXEC farlands.jar"
         - "§7> load world_alpha_1_7_3\n§8[ERR] World boundary undefined\n§7> force_load --no-limit"
         - "§7/* TODO: fix integer overflow in\n   terrain generation */\n§8// See: JIRA-12481287"
+        - "§7> getBiome(12550821, 64, 12550821)\n§8[ERR] Return value: null\n§7// Biome registry corrupted"
+        - "§7// RESTORE backup_alpha_1_7_3.dat\n§8Backup predates coordinate system.\n§7// Restoring anyway..."
+        - "§7> terrain_gen --seed 0\n§8[WARN] Seed 0 produces undefined\n§8  geometry past X=12550824\n§7// Known issue. Will not fix."
     - weight: 1
       target: level_5
       messages:
         - "§7// PLAY audio_11.dat\n§8[WARN] File corrupted at 0x00B1\n§7// Recovered 1:05 of 1:11"
         - "§7> extract C418/11.ogg\n§8Access denied. File locked by:\n§c  UNKNOWN_PROCESS"
         - "§7/* The recording was never meant\n   to be found. Stop listening. */"
+        - "§7> ffprobe 11.ogg\n§8Duration: 1:11 (expected)\n§8Channels: 2 (expected)\n§c  Channel 3: UNKNOWN_SOURCE"
+        - "§7// DECRYPT 11.ogg --key=????\n§8[ERR] File is not encrypted.\n§7// Then why can't we read it?"
+        - "§7> strings 11.ogg | grep -i help\n§8  Match at 0x00B1: \"help me\"\n§c  Match at 0x00B1: \"run\""
     - weight: 1
       target: level_7
       messages:
         - "§7// LOAD chunk r.0.0.mca\n§c[FATAL] Chunk data corrupted\n§7// Attempting recovery...\n§c// Recovery failed."
         - "§7> /gamerule worldGenSeed ???\n§8Seed mismatch detected.\n§cAll chunks invalidated."
         - "§7/* Every block type at once.\n   The generator has lost its mind. */"
+        - "§7> chunkinfo r.0.0.mca\n§8  Blocks: 65536 unique (of 65536)\n§c  Expected: <800\n§7// Every palette entry used."
+        - "§7// VALIDATE chunk_422.nbt\n§8[ERR] NBT depth exceeds MAX_INT\n§c// Data references itself."
+        - "§7> diff chunk_422.nbt chunk_422.bak\n§8  Files are identical.\n§c  Backup is also corrupted."
     - weight: 1
       target: level_64637
       messages:
         - "§7// OPEN archive_64637.lib\n§8[INFO] Indexing 2^64637 entries...\n§7// Estimated time: undefined"
         - "§7> ls /data/changelogs/\n§8  total: ∞\n§7  Every version. Every change.\n  Every line of code."
         - "§7/* The library contains everything\n   that was ever written, and\n   everything that will be. */"
+        - "§7> cat /archive/index.dat\n§8[INFO] Index contains your name.\n§7// How?"
+        - "§7> du -sh /archive/\n§8  Size: NaN\n§8  Files: more than last time\n§7// Archive is still growing."
+        - "§7/* Entry 64637.0.0.1:\n   Title: This Terminal\n   Author: You\n   Status: Being Read Right Now */"
 
 events:
   - ambient_sound
@@ -61,6 +73,12 @@ event_config:
       - "§7> kill @e[type=Herobrine]"
       - "§7> gamerule showDeathMessages false"
       - "§c[FATAL] §fWorldGen seed mismatch"
+      - "§7> /list\n§f  0/0 players online"
+      - "§c[ERR] §fPermission node 'exit.allowed' not found"
+      - "§e[WARN] §fRemoved Herobrine."
+      - "§7[Server] §fBackup completed. Size: ∞ bytes"
+      - "§c[ERR] §fThread 'Reality' stopped responding"
+      - "§7> help\n§f  Unknown command."
   inventory_glitch:
     enabled: true
     check_interval_seconds: 60
@@ -71,16 +89,18 @@ event_config:
 exit_triggers:
   - type: powered_command_block
     target_level: level_4
-    power_count: 5
-    radius: 8
+    power_count: 16
+    window_ticks: 80
+    radius: 20
     transition:
       blindness_ticks: 80
       delay_ticks: 20
       message: "// LOADING terrain_gen_legacy.jar ..."
   - type: powered_command_block
     target_level: level_5
-    power_count: 5
-    radius: 8
+    power_count: 16
+    window_ticks: 80
+    radius: 20
     transition:
       blindness_ticks: 100
       darkness_ticks: 100
@@ -88,16 +108,18 @@ exit_triggers:
       message: "// LOADING audio_11.dat ..."
   - type: powered_command_block
     target_level: level_7
-    power_count: 5
-    radius: 8
+    power_count: 16
+    window_ticks: 80
+    radius: 20
     transition:
       blindness_ticks: 80
       delay_ticks: 20
       message: "// LOADING chunk_error_422.bin ..."
   - type: powered_command_block
     target_level: level_64637
-    power_count: 5
-    radius: 8
+    power_count: 16
+    window_ticks: 80
+    radius: 20
     transition:
       blindness_ticks: 60
       delay_ticks: 20

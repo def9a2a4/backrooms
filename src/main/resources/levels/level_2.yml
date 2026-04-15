@@ -10,6 +10,7 @@ events:
   - ambient_sound
   # - blackout
   - footstep_echo
+  - sign_placement
 
 entities:
   - herobrine
@@ -38,6 +39,21 @@ event_config:
     chance: 0.3
     delay_ticks: 6
     offset_blocks: 4
+  sign_placement:
+    enabled: true
+    check_interval_seconds: 90
+    chance: 0.10
+    messages:
+      - "CAUTION: STEAM"
+      - "maintenance access DENIED"
+      - "DO NOT ENTER"
+      - "valve 7 — DO NOT OPEN"
+      - "pressure nominal"
+      - "the pipes are breathing"
+      - ""
+      - "someone turned the valve"
+      - "it came from the pipes"
+      - "no maintenance scheduled"
 
 exit_triggers:
   - type: lever_pipe
