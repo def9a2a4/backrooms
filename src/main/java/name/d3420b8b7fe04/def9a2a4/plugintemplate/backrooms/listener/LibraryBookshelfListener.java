@@ -59,8 +59,8 @@ public class LibraryBookshelfListener implements Listener {
             // Only pillar rooms on this layer have chiseled bookshelves
             if (!Level64637ChunkGenerator.hasCenterPillar(worldSeed, layer, cellX, cellZ)) continue;
 
-            int shelfMinY = layer * Level64637ChunkGenerator.FLOOR_SPACING + 4;
-            int shelfMaxY = layer * Level64637ChunkGenerator.FLOOR_SPACING + 8;
+            int shelfMinY = Level64637ChunkGenerator.BASE_Y + layer * Level64637ChunkGenerator.FLOOR_SPACING + 4;
+            int shelfMaxY = Level64637ChunkGenerator.BASE_Y + layer * Level64637ChunkGenerator.FLOOR_SPACING + 8;
 
             for (int x = 0; x < 16; x++) {
                 for (int z = 0; z < 16; z++) {

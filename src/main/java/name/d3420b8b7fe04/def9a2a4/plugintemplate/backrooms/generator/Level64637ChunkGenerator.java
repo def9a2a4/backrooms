@@ -30,11 +30,12 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     private static final int WALL_THICKNESS = 1;
 
     // Multi-layer layout
+    public static final int BASE_Y = 80;
     public static final int NUM_LAYERS = 7;
     public static final int FLOOR_SPACING = 10;
     private static final int SOLID_THICKNESS = 3;
-    private static final int CAP_MIN_Y = NUM_LAYERS * FLOOR_SPACING;  // 70
-    private static final int CAP_MAX_Y = CAP_MIN_Y + SOLID_THICKNESS; // 73
+    private static final int CAP_MIN_Y = BASE_Y + NUM_LAYERS * FLOOR_SPACING;  // 150
+    private static final int CAP_MAX_Y = CAP_MIN_Y + SOLID_THICKNESS; // 153
 
     // Per-layer offsets (relative to layerBaseY = layer * FLOOR_SPACING)
     private static final int REL_AIR_MIN = 3;
@@ -74,11 +75,11 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         int cellZ = Math.floorDiv(chunkZ * 16, CELL_SIZE);
 
         // Fill entire vertical extent with oak planks, including fake layers above/below
-        chunkData.setRegion(0, -FLOOR_SPACING, 0, 16, CAP_MAX_Y + FLOOR_SPACING, 16, Material.OAK_PLANKS);
+        chunkData.setRegion(0, BASE_Y - FLOOR_SPACING, 0, 16, CAP_MAX_Y + FLOOR_SPACING, 16, Material.OAK_PLANKS);
 
         // Generate each layer (including fake layers -1 and NUM_LAYERS for visual wrap continuity)
         for (int layer = -1; layer <= NUM_LAYERS; layer++) {
-            int baseY = layer * FLOOR_SPACING;
+            int baseY = BASE_Y + layer * FLOOR_SPACING;
             int airMin = baseY + REL_AIR_MIN;
             int airMax = baseY + REL_AIR_MAX;
 
@@ -136,20 +137,19 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         // Punch stairwell through base (Y=0-2) and ceiling cap (Y=70-72)
         // for all-layer staircases that need the wrap connection
         if (isStaircase(seed, cellX, cellZ) && getStaircaseSpan(seed, cellX, cellZ) >= NUM_LAYERS) {
-            punchStairwellShaft(chunkData, 0, SOLID_THICKNESS, chunkX, chunkZ);
+            punchStairwellShaft(chunkData, BASE_Y, BASE_Y + SOLID_THICKNESS, chunkX, chunkZ);
             punchStairwellShaft(chunkData, CAP_MIN_Y, CAP_MAX_Y, chunkX, chunkZ);
         }
 
-        // Bedrock boundaries: Y=0-1 floor, Y=71-72 ceiling.
-        // Y=2 and Y=70 stay as oak planks so the visible floor/ceiling surface is wood, not bedrock.
-        applyBoundaryLayer(chunkData, 0, REL_AIR_MIN - 1, Material.BEDROCK, false);
+        // Bedrock boundaries
+        applyBoundaryLayer(chunkData, BASE_Y, BASE_Y + REL_AIR_MIN - 1, Material.BEDROCK, false);
         applyBoundaryLayer(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, Material.BEDROCK, false);
 
         // Re-punch stairwell shaft through bedrock and line the exposed walls with oak planks.
         if (isStaircase(seed, cellX, cellZ) && getStaircaseSpan(seed, cellX, cellZ) >= NUM_LAYERS) {
-            punchStairwellShaft(chunkData, 0, REL_AIR_MIN - 1, chunkX, chunkZ);
+            punchStairwellShaft(chunkData, BASE_Y, BASE_Y + REL_AIR_MIN - 1, chunkX, chunkZ);
             punchStairwellShaft(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, chunkX, chunkZ);
-            lineShaftWalls(chunkData, 0, REL_AIR_MIN - 1, chunkX, chunkZ);
+            lineShaftWalls(chunkData, BASE_Y, BASE_Y + REL_AIR_MIN - 1, chunkX, chunkZ);
             lineShaftWalls(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, chunkX, chunkZ);
         }
 
@@ -266,8 +266,8 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                 slab.setType(isTop ? Slab.Type.TOP : Slab.Type.BOTTOM);
 
                 // Base shaft: r = -1
-                int baseBlockY = REL_AIR_MIN + offset - 6;
-                if (baseBlockY >= 0 && baseBlockY < REL_AIR_MIN) {
+                int baseBlockY = BASE_Y + REL_AIR_MIN + offset - 6;
+                if (baseBlockY >= BASE_Y && baseBlockY < BASE_Y + REL_AIR_MIN) {
                     data.setBlock(x, baseBlockY, z, slab);
                 }
 
@@ -282,7 +282,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
     private void placeWallColumn(ChunkData data, int x, int z, int localPos,
                                  long seed, int coordA, int coordB, boolean xWall, int layer) {
-        int baseY = layer * FLOOR_SPACING;
+        int baseY = BASE_Y + layer * FLOOR_SPACING;
         int airMin = baseY + REL_AIR_MIN;
         int airMax = baseY + REL_AIR_MAX;
         int shelfMin = baseY + REL_SHELF_MIN;
@@ -391,7 +391,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     // ── Pillar room ─────────────────────────────────────────────────────
 
     private void placePillarColumn(ChunkData data, int x, int z, int localX, int localZ, int layer) {
-        int baseY = layer * FLOOR_SPACING;
+        int baseY = BASE_Y + layer * FLOOR_SPACING;
         int airMin = baseY + REL_AIR_MIN;
         int airMax = baseY + REL_AIR_MAX;
         int shelfMin = baseY + REL_SHELF_MIN;
@@ -454,7 +454,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     private void placeStaircaseColumn(ChunkData data, int x, int z,
                                        int localX, int localZ, int layer,
                                        long seed, int cellX, int cellZ) {
-        int baseY = layer * FLOOR_SPACING;
+        int baseY = BASE_Y + layer * FLOOR_SPACING;
         int airMin = baseY + REL_AIR_MIN;
         int airMax = baseY + REL_AIR_MAX;
 
@@ -479,8 +479,8 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         // Compute staircase base Y (airMin of the bottom layer of this span)
         int span = getStaircaseSpan(seed, cellX, cellZ);
         int startY = (span >= NUM_LAYERS)
-                ? REL_AIR_MIN
-                : getStaircaseStartLayer(seed, cellX, cellZ) * FLOOR_SPACING + REL_AIR_MIN;
+                ? BASE_Y + REL_AIR_MIN
+                : BASE_Y + getStaircaseStartLayer(seed, cellX, cellZ) * FLOOR_SPACING + REL_AIR_MIN;
         int maxBlockY = startY + 10 * Math.min(span, NUM_LAYERS) - 1;
 
         boolean isTop = STAIR_IS_TOP[sz][sx];
@@ -520,7 +520,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private void placeLantern(ChunkData data, int x, int z, int layer) {
-        int y = layer * FLOOR_SPACING + REL_AIR_MAX - 1;
+        int y = BASE_Y + layer * FLOOR_SPACING + REL_AIR_MAX - 1;
         org.bukkit.block.data.type.Lantern lantern =
                 (org.bukkit.block.data.type.Lantern) Material.LANTERN.createBlockData();
         lantern.setHanging(true);
@@ -528,11 +528,11 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     @Override
-    public int getSpawnY() { return 3 * FLOOR_SPACING + REL_AIR_MIN; }
+    public int getSpawnY() { return BASE_Y + 3 * FLOOR_SPACING + REL_AIR_MIN; }
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, 8.5, 3 * FLOOR_SPACING + REL_AIR_MIN, 8.5); // layer 3 floor
+        return new Location(world, 8.5, BASE_Y + 3 * FLOOR_SPACING + REL_AIR_MIN, 8.5); // layer 3 floor
     }
 
     // ── Book Config ──────────────────────────────────────────────────────

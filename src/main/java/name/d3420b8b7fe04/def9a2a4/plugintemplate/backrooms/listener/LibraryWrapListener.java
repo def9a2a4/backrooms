@@ -14,8 +14,8 @@ import org.bukkit.event.player.PlayerMoveEvent;
  */
 public class LibraryWrapListener implements Listener {
 
-    private static final double UPPER_THRESHOLD = 66.0;
-    private static final double LOWER_THRESHOLD = 5.0;
+    private static final double UPPER_THRESHOLD = Level64637ChunkGenerator.BASE_Y + 66.0;
+    private static final double LOWER_THRESHOLD = Level64637ChunkGenerator.BASE_Y + 5.0;
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
