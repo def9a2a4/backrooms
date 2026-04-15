@@ -9,7 +9,7 @@ backrooms:
       - world_nether
     suffocation_noclip:
       enabled: true
-      chance: 0.02
+      damage_threshold: 16.0
       target_level: level_64637
     void_fall:
       enabled: true
@@ -19,10 +19,12 @@ backrooms:
       chance: 0.05
       require_thunderstorm: true
       target_level: level_64637
-    portal_mislink:
+    aether_portal:
       enabled: true
-      chance: 0.01
-      target_level: level_64637
+      target_level: level_94
+    herobrine_shrine:
+      enabled: true
+      target_level: level_0
 
   # Entity spawner settings
   entity_spawner:

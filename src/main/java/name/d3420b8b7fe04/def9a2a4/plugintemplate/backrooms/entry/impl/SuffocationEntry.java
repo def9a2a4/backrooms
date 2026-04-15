@@ -11,15 +11,12 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.*;
 
 public class SuffocationEntry implements EntryTrigger {
 
     private boolean enabled = true;
-    private double chance = 0.02;
+    private double damageThreshold = 16.0;
     private String targetLevel = "level_0";
     private String entryMessage = "\u00a77\u00a7oInternal server error: java.lang.NullPointerException at WorldGenLayer.class";
     private int blindnessDuration = 40;
@@ -27,6 +24,8 @@ public class SuffocationEntry implements EntryTrigger {
     private int delayTicks = 40;
     private Set<String> enabledWorlds = new HashSet<>();
     private final JavaPlugin plugin;
+
+    private final Map<UUID, Double> accumulatedDamage = new HashMap<>();
 
     public SuffocationEntry(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -48,9 +47,25 @@ public class SuffocationEntry implements EntryTrigger {
         if (!enabled) return null;
         if (!(event instanceof EntityDamageEvent damageEvent)) return null;
         if (damageEvent.getCause() != EntityDamageEvent.DamageCause.SUFFOCATION) return null;
-        if (ThreadLocalRandom.current().nextDouble() >= chance) return null;
-        damageEvent.setCancelled(true);
-        return targetLevel;
+
+        UUID uuid = player.getUniqueId();
+        double total = accumulatedDamage.getOrDefault(uuid, 0.0) + damageEvent.getDamage();
+
+        if (total >= damageThreshold) {
+            accumulatedDamage.remove(uuid);
+            damageEvent.setCancelled(true);
+            return targetLevel;
+        }
+
+        accumulatedDamage.put(uuid, total);
+        // Decay tracker if player stops taking suffocation damage within 3 seconds
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            Double current = accumulatedDamage.get(uuid);
+            if (current != null && current == total) {
+                accumulatedDamage.remove(uuid);
+            }
+        }, 60L);
+        return null;
     }
 
     @Override
@@ -70,7 +85,7 @@ public class SuffocationEntry implements EntryTrigger {
     public void loadConfig(ConfigurationSection config) {
         if (config == null) return;
         enabled = config.getBoolean("enabled", true);
-        chance = config.getDouble("chance", 0.02);
+        damageThreshold = config.getDouble("damage_threshold", 16.0);
         targetLevel = config.getString("target_level", "level_0");
         entryMessage = config.getString("entry_message", entryMessage);
         blindnessDuration = config.getInt("blindness_duration", blindnessDuration);

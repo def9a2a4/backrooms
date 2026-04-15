@@ -4,10 +4,16 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command.BackroomsCom
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntitySpawner;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityTypeRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.behavior.EntityBehaviorRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.behavior.impl.*;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl.FloatingHeadEntity;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl.MannequinEntity;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.EntryManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.EntryTriggerRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.BedAnomalyEntry;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.PortalMislinkEntry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.AetherPortalEntry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.HerobrineShrineEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.SuffocationEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.VoidFallEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.BackroomsEvent;
@@ -49,6 +55,8 @@ public class BackroomsPlugin {
     private final EventRegistry eventRegistry;
     private final EntryTriggerRegistry entryTriggerRegistry;
     private final EntityRegistry entityRegistry;
+    private final EntityTypeRegistry entityTypeRegistry = new EntityTypeRegistry();
+    private final EntityBehaviorRegistry behaviorRegistry = new EntityBehaviorRegistry();
     private final PlayerStateManager playerStateManager;
     private final EventScheduler eventScheduler;
     private final EntitySpawner entitySpawner;
@@ -100,21 +108,45 @@ public class BackroomsPlugin {
         eventRegistry.register(new InventoryGlitchEvent());
         eventRegistry.register(new TorchDecayEvent());
 
+        eventRegistry.register(new WallShiftEvent());
+        eventRegistry.register(new SignPlacementEvent());
+
         // 3. Register built-in entities
         entityRegistry.register(new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl.HerobrineEntity());
         entityRegistry.register(new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl.PursuerEntity());
         entityRegistry.register(new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl.WrongEndermanEntity());
 
+        // 3b. Register entity behaviors and type factories (for data-driven entity_instances)
+        behaviorRegistry.register("weeping_angel", WeepingAngelBehavior::new);
+        behaviorRegistry.register("stalk", StalkerBehavior::new);
+        behaviorRegistry.register("flee", FleeBehavior::new);
+        behaviorRegistry.register("attack", AttackBehavior::new);
+        behaviorRegistry.register("stationary_stare", StationaryStareBehavior::new);
+        behaviorRegistry.register("patrol", PatrolBehavior::new);
+
+        entityTypeRegistry.register("floating_head", (instanceId, cfg) -> {
+            FloatingHeadEntity e = new FloatingHeadEntity(instanceId, behaviorRegistry);
+            e.loadConfig(cfg);
+            return e;
+        });
+        entityTypeRegistry.register("mannequin", (instanceId, cfg) -> {
+            MannequinEntity e = new MannequinEntity(instanceId, behaviorRegistry);
+            e.loadConfig(cfg);
+            return e;
+        });
+
         // 4. Register built-in entry triggers
         SuffocationEntry suffocation = new SuffocationEntry(plugin);
         VoidFallEntry voidFall = new VoidFallEntry(plugin);
         BedAnomalyEntry bedAnomaly = new BedAnomalyEntry(plugin);
-        PortalMislinkEntry portalMislink = new PortalMislinkEntry(plugin);
+        AetherPortalEntry aetherPortal = new AetherPortalEntry(plugin);
+        HerobrineShrineEntry herobrineShrine = new HerobrineShrineEntry(plugin);
 
         entryTriggerRegistry.register(suffocation);
         entryTriggerRegistry.register(voidFall);
         entryTriggerRegistry.register(bedAnomaly);
-        entryTriggerRegistry.register(portalMislink);
+        entryTriggerRegistry.register(aetherPortal);
+        entryTriggerRegistry.register(herobrineShrine);
 
         // 4. Load config — creates levels from config using generator registry
         loadConfig();
@@ -316,6 +348,29 @@ public class BackroomsPlugin {
                     if (entity != null) {
                         entity.loadConfig(entitiesCfg.getConfigurationSection(entityId));
                     }
+                }
+            }
+
+            // Load data-driven entity instances
+            ConfigurationSection instancesCfg = levelCfg.getConfigurationSection("entity_instances");
+            if (instancesCfg != null) {
+                for (String instanceId : instancesCfg.getKeys(false)) {
+                    ConfigurationSection instanceCfg = instancesCfg.getConfigurationSection(instanceId);
+                    if (instanceCfg == null) continue;
+                    String typeId = instanceCfg.getString("type");
+                    if (typeId == null) {
+                        plugin.getLogger().warning("Entity instance '" + instanceId
+                                + "' in " + levelFile.getName() + " missing 'type' — skipping.");
+                        continue;
+                    }
+                    BackroomsEntity entity = entityTypeRegistry.create(typeId, instanceId, instanceCfg);
+                    if (entity == null) {
+                        plugin.getLogger().warning("Unknown entity type '" + typeId
+                                + "' for instance '" + instanceId + "' in " + levelFile.getName());
+                        continue;
+                    }
+                    entityRegistry.register(entity);
+                    level.addEntityId(instanceId);
                 }
             }
 
