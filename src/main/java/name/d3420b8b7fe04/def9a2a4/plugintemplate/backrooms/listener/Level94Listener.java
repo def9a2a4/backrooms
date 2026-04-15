@@ -31,7 +31,7 @@ import java.util.*;
  */
 public class Level94Listener implements Listener {
 
-    private static final String WORLD_NAME = "backrooms_level_94";
+    private static final String WORLD_NAME = "bkrms_94";
     private static final int VOID_THRESHOLD = 10;
     private static final int CASCADE_DURATION_TICKS = 400; // 20 seconds
 

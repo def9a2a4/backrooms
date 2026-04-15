@@ -44,7 +44,7 @@ public class LibraryBookshelfListener implements Listener {
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
         if (!event.isNewChunk()) return;
-        if (!event.getWorld().getName().equals("backrooms_level_64637")) return;
+        if (!event.getWorld().getName().equals("bkrms_64637")) return;
 
         Chunk chunk = event.getChunk();
         long worldSeed = event.getWorld().getSeed();

@@ -10,10 +10,25 @@ events:
   - ambient_sound
   - footstep_echo
   - torch_decay
+  - sign_placement
 
 entities:
   - pursuer
   - herobrine
+
+entity_instances:
+  level5_floating_head:
+    type: floating_head
+    skin: "http://textures.minecraft.net/texture/ea0c43536e47e78c780a2c1a3db0cc242f5e8b2d3c5b7e63a659f58fe1c3b0ce"
+    scale: 1.0
+    behavior: flee
+    spawn_chance: 0.12
+    min_escalation: 0
+    flee:
+      trigger_distance: 20.0
+      look_angle: 30.0
+      flee_speed: 0.15
+      max_distance: 60.0
 
 event_config:
   ambient_sound:
@@ -35,3 +50,11 @@ event_config:
     chance: 0.4
     radius: 20
     extinguish_chance: 0.3
+  sign_placement:
+    enabled: true
+    check_interval_seconds: 60
+    chance: 0.12
+    messages:
+      - "behind you"
+      - "STOP"
+      - ""

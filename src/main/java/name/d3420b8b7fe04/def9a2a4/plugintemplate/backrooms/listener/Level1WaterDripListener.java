@@ -29,7 +29,7 @@ public class Level1WaterDripListener implements Listener {
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
         if (!event.isNewChunk()) return;
-        if (!event.getWorld().getName().equals("backrooms_level_1")) return;
+        if (!event.getWorld().getName().equals("bkrms_1")) return;
 
         Chunk chunk = event.getChunk();
         List<int[]> waterPositions = new ArrayList<>();

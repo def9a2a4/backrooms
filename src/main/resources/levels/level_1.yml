@@ -71,3 +71,16 @@ event_config:
     light_y: 18
     light_spacing: 11
     light_material: VERDANT_FROGLIGHT
+  wall_shift:
+    enabled: true
+    check_interval_seconds: 50
+    chance: 0.20
+  sign_placement:
+    enabled: true
+    check_interval_seconds: 90
+    chance: 0.10
+    messages:
+      - "Wake up"
+      - "Not real"
+      - "you've been here before"
+      - ""

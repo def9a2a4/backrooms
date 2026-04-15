@@ -174,10 +174,7 @@ public class LevelRegistry {
     }
 
     private String worldNameFor(BackroomsLevel level) {
-        if ("level_0".equals(level.getId())) {
-            return "backrooms";
-        }
-        return "backrooms_" + level.getId();
+        return "bkrms_" + level.getId().substring("level_".length());
     }
 
     private void deleteDirectory(Path dir) {

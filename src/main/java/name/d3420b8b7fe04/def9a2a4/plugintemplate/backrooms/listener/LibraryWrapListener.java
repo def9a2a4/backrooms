@@ -19,7 +19,7 @@ public class LibraryWrapListener implements Listener {
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
-        if (!event.getTo().getWorld().getName().equals("backrooms_level_64637")) return;
+        if (!event.getTo().getWorld().getName().equals("bkrms_64637")) return;
 
         double y = event.getTo().getY();
         if (y > LOWER_THRESHOLD && y < UPPER_THRESHOLD) return;
