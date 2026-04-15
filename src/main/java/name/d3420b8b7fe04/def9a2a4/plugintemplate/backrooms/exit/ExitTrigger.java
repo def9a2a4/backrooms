@@ -20,7 +20,7 @@ public interface ExitTrigger {
         return List.of();
     }
 
-    default boolean checkEvent(Event event, Player player) {
+    default boolean checkEvent(Event event, Player player, BackroomsPlayerState state) {
         return false;
     }
 }

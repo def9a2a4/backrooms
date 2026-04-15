@@ -21,7 +21,7 @@ public class HerobrineEntity implements BackroomsEntity {
 
     // White-eyed Steve skin (classic Herobrine texture)
     private static final String HEROBRINE_SKIN_URL =
-            "http://textures.minecraft.net/texture/ea0c43536e47e78c780a2c1a3db0cc242f5e8b2d3c5b7e63a659f58fe1c3b0ce";
+            "https://textures.minecraft.net/texture/de507cfcfbd14d9fe9970f553a934f643c2a393dbc6b7d8ccee75909dbc4ebfa"; // herobrine (from skins.yml)
 
     private int minEscalationLevel = 1;
     private double spawnChance = 0.15;

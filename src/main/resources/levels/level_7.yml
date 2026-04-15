@@ -15,6 +15,17 @@ events:
 
 entities: []
 
+entity_instances:
+  corrupted_notch:
+    type: mannequin
+    skin: "https://textures.minecraft.net/texture/78df1772cb93461bfa5f8518a66b215acf3d1e352968168e7054b62685f3ec11"  # notch-bloody
+    scale: 3.0
+    behavior: stationary_stare
+    spawn_chance: 0.15
+    min_escalation: 0
+    stationary_stare:
+      despawn_distance: 10.0
+
 event_config:
   ambient_sound:
     enabled: true
@@ -59,3 +70,11 @@ event_config:
     chance: 0.2
     radius: 25
     cube_size: 4
+
+exit_triggers:
+  - type: below_y
+    target_level: overworld
+    y_threshold: 0
+    transition:
+      blindness_ticks: 100
+      delay_ticks: 30

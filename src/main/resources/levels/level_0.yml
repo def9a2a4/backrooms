@@ -18,9 +18,9 @@ entities:
   - herobrine
 
 entity_instances:
-  level0_mannequin:
+  level0_mannequin_angel:
     type: mannequin
-    skin: player
+    skin: player  # copies the target player's own skin
     scale: 1.0
     behavior: weeping_angel
     spawn_chance: 0.10
@@ -30,9 +30,31 @@ entity_instances:
       approach_interval_ticks: 5
       approach_distance: 2.5
       close_distance: 8.0
+  level0_attacker_player:
+    type: mannequin
+    skin: player  # copies the target player's own skin
+    scale: 1.0
+    behavior: attack
+    spawn_chance: 0.06
+    min_escalation: 1
+    attack:
+      charge_speed: 0.8
+      attack_distance: 2.0
+      damage: 10.0
+  level0_attacker_shadow:
+    type: mannequin
+    skin: "https://textures.minecraft.net/texture/b089eda62a203acf6d6425d95129bb5b0df07761092c18e882ed0470842ee6d1"  # null
+    scale: 1.0
+    behavior: attack
+    spawn_chance: 0.06
+    min_escalation: 1
+    attack:
+      charge_speed: 0.6
+      attack_distance: 2.0
+      damage: 10.0
   level0_floating_head:
     type: floating_head
-    skin: "http://textures.minecraft.net/texture/ea0c43536e47e78c780a2c1a3db0cc242f5e8b2d3c5b7e63a659f58fe1c3b0ce"
+    skin: "https://textures.minecraft.net/texture/de507cfcfbd14d9fe9970f553a934f643c2a393dbc6b7d8ccee75909dbc4ebfa"  # herobrine
     scale: 1.5
     behavior: stationary_stare
     spawn_chance: 0.12
@@ -94,3 +116,12 @@ event_config:
       - "behind you"
       - "DON'T TURN AROUND"
       - ""
+
+exit_triggers:
+  - type: collect_items
+    target_level: level_1
+    item: WRITTEN_BOOK
+    threshold: 16
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20

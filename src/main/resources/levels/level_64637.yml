@@ -10,20 +10,8 @@ enter_message: "§8§kxxxx§r §7You find yourself among infinite shelves. §8§
 events:
   - ambient_sound
   - footstep_echo
-  - sign_placement
 
 entities: []
-
-entity_instances:
-  library_floating_head:
-    type: floating_head
-    skin: "http://textures.minecraft.net/texture/ea0c43536e47e78c780a2c1a3db0cc242f5e8b2d3c5b7e63a659f58fe1c3b0ce"
-    scale: 0.8
-    behavior: stationary_stare
-    spawn_chance: 0.08
-    min_escalation: 0
-    stationary_stare:
-      despawn_distance: 8.0
 
 event_config:
   ambient_sound:
@@ -39,11 +27,19 @@ event_config:
     chance: 0.5
     delay_ticks: 12
     offset_blocks: 8
-  sign_placement:
-    enabled: true
-    check_interval_seconds: 90
-    chance: 0.08
-    messages:
-      - "I am watching"
-      - "you've been here before"
-      - ""
+exit_triggers:
+  - type: collect_items
+    target_level: overworld
+    item: WRITTEN_BOOK
+    threshold: 16
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 30
+  - type: fall_distance
+    target_level: overworld
+    fall_distance: 200
+    transition:
+      blindness_ticks: 80
+      darkness_ticks: 80
+      delay_ticks: 40
+      message: "§7The stairs end. You feel yourself falling... and then, light."

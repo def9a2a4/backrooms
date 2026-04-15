@@ -20,7 +20,7 @@ entities:
 entity_instances:
   level1_mannequin:
     type: mannequin
-    skin: player
+    skin: player  # copies the target player's own skin
     scale: 1.0
     behavior: stalk
     spawn_chance: 0.08
@@ -30,7 +30,7 @@ entity_instances:
       despawn_distance: 5.0
   level1_floating_head:
     type: floating_head
-    skin: "http://textures.minecraft.net/texture/ea0c43536e47e78c780a2c1a3db0cc242f5e8b2d3c5b7e63a659f58fe1c3b0ce"
+    skin: "https://textures.minecraft.net/texture/d63139c6ee85655d6ef54c8d329bd597833b94dcd6b756e12fcdc171358a2b69"  # faceless-steve
     scale: 1.0
     behavior: stationary_stare
     spawn_chance: 0.10
@@ -84,3 +84,21 @@ event_config:
       - "Not real"
       - "you've been here before"
       - ""
+
+exit_triggers:
+  - type: submerged_below_y
+    target_level: level_2
+    y_threshold: 5
+    transition:
+      blindness_ticks: 80
+      nausea_ticks: 100
+      delay_ticks: 30
+      message: "The water pulls you under..."
+  - type: above_y
+    target_level: level_94
+    y_threshold: 30
+    transition:
+      blindness_ticks: 60
+      nausea_ticks: 60
+      delay_ticks: 20
+      message: "You climb through the breach..."

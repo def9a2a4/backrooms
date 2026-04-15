@@ -320,6 +320,23 @@ public class Level3ChunkGenerator extends BackroomsChunkGenerator {
         } catch (Exception e) {
             chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, component);
         }
+
+        // Rare command block placement next to lecterns (~0.5% of components)
+        if (component == Material.LECTERN) {
+            long cmdHash = posHash ^ 0xC0D_B10CL;
+            if (Math.floorMod(cmdHash, 200) == 0) {
+                // Place command block adjacent (opposite side of facing)
+                int cbx = x, cbz = z;
+                if (facing == BlockFace.NORTH) cbz += 1;
+                else if (facing == BlockFace.SOUTH) cbz -= 1;
+                else if (facing == BlockFace.EAST) cbx -= 1;
+                else cbx += 1;
+                if (cbx >= 0 && cbx < 16 && cbz >= 0 && cbz < 16) {
+                    chunkData.setBlock(cbx, FLOOR_HEIGHT, cbz, Material.COMMAND_BLOCK);
+                    chunkData.setBlock(cbx, FLOOR_HEIGHT + 1, cbz, Material.AIR);
+                }
+            }
+        }
     }
 
     private void placeDust(ChunkData chunkData, int x, int z, boolean nsChain) {

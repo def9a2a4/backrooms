@@ -145,9 +145,6 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         applyBoundaryLayer(chunkData, 0, REL_AIR_MIN - 1, Material.BEDROCK, false);
         applyBoundaryLayer(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, Material.BEDROCK, false);
 
-        // Punch a hole in the center of the ceiling cap so the fake room above is visible
-        punchCeilingHole(chunkData, chunkX, chunkZ);
-
         // Re-punch stairwell shaft through bedrock and line the exposed walls with oak planks.
         if (isStaircase(seed, cellX, cellZ) && getStaircaseSpan(seed, cellX, cellZ) >= NUM_LAYERS) {
             punchStairwellShaft(chunkData, 0, REL_AIR_MIN - 1, chunkX, chunkZ);
@@ -156,7 +153,11 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
             lineShaftWalls(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, chunkX, chunkZ);
         }
 
+        // Punch a hole in the center of the ceiling cap so the fake room above is visible
+        punchCeilingHole(chunkData, chunkX, chunkZ);
+
         // Place wrap slabs in the base and cap shafts (after bedrock so they aren't overwritten)
+        // Cap slabs skip the ceiling hole area (see inCeilingHole guard)
         placeWrapSlabs(chunkData, chunkX, chunkZ, seed, cellX, cellZ);
     }
 
@@ -265,11 +266,16 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                 }
 
                 // Cap shaft: find r where blockY lands in [CAP_MIN_Y, CAP_MAX_Y)
-                for (int r = (CAP_MIN_Y - REL_AIR_MIN - offset + 5) / 6; ; r++) {
-                    int blockY = REL_AIR_MIN + offset + 6 * r;
-                    if (blockY >= CAP_MAX_Y) break;
-                    if (blockY >= CAP_MIN_Y) {
-                        data.setBlock(x, blockY, z, slab);
+                // Skip positions inside the ceiling hole so the fake room above stays visible
+                boolean inCeilingHole = localX >= PILLAR_MIN && localX <= PILLAR_MAX
+                        && localZ >= PILLAR_MIN && localZ <= PILLAR_MAX;
+                if (!inCeilingHole) {
+                    for (int r = (CAP_MIN_Y - REL_AIR_MIN - offset + 5) / 6; ; r++) {
+                        int blockY = REL_AIR_MIN + offset + 6 * r;
+                        if (blockY >= CAP_MAX_Y) break;
+                        if (blockY >= CAP_MIN_Y) {
+                            data.setBlock(x, blockY, z, slab);
+                        }
                     }
                 }
             }

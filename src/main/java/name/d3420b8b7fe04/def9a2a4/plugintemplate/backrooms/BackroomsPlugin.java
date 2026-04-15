@@ -20,7 +20,10 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.BackroomsEvent
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.EventRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.EventScheduler;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.impl.*;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitEventListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTriggerRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.impl.*;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.DimensionTypeHelper;
@@ -28,6 +31,8 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1WaterDripListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Disc11JukeboxListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LobbyBookshelfListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryWrapListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
@@ -55,6 +60,7 @@ public class BackroomsPlugin {
     private final EventRegistry eventRegistry;
     private final EntryTriggerRegistry entryTriggerRegistry;
     private final EntityRegistry entityRegistry;
+    private final ExitTriggerRegistry exitTriggerRegistry;
     private final EntityTypeRegistry entityTypeRegistry = new EntityTypeRegistry();
     private final EntityBehaviorRegistry behaviorRegistry = new EntityBehaviorRegistry();
     private final PlayerStateManager playerStateManager;
@@ -72,6 +78,7 @@ public class BackroomsPlugin {
         this.levelRegistry = new LevelRegistry(plugin.getLogger());
         this.eventRegistry = new EventRegistry();
         this.entryTriggerRegistry = new EntryTriggerRegistry();
+        this.exitTriggerRegistry = new ExitTriggerRegistry();
         this.entityRegistry = new EntityRegistry();
         this.playerStateManager = new PlayerStateManager(plugin);
         this.eventScheduler = new EventScheduler(plugin, levelRegistry, eventRegistry, playerStateManager);
@@ -135,7 +142,17 @@ public class BackroomsPlugin {
             return e;
         });
 
-        // 4. Register built-in entry triggers
+        // 4a. Register exit trigger types
+        exitTriggerRegistry.register("below_y", BelowYTrigger::new);
+        exitTriggerRegistry.register("above_y", AboveYTrigger::new);
+        exitTriggerRegistry.register("submerged_below_y", SubmergedBelowYTrigger::new);
+        exitTriggerRegistry.register("collect_items", CollectItemsTrigger::new);
+        exitTriggerRegistry.register("walk_distance", WalkDistanceTrigger::new);
+        exitTriggerRegistry.register("powered_command_block", PoweredCommandBlockTrigger::new);
+        exitTriggerRegistry.register("lever_pipe", LeverPipeTrigger::new);
+        exitTriggerRegistry.register("fall_distance", FallDistanceTrigger::new);
+
+        // 4b. Register built-in entry triggers
         SuffocationEntry suffocation = new SuffocationEntry(plugin);
         VoidFallEntry voidFall = new VoidFallEntry(plugin);
         BedAnomalyEntry bedAnomaly = new BedAnomalyEntry(plugin);
@@ -168,7 +185,11 @@ public class BackroomsPlugin {
         // 8. Register Bukkit listeners
         Bukkit.getPluginManager().registerEvents(playerStateManager, plugin);
         Bukkit.getPluginManager().registerEvents(entryManager, plugin);
+        Bukkit.getPluginManager().registerEvents(
+                new ExitEventListener(levelRegistry, playerStateManager, transitionManager), plugin);
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
+        Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin), plugin);
+        Bukkit.getPluginManager().registerEvents(new Disc11JukeboxListener(), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryWrapListener(), plugin);
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);
@@ -333,7 +354,7 @@ public class BackroomsPlugin {
                 continue;
             }
 
-            ConfigDrivenLevel level = new ConfigDrivenLevel(this, levelId, generatorId, generatorRegistry);
+            ConfigDrivenLevel level = new ConfigDrivenLevel(this, levelId, generatorId, generatorRegistry, exitTriggerRegistry);
             level.loadFromConfig(levelCfg);
             levelRegistry.register(level);
 

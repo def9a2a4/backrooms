@@ -64,3 +64,13 @@ event_config:
     chance: 0.03
     sounds:
       - ambient.underwater.loop
+
+exit_triggers:
+  - type: below_y
+    target_level: level_3
+    y_threshold: -10
+    transition:
+      blindness_ticks: 100
+      delay_ticks: 40
+      message: "The drain pulls you deeper..."
+      sound: ambient.underwater.enter

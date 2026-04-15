@@ -80,6 +80,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private static final int POOL_HALF = 5;       // one half wet, one dry
     private static final int POOL_ABYSS = 6;      // extra-deep stepped pool
     private static final int POOL_ABYSS_DEEP = 7; // rare extra-extra-deep pool
+    private static final int POOL_DRAIN = 8;      // very rare: deep pool with 2x2 drain shaft to void
 
     @Override
     public void configure(@Nullable ConfigurationSection config) {
@@ -231,15 +232,22 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 if (skylightType == SKY_BARS && !isWall
                         && localX >= WALL_THICK && localX < CELL_SIZE - WALL_THICK
                         && localZ >= WALL_THICK && localZ < CELL_SIZE - WALL_THICK) {
-                    // Bars: entire interior ceiling carved out 5 blocks.
-                    // Solid bar strips (localX % 4 == 0) hang down from upper ceiling.
+                    // Bars: lower 5 blocks of entire interior ceiling carved out.
+                    // Bar strips (localX % 4 == 0) hang from upper ceiling down to carve line.
                     // Gaps between bars are fully open to sky.
+                    int carveTop = ceilingY + 5;
                     boolean isBar = localX % 4 == 0;
                     if (isBar) {
-                        for (int y = ceilingY; y < CEILING_MAX_Y; y++) {
+                        // Lower portion: open air
+                        for (int y = ceilingY; y < carveTop; y++) {
+                            chunkData.setBlock(x, y, z, Material.AIR);
+                        }
+                        // Upper portion: solid bar hanging from ceiling
+                        for (int y = carveTop; y < CEILING_MAX_Y; y++) {
                             chunkData.setBlock(x, y, z, palette.ceiling());
                         }
                     } else {
+                        // Fully open to sky
                         for (int y = ceilingY; y < SKYLIGHT_MAX_Y; y++) {
                             chunkData.setBlock(x, y, z, Material.AIR);
                         }
@@ -447,7 +455,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         if (roll < 79) return POOL_MOAT;
         if (roll < 88) return POOL_HALF;
         if (roll < 97) return POOL_ABYSS;
-        return POOL_ABYSS_DEEP;
+        if (roll < 99) return POOL_ABYSS_DEEP;
+        return POOL_DRAIN;
     }
 
     private int getSkylightType(int cellX, int cellZ, long seed) {
@@ -1124,6 +1133,35 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     }
                     chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette.floor());
                 } else {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 7; y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
+                    }
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 7, z, palette.floor());
+                }
+            }
+            case POOL_DRAIN -> {
+                // Very rare super-deep pool with 2x2 drain shaft at center.
+                // Outer area: deep pool (7 blocks). Center 2x2: water all the way
+                // down through the sub-floor into the void.
+                if (distFromPoolEdge <= 1) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
+                } else if (distFromPoolEdge == 2) {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 4; y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
+                    }
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 4, z, palette.floor());
+                } else if (distFromPoolEdge >= 5 && distFromPoolEdge <= 6) {
+                    // 2x2 drain shaft at the deepest center — water down to void
+                    for (int y = FLOOR_HEIGHT; y >= FLOOR_Y; y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
+                    }
+                    // Below FLOOR_Y: air to allow falling into void
+                    for (int y = FLOOR_Y - 1; y >= FLOOR_Y - 5; y--) {
+                        chunkData.setBlock(x, y, z, Material.AIR);
+                    }
+                } else {
+                    // Normal deep area around the drain
                     for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 7; y--) {
                         chunkData.setBlock(x, y, z, Material.WATER);
                     }

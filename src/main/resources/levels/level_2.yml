@@ -38,3 +38,13 @@ event_config:
     chance: 0.3
     delay_ticks: 6
     offset_blocks: 4
+
+exit_triggers:
+  - type: lever_pipe
+    target_level: level_37
+    trapdoor_material: COPPER_TRAPDOOR
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 40
+      message: "You hear rushing water ahead..."
+      sound: ambient.underwater.enter

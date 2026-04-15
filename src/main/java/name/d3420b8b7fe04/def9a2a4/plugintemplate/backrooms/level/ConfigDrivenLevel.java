@@ -2,6 +2,7 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsPlugin;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTrigger;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTriggerRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.BackroomsChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
@@ -12,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.generator.ChunkGenerator;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private final String id;
     private final String generatorId;
     private final GeneratorRegistry generatorRegistry;
+    private final ExitTriggerRegistry exitTriggerRegistry;
 
     private String displayName;
     private World.Environment environment;
@@ -37,13 +40,16 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private int spawnRadius = 300;
     private @Nullable ConfigurationSection generatorConfig;
     private final Map<String, ConfigurationSection> eventConfigs = new HashMap<>();
+    private final List<ExitTrigger> exitTriggers = new ArrayList<>();
 
     public ConfigDrivenLevel(BackroomsPlugin plugin, String id, String generatorId,
-                             GeneratorRegistry generatorRegistry) {
+                             GeneratorRegistry generatorRegistry,
+                             ExitTriggerRegistry exitTriggerRegistry) {
         super(plugin);
         this.id = id;
         this.generatorId = generatorId;
         this.generatorRegistry = generatorRegistry;
+        this.exitTriggerRegistry = exitTriggerRegistry;
 
         // Defaults
         this.displayName = id;
@@ -111,6 +117,33 @@ public class ConfigDrivenLevel extends AbstractLevel {
                 }
             }
         }
+
+        // Parse exit triggers
+        List<?> exitList = section.getList("exit_triggers");
+        if (exitList != null) {
+            for (Object entry : exitList) {
+                if (entry instanceof Map<?, ?> map) {
+                    org.bukkit.configuration.MemoryConfiguration mem = new org.bukkit.configuration.MemoryConfiguration();
+                    for (Map.Entry<?, ?> e : map.entrySet()) {
+                        String key = String.valueOf(e.getKey());
+                        Object val = e.getValue();
+                        if (val instanceof Map<?, ?> nested) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> castMap = (Map<String, Object>) nested;
+                            mem.createSection(key, castMap);
+                        } else {
+                            mem.set(key, val);
+                        }
+                    }
+                    String typeId = mem.getString("type");
+                    if (typeId == null) continue;
+                    ExitTrigger trigger = exitTriggerRegistry.create(typeId, mem);
+                    if (trigger != null) {
+                        exitTriggers.add(trigger);
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -170,7 +203,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
 
     @Override
     public List<ExitTrigger> getExitTriggers() {
-        return List.of();
+        return exitTriggers;
     }
 
     @Override

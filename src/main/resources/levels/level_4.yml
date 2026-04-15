@@ -11,23 +11,10 @@ events:
   - ambient_sound
   - fake_chat_message
   - player_drift
-  - sign_placement
 
 entities:
   - wrong_enderman
   - herobrine
-
-entity_instances:
-  level4_mannequin:
-    type: mannequin
-    skin: player
-    scale: 1.0
-    behavior: stalk
-    spawn_chance: 0.10
-    min_escalation: 0
-    stalk:
-      approach_speed: 0.05
-      despawn_distance: 5.0
 
 event_config:
   ambient_sound:
@@ -50,12 +37,11 @@ event_config:
     check_interval_seconds: 15
     chance: 0.25
     max_drift: 0.6
-  sign_placement:
-    enabled: true
-    check_interval_seconds: 45
-    chance: 0.15
-    messages:
-      - "Level -1"
-      - "exit: none"
-      - "DON'T TURN AROUND"
-      - ""
+exit_triggers:
+  - type: walk_distance
+    target_level: level_3
+    distance_blocks: 1000
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "The terrain loops back on itself..."

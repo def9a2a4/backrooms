@@ -39,3 +39,38 @@ event_config:
     chance: 0.1
     swap_count: 3
     restore_delay_ticks: 40
+
+exit_triggers:
+  - type: powered_command_block
+    target_level: level_4
+    power_count: 5
+    radius: 8
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "// LOADING terrain_gen_legacy.jar ..."
+  - type: powered_command_block
+    target_level: level_5
+    power_count: 5
+    radius: 8
+    transition:
+      blindness_ticks: 100
+      darkness_ticks: 100
+      delay_ticks: 20
+      message: "// LOADING audio_11.dat ..."
+  - type: powered_command_block
+    target_level: level_7
+    power_count: 5
+    radius: 8
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "// LOADING chunk_error_422.bin ..."
+  - type: powered_command_block
+    target_level: level_64637
+    power_count: 5
+    radius: 8
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "// LOADING archive_64637.lib ..."

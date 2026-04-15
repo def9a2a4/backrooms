@@ -48,7 +48,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     // Zone noise
     private static final double CORRIDOR_ZONE_SCALE = 0.01; // low freq = larger zones
     private static final double GARDEN_ZONE_SCALE = 0.004;  // lower = larger patches
-    private static final double MIN_GARDEN_DISTANCE = 100.0; // blocks from origin
+    private static final double MIN_GARDEN_DISTANCE = 300.0; // blocks from origin
 
     // Corridor constants
     private static final int CORRIDOR_PERIOD = 7;
@@ -178,6 +178,9 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
         // Pass 6: Garden floor decorations
         placeGardenDecorations(chunkData, seed, chunkX, chunkZ, chunkRng);
+
+        // Pass 7: Rare garden exit structures (deep pool, ceiling breach)
+        placeGardenExits(chunkData, seed, chunkX, chunkZ);
 
         // Bedrock boundaries: 8-block floor, 10-block ceiling (onlySolid to avoid corridor airspace)
         applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 8, Material.BEDROCK, false);
@@ -450,6 +453,64 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
                                 if (chunkData.getType(nx, vy, nz) != Material.AIR) break;
                                 chunkData.setBlock(nx, vy, nz, Bukkit.createBlockData(Material.VINE,
                                         "[" + faces[d] + "=true]"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Fourth pass: rare exit structures in garden zones.
+     * - Deep sinkhole pool (water shaft below floor Y → L2 exit)
+     * - Ceiling breach with vines (hole through ceiling → Skyblock exit)
+     * Both use deterministic noise so they appear in fixed locations.
+     */
+    private void placeGardenExits(ChunkData chunkData, long seed, int chunkX, int chunkZ) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                if (getZone(seed, worldX, worldZ) != Zone.GARDEN) continue;
+
+                // Use deterministic hash to decide exit placement (~1 per 2000 garden blocks)
+                long exitHash = seed ^ ((long) worldX * 472882027L + (long) worldZ * 920419813L);
+
+                // Deep sinkhole pool — water shaft going below floor into sub-floor
+                if (Math.floorMod(exitHash, 2000) == 0) {
+                    // Carve a 2x2 water shaft from floor level down through sub-floor
+                    for (int dx = 0; dx <= 1; dx++) {
+                        for (int dz = 0; dz <= 1; dz++) {
+                            int sx = x + dx, sz = z + dz;
+                            if (sx >= 16 || sz >= 16) continue;
+                            // Water from floor level down into the sub-floor
+                            for (int y = FLOOR_HEIGHT; y >= FLOOR_Y; y--) {
+                                chunkData.setBlock(sx, y, sz, Material.WATER);
+                            }
+                            // Ensure air above the pool entry
+                            chunkData.setBlock(sx, AIR_MIN_Y, sz, Material.WATER);
+                        }
+                    }
+                }
+
+                // Ceiling breach with vines — hole through ceiling with long cave vines
+                if (Math.floorMod(exitHash + 1, 2000) == 0) {
+                    // Clear a 2x2 hole through the ceiling
+                    for (int dx = 0; dx <= 1; dx++) {
+                        for (int dz = 0; dz <= 1; dz++) {
+                            int sx = x + dx, sz = z + dz;
+                            if (sx >= 16 || sz >= 16) continue;
+                            for (int y = CEILING_MIN_Y; y < CEILING_MAX_Y; y++) {
+                                chunkData.setBlock(sx, y, sz, Material.AIR);
+                            }
+                            // Long cave vines hanging down from the breach
+                            int vineLen = CEILING_MIN_Y - AIR_MIN_Y - 1;
+                            for (int dy = 0; dy < vineLen; dy++) {
+                                int y = CEILING_MIN_Y - 1 - dy;
+                                if (y <= AIR_MIN_Y) break;
+                                chunkData.setBlock(sx, y, sz,
+                                        dy == vineLen - 1 ? Material.CAVE_VINES : Material.CAVE_VINES_PLANT);
                             }
                         }
                     }

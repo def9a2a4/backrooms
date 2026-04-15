@@ -19,7 +19,7 @@ entities:
 entity_instances:
   level5_floating_head:
     type: floating_head
-    skin: "http://textures.minecraft.net/texture/ea0c43536e47e78c780a2c1a3db0cc242f5e8b2d3c5b7e63a659f58fe1c3b0ce"
+    skin: "https://textures.minecraft.net/texture/1daa0dbc6ae76a5caa826d0bc0f18e792c7d5d761e4b30eddba6a76203cee37"  # null-eyes
     scale: 1.0
     behavior: flee
     spawn_chance: 0.12

@@ -15,11 +15,16 @@ import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 public class TransitionManager {
 
     private final JavaPlugin plugin;
     private final LevelRegistry levelRegistry;
     private final PlayerStateManager playerStateManager;
+    private final Set<UUID> transitioning = new HashSet<>();
     private BukkitTask tickTask;
 
     public TransitionManager(JavaPlugin plugin, LevelRegistry levelRegistry,
@@ -46,6 +51,8 @@ public class TransitionManager {
             if (world == null) continue;
 
             for (Player player : world.getPlayers()) {
+                if (transitioning.contains(player.getUniqueId())) continue;
+
                 BackroomsPlayerState state = playerStateManager.getOrCreate(player);
 
                 for (ExitTrigger exit : level.getExitTriggers()) {
@@ -60,31 +67,45 @@ public class TransitionManager {
 
     public void performTransition(Player player, BackroomsPlayerState state,
                                   BackroomsLevel currentLevel, ExitTrigger exit) {
+        if (!transitioning.add(player.getUniqueId())) return; // Already transitioning
+
         String targetId = exit.getTargetLevelId();
 
         if ("overworld".equals(targetId)) {
-            exit.playTransitionSequence(player, () -> returnToOverworld(player, state, currentLevel));
+            exit.playTransitionSequence(player, () -> {
+                try {
+                    returnToOverworld(player, state, currentLevel);
+                } finally {
+                    transitioning.remove(player.getUniqueId());
+                }
+            });
             return;
         }
 
         BackroomsLevel targetLevel = levelRegistry.get(targetId);
         if (targetLevel == null) {
             plugin.getLogger().warning("Exit trigger references unknown level: " + targetId);
+            transitioning.remove(player.getUniqueId());
             return;
         }
 
         World targetWorld = levelRegistry.getWorld(targetLevel);
         if (targetWorld == null) {
             plugin.getLogger().warning("Target level world not loaded: " + targetId);
+            transitioning.remove(player.getUniqueId());
             return;
         }
 
         exit.playTransitionSequence(player, () -> {
-            currentLevel.onPlayerLeave(player, state);
-            Location spawn = findSpawnForLevel(targetLevel, targetWorld);
-            player.teleport(spawn);
-            state.setCurrentLevelId(targetId);
-            targetLevel.onPlayerEnter(player, state);
+            try {
+                currentLevel.onPlayerLeave(player, state);
+                Location spawn = findSpawnForLevel(targetLevel, targetWorld);
+                player.teleport(spawn);
+                state.setCurrentLevelId(targetId);
+                targetLevel.onPlayerEnter(player, state);
+            } finally {
+                transitioning.remove(player.getUniqueId());
+            }
         });
     }
 

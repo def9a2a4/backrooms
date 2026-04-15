@@ -429,6 +429,25 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
         }
 
         placeRoomLantern(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, ceilingY);
+
+        // Rare lever placement (~5% of machinery rooms)
+        long leverHash = (long) centerWorldX * 198491317L ^ (long) centerWorldZ * 6542989L;
+        if (Math.floorMod(leverHash, 20) == 0) {
+            int lx = centerWorldX + 2 - chunkX * 16;
+            int lz = centerWorldZ - chunkZ * 16;
+            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+                chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.LEVER);
+            }
+        }
+
+        // Very rare copper trapdoor tunnel opening (~2% of machinery rooms)
+        if (Math.floorMod(leverHash + 1, 50) == 0) {
+            int tx = centerWorldX - 3 - chunkX * 16;
+            int tz = centerWorldZ - chunkZ * 16;
+            if (tx >= 0 && tx < 16 && tz >= 0 && tz < 16) {
+                chunkData.setBlock(tx, AIR_MIN_Y, tz, Material.COPPER_TRAPDOOR);
+            }
+        }
     }
 
     private void placeRoomLantern(ChunkData chunkData, int chunkX, int chunkZ,
