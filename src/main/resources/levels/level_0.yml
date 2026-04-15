@@ -11,9 +11,34 @@ events:
   - light_blink
   - blackout
   - footstep_echo
+  - wall_shift
+  - sign_placement
 
 entities:
   - herobrine
+
+entity_instances:
+  level0_mannequin:
+    type: mannequin
+    skin: player
+    scale: 1.0
+    behavior: weeping_angel
+    spawn_chance: 0.10
+    min_escalation: 0
+    weeping_angel:
+      look_angle: 28.0
+      approach_interval_ticks: 5
+      approach_distance: 2.5
+      close_distance: 8.0
+  level0_floating_head:
+    type: floating_head
+    skin: "http://textures.minecraft.net/texture/ea0c43536e47e78c780a2c1a3db0cc242f5e8b2d3c5b7e63a659f58fe1c3b0ce"
+    scale: 1.5
+    behavior: stationary_stare
+    spawn_chance: 0.12
+    min_escalation: 0
+    stationary_stare:
+      despawn_distance: 6.0
 
 event_config:
   ambient_sound:
@@ -51,3 +76,21 @@ event_config:
     chance: 0.4
     delay_ticks: 8
     offset_blocks: 5
+  wall_shift:
+    enabled: true
+    check_interval_seconds: 40
+    chance: 0.25
+    radius_min: 8
+    radius_max: 20
+    blocks_per_trigger: 2
+  sign_placement:
+    enabled: true
+    check_interval_seconds: 60
+    chance: 0.15
+    messages:
+      - "STOP"
+      - "I am watching"
+      - "Not real"
+      - "behind you"
+      - "DON'T TURN AROUND"
+      - ""

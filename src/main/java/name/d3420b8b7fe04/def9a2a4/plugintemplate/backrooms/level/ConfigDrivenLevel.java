@@ -89,7 +89,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
         }
 
         this.eventIds = section.getStringList("events");
-        this.entityIds = section.getStringList("entities");
+        this.entityIds = new java.util.ArrayList<>(section.getStringList("entities"));
         this.enterMessage = section.getString("enter_message", null);
         this.fixedTime = section.getLong("fixed_time", -1);
         this.dimensionType = section.getString("dimension_type", "dark");
@@ -162,6 +162,10 @@ public class ConfigDrivenLevel extends AbstractLevel {
     @Override
     public List<String> getEntityIds() {
         return entityIds;
+    }
+
+    public void addEntityId(String id) {
+        entityIds.add(id);
     }
 
     @Override

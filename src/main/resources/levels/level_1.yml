@@ -11,9 +11,32 @@ events:
   - footstep_echo
   - light_blink
   - blackout
+  - wall_shift
+  - sign_placement
 
 entities:
   - herobrine
+
+entity_instances:
+  level1_mannequin:
+    type: mannequin
+    skin: player
+    scale: 1.0
+    behavior: stalk
+    spawn_chance: 0.08
+    min_escalation: 0
+    stalk:
+      approach_speed: 0.04
+      despawn_distance: 5.0
+  level1_floating_head:
+    type: floating_head
+    skin: "http://textures.minecraft.net/texture/ea0c43536e47e78c780a2c1a3db0cc242f5e8b2d3c5b7e63a659f58fe1c3b0ce"
+    scale: 1.0
+    behavior: stationary_stare
+    spawn_chance: 0.10
+    min_escalation: 0
+    stationary_stare:
+      despawn_distance: 5.0
 
 event_config:
   ambient_sound:

@@ -10,44 +10,25 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class StationaryStareBehavior implements EntityBehavior {
+public class StalkerBehavior implements EntityBehavior {
 
-    private int rotateIntervalTicks;
-    private double despawnDistance = 6.0;
+    private double approachSpeed = 0.06;
+    private double despawnDistance = 5.0;
 
-    private long lastRotateTick = 0;
     private final Map<UUID, Boolean> despawnFlags = new HashMap<>();
-
-    public StationaryStareBehavior(int rotateIntervalTicks) {
-        this.rotateIntervalTicks = rotateIntervalTicks;
-    }
-
-    public StationaryStareBehavior() {
-        this(1);
-    }
 
     @Override
     public void loadConfig(ConfigurationSection config) {
         if (config == null) return;
-        rotateIntervalTicks = config.getInt("rotate_interval_ticks", rotateIntervalTicks);
+        approachSpeed = config.getDouble("approach_speed", approachSpeed);
         despawnDistance = config.getDouble("despawn_distance", despawnDistance);
     }
 
     @Override
-    public void tick(EntityHandle handle, Player nearestPlayer) {
-        long currentTick = org.bukkit.Bukkit.getCurrentTick();
-        if (currentTick - lastRotateTick >= rotateIntervalTicks) {
-            lastRotateTick = currentTick;
-            // Facing is handled by the renderer's facePlayer call,
-            // but we still rotate for legacy ArmorStand entities
-            for (var entity : handle.bukkitEntities()) {
-                if (entity instanceof org.bukkit.entity.ArmorStand stand && !stand.isDead()) {
-                    EntityUtil.facePlayer(stand, nearestPlayer);
-                }
-            }
-        }
+    public void tick(EntityHandle handle, Player player) {
+        EntityUtil.moveToward(handle, player, approachSpeed);
 
-        double distance = EntityUtil.distanceTo(handle, nearestPlayer);
+        double distance = EntityUtil.distanceTo(handle, player);
         if (distance < despawnDistance) {
             despawnFlags.put(handle.instanceId(), true);
         }

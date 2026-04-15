@@ -122,7 +122,7 @@ public class BackroomsPlugin {
         behaviorRegistry.register("flee", FleeBehavior::new);
         behaviorRegistry.register("attack", AttackBehavior::new);
         behaviorRegistry.register("stationary_stare", StationaryStareBehavior::new);
-        behaviorRegistry.register("patrol", PatrolBehavior::new);
+        behaviorRegistry.register("patrol", () -> new PatrolBehavior(0.04, 100));
 
         entityTypeRegistry.register("floating_head", (instanceId, cfg) -> {
             FloatingHeadEntity e = new FloatingHeadEntity(instanceId, behaviorRegistry);
