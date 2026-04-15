@@ -7,7 +7,9 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlay
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
+import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -55,11 +57,11 @@ public class Level94Listener implements Listener {
         return instance;
     }
 
-    /** Trigger the cascade animation from a command. */
+    /** Trigger the cascade animation from a command (no clicked block). */
     public void triggerCascade(Player player) {
         if (!player.getWorld().getName().equals(WORLD_NAME)) return;
         if (animating.contains(player.getUniqueId())) return;
-        startAnimation(player);
+        startAnimation(player, null);
     }
 
     // ── Void Fall Loop ──────────────────────────────────────────────────
@@ -119,7 +121,7 @@ public class Level94Listener implements Listener {
 
         if (animating.contains(player.getUniqueId())) return;
 
-        startAnimation(player);
+        startAnimation(player, block.getLocation());
     }
 
     // ── Barrier Wall Cascade ──────────────────────────────────────────
@@ -127,17 +129,27 @@ public class Level94Listener implements Listener {
     private static final int BMIN = Level94ChunkGenerator.BARRIER_MIN;
     private static final int BMAX = Level94ChunkGenerator.BARRIER_MAX;
 
-    private void startAnimation(Player player) {
+    private void startAnimation(Player player, Location clickedBlock) {
         UUID uuid = player.getUniqueId();
         animating.add(uuid);
 
         World world = player.getWorld();
         Random rng = new Random();
 
-        // 1-2 origin points on each of the 4 barrier faces.
         // Each origin: {position-along-wall, y, face}
         //   face 0 = north (Z=BMIN), 1 = south (Z=BMAX), 2 = west (X=BMIN), 3 = east (X=BMAX)
         List<int[]> origins = new ArrayList<>();
+
+        // Add the clicked barrier block as an origin on its face
+        if (clickedBlock != null) {
+            int cx = clickedBlock.getBlockX(), cy = clickedBlock.getBlockY(), cz = clickedBlock.getBlockZ();
+            if (cz == BMIN)      origins.add(new int[]{cx, cy, 0});
+            else if (cz == BMAX) origins.add(new int[]{cx, cy, 1});
+            else if (cx == BMIN) origins.add(new int[]{cz, cy, 2});
+            else if (cx == BMAX) origins.add(new int[]{cz, cy, 3});
+        }
+
+        // 1-2 random origin points on each of the 4 barrier faces
         for (int face = 0; face < 4; face++) {
             int count = 1 + rng.nextInt(2);
             for (int i = 0; i < count; i++) {
@@ -162,7 +174,7 @@ public class Level94Listener implements Listener {
 
                 for (int d1 = -radius[0]; d1 <= radius[0]; d1++) {
                     for (int dy = -radius[0]; dy <= radius[0]; dy++) {
-                        if (d1 * d1 + dy * dy > radius[0] * radius[0]) continue;
+                        if (Math.abs(d1) + Math.abs(dy) > radius[0]) continue; // manhattan
 
                         int by = origin[1] + dy;
                         if (by < 0 || by > 100) continue;
@@ -201,9 +213,27 @@ public class Level94Listener implements Listener {
                         if (!world.isChunkLoaded(behindX >> 4, behindZ >> 4)) continue;
                         Block behind = world.getBlockAt(behindX, by, behindZ);
                         if (behind.getType() == Material.AIR) {
-                            Material fill = rng.nextDouble() < 0.3
-                                    ? Material.COMMAND_BLOCK : Material.WHITE_CONCRETE;
-                            behind.setType(fill, false);
+                            double roll = rng.nextDouble();
+                            if (roll < 0.15) {
+                                // Observer facing inward (toward the island)
+                                BlockFace inward = switch (face) {
+                                    case 0 -> BlockFace.SOUTH;
+                                    case 1 -> BlockFace.NORTH;
+                                    case 2 -> BlockFace.EAST;
+                                    default -> BlockFace.WEST;
+                                };
+                                Directional obs = (Directional) Material.OBSERVER.createBlockData();
+                                obs.setFacing(inward);
+                                behind.setBlockData(obs, false);
+                            } else {
+                                Material fill = switch (rng.nextInt(5)) {
+                                    case 0 -> Material.COMMAND_BLOCK;
+                                    case 1 -> Material.CHAIN_COMMAND_BLOCK;
+                                    case 2 -> Material.REPEATING_COMMAND_BLOCK;
+                                    default -> Material.WHITE_CONCRETE;
+                                };
+                                behind.setType(fill, false);
+                            }
                         }
                     }
                 }

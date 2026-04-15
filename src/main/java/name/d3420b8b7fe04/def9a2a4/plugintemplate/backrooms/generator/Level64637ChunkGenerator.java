@@ -73,11 +73,11 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         int cellX = Math.floorDiv(chunkX * 16, CELL_SIZE);
         int cellZ = Math.floorDiv(chunkZ * 16, CELL_SIZE);
 
-        // Fill entire vertical extent with oak planks first (all solids)
-        chunkData.setRegion(0, 0, 0, 16, CAP_MAX_Y, 16, Material.OAK_PLANKS);
+        // Fill entire vertical extent with oak planks, including fake layers above/below
+        chunkData.setRegion(0, -FLOOR_SPACING, 0, 16, CAP_MAX_Y + FLOOR_SPACING, 16, Material.OAK_PLANKS);
 
-        // Generate each layer
-        for (int layer = 0; layer < NUM_LAYERS; layer++) {
+        // Generate each layer (including fake layers -1 and NUM_LAYERS for visual wrap continuity)
+        for (int layer = -1; layer <= NUM_LAYERS; layer++) {
             int baseY = layer * FLOOR_SPACING;
             int airMin = baseY + REL_AIR_MIN;
             int airMax = baseY + REL_AIR_MAX;
@@ -304,7 +304,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     public static boolean isStaircase(long seed, int cellX, int cellZ) {
         long hash = seed ^ ((long) cellX * 6364136223846793005L
                 + (long) cellZ * 1442695040888963407L + 33L);
-        return new Random(hash).nextDouble() < 0.06;
+        return new Random(hash).nextDouble() < 0.12;
     }
 
     /**
@@ -435,8 +435,9 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         int sz = localZ - STAIR_MIN; // 0-5
         int offset = STAIR_OFFSET[sz][sx];
 
-        // Determine vertical range for this column (may include carved floor solid below)
-        int colMin = (layer > 0 && isStaircaseOnLayer(seed, layer - 1, cellX, cellZ))
+        // Determine vertical range for this column (may include carved floor solid below).
+        // Guard with layer < NUM_LAYERS to prevent fake top layer from carving into the cap.
+        int colMin = (layer > 0 && layer < NUM_LAYERS && isStaircaseOnLayer(seed, layer - 1, cellX, cellZ))
                 ? baseY : airMin;
         int colMax = airMax;
 

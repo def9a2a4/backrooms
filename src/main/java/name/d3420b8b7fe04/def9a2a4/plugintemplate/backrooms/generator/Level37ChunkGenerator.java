@@ -64,10 +64,21 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
     private Palette[] palettes = DEFAULT_PALETTES;
 
+    // Skylight types
+    private static final int SKY_NONE = 0;
+    private static final int SKY_STANDARD = 1;    // existing 8x8 center
+    private static final int SKY_PINHOLE = 2;     // small 4x4 center
+    private static final int SKY_CROSS = 3;       // plus-shaped opening
+    private static final int SKY_BARS = 4;        // full ceiling open with periodic bars
+
     // Pool types
     private static final int POOL_DRY = 0;
     private static final int POOL_SHALLOW = 1;
     private static final int POOL_DEEP = 2;
+    private static final int POOL_CHANNEL = 3;    // 4-wide water strip through center
+    private static final int POOL_MOAT = 4;       // perimeter water ring, dry center
+    private static final int POOL_HALF = 5;       // one half wet, one dry
+    private static final int POOL_ABYSS = 6;      // extra-deep stepped pool
 
     @Override
     public void configure(@Nullable ConfigurationSection config) {
@@ -206,16 +217,15 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     int masterCellX = getMasterCellX(cellX, cellZ, seed);
                     int masterCellZ = getMasterCellZ(cellX, cellZ, seed);
                     int roomType = getRoomType(masterCellX, masterCellZ, seed, roomClass);
-                    boolean skylight = isSkylightRoom(cellX, cellZ, seed);
-                    placeInterior(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette, light, roomType, ceilingY, skylight);
+                    int skylightType = getSkylightType(cellX, cellZ, seed);
+                    placeInterior(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette, light, roomType, ceilingY, skylightType);
                     placePool(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette);
                 }
 
                 // Ceiling
-                boolean skylight = isSkylightRoom(cellX, cellZ, seed);
-                boolean inSkylightZone = skylight
-                        && localX >= 8 && localX < 16
-                        && localZ >= 8 && localZ < 16;
+                int skylightType = getSkylightType(cellX, cellZ, seed);
+                boolean inSkylightZone = skylightType != SKY_NONE
+                        && isInSkylightZone(skylightType, localX, localZ);
 
                 if (inSkylightZone && !isWall) {
                     for (int y = ceilingY; y < SKYLIGHT_MAX_Y; y++) {
@@ -413,15 +423,36 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private int getPoolType(int cellX, int cellZ, long seed) {
         Random rng = new Random(seed ^ ((long) cellX * 314159265L + (long) cellZ * 271828182L));
         int roll = rng.nextInt(100);
-        if (roll < 30) return POOL_DRY;
-        if (roll < 80) return POOL_SHALLOW;
-        return POOL_DEEP;
+        if (roll < 20) return POOL_DRY;
+        if (roll < 45) return POOL_SHALLOW;
+        if (roll < 58) return POOL_DEEP;
+        if (roll < 70) return POOL_CHANNEL;
+        if (roll < 80) return POOL_MOAT;
+        if (roll < 90) return POOL_HALF;
+        return POOL_ABYSS;
     }
 
-    private boolean isSkylightRoom(int cellX, int cellZ, long seed) {
+    private int getSkylightType(int cellX, int cellZ, long seed) {
         Random rng = getCellRandom(cellX, cellZ, seed);
         rng.nextInt(); rng.nextInt();
-        return rng.nextInt(100) < 20;
+        int roll = rng.nextInt(100);
+        if (roll < 80) return SKY_NONE;
+        if (roll < 87) return SKY_STANDARD;
+        if (roll < 91) return SKY_PINHOLE;
+        if (roll < 95) return SKY_CROSS;
+        return SKY_BARS;
+    }
+
+    private boolean isInSkylightZone(int skylightType, int localX, int localZ) {
+        boolean inInterior = localX >= WALL_THICK && localX < CELL_SIZE - WALL_THICK
+                          && localZ >= WALL_THICK && localZ < CELL_SIZE - WALL_THICK;
+        return switch (skylightType) {
+            case SKY_STANDARD -> localX >= 8 && localX < 16 && localZ >= 8 && localZ < 16;
+            case SKY_PINHOLE -> localX >= 10 && localX < 14 && localZ >= 10 && localZ < 14;
+            case SKY_CROSS -> inInterior && (localX >= 10 && localX < 14 || localZ >= 10 && localZ < 14);
+            case SKY_BARS -> inInterior && localX % 4 != 0;
+            default -> false;
+        };
     }
 
     // --- Structure placement ---
@@ -444,7 +475,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                                int localX, int localZ,
                                int masterCellX, int masterCellZ, long seed,
                                Palette palette, Material light,
-                               int roomType, int ceilingY, boolean skylight) {
+                               int roomType, int ceilingY, int skylightType) {
         int ix = localX - WALL_THICK;
         int iz = localZ - WALL_THICK;
 
@@ -568,7 +599,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             }
 
             // --- SHORT room types (two-level, cases 10-14) ---
-            case 10 -> placeShortOpen(chunkData, x, z, ix, iz, edX, edZ, palette, light, skylight);
+            case 10 -> placeShortOpen(chunkData, x, z, ix, iz, edX, edZ, palette, light, skylightType);
             case 11 -> placeShortPartitioned(chunkData, x, z, ix, iz, edX, edZ, palette, light);
             case 12 -> placeShortCorner(chunkData, x, z, ix, iz, edX, edZ, masterCellX, masterCellZ, seed, palette, light);
             case 13 -> placeShortMezzanine(chunkData, x, z, ix, iz, edX, edZ, palette, light);
@@ -599,7 +630,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 10: open two-level with center void and symmetric staircases */
     private void placeShortOpen(ChunkData chunkData, int x, int z,
                                 int ix, int iz, int edX, int edZ,
-                                Palette palette, Material light, boolean skylight) {
+                                Palette palette, Material light, int skylightType) {
         boolean centerOpening = edX >= 6 && edZ >= 6;
         // West staircase: ix=0-2, iz=2-7 ascending
         boolean westStair = ix <= 2 && iz >= 2 && iz <= 7;
@@ -608,7 +639,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
         if (centerOpening) {
             if (edX == 6 && edZ == 6) {
-                int pillarTop = skylight ? MID_FLOOR_Y : CEILING_Y;
+                int pillarTop = skylightType != SKY_NONE ? MID_FLOOR_Y : CEILING_Y;
                 for (int y = FLOOR_HEIGHT; y < pillarTop; y++) {
                     chunkData.setBlock(x, y, z, palette.pillar());
                 }
