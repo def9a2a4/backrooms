@@ -317,7 +317,7 @@ public class BackroomsPlugin {
                     .filter(e -> e.getName().startsWith("levels/") && !e.isDirectory())
                     .forEach(e -> {
                         try {
-                            plugin.saveResource(e.getName(), false);
+                            plugin.saveResource(e.getName(), true);
                         } catch (Exception ex) {
                             plugin.getLogger().warning("Failed to extract " + e.getName() + ": " + ex.getMessage());
                         }

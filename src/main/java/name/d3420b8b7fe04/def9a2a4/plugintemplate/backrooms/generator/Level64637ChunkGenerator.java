@@ -154,7 +154,8 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         }
 
         // Punch a hole in the center of the ceiling cap so the fake room above is visible
-        punchCeilingHole(chunkData, chunkX, chunkZ);
+        // Uses stairwell bounds (6x6) for staircase cells, pillar bounds (4x4) for others
+        punchCeilingHole(chunkData, chunkX, chunkZ, seed);
 
         // Place wrap slabs in the base and cap shafts (after bedrock so they aren't overwritten)
         // Cap slabs skip the ceiling hole area (see inCeilingHole guard)
@@ -209,19 +210,24 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     /**
-     * Punches a 4x4 hole in the center of the ceiling cap for each cell,
+     * Punches a hole in the center of the ceiling cap for each cell,
      * so the fake room above layer 6 is visible from below.
+     * Uses stairwell bounds (6x6) for staircase cells, pillar bounds (4x4) for others.
      */
-    private void punchCeilingHole(ChunkData data, int chunkX, int chunkZ) {
+    private void punchCeilingHole(ChunkData data, int chunkX, int chunkZ, long seed) {
+        int cellX = chunkX;  // CELL_SIZE == 16 == chunk width
+        int cellZ = chunkZ;
+        boolean isStair = isStaircase(seed, cellX, cellZ);
+        int holeMin = isStair ? STAIR_MIN : PILLAR_MIN;
+        int holeMax = isStair ? STAIR_MAX : PILLAR_MAX;
+
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                int worldX = chunkX * 16 + x;
-                int worldZ = chunkZ * 16 + z;
-                int localX = Math.floorMod(worldX, CELL_SIZE);
-                int localZ = Math.floorMod(worldZ, CELL_SIZE);
+                int localX = Math.floorMod(chunkX * 16 + x, CELL_SIZE);
+                int localZ = Math.floorMod(chunkZ * 16 + z, CELL_SIZE);
 
-                if (localX >= PILLAR_MIN && localX <= PILLAR_MAX
-                        && localZ >= PILLAR_MIN && localZ <= PILLAR_MAX) {
+                if (localX >= holeMin && localX <= holeMax
+                        && localZ >= holeMin && localZ <= holeMax) {
                     for (int y = CAP_MIN_Y; y < CAP_MAX_Y; y++) {
                         data.setBlock(x, y, z, Material.AIR);
                     }
@@ -265,19 +271,9 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                     data.setBlock(x, baseBlockY, z, slab);
                 }
 
-                // Cap shaft: find r where blockY lands in [CAP_MIN_Y, CAP_MAX_Y)
-                // Skip positions inside the ceiling hole so the fake room above stays visible
-                boolean inCeilingHole = localX >= PILLAR_MIN && localX <= PILLAR_MAX
-                        && localZ >= PILLAR_MIN && localZ <= PILLAR_MAX;
-                if (!inCeilingHole) {
-                    for (int r = (CAP_MIN_Y - REL_AIR_MIN - offset + 5) / 6; ; r++) {
-                        int blockY = REL_AIR_MIN + offset + 6 * r;
-                        if (blockY >= CAP_MAX_Y) break;
-                        if (blockY >= CAP_MIN_Y) {
-                            data.setBlock(x, blockY, z, slab);
-                        }
-                    }
-                }
+                // Cap shaft: skip entirely — ceiling hole clears the full stairwell area
+                // in the cap for staircase cells, so placing slabs here would fill it back in.
+                // Base slabs (above) are unaffected.
             }
         }
     }
