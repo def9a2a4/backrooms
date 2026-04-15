@@ -13,12 +13,22 @@ clean:
 
 .PHONY: server-plugin-copy
 server-plugin-copy:
+	mkdir -p server/plugins/
 	rm -f server/plugins/$(PLUGIN_NAME)*.jar
 	cp bin/$(PLUGIN_NAME)*.jar server/plugins/
 
 .PHONY: server-clear-plugin-data
 server-clear-plugin-data:
 	rm -rf server/plugins/$(PLUGIN_NAME)/
+
+.PHONY: server-clean
+server-clean:
+	cd server && find . -mindepth 1 \
+		! -name 'paper-*.jar' \
+		! -name 'eula.txt' \
+		! -name 'ops.json' \
+		! -name 'server.properties' \
+		-delete 2>/dev/null || true
 
 .PHONY: server-start
 server-start:
