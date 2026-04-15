@@ -1,16 +1,16 @@
-name: PluginTemplate
-main: name.d3420b8b7fe04.def9a2a4.plugintemplate.PluginTemplatePlugin
-bootstrapper: name.d3420b8b7fe04.def9a2a4.plugintemplate.PluginTemplateBootstrap
+name: Backrooms
+main: name.d3420b8b7fe04.def9a2a4.plugintemplate.BackroomsMainPlugin
+bootstrapper: name.d3420b8b7fe04.def9a2a4.plugintemplate.BackroomsBootstrap
 version: ${version}
 api-version: "1.21"
 author: You
 description: A Paper plugin.
 
 permissions:
-  plugintemplate.admin:
-    description: Allows access to all PluginTemplate commands
+  backrooms.admin:
+    description: Allows access to all Backrooms commands
     default: op
-  plugintemplate.reload:
+  backrooms.reload:
     description: Allows reloading the config
     default: op
   backrooms.use:

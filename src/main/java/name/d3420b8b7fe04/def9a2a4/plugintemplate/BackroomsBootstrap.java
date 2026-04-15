@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import java.net.URI;
 
 @SuppressWarnings("UnstableApiUsage")
-public class PluginTemplateBootstrap implements PluginBootstrap {
+public class BackroomsBootstrap implements PluginBootstrap {
 
     @Override
     public void bootstrap(@NotNull BootstrapContext context) {

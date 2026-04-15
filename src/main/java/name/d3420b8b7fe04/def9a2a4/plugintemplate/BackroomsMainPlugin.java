@@ -4,7 +4,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsPlugin;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class PluginTemplatePlugin extends JavaPlugin {
+public class BackroomsMainPlugin extends JavaPlugin {
 
     // Replace with your bStats plugin ID from https://bstats.org
     private static final int BSTATS_ID = 00000;
@@ -19,7 +19,7 @@ public class PluginTemplatePlugin extends JavaPlugin {
         backrooms = new BackroomsPlugin(this);
         backrooms.enable();
 
-        getLogger().info("PluginTemplate enabled.");
+        getLogger().info("Backrooms enabled.");
     }
 
     @Override
@@ -27,6 +27,6 @@ public class PluginTemplatePlugin extends JavaPlugin {
         if (backrooms != null) {
             backrooms.disable();
         }
-        getLogger().info("PluginTemplate disabled.");
+        getLogger().info("Backrooms disabled.");
     }
 }
