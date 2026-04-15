@@ -221,6 +221,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     int skylightType = getSkylightType(cellX, cellZ, seed);
                     placeInterior(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette, light, roomType, ceilingY, skylightType);
                     placePool(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette);
+                    placeDrainTunnel(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed);
                 }
 
                 // Ceiling
@@ -1121,7 +1122,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
             case POOL_ABYSS_DEEP -> {
-                // Rare extra-extra-deep pool (6 blocks at center)
+                // Rare extra-extra-deep pool (7 blocks at center)
+                // A drain tunnel extends from the +X wall — see placeDrainTunnel()
                 if (distFromPoolEdge <= 1) {
                     chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
                     chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
@@ -1131,40 +1133,50 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     }
                     chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette.floor());
                 } else {
-                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 6; y--) {
-                        chunkData.setBlock(x, y, z, Material.WATER);
-                    }
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 6, z, palette.floor());
-                }
-            }
-            case POOL_DRAIN -> {
-                // Very rare super-deep pool with 2x2 drain shaft at center.
-                // Outer area: deep pool (7 blocks). Center 2x2: water all the way
-                // down through the sub-floor into the void.
-                if (distFromPoolEdge <= 1) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
-                } else if (distFromPoolEdge == 2) {
-                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 4; y--) {
-                        chunkData.setBlock(x, y, z, Material.WATER);
-                    }
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 4, z, palette.floor());
-                } else if (distFromPoolEdge >= 5 && distFromPoolEdge <= 6) {
-                    // 2x2 drain shaft at the deepest center — water down to void
-                    for (int y = FLOOR_HEIGHT; y >= FLOOR_Y; y--) {
-                        chunkData.setBlock(x, y, z, Material.WATER);
-                    }
-                    // Below FLOOR_Y: air to allow falling into void
-                    for (int y = FLOOR_Y - 1; y >= FLOOR_Y - 5; y--) {
-                        chunkData.setBlock(x, y, z, Material.AIR);
-                    }
-                } else {
-                    // Normal deep area around the drain
                     for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 7; y--) {
                         chunkData.setBlock(x, y, z, Material.WATER);
                     }
                     chunkData.setBlock(x, FLOOR_HEIGHT - 7, z, palette.floor());
                 }
+            }
+        }
+    }
+
+    /**
+     * Carves a drain tunnel for POOL_ABYSS_DEEP rooms.
+     * The tunnel goes from the +X edge of the pool, horizontally through the wall
+     * for ~10 blocks, then drops down into the void.
+     * Tunnel is 2 wide (Z axis) at the pool's bottom Y level.
+     */
+    private void placeDrainTunnel(ChunkData chunkData, int x, int z,
+                                  int localX, int localZ,
+                                  int masterCellX, int masterCellZ, long seed) {
+        int poolType = getPoolType(masterCellX, masterCellZ, seed);
+        if (poolType != POOL_ABYSS_DEEP) return;
+
+        // Drain tunnel: 2x2 (2 wide in Z, 2 tall in Y)
+        // Runs along +X from the pool interior edge through the wall
+        // Z center of the cell: localZ 11 and 12
+        int poolBottom = FLOOR_HEIGHT - 7;
+        int tunnelZ0 = CELL_SIZE / 2 - 1; // localZ = 11
+        int tunnelZ1 = CELL_SIZE / 2;     // localZ = 12
+
+        if (localZ != tunnelZ0 && localZ != tunnelZ1) return;
+
+        int interiorEnd = CELL_SIZE - WALL_THICK - 2;
+
+        // Horizontal section: from pool edge through wall area (+X direction)
+        if (localX >= interiorEnd && localX < CELL_SIZE) {
+            // Carve 2-tall water tunnel at pool bottom level
+            chunkData.setBlock(x, poolBottom, z, Material.WATER);
+            chunkData.setBlock(x, poolBottom + 1, z, Material.WATER);
+        }
+
+        // Vertical drop: at the far end of the tunnel (last 2 blocks before cell edge)
+        if (localX >= CELL_SIZE - 2 && localX < CELL_SIZE) {
+            // Carve downward from pool bottom into void
+            for (int y = poolBottom - 1; y >= chunkData.getMinHeight(); y--) {
+                chunkData.setBlock(x, y, z, Material.WATER);
             }
         }
     }

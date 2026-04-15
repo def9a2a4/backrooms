@@ -32,6 +32,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsLi
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1WaterDripListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Disc11JukeboxListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1GardenEffectListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LobbyBookshelfListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryWrapListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
@@ -71,6 +72,7 @@ public class BackroomsPlugin {
 
     private BukkitTask autoSaveTask;
     private BackroomsCommand command;
+    private Level1GardenEffectListener gardenEffectListener;
 
     public BackroomsPlugin(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -181,6 +183,8 @@ public class BackroomsPlugin {
         eventScheduler.start();
         entitySpawner.start();
         transitionManager.start();
+        gardenEffectListener = new Level1GardenEffectListener(plugin);
+        gardenEffectListener.start();
 
         // 8. Register Bukkit listeners
         Bukkit.getPluginManager().registerEvents(playerStateManager, plugin);
@@ -235,6 +239,7 @@ public class BackroomsPlugin {
         eventScheduler.stop();
         entitySpawner.stop();
         transitionManager.stop();
+        if (gardenEffectListener != null) gardenEffectListener.stop();
 
         for (BackroomsEvent event : eventRegistry.getAll()) {
             event.shutdown();
