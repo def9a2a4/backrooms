@@ -142,10 +142,10 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 if (!isLineActive(seed, gridZ, 0) && !isLineActive(seed, gridX, 1)) continue;
 
                 double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
-                if (roomNoise <= 0.97) continue;
+                if (roomNoise <= 0.95) continue;
 
-                boolean isBoilerRoom = roomNoise > 0.99;
-                int roomRadius = isBoilerRoom ? 6 : (roomNoise > 0.98 ? 4 : 3);
+                boolean isBoilerRoom = roomNoise > 0.98;
+                int roomRadius = isBoilerRoom ? 6 : (roomNoise > 0.96 ? 4 : 3);
                 int ceilingY = isBoilerRoom ? CEILING_TALL : getCeilingHeight(seed, worldX, worldZ);
                 if (ceilingY < CEILING_NORMAL) ceilingY = CEILING_NORMAL;
 
