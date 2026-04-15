@@ -145,6 +145,9 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         applyBoundaryLayer(chunkData, 0, REL_AIR_MIN - 1, Material.BEDROCK, false);
         applyBoundaryLayer(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, Material.BEDROCK, false);
 
+        // Punch a hole in the center of the ceiling cap so the fake room above is visible
+        punchCeilingHole(chunkData, chunkX, chunkZ);
+
         // Re-punch stairwell shaft through bedrock and line the exposed walls with oak planks.
         if (isStaircase(seed, cellX, cellZ) && getStaircaseSpan(seed, cellX, cellZ) >= NUM_LAYERS) {
             punchStairwellShaft(chunkData, 0, REL_AIR_MIN - 1, chunkX, chunkZ);
@@ -198,6 +201,28 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                 if ((adjX && inRangeZ) || (adjZ && inRangeX)) {
                     for (int y = yMin; y < yMax; y++) {
                         data.setBlock(x, y, z, Material.OAK_PLANKS);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Punches a 4x4 hole in the center of the ceiling cap for each cell,
+     * so the fake room above layer 6 is visible from below.
+     */
+    private void punchCeilingHole(ChunkData data, int chunkX, int chunkZ) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                int localX = Math.floorMod(worldX, CELL_SIZE);
+                int localZ = Math.floorMod(worldZ, CELL_SIZE);
+
+                if (localX >= PILLAR_MIN && localX <= PILLAR_MAX
+                        && localZ >= PILLAR_MIN && localZ <= PILLAR_MAX) {
+                    for (int y = CAP_MIN_Y; y < CAP_MAX_Y; y++) {
+                        data.setBlock(x, y, z, Material.AIR);
                     }
                 }
             }
@@ -319,14 +344,14 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
     /**
      * Returns the number of layers this staircase spans.
-     * 2 layers (~75%), 3 layers (~23%), all 7 layers (~2%).
+     * 2 layers (~65%), 3 layers (~25%), all 7 layers (~10%).
      */
     public static int getStaircaseSpan(long seed, int cellX, int cellZ) {
         long hash = seed ^ ((long) cellX * 1103515245L
                 + (long) cellZ * 12345L + 35L);
         double value = new Random(hash).nextDouble();
-        if (value < 0.02) return NUM_LAYERS; // all layers
-        if (value < 0.25) return 3;
+        if (value < 0.10) return NUM_LAYERS; // all layers
+        if (value < 0.35) return 3;
         return 2;
     }
 

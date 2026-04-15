@@ -3,10 +3,7 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.impl;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.AppearanceBuilder;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityHandle;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.behavior.EntityBehavior;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.behavior.impl.ApproachPlayerBehavior;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.behavior.impl.FleeOnLookBehavior;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.behavior.impl.StationaryStareBehavior;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityUtil;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -148,10 +145,6 @@ public class HerobrineEntity implements BackroomsEntity {
     }
 
     private boolean isPlayerLookingAt(Player player, Location target, double maxAngle) {
-        Location eyeLoc = player.getEyeLocation();
-        org.bukkit.util.Vector toEntity = target.toVector().subtract(eyeLoc.toVector()).normalize();
-        org.bukkit.util.Vector lookDir = eyeLoc.getDirection().normalize();
-        double angle = Math.toDegrees(lookDir.angle(toEntity));
-        return angle < maxAngle;
+        return EntityUtil.isPlayerLookingAt(player, target, maxAngle);
     }
 }

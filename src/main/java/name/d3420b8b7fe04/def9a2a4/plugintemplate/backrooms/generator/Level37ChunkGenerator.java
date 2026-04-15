@@ -79,6 +79,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private static final int POOL_MOAT = 4;       // perimeter water ring, dry center
     private static final int POOL_HALF = 5;       // one half wet, one dry
     private static final int POOL_ABYSS = 6;      // extra-deep stepped pool
+    private static final int POOL_ABYSS_DEEP = 7; // rare extra-extra-deep pool
 
     @Override
     public void configure(@Nullable ConfigurationSection config) {
@@ -227,7 +228,23 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 boolean inSkylightZone = skylightType != SKY_NONE
                         && isInSkylightZone(skylightType, localX, localZ);
 
-                if (inSkylightZone && !isWall) {
+                if (skylightType == SKY_BARS && !isWall
+                        && localX >= WALL_THICK && localX < CELL_SIZE - WALL_THICK
+                        && localZ >= WALL_THICK && localZ < CELL_SIZE - WALL_THICK) {
+                    // Bars: entire interior ceiling carved out 5 blocks.
+                    // Solid bar strips (localX % 4 == 0) hang down from upper ceiling.
+                    // Gaps between bars are fully open to sky.
+                    boolean isBar = localX % 4 == 0;
+                    if (isBar) {
+                        for (int y = ceilingY; y < CEILING_MAX_Y; y++) {
+                            chunkData.setBlock(x, y, z, palette.ceiling());
+                        }
+                    } else {
+                        for (int y = ceilingY; y < SKYLIGHT_MAX_Y; y++) {
+                            chunkData.setBlock(x, y, z, Material.AIR);
+                        }
+                    }
+                } else if (inSkylightZone && !isWall) {
                     for (int y = ceilingY; y < SKYLIGHT_MAX_Y; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);
                     }
@@ -424,12 +441,13 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         Random rng = new Random(seed ^ ((long) cellX * 314159265L + (long) cellZ * 271828182L));
         int roll = rng.nextInt(100);
         if (roll < 20) return POOL_DRY;
-        if (roll < 45) return POOL_SHALLOW;
-        if (roll < 58) return POOL_DEEP;
-        if (roll < 70) return POOL_CHANNEL;
-        if (roll < 80) return POOL_MOAT;
-        if (roll < 90) return POOL_HALF;
-        return POOL_ABYSS;
+        if (roll < 44) return POOL_SHALLOW;
+        if (roll < 57) return POOL_DEEP;
+        if (roll < 69) return POOL_CHANNEL;
+        if (roll < 79) return POOL_MOAT;
+        if (roll < 88) return POOL_HALF;
+        if (roll < 97) return POOL_ABYSS;
+        return POOL_ABYSS_DEEP;
     }
 
     private int getSkylightType(int cellX, int cellZ, long seed) {
@@ -437,10 +455,11 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         rng.nextInt(); rng.nextInt();
         int roll = rng.nextInt(100);
         if (roll < 80) return SKY_NONE;
-        if (roll < 87) return SKY_STANDARD;
-        if (roll < 91) return SKY_PINHOLE;
+        if (roll < 88) return SKY_STANDARD;
+        if (roll < 93) return SKY_PINHOLE;
         if (roll < 95) return SKY_CROSS;
-        return SKY_BARS;
+        if (roll < 98) return SKY_BARS;
+        return SKY_STANDARD;
     }
 
     private boolean isInSkylightZone(int skylightType, int localX, int localZ) {
@@ -450,7 +469,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             case SKY_STANDARD -> localX >= 8 && localX < 16 && localZ >= 8 && localZ < 16;
             case SKY_PINHOLE -> localX >= 10 && localX < 14 && localZ >= 10 && localZ < 14;
             case SKY_CROSS -> inInterior && (localX >= 10 && localX < 14 || localZ >= 10 && localZ < 14);
-            case SKY_BARS -> inInterior && localX % 4 != 0;
+            case SKY_BARS -> false; // handled separately in ceiling generation
             default -> false;
         };
     }
@@ -1094,6 +1113,23 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     chunkData.setBlock(x, FLOOR_HEIGHT - 6, z, palette.floor());
                 }
             }
+            case POOL_ABYSS_DEEP -> {
+                // Rare extra-extra-deep pool (7 blocks at center)
+                if (distFromPoolEdge <= 1) {
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
+                } else if (distFromPoolEdge == 2) {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 3; y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
+                    }
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette.floor());
+                } else {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 7; y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
+                    }
+                    chunkData.setBlock(x, FLOOR_HEIGHT - 7, z, palette.floor());
+                }
+            }
         }
     }
 
@@ -1112,7 +1148,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
     private static final String[] CLASS_NAMES = { "SHORT", "NORMAL", "TALL" };
     private static final String[] SKYLIGHT_TYPE_NAMES = { "None", "Standard", "Pinhole", "Cross", "Bars" };
-    private static final String[] POOL_TYPE_NAMES = { "Dry", "Shallow", "Deep", "Channel", "Moat", "Half", "Abyss" };
+    private static final String[] POOL_TYPE_NAMES = { "Dry", "Shallow", "Deep", "Channel", "Moat", "Half", "Abyss", "Deep Abyss" };
 
     public static String getDebugInfo(int worldX, int worldZ, long seed) {
         int cellX = Math.floorDiv(worldX, CELL_SIZE);
@@ -1188,22 +1224,24 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         int skyRoll = skyRng.nextInt(100);
         int skylightType;
         if (skyRoll < 80) skylightType = SKY_NONE;
-        else if (skyRoll < 87) skylightType = SKY_STANDARD;
-        else if (skyRoll < 91) skylightType = SKY_PINHOLE;
+        else if (skyRoll < 88) skylightType = SKY_STANDARD;
+        else if (skyRoll < 93) skylightType = SKY_PINHOLE;
         else if (skyRoll < 95) skylightType = SKY_CROSS;
-        else skylightType = SKY_BARS;
+        else if (skyRoll < 98) skylightType = SKY_BARS;
+        else skylightType = SKY_STANDARD;
 
         // Pool type (same RNG logic as getPoolType, uses master cell)
         Random poolRng = new Random(seed ^ ((long) cx * 314159265L + (long) cz * 271828182L));
         int poolRoll = poolRng.nextInt(100);
         int poolType;
         if (poolRoll < 20) poolType = POOL_DRY;
-        else if (poolRoll < 45) poolType = POOL_SHALLOW;
-        else if (poolRoll < 58) poolType = POOL_DEEP;
-        else if (poolRoll < 70) poolType = POOL_CHANNEL;
-        else if (poolRoll < 80) poolType = POOL_MOAT;
-        else if (poolRoll < 90) poolType = POOL_HALF;
-        else poolType = POOL_ABYSS;
+        else if (poolRoll < 44) poolType = POOL_SHALLOW;
+        else if (poolRoll < 57) poolType = POOL_DEEP;
+        else if (poolRoll < 69) poolType = POOL_CHANNEL;
+        else if (poolRoll < 79) poolType = POOL_MOAT;
+        else if (poolRoll < 88) poolType = POOL_HALF;
+        else if (poolRoll < 97) poolType = POOL_ABYSS;
+        else poolType = POOL_ABYSS_DEEP;
 
         String className = CLASS_NAMES[roomClass];
         String paletteName = DEFAULT_PALETTES[paletteIndex].name();

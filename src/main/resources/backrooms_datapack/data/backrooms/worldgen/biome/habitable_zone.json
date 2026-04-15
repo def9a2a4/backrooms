@@ -12,12 +12,6 @@
   "attributes": {
     "minecraft:visual/sky_color": 1710874,
     "minecraft:visual/fog_color": 3355443,
-    "minecraft:visual/water_fog_color": 1118481,
-    "minecraft:visual/ambient_particles": {
-      "probability": 0.01,
-      "options": {
-        "type": "minecraft:dripping_water"
-      }
-    }
+    "minecraft:visual/water_fog_color": 1118481
   }
 }
