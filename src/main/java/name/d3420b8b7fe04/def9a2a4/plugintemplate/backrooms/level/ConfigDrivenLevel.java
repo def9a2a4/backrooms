@@ -2,6 +2,7 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsPlugin;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTrigger;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.BackroomsChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import org.bukkit.NamespacedKey;
@@ -34,6 +35,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private String dimensionType;
     private @Nullable NamespacedKey biomeKey;
     private int spawnRadius = 300;
+    private @Nullable ConfigurationSection generatorConfig;
     private final Map<String, ConfigurationSection> eventConfigs = new HashMap<>();
 
     public ConfigDrivenLevel(BackroomsPlugin plugin, String id, String generatorId,
@@ -92,6 +94,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
         this.fixedTime = section.getLong("fixed_time", -1);
         this.dimensionType = section.getString("dimension_type", "dark");
         this.spawnRadius = section.getInt("spawn_radius", 300);
+        this.generatorConfig = section.getConfigurationSection("generator_config");
 
         String biomeStr = section.getString("biome", null);
         if (biomeStr != null && biomeStr.contains(":")) {
@@ -131,6 +134,9 @@ public class ConfigDrivenLevel extends AbstractLevel {
         if (gen == null) {
             throw new IllegalStateException("No generator registered for id: " + generatorId
                     + " (level: " + id + ")");
+        }
+        if (generatorConfig != null && gen instanceof BackroomsChunkGenerator brGen) {
+            brGen.configure(generatorConfig);
         }
         return gen;
     }

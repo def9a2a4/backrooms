@@ -5,8 +5,12 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.generator.WorldInfo;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 /**
@@ -45,40 +49,48 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     // Region size: multiple of CELL_SIZE so boundaries align with room walls
     private static final int REGION_SIZE = CELL_SIZE * 14; // 336 blocks
 
-    // Palette indices
-    private static final int PAL_WALL = 0;
-    private static final int PAL_FLOOR = 1;
-    private static final int PAL_PILLAR = 2;
-    private static final int PAL_CEILING = 3;
+    // Palette record — each entry defines wall/floor/pillar/ceiling/light materials
+    record Palette(String name, Material wall, Material floor, Material pillar, Material ceiling, Material light) {}
 
-    private static final Material[][] PALETTES = {
-        // Quartz
-        { Material.QUARTZ_BLOCK, Material.SMOOTH_QUARTZ, Material.QUARTZ_PILLAR, Material.QUARTZ_BRICKS },
-        // White concrete
-        { Material.WHITE_CONCRETE, Material.WHITE_CONCRETE, Material.WHITE_CONCRETE, Material.WHITE_CONCRETE },
-        // Smooth stone
-        { Material.SMOOTH_STONE, Material.SMOOTH_STONE, Material.STONE, Material.SMOOTH_STONE },
-        // Dark prismarine
-        { Material.DARK_PRISMARINE, Material.DARK_PRISMARINE, Material.DARK_PRISMARINE, Material.DARK_PRISMARINE },
-        // End stone bricks (pillar also uses bricks, no raw end stone)
-        { Material.END_STONE_BRICKS, Material.END_STONE_BRICKS, Material.END_STONE_BRICKS, Material.END_STONE_BRICKS },
-        // Sandstone (chiseled, smooth, cut only)
-        { Material.SMOOTH_SANDSTONE, Material.CUT_SANDSTONE, Material.CUT_SANDSTONE, Material.SMOOTH_SANDSTONE },
-        // Stone
-        { Material.STONE, Material.STONE, Material.STONE, Material.STONE },
+    private static final Palette[] DEFAULT_PALETTES = {
+        new Palette("Quartz",          Material.QUARTZ_BLOCK,     Material.SMOOTH_QUARTZ,    Material.QUARTZ_PILLAR,    Material.QUARTZ_BRICKS,    Material.PEARLESCENT_FROGLIGHT),
+        new Palette("White Concrete",  Material.WHITE_CONCRETE,   Material.WHITE_CONCRETE,   Material.WHITE_CONCRETE,   Material.WHITE_CONCRETE,   Material.PEARLESCENT_FROGLIGHT),
+        new Palette("Smooth Stone",    Material.SMOOTH_STONE,     Material.SMOOTH_STONE,     Material.STONE,            Material.SMOOTH_STONE,     Material.PEARLESCENT_FROGLIGHT),
+        new Palette("Dark Prismarine", Material.DARK_PRISMARINE,  Material.DARK_PRISMARINE,  Material.DARK_PRISMARINE,  Material.DARK_PRISMARINE,  Material.SEA_LANTERN),
+        new Palette("End Stone",       Material.END_STONE_BRICKS, Material.END_STONE_BRICKS, Material.END_STONE_BRICKS, Material.END_STONE_BRICKS, Material.OCHRE_FROGLIGHT),
+        new Palette("Sandstone",       Material.SMOOTH_SANDSTONE, Material.CUT_SANDSTONE,    Material.CUT_SANDSTONE,    Material.SMOOTH_SANDSTONE, Material.OCHRE_FROGLIGHT),
+        new Palette("Stone",           Material.STONE,            Material.STONE,            Material.STONE,            Material.STONE,            Material.PEARLESCENT_FROGLIGHT),
     };
+
+    private Palette[] palettes = DEFAULT_PALETTES;
 
     // Pool types
     private static final int POOL_DRY = 0;
     private static final int POOL_SHALLOW = 1;
     private static final int POOL_DEEP = 2;
 
-    private static Material lightBlock(Material[] palette) {
-        if (palette[PAL_WALL] == Material.DARK_PRISMARINE) return Material.SEA_LANTERN;
-        if (palette[PAL_WALL] == Material.SMOOTH_STONE || palette[PAL_WALL] == Material.STONE
-                || palette[PAL_WALL] == Material.QUARTZ_BLOCK || palette[PAL_WALL] == Material.WHITE_CONCRETE)
-            return Material.PEARLESCENT_FROGLIGHT;
-        return Material.OCHRE_FROGLIGHT;
+    @Override
+    public void configure(@Nullable ConfigurationSection config) {
+        if (config == null) return;
+        List<Map<?, ?>> paletteList = config.getMapList("palettes");
+        if (paletteList.isEmpty()) return;
+
+        Palette[] parsed = new Palette[paletteList.size()];
+        for (int i = 0; i < paletteList.size(); i++) {
+            Map<?, ?> entry = paletteList.get(i);
+            String name    = entry.containsKey("name") ? String.valueOf(entry.get("name")) : "Palette " + i;
+            Material wall    = Material.matchMaterial(String.valueOf(entry.get("wall")));
+            Material floor   = Material.matchMaterial(String.valueOf(entry.get("floor")));
+            Material pillar  = Material.matchMaterial(String.valueOf(entry.get("pillar")));
+            Material ceiling = Material.matchMaterial(String.valueOf(entry.get("ceiling")));
+            Material light   = Material.matchMaterial(String.valueOf(entry.get("light")));
+            if (wall == null || floor == null || pillar == null || ceiling == null || light == null) {
+                // Invalid palette entry — fall back to all defaults
+                return;
+            }
+            parsed[i] = new Palette(name, wall, floor, pillar, ceiling, light);
+        }
+        this.palettes = parsed;
     }
 
     @Override
@@ -90,8 +102,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 int worldX = chunkX * 16 + x;
                 int worldZ = chunkZ * 16 + z;
 
-                Material[] palette = getPalette(worldX, worldZ, seed);
-                Material light = lightBlock(palette);
+                Palette palette = getPalette(worldX, worldZ, seed);
+                Material light = palette.light();
 
                 int cellX = Math.floorDiv(worldX, CELL_SIZE);
                 int cellZ = Math.floorDiv(worldZ, CELL_SIZE);
@@ -143,11 +155,11 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 }
 
                 // Sub-floor fill
-                chunkData.setRegion(x, FLOOR_Y, z, x + 1, FLOOR_HEIGHT, z + 1, palette[PAL_FLOOR]);
+                chunkData.setRegion(x, FLOOR_Y, z, x + 1, FLOOR_HEIGHT, z + 1, palette.floor());
 
                 if (isWall) {
                     for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                        chunkData.setBlock(x, y, z, palette.wall());
                     }
                     // Symmetric wall lights: use cell-local edge distance
                     int edWallX = cellEdgeDist(localX);
@@ -160,12 +172,12 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                         }
                     }
                 } else if (isDoorX || isDoorZ) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_FLOOR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.floor());
                     if (shortTransition) {
                         for (int y = FLOOR_HEIGHT + 1; y < MID_FLOOR_Y; y++) {
                             chunkData.setBlock(x, y, z, Material.AIR);
                         }
-                        chunkData.setBlock(x, MID_FLOOR_Y, z, palette[PAL_FLOOR]);
+                        chunkData.setBlock(x, MID_FLOOR_Y, z, palette.floor());
                         for (int y = MID_FLOOR_Y + 1; y < ceilingY; y++) {
                             chunkData.setBlock(x, y, z, Material.AIR);
                         }
@@ -177,16 +189,16 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     placeArchBlock(chunkData, x, z, localX, localZ, inWallX, palette, ceilingY);
                 } else if ((inWallX || inWallZ) && shortTransition) {
                     // Wall removed between two short rooms — extend mid-floor
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_FLOOR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.floor());
                     for (int y = FLOOR_HEIGHT + 1; y < MID_FLOOR_Y; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);
                     }
-                    chunkData.setBlock(x, MID_FLOOR_Y, z, palette[PAL_FLOOR]);
+                    chunkData.setBlock(x, MID_FLOOR_Y, z, palette.floor());
                     for (int y = MID_FLOOR_Y + 1; y < ceilingY; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);
                     }
                 } else {
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_FLOOR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.floor());
                     for (int y = FLOOR_HEIGHT + 1; y < ceilingY; y++) {
                         chunkData.setBlock(x, y, z, Material.AIR);
                     }
@@ -211,7 +223,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     }
                 } else {
                     for (int y = ceilingY; y < CEILING_MAX_Y; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_CEILING]);
+                        chunkData.setBlock(x, y, z, palette.ceiling());
                     }
                 }
 
@@ -235,8 +247,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 int localZ = Math.floorMod(worldZ, CELL_SIZE);
                 int edX = cellEdgeDist(localX);
                 int edZ = cellEdgeDist(localZ);
-                Material[] palette = getPalette(worldX, worldZ, seed);
-                Material light = lightBlock(palette);
+                Palette palette = getPalette(worldX, worldZ, seed);
+                Material light = palette.light();
 
                 // Underwater lights: symmetric every 4 edge-distance units
                 if (edX % 4 == 0 && edZ % 4 == 0) {
@@ -286,12 +298,19 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
     // --- Palette region (aligned to cell grid) ---
 
-    private Material[] getPalette(int worldX, int worldZ, long seed) {
+    private Palette getPalette(int worldX, int worldZ, long seed) {
         int regionX = Math.floorDiv(worldX, REGION_SIZE);
         int regionZ = Math.floorDiv(worldZ, REGION_SIZE);
         long regionSeed = seed ^ (regionX * 198491317L + regionZ * 6542989L);
-        int paletteIndex = Math.floorMod(regionSeed, PALETTES.length);
-        return PALETTES[paletteIndex];
+        int paletteIndex = (int) Math.floorMod(regionSeed, palettes.length);
+        return palettes[paletteIndex];
+    }
+
+    private int getPaletteIndex(int worldX, int worldZ, long seed) {
+        int regionX = Math.floorDiv(worldX, REGION_SIZE);
+        int regionZ = Math.floorDiv(worldZ, REGION_SIZE);
+        long regionSeed = seed ^ (regionX * 198491317L + regionZ * 6542989L);
+        return (int) Math.floorMod(regionSeed, palettes.length);
     }
 
     // --- Cell helpers ---
@@ -409,22 +428,22 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
     private void placeArchBlock(ChunkData chunkData, int x, int z,
                                 int localX, int localZ,
-                                boolean inWallX, Material[] palette, int ceilingY) {
+                                boolean inWallX, Palette palette, int ceilingY) {
         int doorLocalPos = inWallX ? localZ : localX;
         int distFromEdge = Math.min(doorLocalPos - DOOR_START, DOOR_END - 1 - doorLocalPos);
 
         if (distFromEdge == 0) {
-            chunkData.setBlock(x, ceilingY - 1, z, palette[PAL_WALL]);
-            chunkData.setBlock(x, ceilingY - 2, z, palette[PAL_WALL]);
+            chunkData.setBlock(x, ceilingY - 1, z, palette.wall());
+            chunkData.setBlock(x, ceilingY - 2, z, palette.wall());
         } else if (distFromEdge == 1) {
-            chunkData.setBlock(x, ceilingY - 1, z, palette[PAL_WALL]);
+            chunkData.setBlock(x, ceilingY - 1, z, palette.wall());
         }
     }
 
     private void placeInterior(ChunkData chunkData, int x, int z,
                                int localX, int localZ,
                                int masterCellX, int masterCellZ, long seed,
-                               Material[] palette, Material light,
+                               Palette palette, Material light,
                                int roomType, int ceilingY, boolean skylight) {
         int ix = localX - WALL_THICK;
         int iz = localZ - WALL_THICK;
@@ -443,7 +462,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 boolean onPillarZ = symmetricMatch(iz, 5) || symmetricMatch(iz, 4);
                 if (onPillarX && onPillarZ) {
                     for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                        chunkData.setBlock(x, y, z, palette.pillar());
                     }
                 }
             }
@@ -452,7 +471,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 boolean onPillar = symmetricMatch(ix, 8) || symmetricMatch(ix, 3);
                 if (nearEdgeZ && onPillar) {
                     for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                        chunkData.setBlock(x, y, z, palette.pillar());
                     }
                 }
             }
@@ -461,9 +480,9 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 boolean onPartZ = symmetricMatch(iz, 4) && edX > 3;
                 if (onPartX || onPartZ) {
                     for (int y = FLOOR_HEIGHT + 1; y < FLOOR_HEIGHT + 6; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                        chunkData.setBlock(x, y, z, palette.wall());
                     }
-                    chunkData.setBlock(x, FLOOR_HEIGHT + 6, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT + 6, z, palette.pillar());
                 }
             }
             case 4 -> { // Light columns: symmetric glass+froglight towers
@@ -484,13 +503,13 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 boolean onCross = (edX >= 9 && edZ >= 4) || (edZ >= 9 && edX >= 4);
                 boolean onDiamond = Math.abs(dfc + dfcZ - 3) <= 1 && dfc < 8 && dfcZ < 8;
                 if (onCross || onDiamond) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
                 }
             }
             case 6 -> { // Fountain: center feature + pillar ring + floor accent
                 if (edX >= 8 && edZ >= 8) {
                     for (int y = FLOOR_HEIGHT; y < FLOOR_HEIGHT + 5; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                        chunkData.setBlock(x, y, z, palette.pillar());
                     }
                     chunkData.setBlock(x, FLOOR_HEIGHT + 5, z, light);
                 }
@@ -498,24 +517,24 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 boolean ringZ = edZ == 4 || edZ == 5;
                 if (ringX && ringZ) {
                     for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                        chunkData.setBlock(x, y, z, palette.pillar());
                     }
                 }
                 if (edX + edZ == 6 && edX >= 1 && edZ >= 1) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
                 }
             }
             case 7 -> { // Platform: raised center with corner pillars
                 if (edX >= 6 && edZ >= 6) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, palette.pillar());
                     if (edX == 6 && edZ == 6) {
                         for (int y = FLOOR_HEIGHT + 1; y < ceilingY; y++) {
-                            chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                            chunkData.setBlock(x, y, z, palette.pillar());
                         }
                     }
                 }
                 if ((edX == 5 && edZ >= 5) || (edZ == 5 && edX >= 5)) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
                 }
             }
             case 8 -> { // Alcoves: pillar-framed niches on all 4 walls
@@ -525,7 +544,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 boolean atEdgeX = edX <= 3;
                 if ((pillarX && atEdgeZ) || (pillarZ && atEdgeX)) {
                     for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                        chunkData.setBlock(x, y, z, palette.pillar());
                     }
                 }
                 if ((edX >= 9 && edZ == 0) || (edZ >= 9 && edX == 0)) {
@@ -535,16 +554,16 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             case 9 -> { // Grand: corner pillars + center inlay + perimeter trim
                 if (edX >= 2 && edX <= 3 && edZ >= 2 && edZ <= 3) {
                     for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                        chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                        chunkData.setBlock(x, y, z, palette.pillar());
                     }
                 }
                 if (edX >= 6 && edZ >= 6) {
                     if (edX == 6 || edZ == 6 || (edX >= 8 && edZ >= 8)) {
-                        chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+                        chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
                     }
                 }
                 if (edX == 1 && edZ >= 1 || edZ == 1 && edX >= 1) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
                 }
             }
 
@@ -573,14 +592,14 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
     // --- SHORT: two-level rooms ---
 
-    private void placeMidFloor(ChunkData chunkData, int x, int z, Material[] palette) {
-        chunkData.setBlock(x, MID_FLOOR_Y, z, palette[PAL_FLOOR]);
+    private void placeMidFloor(ChunkData chunkData, int x, int z, Palette palette) {
+        chunkData.setBlock(x, MID_FLOOR_Y, z, palette.floor());
     }
 
     /** Case 10: open two-level with center void and symmetric staircases */
     private void placeShortOpen(ChunkData chunkData, int x, int z,
                                 int ix, int iz, int edX, int edZ,
-                                Material[] palette, Material light, boolean skylight) {
+                                Palette palette, Material light, boolean skylight) {
         boolean centerOpening = edX >= 6 && edZ >= 6;
         // West staircase: ix=0-2, iz=2-7 ascending
         boolean westStair = ix <= 2 && iz >= 2 && iz <= 7;
@@ -591,18 +610,18 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             if (edX == 6 && edZ == 6) {
                 int pillarTop = skylight ? MID_FLOOR_Y : CEILING_Y;
                 for (int y = FLOOR_HEIGHT; y < pillarTop; y++) {
-                    chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, y, z, palette.pillar());
                 }
             }
         } else if (westStair) {
             int stepY = FLOOR_HEIGHT + 1 + (iz - 2) * (MID_FLOOR_Y - FLOOR_HEIGHT - 1) / 5;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else if (eastStair) {
             int stepY = FLOOR_HEIGHT + 1 + (17 - iz) * (MID_FLOOR_Y - FLOOR_HEIGHT - 1) / 5;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else {
             placeMidFloor(chunkData, x, z, palette);
@@ -615,26 +634,26 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 11: partitioned lower level with stairwells */
     private void placeShortPartitioned(ChunkData chunkData, int x, int z,
                                        int ix, int iz, int edX, int edZ,
-                                       Material[] palette, Material light) {
+                                       Palette palette, Material light) {
         boolean northStair = ix >= 8 && ix <= 11 && iz <= 5;
         boolean southStair = ix >= 8 && ix <= 11 && iz >= 14;
 
         if (northStair) {
             int stepY = FLOOR_HEIGHT + 1 + iz * (MID_FLOOR_Y - FLOOR_HEIGHT - 1) / 5;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else if (southStair) {
             int stepY = FLOOR_HEIGHT + 1 + (19 - iz) * (MID_FLOOR_Y - FLOOR_HEIGHT - 1) / 5;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else {
             placeMidFloor(chunkData, x, z, palette);
             boolean onPartition = symmetricMatch(ix, 5) || symmetricMatch(ix, 0);
             if (onPartition && iz > 5 && iz < 14) {
                 for (int y = FLOOR_HEIGHT + 1; y < MID_FLOOR_Y - 1; y++) {
-                    chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                    chunkData.setBlock(x, y, z, palette.wall());
                 }
             }
             if (edX % 4 == 0 && edZ % 4 == 0) {
@@ -648,7 +667,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private void placeShortCorner(ChunkData chunkData, int x, int z,
                                   int ix, int iz, int edX, int edZ,
                                   int cellX, int cellZ, long seed,
-                                  Material[] palette, Material light) {
+                                  Palette palette, Material light) {
         Random rng = new Random(seed ^ ((long) cellX * 111111L + (long) cellZ * 222222L));
         int corner = rng.nextInt(4);
 
@@ -669,19 +688,19 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         if (leg1) {
             int stepY = FLOOR_HEIGHT + 1 + lz;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else if (leg2) {
             int stepY = FLOOR_HEIGHT + 1 + 4 + (lx - 1);  // continues from leg1 top
             stepY = Math.min(stepY, MID_FLOOR_Y);
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else {
             placeMidFloor(chunkData, x, z, palette);
             if (edX >= 8 && edZ >= 8) {
                 for (int y = MID_FLOOR_Y + 1; y < CEILING_Y; y++) {
-                    chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, y, z, palette.pillar());
                 }
                 chunkData.setBlock(x, MID_FLOOR_Y + 1, z, light);
                 chunkData.setBlock(x, CEILING_Y - 1, z, light);
@@ -693,7 +712,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
      *  Staircases descend from ring inner edge into the center. */
     private void placeShortMezzanine(ChunkData chunkData, int x, int z,
                                      int ix, int iz, int edX, int edZ,
-                                     Material[] palette, Material light) {
+                                     Palette palette, Material light) {
         boolean onRing = edX <= 3 || edZ <= 3;
         // Staircases: 2 blocks wide at center, descend from ring edge (iz/ix=3 or 16) into center
         boolean northStair = iz >= 3 && iz <= 7 && (ix == 9 || ix == 10);
@@ -704,27 +723,27 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         if (northStair) {
             int stepY = MID_FLOOR_Y - (iz - 3) * (MID_FLOOR_Y - FLOOR_HEIGHT - 1) / 4;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else if (southStair) {
             int stepY = MID_FLOOR_Y - (16 - iz) * (MID_FLOOR_Y - FLOOR_HEIGHT - 1) / 4;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else if (westStair) {
             int stepY = MID_FLOOR_Y - (ix - 3) * (MID_FLOOR_Y - FLOOR_HEIGHT - 1) / 4;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else if (eastStair) {
             int stepY = MID_FLOOR_Y - (16 - ix) * (MID_FLOOR_Y - FLOOR_HEIGHT - 1) / 4;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else if (onRing) {
             placeMidFloor(chunkData, x, z, palette);
             if ((edX == 3 && edZ > 3) || (edZ == 3 && edX > 3)) {
-                chunkData.setBlock(x, MID_FLOOR_Y + 1, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, MID_FLOOR_Y + 1, z, palette.wall());
             }
         }
         if (edX >= 8 && edZ >= 8) {
@@ -736,7 +755,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
      *  Outer ring (ix 6-13, iz 6-13) and inner ring (ix 7-12, iz 7-12). */
     private void placeShortDensePillars(ChunkData chunkData, int x, int z,
                                         int ix, int iz, int edX, int edZ,
-                                        Material[] palette, Material light) {
+                                        Palette palette, Material light) {
         // Outer ring progress (28 positions, clockwise from south)
         int outerProgress = -1;
         if (iz == 13 && ix >= 6 && ix <= 13) { outerProgress = ix - 6; }             // S: 0-7
@@ -762,7 +781,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             }
             int stepY = FLOOR_HEIGHT + progress * (MID_FLOOR_Y - FLOOR_HEIGHT) / 28;
             for (int y = FLOOR_HEIGHT + 1; y <= stepY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         } else {
             // Everything else gets mid-floor
@@ -773,10 +792,10 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             // Pillars on both levels outside spiral zone
             if (edX % 4 == 1 && edZ % 4 == 1 && !insideSpiral) {
                 for (int y = FLOOR_HEIGHT; y < MID_FLOOR_Y; y++) {
-                    chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, y, z, palette.pillar());
                 }
                 for (int y = MID_FLOOR_Y; y < CEILING_Y; y++) {
-                    chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                    chunkData.setBlock(x, y, z, palette.pillar());
                 }
             }
             if (edX % 4 == 3 && edZ % 4 == 3 && !insideSpiral) {
@@ -789,7 +808,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 15: small pools — 4 symmetric pools on lower level, mezzanine ring (no stairs) */
     private void placeShortSmallPools(ChunkData chunkData, int x, int z,
                                       int ix, int iz, int edX, int edZ,
-                                      Material[] palette, Material light) {
+                                      Palette palette, Material light) {
         boolean onRing = edX <= 3 || edZ <= 3;
         // 4 symmetric pools: NW(4-7,4-7), NE(12-15,4-7), SW(4-7,12-15), SE(12-15,12-15)
         boolean inPool = (ix >= 4 && ix <= 7 || ix >= 12 && ix <= 15)
@@ -799,13 +818,13 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             placeMidFloor(chunkData, x, z, palette);
             // Trim wall at ring inner edge
             if ((edX == 3 && edZ > 3) || (edZ == 3 && edX > 3)) {
-                chunkData.setBlock(x, MID_FLOOR_Y + 1, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, MID_FLOOR_Y + 1, z, palette.wall());
             }
         }
         if (inPool && !onRing) {
             // Shallow pool on lower level
             chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
-            chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette[PAL_FLOOR]);
+            chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
         }
         // Single center light
         if (edX == 9 && edZ == 9) {
@@ -818,10 +837,10 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 20: grand cathedral — massive pillars + floor inlay */
     private void placeTallCathedral(ChunkData chunkData, int x, int z,
                                     int ix, int iz, int edX, int edZ, int ceilingY,
-                                    Material[] palette, Material light) {
+                                    Palette palette, Material light) {
         if (edX >= 4 && edX <= 6 && edZ >= 4 && edZ <= 6) {
             for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                chunkData.setBlock(x, y, z, palette.pillar());
             }
             int midY = (FLOOR_HEIGHT + ceilingY) / 2;
             chunkData.setBlock(x, midY, z, light);
@@ -830,24 +849,24 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         }
         if (edX >= 7 && edZ >= 7) {
             if (edX == 7 || edZ == 7 || (edX >= 9 && edZ >= 9)) {
-                chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+                chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
             }
         }
         if ((edX == 1 && edZ >= 1) || (edZ == 1 && edX >= 1)) {
-            chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+            chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
         }
     }
 
     /** Case 21: atrium — outer solid pillars, inner glass pillars */
     private void placeTallAtrium(ChunkData chunkData, int x, int z,
                                  int ix, int iz, int edX, int edZ, int ceilingY,
-                                 Material[] palette, Material light) {
+                                 Palette palette, Material light) {
         boolean outerPillar = edX == 5 && edZ == 5;
         boolean innerPillar = (edX == 9 && edZ == 5) || (edX == 5 && edZ == 9);
 
         if (outerPillar) {
             for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                chunkData.setBlock(x, y, z, palette.pillar());
             }
             chunkData.setBlock(x, (FLOOR_HEIGHT + ceilingY) / 2, z, light);
             chunkData.setBlock(x, ceilingY - 3, z, light);
@@ -859,19 +878,19 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
             chunkData.setBlock(x, ceilingY - 3, z, light);
         }
         if (edX + edZ == 8 && edX >= 2 && edZ >= 2) {
-            chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+            chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
         }
     }
 
     /** Case 22: towering columns — alternating solid and glass */
     private void placeTallColumns(ChunkData chunkData, int x, int z,
                                   int ix, int iz, int edX, int edZ, int ceilingY,
-                                  Material[] palette, Material light) {
+                                  Palette palette, Material light) {
         boolean colX = symmetricMatch(ix, 3) || symmetricMatch(ix, 7);
         boolean colZ = symmetricMatch(iz, 3) || symmetricMatch(iz, 7);
         if (colX && colZ) {
             boolean isGlassCol = (edX == 3 || edZ == 3) && !(edX == 7 && edZ == 7);
-            Material colMat = isGlassCol ? Material.LIGHT_BLUE_STAINED_GLASS : palette[PAL_PILLAR];
+            Material colMat = isGlassCol ? Material.LIGHT_BLUE_STAINED_GLASS : palette.pillar();
             for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
                 chunkData.setBlock(x, y, z, colMat);
             }
@@ -885,24 +904,24 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 23: layered — trim bands + corner pillars */
     private void placeTallLayered(ChunkData chunkData, int x, int z,
                                   int ix, int iz, int edX, int edZ, int ceilingY,
-                                  Material[] palette, Material light) {
+                                  Palette palette, Material light) {
         if (edX >= 2 && edX <= 3 && edZ >= 2 && edZ <= 3) {
             for (int y = FLOOR_HEIGHT; y < ceilingY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_PILLAR]);
+                chunkData.setBlock(x, y, z, palette.pillar());
             }
         }
         if (edX <= 2 || edZ <= 2) {
             int bandY1 = FLOOR_HEIGHT + (ceilingY - FLOOR_HEIGHT) / 3;
             int bandY2 = FLOOR_HEIGHT + 2 * (ceilingY - FLOOR_HEIGHT) / 3;
-            chunkData.setBlock(x, bandY1, z, palette[PAL_WALL]);
-            chunkData.setBlock(x, bandY2, z, palette[PAL_WALL]);
+            chunkData.setBlock(x, bandY1, z, palette.wall());
+            chunkData.setBlock(x, bandY2, z, palette.wall());
             if (edX % 4 == 0 && edZ % 4 == 0) {
                 chunkData.setBlock(x, bandY1, z, light);
                 chunkData.setBlock(x, bandY2, z, light);
             }
         }
         if (edX >= 6 && edZ >= 6) {
-            chunkData.setBlock(x, FLOOR_HEIGHT, z, palette[PAL_PILLAR]);
+            chunkData.setBlock(x, FLOOR_HEIGHT, z, palette.pillar());
         }
     }
 
@@ -911,11 +930,11 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 30: parallel walls along Z axis with center gap */
     private void placeWallsGap(ChunkData chunkData, int x, int z,
                                int ix, int iz, int edX, int edZ, int ceilingY,
-                               Material[] palette) {
+                               Palette palette) {
         boolean onWall = symmetricMatch(ix, 3) || symmetricMatch(ix, 7);
         if (onWall && edZ < 8) {
             for (int y = FLOOR_HEIGHT + 1; y < ceilingY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         }
     }
@@ -923,11 +942,11 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 31: parallel walls along X axis, no gap */
     private void placeWallsSolid(ChunkData chunkData, int x, int z,
                                  int ix, int iz, int edX, int edZ, int ceilingY,
-                                 Material[] palette) {
+                                 Palette palette) {
         boolean onWall = symmetricMatch(iz, 4) || symmetricMatch(iz, 8);
         if (onWall) {
             for (int y = FLOOR_HEIGHT + 1; y < ceilingY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         }
     }
@@ -935,7 +954,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     /** Case 32: cross grid — X and Z walls creating sub-rooms with edge doorways */
     private void placeWallsCross(ChunkData chunkData, int x, int z,
                                  int ix, int iz, int edX, int edZ, int ceilingY,
-                                 Material[] palette) {
+                                 Palette palette) {
         boolean wallX = symmetricMatch(ix, 5);
         boolean wallZ = symmetricMatch(iz, 5);
         // Doorway gaps near room edges
@@ -943,7 +962,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         boolean gapZ = edX <= 2;
         if ((wallX && !gapX) || (wallZ && !gapZ)) {
             for (int y = FLOOR_HEIGHT + 1; y < ceilingY; y++) {
-                chunkData.setBlock(x, y, z, palette[PAL_WALL]);
+                chunkData.setBlock(x, y, z, palette.wall());
             }
         }
     }
@@ -951,7 +970,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private void placePool(ChunkData chunkData, int x, int z,
                            int localX, int localZ,
                            int masterCellX, int masterCellZ, long seed,
-                           Material[] palette) {
+                           Palette palette) {
         if (chunkData.getType(x, FLOOR_HEIGHT + 1, z) != Material.AIR) {
             return;
         }
@@ -971,13 +990,13 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
         // Don't overwrite decorated floor tiles or lights
         Material currentFloor = chunkData.getType(x, FLOOR_HEIGHT, z);
-        if (currentFloor != palette[PAL_FLOOR]) {
+        if (currentFloor != palette.floor()) {
             return;
         }
 
         if (poolType == POOL_SHALLOW) {
             chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
-            chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette[PAL_FLOOR]);
+            chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
         } else {
             // Symmetric stepped entry
             int distFromPoolEdge = Math.min(
@@ -985,21 +1004,17 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     Math.min(localZ - interiorStart, interiorEnd - 1 - localZ));
             if (distFromPoolEdge <= 1) {
                 chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
-                chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette[PAL_FLOOR]);
+                chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
             } else {
                 chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
                 chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, Material.WATER);
                 chunkData.setBlock(x, FLOOR_HEIGHT - 2, z, Material.WATER);
-                chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette[PAL_FLOOR]);
+                chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette.floor());
             }
         }
     }
 
     // --- Debug info ---
-
-    private static final String[] PALETTE_NAMES = {
-        "Quartz", "White Concrete", "Smooth Stone", "Dark Prismarine", "End Stone", "Sandstone", "Stone"
-    };
 
     private static final String[] ROOM_TYPE_NAMES = {
         "Open", "Pillared", "Colonnade", "Gallery", "Light Columns",
@@ -1029,7 +1044,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         int regionX = Math.floorDiv(worldX, REGION_SIZE);
         int regionZ = Math.floorDiv(worldZ, REGION_SIZE);
         long regionSeed = seed ^ (regionX * 198491317L + regionZ * 6542989L);
-        int paletteIndex = Math.floorMod(regionSeed, PALETTES.length);
+        int paletteIndex = (int) Math.floorMod(regionSeed, DEFAULT_PALETTES.length);
 
         // Master cell for room type
         int cx = cellX;
@@ -1083,7 +1098,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         }
 
         String className = CLASS_NAMES[roomClass];
-        String paletteName = PALETTE_NAMES[paletteIndex];
+        String paletteName = DEFAULT_PALETTES[paletteIndex].name();
         String typeName = (roomType >= 0 && roomType < ROOM_TYPE_NAMES.length && ROOM_TYPE_NAMES[roomType] != null)
                 ? ROOM_TYPE_NAMES[roomType] : "Unknown(" + roomType + ")";
 

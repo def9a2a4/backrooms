@@ -12,6 +12,51 @@ events:
 
 entities: []
 
+generator_config:
+  palettes:
+    - name: Quartz
+      wall: QUARTZ_BLOCK
+      floor: SMOOTH_QUARTZ
+      pillar: QUARTZ_PILLAR
+      ceiling: QUARTZ_BRICKS
+      light: PEARLESCENT_FROGLIGHT
+    - name: White Concrete
+      wall: WHITE_CONCRETE
+      floor: WHITE_CONCRETE
+      pillar: WHITE_CONCRETE
+      ceiling: WHITE_CONCRETE
+      light: PEARLESCENT_FROGLIGHT
+    - name: Smooth Stone
+      wall: SMOOTH_STONE
+      floor: SMOOTH_STONE
+      pillar: STONE
+      ceiling: SMOOTH_STONE
+      light: PEARLESCENT_FROGLIGHT
+    - name: Dark Prismarine
+      wall: DARK_PRISMARINE
+      floor: DARK_PRISMARINE
+      pillar: DARK_PRISMARINE
+      ceiling: DARK_PRISMARINE
+      light: SEA_LANTERN
+    - name: End Stone
+      wall: END_STONE_BRICKS
+      floor: END_STONE_BRICKS
+      pillar: END_STONE_BRICKS
+      ceiling: END_STONE_BRICKS
+      light: OCHRE_FROGLIGHT
+    - name: Sandstone
+      wall: SMOOTH_SANDSTONE
+      floor: CUT_SANDSTONE
+      pillar: CUT_SANDSTONE
+      ceiling: SMOOTH_SANDSTONE
+      light: OCHRE_FROGLIGHT
+    - name: Stone
+      wall: STONE
+      floor: STONE
+      pillar: STONE
+      ceiling: STONE
+      light: PEARLESCENT_FROGLIGHT
+
 event_config:
   ambient_sound:
     enabled: true

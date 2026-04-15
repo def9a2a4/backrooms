@@ -4,6 +4,7 @@ import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Biome;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
@@ -53,6 +54,14 @@ public abstract class BackroomsChunkGenerator extends ChunkGenerator {
         } catch (Exception ignored) {
         }
         return Biome.THE_VOID;
+    }
+
+    /**
+     * Called after construction to pass level-specific generator configuration.
+     * Override in subclasses to read custom settings from the level YAML.
+     */
+    public void configure(@Nullable ConfigurationSection config) {
+        // default: no-op
     }
 
     /**
