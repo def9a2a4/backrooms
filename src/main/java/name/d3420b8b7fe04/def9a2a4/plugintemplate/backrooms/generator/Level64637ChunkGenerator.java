@@ -56,8 +56,8 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     public static final int STAIR_MIN = 5;
     public static final int STAIR_MAX = 10;
 
-    // Wrap teleportation offset (base Y=0 ↔ cap Y=70)
-    public static final int WRAP_OFFSET = NUM_LAYERS * FLOOR_SPACING; // 70
+    // Wrap teleportation offset (layer 0 ↔ layer 6, identical rooms)
+    public static final int WRAP_OFFSET = 6 * FLOOR_SPACING; // 60
 
     public enum RoomType { EMPTY, PILLAR, STAIRCASE }
 
@@ -152,6 +152,9 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
             lineShaftWalls(chunkData, 0, REL_AIR_MIN - 1, chunkX, chunkZ);
             lineShaftWalls(chunkData, CAP_MIN_Y + 1, CAP_MAX_Y, chunkX, chunkZ);
         }
+
+        // Place wrap slabs in the base and cap shafts (after bedrock so they aren't overwritten)
+        placeWrapSlabs(chunkData, chunkX, chunkZ, seed, cellX, cellZ);
     }
 
     /**
@@ -195,6 +198,53 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                 if ((adjX && inRangeZ) || (adjZ && inRangeX)) {
                     for (int y = yMin; y < yMax; y++) {
                         data.setBlock(x, y, z, Material.OAK_PLANKS);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Places staircase slabs in the base shaft (Y=0–2) and cap shaft (Y=70–72)
+     * for all-layer wrapping staircases, using r=−1 and high-r revolutions.
+     * Called after bedrock + re-punch so the slabs aren't overwritten.
+     */
+    private void placeWrapSlabs(ChunkData data, int chunkX, int chunkZ,
+                                long seed, int cellX, int cellZ) {
+        if (!isStaircase(seed, cellX, cellZ)
+                || getStaircaseSpan(seed, cellX, cellZ) < NUM_LAYERS) return;
+
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                int localX = Math.floorMod(worldX, CELL_SIZE);
+                int localZ = Math.floorMod(worldZ, CELL_SIZE);
+
+                if (localX < STAIR_MIN || localX > STAIR_MAX
+                        || localZ < STAIR_MIN || localZ > STAIR_MAX) continue;
+
+                int sx = localX - STAIR_MIN;
+                int sz = localZ - STAIR_MIN;
+                int offset = STAIR_OFFSET[sz][sx];
+                if (offset == -1) continue; // center shaft stays air
+
+                boolean isTop = STAIR_IS_TOP[sz][sx];
+                Slab slab = (Slab) Material.OAK_SLAB.createBlockData();
+                slab.setType(isTop ? Slab.Type.TOP : Slab.Type.BOTTOM);
+
+                // Base shaft: r = -1
+                int baseBlockY = REL_AIR_MIN + offset - 6;
+                if (baseBlockY >= 0 && baseBlockY < REL_AIR_MIN) {
+                    data.setBlock(x, baseBlockY, z, slab);
+                }
+
+                // Cap shaft: find r where blockY lands in [CAP_MIN_Y, CAP_MAX_Y)
+                for (int r = (CAP_MIN_Y - REL_AIR_MIN - offset + 5) / 6; ; r++) {
+                    int blockY = REL_AIR_MIN + offset + 6 * r;
+                    if (blockY >= CAP_MAX_Y) break;
+                    if (blockY >= CAP_MIN_Y) {
+                        data.setBlock(x, blockY, z, slab);
                     }
                 }
             }
@@ -403,7 +453,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         int startY = (span >= NUM_LAYERS)
                 ? REL_AIR_MIN
                 : getStaircaseStartLayer(seed, cellX, cellZ) * FLOOR_SPACING + REL_AIR_MIN;
-        int maxBlockY = startY + 10 * (Math.min(span, NUM_LAYERS) - 1) - 1;
+        int maxBlockY = startY + 10 * Math.min(span, NUM_LAYERS) - 1;
 
         boolean isTop = STAIR_IS_TOP[sz][sx];
 

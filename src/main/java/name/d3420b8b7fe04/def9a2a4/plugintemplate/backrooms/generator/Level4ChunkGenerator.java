@@ -166,7 +166,7 @@ public class Level4ChunkGenerator extends BackroomsChunkGenerator {
 
                 for (int y = MAX_Y - 1; y > MIN_Y; y--) {
                     if (solid[tx][y][tz] && (y >= MAX_Y - 1 || !solid[tx][y + 1][tz])) {
-                        if (chunkData.getType(tx, y, tz) == Material.GRASS_BLOCK) {
+                        if (y >= SEA_LEVEL + 2 && chunkData.getType(tx, y, tz) == Material.GRASS_BLOCK) {
                             placeOakTree(chunkData, chunkRng, tx, y + 1, tz);
                         }
                         break;
@@ -177,20 +177,30 @@ public class Level4ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private void placeOakTree(ChunkData chunkData, Random rng, int x, int y, int z) {
-        int trunkHeight = 4 + rng.nextInt(3);
+        int trunkHeight = 4 + rng.nextInt(3); // 4-6
+        int topY = y + trunkHeight - 1;
+
+        // Trunk
         for (int dy = 0; dy < trunkHeight; dy++) {
             if (y + dy < MAX_Y) {
                 chunkData.setBlock(x, y + dy, z, Material.OAK_LOG);
             }
         }
-        int leafStart = y + trunkHeight - 2;
-        for (int dy = 0; dy < 3; dy++) {
-            int radius = dy == 2 ? 1 : 2;
+
+        // Leaf layers: 2 wide layers, then 2 narrow layers (classic oak shape)
+        // Layer 0,1 (bottom two): radius 2 with random corner removal
+        // Layer 2,3 (top two): radius 1 with leaf on top of trunk
+        for (int layer = 0; layer < 4; layer++) {
+            int ly = topY - 2 + layer; // starts 2 below trunk top
+            if (ly < 0 || ly >= MAX_Y) continue;
+            int radius = layer < 2 ? 2 : 1;
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
-                    if (Math.abs(dx) == radius && Math.abs(dz) == radius) continue;
-                    int lx = x + dx, lz = z + dz, ly = leafStart + dy;
-                    if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && ly < MAX_Y) {
+                    if (dx == 0 && dz == 0 && layer < 3) continue; // trunk column (except top)
+                    // Skip corners randomly on wide layers
+                    if (Math.abs(dx) == radius && Math.abs(dz) == radius && rng.nextBoolean()) continue;
+                    int lx = x + dx, lz = z + dz;
+                    if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
                         if (chunkData.getType(lx, ly, lz) == Material.AIR) {
                             chunkData.setBlock(lx, ly, lz, Material.OAK_LEAVES);
                         }
