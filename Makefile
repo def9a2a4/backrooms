@@ -1,4 +1,4 @@
-PLUGIN_NAME := PluginTemplate
+PLUGIN_NAME := Backrooms
 
 .PHONY: build
 build:

@@ -36,7 +36,7 @@ tasks {
     }
 
     jar {
-        archiveBaseName.set("PluginTemplate")
+        archiveBaseName.set("Backrooms")
         manifest {
             attributes["paperweight-mappings-namespace"] = "mojang"
         }
@@ -46,6 +46,6 @@ tasks {
         relocate("org.bstats", "name.d3420b8b7fe04.def9a2a4.bstats")
         mergeServiceFiles()
         archiveClassifier.set("")
-        archiveBaseName.set("PluginTemplate")
+        archiveBaseName.set("Backrooms")
     }
 }
