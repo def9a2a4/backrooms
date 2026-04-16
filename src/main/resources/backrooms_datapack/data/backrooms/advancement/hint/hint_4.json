@@ -5,7 +5,7 @@
       "id": "minecraft:leather_boots"
     },
     "title": {"text": "Walking Forward Only Takes You Back", "color": "dark_green"},
-    "description": {"text": "One thousand steps. The same room.", "color": "gray", "italic": true},
+    "description": {"text": "One thousand steps the same room", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

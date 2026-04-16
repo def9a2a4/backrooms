@@ -4,8 +4,8 @@
     "icon": {
       "id": "minecraft:glowstone"
     },
-    "title": {"text": "Wrong Portal", "color": "gray"},
-    "description": {"text": "The sky you sought was not above.", "color": "gray", "italic": true},
+    "title": {"text": "A Dream that Never Was", "color": "gray"},
+    "description": {"text": "The sky you sought was not above", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

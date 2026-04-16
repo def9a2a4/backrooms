@@ -5,7 +5,7 @@
       "id": "minecraft:glass"
     },
     "title": {"text": "The Sky Holds No Doors", "color": "green"},
-    "description": {"text": "There is no known exit. You chose this.", "color": "gray", "italic": true},
+    "description": {"text": "There is no known exit you chose this", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": false

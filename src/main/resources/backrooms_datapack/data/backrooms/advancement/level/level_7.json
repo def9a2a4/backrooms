@@ -4,8 +4,8 @@
     "icon": {
       "id": "minecraft:crying_obsidian"
     },
-    "title": {"text": "The Corrupted Chunk", "color": "dark_red"},
-    "description": {"text": "The world forgot how to render here.", "color": "gray", "italic": true},
+    "title": {"text": "The Corrupted Chunk", "color": "dark_red", "obfuscated": true},
+    "description": {"text": "The world forgot how to render here", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

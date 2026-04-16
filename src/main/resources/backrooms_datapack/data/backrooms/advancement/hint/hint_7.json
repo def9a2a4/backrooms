@@ -5,7 +5,7 @@
       "id": "minecraft:barrier"
     },
     "title": {"text": "The Void Below Is Not the Same Void", "color": "dark_red"},
-    "description": {"text": "Fall through the broken floor. Wake up at home.", "color": "gray", "italic": true},
+    "description": {"text": "Fall through the broken floor wake up at home", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

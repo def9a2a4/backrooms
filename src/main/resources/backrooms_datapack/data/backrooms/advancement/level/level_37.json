@@ -2,10 +2,10 @@
   "parent": "backrooms:root",
   "display": {
     "icon": {
-      "id": "minecraft:prismarine"
+      "id": "minecraft:quartz_bricks"
     },
     "title": {"text": "The Poolrooms", "color": "aqua"},
-    "description": {"text": "Chlorine and nostalgia for a place you never visited.", "color": "gray", "italic": true},
+    "description": {"text": "Chlorine and nostalgia for a place you never visited", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

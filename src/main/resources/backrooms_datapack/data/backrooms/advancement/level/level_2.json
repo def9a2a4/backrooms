@@ -5,7 +5,7 @@
       "id": "minecraft:copper_block"
     },
     "title": {"text": "The Pipe Works", "color": "gold"},
-    "description": {"text": "Rust and dripping. Something moves in the pipes.", "color": "gray", "italic": true},
+    "description": {"text": "Rust and dripping something moves in the pipes", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

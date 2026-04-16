@@ -5,7 +5,7 @@
       "id": "minecraft:jukebox"
     },
     "title": {"text": "The Record Skips. There Is No Needle.", "color": "dark_gray"},
-    "description": {"text": "No one has found the way out. Yet.", "color": "gray", "italic": true},
+    "description": {"text": "No one has found the way out yet", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": false

@@ -5,7 +5,7 @@
       "id": "minecraft:red_bed"
     },
     "title": {"text": "The Dream That Wasn't", "color": "gray"},
-    "description": {"text": "Thunder, then silence. Then here.", "color": "gray", "italic": true},
+    "description": {"text": "Thunder then silence then here", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

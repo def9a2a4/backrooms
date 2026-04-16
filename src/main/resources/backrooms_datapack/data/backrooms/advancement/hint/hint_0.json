@@ -5,7 +5,7 @@
       "id": "minecraft:written_book"
     },
     "title": {"text": "Sixteen Voices Speak as One", "color": "gold"},
-    "description": {"text": "The authors left breadcrumbs. Collect their words.", "color": "gray", "italic": true},
+    "description": {"text": "The authors left breadcrumbs collect their words", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

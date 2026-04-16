@@ -5,7 +5,7 @@
       "id": "minecraft:clock"
     },
     "title": {"text": "You Woke Up", "color": "white"},
-    "description": {"text": "Was it real? The buzzing says yes.", "color": "gray", "italic": true},
+    "description": {"text": "Was it real the buzzing says yes", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true

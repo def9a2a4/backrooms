@@ -2,10 +2,10 @@
   "parent": "backrooms:level/level_3",
   "display": {
     "icon": {
-      "id": "minecraft:redstone"
+      "id": "minecraft:comparator"
     },
-    "title": {"text": "Five Hearts Beat in Unison", "color": "red"},
-    "description": {"text": "Power the minds. Stay close. The doors are random.", "color": "gray", "italic": true},
+    "title": {"text": "There is no Time here", "color": "red"},
+    "description": {"text": "Power the minds stay close the doors are random", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

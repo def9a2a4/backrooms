@@ -5,7 +5,7 @@
       "id": "minecraft:water_bucket"
     },
     "title": {"text": "The Water Remembers", "color": "blue"},
-    "description": {"text": "Submerge. Deeper than you think is safe.", "color": "gray", "italic": true},
+    "description": {"text": "Submerge deeper than you think is safe", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

@@ -2,10 +2,10 @@
   "parent": "backrooms:level/level_37",
   "display": {
     "icon": {
-      "id": "minecraft:prismarine_shard"
+      "id": "minecraft:sculk"
     },
     "title": {"text": "The Deep End Has No Bottom", "color": "aqua"},
-    "description": {"text": "The water swallows you. The servers catch you.", "color": "gray", "italic": true},
+    "description": {"text": "The water swallows you the servers catch you", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

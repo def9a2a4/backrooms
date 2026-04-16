@@ -5,7 +5,7 @@
       "id": "minecraft:command_block"
     },
     "title": {"text": "The Server Room", "color": "red"},
-    "description": {"text": "The machines are thinking. About you.", "color": "gray", "italic": true},
+    "description": {"text": "The machines are thinking about you", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

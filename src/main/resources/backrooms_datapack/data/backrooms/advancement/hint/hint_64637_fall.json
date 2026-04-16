@@ -2,10 +2,10 @@
   "parent": "backrooms:level/level_64637",
   "display": {
     "icon": {
-      "id": "minecraft:elytra"
+      "id": "minecraft:feather"
     },
-    "title": {"text": "Some Falls Have No Landing", "color": "dark_purple"},
-    "description": {"text": "Two hundred blocks of nothing. Then everything.", "color": "gray", "italic": true},
+    "title": {"text": "Leap of Faith", "color": "dark_purple"},
+    "description": {"text": "Two hundred blocks of nothing then everything", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

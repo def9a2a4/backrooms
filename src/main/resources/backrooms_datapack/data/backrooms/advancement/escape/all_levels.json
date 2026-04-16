@@ -5,7 +5,7 @@
       "id": "minecraft:filled_map"
     },
     "title": {"text": "Cartographer of the Damned", "color": "light_purple"},
-    "description": {"text": "You mapped the unmappable.", "color": "gray", "italic": true},
+    "description": {"text": "You mapped the unmappable", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true

@@ -5,7 +5,7 @@
       "id": "minecraft:oak_log"
     },
     "title": {"text": "Skyblock", "color": "green"},
-    "description": {"text": "Floating. No ground to fall to.", "color": "gray", "italic": true},
+    "description": {"text": "Floating no ground to fall to", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

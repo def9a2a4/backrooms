@@ -5,7 +5,7 @@
       "id": "minecraft:player_head"
     },
     "title": {"text": "He Was Listening", "color": "gray"},
-    "description": {"text": "You called something that already knew your name.", "color": "gray", "italic": true},
+    "description": {"text": "You called something that knew your name", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

@@ -5,7 +5,7 @@
       "id": "minecraft:chiseled_bookshelf"
     },
     "title": {"text": "The Library", "color": "dark_purple"},
-    "description": {"text": "Every book is wrong. Every book is about you.", "color": "gray", "italic": true},
+    "description": {"text": "Every book is wrong every book is about you", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

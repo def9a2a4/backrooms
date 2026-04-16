@@ -5,7 +5,7 @@
       "id": "minecraft:black_concrete"
     },
     "title": {"text": "The Floor Gave Way", "color": "gray"},
-    "description": {"text": "You fell through everything.", "color": "gray", "italic": true},
+    "description": {"text": "You fell through everything", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true
