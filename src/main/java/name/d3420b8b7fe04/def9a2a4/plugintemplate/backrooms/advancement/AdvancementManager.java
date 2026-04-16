@@ -63,9 +63,7 @@ public class AdvancementManager {
             Map.entry("level_4:level_3", key("hint/hint_4")),
             Map.entry("level_7:overworld", key("hint/hint_7")),
             Map.entry("level_37:level_3", key("hint/hint_37")),
-            // L64637 has two exits to overworld — distinguished by trigger type
-            Map.entry("level_64637:collect_items", key("hint/hint_64637_books")),
-            Map.entry("level_64637:fall_distance", key("hint/hint_64637_fall")),
+            Map.entry("level_64637:overworld", key("hint/hint_64637_fall")),
             Map.entry("level_84:level_4", key("hint/hint_84_down")),
             Map.entry("level_84:level_3", key("hint/hint_84_up"))
     );
@@ -87,7 +85,8 @@ public class AdvancementManager {
     }
 
     public void grantLevelDiscovery(Player player, String levelId) {
-        grant(player, rootKey);
+        // Grant the full structural chain so the entire tree is visible
+        grantStructuralChain(player);
         NamespacedKey discoveryKey = levelKeys.get(levelId);
         if (discoveryKey != null) {
             grant(player, discoveryKey);
@@ -96,21 +95,27 @@ public class AdvancementManager {
     }
 
     /**
+     * Grants root + all entries + all level discoveries + garden so that
+     * the entire hint/escape layer is visible in the advancement screen.
+     * These are structural — their JSONs have show_toast:false.
+     */
+    private void grantStructuralChain(Player player) {
+        grant(player, rootKey);
+        for (NamespacedKey entryKey : entryKeys.values()) {
+            grant(player, entryKey);
+        }
+        for (NamespacedKey levelKey : levelKeys.values()) {
+            grant(player, levelKey);
+        }
+        grant(player, gardenKey);
+    }
+
+    /**
      * Grants the hint advancement for the exit used.
-     * For most levels, the hint is determined by currentLevel + targetLevel.
-     * For L64637 (two exits to overworld), pass the exit trigger type instead.
+     * The hint is determined by currentLevel + targetLevel.
      */
     public void grantExitHint(Player player, String currentLevelId, String targetLevelId,
                               String exitTriggerType) {
-        // For L64637 → overworld, use trigger type to distinguish book vs fall exit
-        if ("level_64637".equals(currentLevelId) && "overworld".equals(targetLevelId)) {
-            NamespacedKey hintKey = exitHintKeys.get("level_64637:" + exitTriggerType);
-            if (hintKey != null) {
-                grant(player, hintKey);
-            }
-            return;
-        }
-
         NamespacedKey hintKey = exitHintKeys.get(currentLevelId + ":" + targetLevelId);
         if (hintKey != null) {
             grant(player, hintKey);
