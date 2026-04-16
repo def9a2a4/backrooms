@@ -311,6 +311,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         applyBoundaryLayer(chunkData, SKYLIGHT_MAX_Y, CEILING_MAX_Y, Material.BARRIER, false);
 
         // Third pass: escape pipes (must run after bedrock boundary to carve through it)
+        // Check both the current cell and the -X neighbor (pipe crosses cell boundaries)
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
@@ -319,9 +320,18 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 int cellZ = Math.floorDiv(worldZ, CELL_SIZE);
                 int localX = Math.floorMod(worldX, CELL_SIZE);
                 int localZ = Math.floorMod(worldZ, CELL_SIZE);
+
+                // This cell's own pipe (first 2 blocks, through the wall)
                 int masterCellX = getMasterCellX(cellX, cellZ, seed);
                 int masterCellZ = getMasterCellZ(cellX, cellZ, seed);
-                placeEscapePipe(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed);
+                placeEscapePipe(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, false);
+
+                // -X neighbor's pipe may extend into this cell
+                int prevCellX = cellX - 1;
+                int prevMasterCellX = getMasterCellX(prevCellX, cellZ, seed);
+                int prevMasterCellZ = getMasterCellZ(prevCellX, cellZ, seed);
+                int localXInPrev = localX + CELL_SIZE; // this block's position relative to the prev cell
+                placeEscapePipe(chunkData, x, z, localXInPrev, localZ, prevMasterCellX, prevMasterCellZ, seed, true);
             }
         }
     }
@@ -1145,33 +1155,45 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
     /**
      * Carves a 1x1 escape pipe for deep POOL_ABYSS rooms (depth >= 16).
-     * The pipe runs horizontally from the pool center for 10 blocks (+X),
+     * The pipe exits from the +X side wall of the pool at its deepest Y level,
+     * runs horizontally outward for 10 blocks (through the wall into the next cell),
      * then drops vertically through bedrock to trigger the below_y exit.
      * Must run AFTER applyBoundaryLayer so it can carve through bedrock.
+     *
+     * @param fromNeighbor true when checking a -X neighbor's pipe extending into this cell
      */
     private void placeEscapePipe(ChunkData chunkData, int x, int z,
                                  int localX, int localZ,
-                                 int masterCellX, int masterCellZ, long seed) {
+                                 int masterCellX, int masterCellZ, long seed,
+                                 boolean fromNeighbor) {
         int poolType = getPoolType(masterCellX, masterCellZ, seed);
         if (poolType != POOL_ABYSS) return;
 
         int depth = getAbyssDepth(masterCellX, masterCellZ, seed);
         if (depth < 16) return;
 
-        // Pipe at center Z of cell, at pool bottom Y
+        // Pipe at center Z of the source cell, at pool bottom Y
         int pipeZ = CELL_SIZE / 2; // localZ = 12
         if (localZ != pipeZ) return;
 
         int pipeY = FLOOR_HEIGHT - depth;
-        int pipeStartX = CELL_SIZE / 2;       // localX = 12 (pool center)
-        int pipeEndX = pipeStartX + 10;        // localX = 22
 
-        // Horizontal section: 10 blocks from pool center toward +X wall
-        if (localX >= pipeStartX && localX < pipeEndX) {
-            chunkData.setBlock(x, pipeY, z, Material.WATER);
-        }
+        // Pipe starts at the +X interior edge and goes outward for 10 blocks
+        int pipeStartX = CELL_SIZE - WALL_THICK; // localX = 22 (interior edge)
+        int pipeEndX = pipeStartX + 10;           // localX = 32 (extends into next cell)
 
-        // Vertical drop: at the end of the horizontal pipe, down through bedrock
+        // Skip blocks outside the pipe range
+        if (localX < pipeStartX || localX >= pipeEndX) return;
+
+        // For the source cell's own call, only handle localX < CELL_SIZE (22-23)
+        // For the neighbor call, only handle localX >= CELL_SIZE (24-31, i.e. 0-7 in this cell)
+        if (!fromNeighbor && localX >= CELL_SIZE) return;
+        if (fromNeighbor && localX < CELL_SIZE) return;
+
+        // Horizontal section
+        chunkData.setBlock(x, pipeY, z, Material.WATER);
+
+        // Vertical drop at the last block of the pipe
         if (localX == pipeEndX - 1) {
             for (int y = pipeY - 1; y >= FLOOR_Y - 2; y--) {
                 chunkData.setBlock(x, y, z, Material.WATER);

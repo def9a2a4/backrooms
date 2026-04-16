@@ -2,15 +2,17 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator;
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.util.Vector;
 
 /**
  * Wraps player Y position in the Library level (64637) to create a vertical loop.
  * Layers 0 and 6 are identical. Descending past Y=5 teleports up by 60;
  * ascending past Y=66 teleports down by 60. Works everywhere — rooms are
- * identical so the teleport is invisible.
+ * identical so the teleport is invisible. Velocity is preserved across wraps.
  */
 public class LibraryWrapListener implements Listener {
 
@@ -24,6 +26,9 @@ public class LibraryWrapListener implements Listener {
         double y = event.getTo().getY();
         if (y > LOWER_THRESHOLD && y < UPPER_THRESHOLD) return;
 
+        Player player = event.getPlayer();
+        Vector velocity = player.getVelocity();
+
         Location dest = event.getTo().clone();
         if (y >= UPPER_THRESHOLD) {
             dest.setY(y - Level64637ChunkGenerator.WRAP_OFFSET);
@@ -31,5 +36,6 @@ public class LibraryWrapListener implements Listener {
             dest.setY(y + Level64637ChunkGenerator.WRAP_OFFSET);
         }
         event.setTo(dest);
+        player.setVelocity(velocity);
     }
 }

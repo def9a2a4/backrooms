@@ -34,7 +34,6 @@ public class Level84Listener implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         if (!event.getBlock().getWorld().getName().equals(WORLD_NAME)) return;
-        event.setCancelled(true);
         punish(event.getPlayer());
     }
 
