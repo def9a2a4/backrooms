@@ -34,7 +34,8 @@ generator_config:
   bedrock_min_y: 48
   bedrock_max_y: 64
   obsidian_layers: 3
-  barrier_layers: 10
+  wall_open_chance: 55
+  teleport_ceiling_offset: 0
   floor_material: GRASS_BLOCK
   sub_floor_material: OBSIDIAN
   wall_outer_materials:
@@ -42,9 +43,18 @@ generator_config:
     - SPRUCE_LEAVES
     - DARK_OAK_LEAVES
     - BIRCH_LEAVES
-  wall_inner_material: GREEN_TERRACOTTA
+  wall_inner_material: DARK_OAK_LOG
   exit_min_distance: 200
-  exit_chance: 300
+  exit_chance: 60
+  decoration_empty_chance: 50
+  ground_decorations:
+    MOSS_CARPET: 20
+    OAK_LEAVES: 10
+    SPRUCE_LEAVES: 10
+    DARK_OAK_LEAVES: 10
+    BIRCH_LEAVES: 10
+    RED_MUSHROOM: 5
+    BROWN_MUSHROOM: 5
 
 level_config:
   punishment:
@@ -61,8 +71,9 @@ exit_triggers:
       blindness_ticks: 60
       delay_ticks: 20
       message: "\u00a77The ground gives way beneath you..."
+  # wallTopY = bedrock_max_y + obsidian_layers + 1 + wall_height = 88
   - type: above_y
-    y_threshold: 97
+    y_threshold: 88
     target_level: level_3
     transition:
       blindness_ticks: 60

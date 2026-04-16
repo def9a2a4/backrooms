@@ -14,8 +14,8 @@ import java.util.Random;
 
 /**
  * Reusable, config-driven maze chunk generator.
- * Uses a binary-tree algorithm that guarantees full connectivity
- * without cross-chunk state.
+ * Uses independent per-wall hash decisions for maze connectivity,
+ * producing an unbiased random maze without cross-chunk state.
  *
  * All dimensions, materials, and exit placement are configurable
  * via generator_config in the level YAML.
@@ -31,7 +31,9 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
     private int bedrockMinY = 48;
     private int bedrockMaxY = 64;
     private int obsidianLayers = 3;
-    private int barrierLayers = 10;
+
+    // Maze openness: percentage of wall segments that are carved open (0-100)
+    private int wallOpenChance = 55;
 
     // Materials
     private Material floorMaterial = Material.GRASS_BLOCK;
@@ -40,19 +42,30 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
             Material.OAK_LEAVES, Material.SPRUCE_LEAVES,
             Material.DARK_OAK_LEAVES, Material.BIRCH_LEAVES
     };
-    private Material wallInnerMaterial = Material.GREEN_TERRACOTTA;
+    private Material wallInnerMaterial = Material.DARK_OAK_LOG;
 
     // Exit holes
     private int exitMinDistance = 200;
-    private int exitChance = 300;
+    private int exitChance = 60;
+
+    // Teleport ceiling offset above wallTopY
+    private int teleportCeilingOffset = 0;
+
+    // Ground decoration — weighted entries; totalDecorationWeight is the sum of all weights
+    private Material[] decorationMaterials = {
+            Material.MOSS_CARPET, Material.OAK_LEAVES, Material.SPRUCE_LEAVES,
+            Material.DARK_OAK_LEAVES, Material.BIRCH_LEAVES,
+            Material.RED_MUSHROOM, Material.BROWN_MUSHROOM
+    };
+    private int[] decorationWeights = { 20, 10, 10, 10, 10, 5, 5 };
+    private int totalDecorationWeight = 70;
+    private int decorationEmptyChance = 50; // percent chance of nothing (0-100)
 
     // Derived
     private int cellSize;
     private int floorY;
     private int wallBaseY;
     private int wallTopY;
-    private int barrierBaseY;
-    private int barrierTopY;
 
     public MazeChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
@@ -69,7 +82,8 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
         bedrockMinY = config.getInt("bedrock_min_y", bedrockMinY);
         bedrockMaxY = config.getInt("bedrock_max_y", bedrockMaxY);
         obsidianLayers = config.getInt("obsidian_layers", obsidianLayers);
-        barrierLayers = config.getInt("barrier_layers", barrierLayers);
+        wallOpenChance = config.getInt("wall_open_chance", wallOpenChance);
+        teleportCeilingOffset = config.getInt("teleport_ceiling_offset", teleportCeilingOffset);
 
         String floorStr = config.getString("floor_material");
         if (floorStr != null) {
@@ -99,6 +113,27 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
         exitMinDistance = config.getInt("exit_min_distance", exitMinDistance);
         exitChance = config.getInt("exit_chance", exitChance);
 
+        decorationEmptyChance = config.getInt("decoration_empty_chance", decorationEmptyChance);
+        ConfigurationSection decoSection = config.getConfigurationSection("ground_decorations");
+        if (decoSection != null) {
+            var keys = decoSection.getKeys(false);
+            var mats = new java.util.ArrayList<Material>();
+            var weights = new java.util.ArrayList<Integer>();
+            for (String key : keys) {
+                Material m = Material.matchMaterial(key);
+                if (m != null) {
+                    mats.add(m);
+                    weights.add(decoSection.getInt(key, 1));
+                }
+            }
+            if (!mats.isEmpty()) {
+                decorationMaterials = mats.toArray(new Material[0]);
+                decorationWeights = weights.stream().mapToInt(Integer::intValue).toArray();
+                totalDecorationWeight = 0;
+                for (int w : decorationWeights) totalDecorationWeight += w;
+            }
+        }
+
         recalcDerived();
     }
 
@@ -107,8 +142,6 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
         floorY = bedrockMaxY + obsidianLayers;       // grass surface
         wallBaseY = floorY + 1;                       // first wall block
         wallTopY = wallBaseY + wallHeight;             // one above last wall block
-        barrierBaseY = wallTopY;
-        barrierTopY = barrierBaseY + barrierLayers;
     }
 
     @Override
@@ -116,9 +149,13 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
         return floorY + 1; // feet on floor
     }
 
+    /** Y above which the above_y exit trigger should fire. */
+    public int getTeleportCeilingY() {
+        return wallTopY + teleportCeilingOffset;
+    }
+
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        // Spawn in the center of the origin cell's corridor
         double center = corridorWidth / 2.0;
         return new Location(world, center, floorY + 1, center);
     }
@@ -133,11 +170,9 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
                 int worldZ = chunkZ * 16 + z;
 
                 // --- Foundation layers ---
-                // Bedrock
                 for (int y = bedrockMinY; y < bedrockMaxY; y++) {
                     chunkData.setBlock(x, y, z, Material.BEDROCK);
                 }
-                // Sub-floor (obsidian)
                 for (int y = bedrockMaxY; y < floorY; y++) {
                     chunkData.setBlock(x, y, z, subFloorMaterial);
                 }
@@ -145,44 +180,40 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
                 // --- Maze logic ---
                 boolean isWall = isWallAt(worldX, worldZ, seed);
 
-                // Floor
                 chunkData.setBlock(x, floorY, z, floorMaterial);
 
                 if (isWall) {
-                    // Build hedge wall
                     placeWallColumn(chunkData, x, z, worldX, worldZ, seed);
                 } else {
-                    // Corridor — check for exit hole
                     if (shouldPlaceExit(worldX, worldZ, seed)) {
-                        // Punch hole from floor down to bedrock top
+                        // Punch hole through everything
                         chunkData.setBlock(x, floorY, z, Material.AIR);
                         for (int y = bedrockMinY; y < floorY; y++) {
                             chunkData.setBlock(x, y, z, Material.AIR);
                         }
+                    } else {
+                        placeGroundDecoration(chunkData, x, z, worldX, worldZ, seed);
                     }
-                }
-
-                // --- Barrier ceiling ---
-                for (int y = barrierBaseY; y < barrierTopY; y++) {
-                    chunkData.setBlock(x, y, z, Material.BARRIER);
                 }
             }
         }
     }
 
+    // ---------------------------------------------------------------
+    //  Maze topology — independent per-wall hash decisions
+    // ---------------------------------------------------------------
+
     /**
      * Determine whether the block at (worldX, worldZ) is part of a maze wall.
      */
     private boolean isWallAt(int worldX, int worldZ, long seed) {
-        int cellX = Math.floorDiv(worldX, cellSize);
-        int cellZ = Math.floorDiv(worldZ, cellSize);
         int localX = Math.floorMod(worldX, cellSize);
         int localZ = Math.floorMod(worldZ, cellSize);
 
         boolean inCorridorX = localX < corridorWidth;
         boolean inCorridorZ = localZ < corridorWidth;
 
-        // Corner of cell (wall on both axes) — always wall
+        // Corner of cell (wall on both axes) — always wall pillar
         if (!inCorridorX && !inCorridorZ) {
             return true;
         }
@@ -192,100 +223,112 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
             return false;
         }
 
-        // West wall zone (localX >= corridorWidth, localZ < corridorWidth)
-        // This wall belongs to the cell to the east: (cellX+1, cellZ).
-        // It is carved if that cell chose to carve west.
+        int cellX = Math.floorDiv(worldX, cellSize);
+        int cellZ = Math.floorDiv(worldZ, cellSize);
+
+        // East wall of cell (cellX, cellZ) — separates this cell from (cellX+1, cellZ)
         if (!inCorridorX) {
-            int eastCellX = cellX + 1;
-            return !carvesWest(eastCellX, cellZ, seed);
+            return !isWallOpen(cellX, cellZ, 0, seed);
         }
 
-        // North wall zone (localZ >= corridorWidth, localX < corridorWidth)
-        // This wall belongs to the cell to the south: (cellX, cellZ+1).
-        // It is carved if that cell chose to carve north.
-        int southCellZ = cellZ + 1;
-        return !carvesNorth(cellX, southCellZ, seed);
+        // South wall of cell (cellX, cellZ) — separates this cell from (cellX, cellZ+1)
+        return !isWallOpen(cellX, cellZ, 1, seed);
     }
 
     /**
-     * Binary tree decision: each cell carves either north or west.
-     * Boundary cells are forced to carve in the only available direction.
+     * Independently decide whether a wall segment is open (carved).
+     * Each wall segment gets a deterministic hash; open with probability wallOpenChance/100.
      */
-    private boolean carvesNorth(int cellX, int cellZ, long seed) {
-        // Cell at Z=0 cannot carve north (nothing north of it in the negative direction)
-        // Actually for binary tree: cell carves toward -X or -Z.
-        // At cellZ <= 0 boundary, must carve west (toward -X).
-        // At cellX <= 0 boundary, must carve north (toward -Z).
-        if (cellZ <= 0 && cellX <= 0) {
-            // Origin cell — no carving needed (but won't be queried normally)
-            return false;
-        }
-        if (cellX <= 0) return true;  // must carve north
-        if (cellZ <= 0) return false; // must carve west
-
-        long hash = seed ^ ((long) cellX * 735632791L + (long) cellZ * 524287L + 31L);
-        return Math.floorMod(hash, 2) == 0;
+    private boolean isWallOpen(int cellX, int cellZ, int wallType, long seed) {
+        long h = seed;
+        h ^= (long) cellX * 0x517cc1b727220a95L;
+        h ^= (long) cellZ * 0x6c62272e07bb0142L;
+        h += wallType * 0x6364136223846793L;
+        h ^= h >>> 33;
+        h *= 0xff51afd7ed558ccdL;
+        h ^= h >>> 33;
+        h *= 0xc4ceb9fe1a85ec53L;
+        h ^= h >>> 33;
+        return Math.floorMod(h, 100) < wallOpenChance;
     }
 
-    private boolean carvesWest(int cellX, int cellZ, long seed) {
-        return !carvesNorth(cellX, cellZ, seed);
-    }
+    // ---------------------------------------------------------------
+    //  Wall column placement
+    // ---------------------------------------------------------------
 
     /**
-     * Place a wall column of hedge blocks at this position.
+     * Place a wall column.
+     * Inner material (logs) only if all 4 cardinal neighbors are also wall,
+     * ensuring it's never visible from a corridor. Otherwise, IID leaf blocks.
      */
     private void placeWallColumn(ChunkData chunkData, int x, int z,
                                  int worldX, int worldZ, long seed) {
-        // Determine position within the wall to decide material layering.
-        // For walls running along X axis (north wall zone): depth is localZ - corridorWidth
-        // For walls running along Z axis (west wall zone): depth is localX - corridorWidth
-        int localX = Math.floorMod(worldX, cellSize);
-        int localZ = Math.floorMod(worldZ, cellSize);
+        boolean allNeighborsWall =
+                isWallAt(worldX - 1, worldZ, seed) &&
+                isWallAt(worldX + 1, worldZ, seed) &&
+                isWallAt(worldX, worldZ - 1, seed) &&
+                isWallAt(worldX, worldZ + 1, seed);
 
-        boolean inWestWall = localX >= corridorWidth && localZ < corridorWidth;
-        boolean inNorthWall = localZ >= corridorWidth && localX < corridorWidth;
-
-        int depth;
-        if (inWestWall) {
-            depth = localX - corridorWidth;
-        } else if (inNorthWall) {
-            depth = localZ - corridorWidth;
+        if (allNeighborsWall) {
+            for (int y = wallBaseY; y < wallTopY; y++) {
+                chunkData.setBlock(x, y, z, wallInnerMaterial);
+            }
         } else {
-            // Corner block — use minimum depth
-            depth = Math.min(localX - corridorWidth, localZ - corridorWidth);
+            for (int y = wallBaseY; y < wallTopY; y++) {
+                Material leafMat = getRandomLeaf(worldX, y, worldZ, seed);
+                BlockData blockData = leafMat.createBlockData();
+                if (blockData instanceof org.bukkit.block.data.type.Leaves leaves) {
+                    leaves.setPersistent(true);
+                }
+                chunkData.setBlock(x, y, z, blockData);
+            }
         }
+    }
 
-        Material material = getWallMaterial(depth, worldX, worldZ, seed);
-        BlockData blockData = material.createBlockData();
+    /** IID sample a leaf material per block position. */
+    private Material getRandomLeaf(int worldX, int y, int worldZ, long seed) {
+        long h = seed;
+        h ^= (long) worldX * 0x517cc1b727220a95L;
+        h ^= (long) y * 0x9e3779b97f4a7c15L;
+        h ^= (long) worldZ * 0x6c62272e07bb0142L;
+        h ^= h >>> 33;
+        h *= 0xff51afd7ed558ccdL;
+        h ^= h >>> 33;
+        int idx = (int) Math.floorMod(h, wallOuterMaterials.length);
+        return wallOuterMaterials[idx];
+    }
+
+    // ---------------------------------------------------------------
+    //  Ground decoration
+    // ---------------------------------------------------------------
+
+    private void placeGroundDecoration(ChunkData chunkData, int x, int z,
+                                       int worldX, int worldZ, long seed) {
+        if (decorationMaterials.length == 0 || totalDecorationWeight <= 0) return;
+        long h = blockHash(worldX, worldZ, seed, 0xDE_C0);
+        // Empty chance check
+        if (Math.floorMod(h, 100) < decorationEmptyChance) return;
+        // Weighted selection
+        int roll = (int) Math.floorMod(h >>> 16, totalDecorationWeight);
+        Material mat = decorationMaterials[0];
+        int cumulative = 0;
+        for (int i = 0; i < decorationMaterials.length; i++) {
+            cumulative += decorationWeights[i];
+            if (roll < cumulative) {
+                mat = decorationMaterials[i];
+                break;
+            }
+        }
+        BlockData blockData = mat.createBlockData();
         if (blockData instanceof org.bukkit.block.data.type.Leaves leaves) {
             leaves.setPersistent(true);
         }
-
-        for (int y = wallBaseY; y < wallTopY; y++) {
-            chunkData.setBlock(x, y, z, blockData);
-        }
+        chunkData.setBlock(x, floorY + 1, z, blockData);
     }
 
-    /**
-     * Determine wall material based on depth within the wall.
-     * Outer layers get random leaf types, inner layers get the core material.
-     */
-    private Material getWallMaterial(int depth, int worldX, int worldZ, long seed) {
-        // Outer layer: depth 0 or depth (wallThickness - 1)
-        boolean isOuter = depth == 0 || depth == wallThickness - 1;
-
-        if (isOuter) {
-            // Pick leaf type based on wall segment hash
-            // Quantize position to wall segments for consistent material per segment
-            int segX = Math.floorDiv(worldX, cellSize);
-            int segZ = Math.floorDiv(worldZ, cellSize);
-            long hash = seed ^ ((long) segX * 198491317L + (long) segZ * 6542989L + depth * 17L);
-            int idx = (int) Math.floorMod(hash, wallOuterMaterials.length);
-            return wallOuterMaterials[idx];
-        }
-
-        return wallInnerMaterial;
-    }
+    // ---------------------------------------------------------------
+    //  Exit holes
+    // ---------------------------------------------------------------
 
     /**
      * Check if a 1x1 exit hole should be placed at this corridor position.
@@ -294,7 +337,6 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
     private boolean shouldPlaceExit(int worldX, int worldZ, long seed) {
         if (exitChance <= 0) return false;
 
-        // Must be far enough from origin
         double dist = Math.sqrt((double) worldX * worldX + (double) worldZ * worldZ);
         if (dist < exitMinDistance) return false;
 
@@ -305,10 +347,24 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
         int centerZ = corridorWidth / 2;
         if (localX != centerX || localZ != centerZ) return false;
 
-        // Hash-based probability
         int cellX = Math.floorDiv(worldX, cellSize);
         int cellZ = Math.floorDiv(worldZ, cellSize);
         long hash = seed ^ ((long) cellX * 433494437L + (long) cellZ * 291371L + 0xE517L);
         return Math.floorMod(hash, exitChance) == 0;
+    }
+
+    // ---------------------------------------------------------------
+    //  Utility
+    // ---------------------------------------------------------------
+
+    private static long blockHash(int worldX, int worldZ, long seed, int salt) {
+        long h = seed;
+        h ^= (long) worldX * 0x517cc1b727220a95L;
+        h ^= (long) worldZ * 0x6c62272e07bb0142L;
+        h += salt * 0x6364136223846793L;
+        h ^= h >>> 33;
+        h *= 0xff51afd7ed558ccdL;
+        h ^= h >>> 33;
+        return h;
     }
 }
