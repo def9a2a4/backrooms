@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level37ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityHandle;
@@ -41,6 +42,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
     private final EntryTriggerRegistry entryTriggerRegistry;
     private final EntitySpawner entitySpawner;
     private final GeneratorRegistry generatorRegistry;
+    private final AdvancementManager advancementManager;
 
     private final Set<UUID> debug37Players = new HashSet<>();
     private BukkitTask debug37Task;
@@ -48,7 +50,8 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
     public BackroomsCommand(JavaPlugin plugin, LevelRegistry levelRegistry, PlayerStateManager playerStateManager,
                             TransitionManager transitionManager, EventRegistry eventRegistry,
                             EntityRegistry entityRegistry, EntryTriggerRegistry entryTriggerRegistry,
-                            EntitySpawner entitySpawner, GeneratorRegistry generatorRegistry) {
+                            EntitySpawner entitySpawner, GeneratorRegistry generatorRegistry,
+                            AdvancementManager advancementManager) {
         this.plugin = plugin;
         this.levelRegistry = levelRegistry;
         this.playerStateManager = playerStateManager;
@@ -58,6 +61,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         this.entryTriggerRegistry = entryTriggerRegistry;
         this.entitySpawner = entitySpawner;
         this.generatorRegistry = generatorRegistry;
+        this.advancementManager = advancementManager;
         startDebug37Task();
     }
 
@@ -74,7 +78,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return switch (args[0].toLowerCase()) {
             case "regenerate" -> handleRegenerate(sender, args.length > 1 ? args[1] : null);
             case "list" -> handleList(sender, args.length > 1 ? args[1] : null);
-            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37", "skyblock_trigger_cascade" -> {
+            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37", "skyblock_trigger_cascade", "advance" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("This command can only be used by players.");
                     yield true;
@@ -125,11 +129,22 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
                     case "reset" -> handleReset(player);
                     case "debug37" -> handleDebug37(player);
                     case "skyblock_trigger_cascade" -> handleSkyblockCascade(player);
+                    case "advance" -> {
+                        if (!player.hasPermission("backrooms.admin") && !player.isOp()) {
+                            player.sendMessage("You don't have permission to use this command.");
+                            yield true;
+                        }
+                        if (args.length < 2) {
+                            player.sendMessage("Usage: /backrooms advance <path|*>");
+                            yield true;
+                        }
+                        yield handleAdvance(player, args[1]);
+                    }
                     default -> true;
                 };
             }
             default -> {
-                sender.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status, event, spawn, despawn, enter, escalation, reset, list, debug37");
+                sender.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status, event, spawn, despawn, enter, escalation, reset, list, advance");
                 yield true;
             }
         };
@@ -389,6 +404,21 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean handleAdvance(Player player, String arg) {
+        if ("*".equals(arg)) {
+            int count = advancementManager.grantAll(player);
+            player.sendMessage("§aGranted " + count + " advancement(s).");
+            return true;
+        }
+
+        if (advancementManager.grantByPath(player, arg)) {
+            player.sendMessage("§aGranted advancement: backrooms:" + arg + " (with ancestors)");
+        } else {
+            player.sendMessage("§cUnknown advancement: backrooms:" + arg);
+        }
+        return true;
+    }
+
     private boolean handleDebug37(Player player) {
         if (!requireAdmin(player)) return true;
 
@@ -491,7 +521,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of("leave", "status"));
             if (sender.hasPermission("backrooms.admin") || sender.isOp()) {
-                subs.addAll(List.of("goto", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "debug37", "skyblock_trigger_cascade"));
+                subs.addAll(List.of("goto", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "advance", "debug37", "skyblock_trigger_cascade"));
             }
             if (sender.hasPermission("backrooms.regenerate") || sender.isOp()) {
                 subs.add("regenerate");
@@ -512,6 +542,11 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
                 case "spawn" -> filterStartsWith(entityIds(), args[1]);
                 case "enter" -> filterStartsWith(triggerIds(), args[1]);
                 case "escalation" -> filterStartsWith(List.of("0", "1", "2", "3", "4", "5"), args[1]);
+                case "advance" -> {
+                    List<String> opts = new ArrayList<>(advancementManager.getAllAdvancementPaths());
+                    opts.add(0, "*");
+                    yield filterStartsWith(opts, args[1]);
+                }
                 case "list" -> filterStartsWith(
                         List.of("levels", "events", "entities", "triggers", "generators"), args[1]);
                 default -> List.of();

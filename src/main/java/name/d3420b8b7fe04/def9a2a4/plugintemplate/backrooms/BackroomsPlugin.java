@@ -225,7 +225,8 @@ public class BackroomsPlugin {
 
         // 9. Register commands (Paper plugins don't support YAML-based commands)
         command = new BackroomsCommand(plugin, levelRegistry, playerStateManager, transitionManager,
-                eventRegistry, entityRegistry, entryTriggerRegistry, entitySpawner, generatorRegistry);
+                eventRegistry, entityRegistry, entryTriggerRegistry, entitySpawner, generatorRegistry,
+                advancementManager);
         org.bukkit.command.Command backroomsCmd = new org.bukkit.command.Command(
                 "backrooms", "Backrooms dimension commands",
                 "/backrooms [leave|goto|regenerate|status|event|spawn|despawn|enter|escalation|reset|list]",
