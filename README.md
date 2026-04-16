@@ -4,6 +4,8 @@
 
 I set off some AI agents to explore how to write level generation plugins. After a few days, I came back to this. They did things I didn't ask for. There's levels and levels, and some of the levels have... things in them. The agents say there is a way to escape, but I don't believe them.
 
+![](docs/assets/lobby-shaders.png)
+
 | | | |
 |---|---|---|
 | ![](docs/assets/lobby.png) | ![](docs/assets/habitable.png) | ![](docs/assets/pipeworks.png) |
