@@ -62,6 +62,44 @@ entity_instances:
     min_escalation: 0
     stationary_stare:
       despawn_distance: 6.0
+  level0_mannequin_noise:
+    type: mannequin
+    skin: "https://textures.minecraft.net/texture/1f9bb81a753539621f493375a65a5a33ce99a17088af3444aa6f10b4532f1653"  # noise
+    scale: 1.0
+    behavior: patrol
+    spawn_chance: 0.08
+    min_escalation: 0
+  level0_floating_head_null:
+    type: floating_head
+    skin: "https://textures.minecraft.net/texture/bd1d18e03278a7057ff7c4fe10b8c99f31529b1d6e6683ef122d3a825358a60e"  # null-scary-face
+    scale: 1.2
+    behavior: flee
+    spawn_chance: 0.08
+    min_escalation: 0
+    flee:
+      trigger_distance: 15.0
+      look_angle: 30.0
+      flee_speed: 0.12
+      max_distance: 50.0
+  level0_mannequin_stalker:
+    type: mannequin
+    skin: "https://textures.minecraft.net/texture/1daa0dbc6ae76a5caa826d0bc0f18e792c7d5d761e4b30eddba6a76203cee37"  # null-eyes
+    scale: 1.0
+    behavior: stalk
+    spawn_chance: 0.07
+    min_escalation: 0
+    stalk:
+      approach_speed: 0.03
+      despawn_distance: 5.0
+  level0_floating_head_grey:
+    type: floating_head
+    skin: "https://textures.minecraft.net/texture/55f38460d590fd3b912c57f678212295c9fe3205c2b5793fa1ab7f3b74fb80c0"  # herobrine-grey
+    scale: 1.0
+    behavior: stationary_stare
+    spawn_chance: 0.10
+    min_escalation: 0
+    stationary_stare:
+      despawn_distance: 7.0
 
 event_config:
   ambient_sound:
