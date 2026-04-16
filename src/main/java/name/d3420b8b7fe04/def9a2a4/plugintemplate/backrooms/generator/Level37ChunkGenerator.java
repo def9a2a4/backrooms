@@ -1178,9 +1178,10 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
         int pipeY = FLOOR_HEIGHT - depth;
 
-        // Pipe starts at the +X pool edge and goes outward for 10 blocks
-        int pipeStartX = CELL_SIZE - WALL_THICK - 2 - 1; // localX = 19 (last pool water block)
-        int pipeEndX = pipeStartX + 10;                   // localX = 29 (extends into next cell)
+        // Pipe starts at the stepped pool edge and carves through the shelf to connect
+        // to the deep center (full depth ends at distFromPoolEdge > 2, i.e. localX = 16)
+        int pipeStartX = CELL_SIZE - WALL_THICK - 2 - 1 - 2; // localX = 17 (start of stepped edge)
+        int pipeEndX = pipeStartX + 10;                       // localX = 27 (extends into next cell)
 
         // Skip blocks outside the pipe range
         if (localX < pipeStartX || localX >= pipeEndX) return;
