@@ -5,6 +5,7 @@ environment: NORMAL
 dimension_type: default
 biome: "backrooms:far_lands"
 fixed_time: 12000
+spawn_radius: 0
 enter_message: "§6[ERR]: java.math.IntergerOverflowError"
 
 events:
