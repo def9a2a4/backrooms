@@ -144,7 +144,7 @@ exit_triggers:
   - type: collect_items
     target_level: level_1
     item: WRITTEN_BOOK
-    threshold: 16
+    threshold: 7
     transition:
       blindness_ticks: 60
       delay_ticks: 20

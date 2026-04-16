@@ -56,6 +56,30 @@ cursed_snippets:
   - "the catalogue uses a notation that no one invented. the librarians follow it because it works. it describes the location of every book, including books that have not been written yet. it is always correct."
   - "if you rearrange the gibberish on this page it spells a name. the name is yours. every page in every book spells a name. the library has enough pages for everyone. it has had enough pages since before there was anyone."
   - "the last sentence of the last book on the last shelf of the last aisle reads: 'and then the library began.' this is not the last book. the library does not know which book is last. the library is afraid to find out."
+  # --- SCP Foundation inspired ---
+  - "the store is now closed. please exit the building."
+  - "item #: scp-64637. object class: keter. special containment procedures: none. the anomaly cannot be contained because it is the container."
+  - "exploration log iv: subject descended 41 flights. audio recorded a child crying approximately 200 meters below. subject never reached the source. the stairwell has no endpoint."
+  - "addendum: testing suspended indefinitely. d-class personnel reported the books were reading them back. monitoring confirmed eye movement in the text."
+  - "containment breach report: the shelves extended past the walls of the facility at 03:47. by 04:00 the facility was inside the library. reclassification to keter approved."
+  - "interview log ████-1: 'it looked like an employee. yellow shirt, blue trousers. but the proportions were wrong. too long. and it had no face. it said the store was closed.'"
+  - "scp-087 supplemental: knocking from interior of stairwell persisted for 14 days following exploration iv. frequency: 1-2 seconds per knock. source remains 200 meters below regardless of measurement position."
+  - "note: the entity does not chase. it follows at a fixed distance. the distance is always exactly the length of one aisle. it has been following you since you entered this section."
+  - "the anomaly resembles a standard fluorescent light fixture. when observed directly, it functions normally. when unobserved, it produces a tone at 277.18 hz. the tone is not sound. it is language."
+  # --- Herobrine inspired ---
+  - "i saw him between the shelves. default skin. white eyes. he was holding a book. the book was this book."
+  - "this world was last saved three years before you were born."
+  - "changelog v0.0.0: added the library. removed herobrine. added herobrine. removed the exit. the library remembers the version before this one."
+  - "someone has been cutting 2x2 tunnels through the shelves. perfect squares, no debris. they go deeper than the shelves should allow. at the end of each tunnel is a sign that says 'stop.'"
+  - "it has been reported that some victims of torture, during the act, would retreat into a fantasy world from which they could not wake up. you are reading a book in a library that does not exist. wake up."
+  - "removed herobrine. removed herobrine. removed herobrine. he keeps coming back. the changelog is longer than the game."
+  # --- Backrooms lore inspired ---
+  - "if you see, hear, or encounter what you believe to be another reader, it is not human."
+  - "you noclipped through the wrong wall. this is not level 0. this is not any level. the wiki has no entry for this place. you are in the margin."
+  - "m.e.g. exploration log 64637-7: operative entered aisle at 14:00. radio contact lost at 14:03. operative recovered 6 days later in aisle adjacent to entry point. operative aged 11 years. operative does not remember the library."
+  - "the almond water tastes different here. it tastes like ink. the ink tastes like almond water. the library is teaching you to read with your tongue."
+  - "you fell through the floor of level 0 and landed on a shelf. the book that broke your fall was open to a page that described you falling through the floor of level 0 and landing on a shelf."
+  - "the hum is louder near the restricted section. there is no restricted section. the hum disagrees."
 
 # Cursed book titles — rarely used instead of a gibberish title
 cursed_titles:
@@ -74,6 +98,14 @@ cursed_titles:
   - "ERRATUM"
   - "A COMPLETE HISTORY OF EVERYTHING"
   - "THE BORROWER'S RECORD"
+  - "CONTAINMENT BREACH"
+  - "SCP-[REDACTED]"
+  - "EXPLORATION LOG IV"
+  - "REMOVED"
+  - "WAKE UP"
+  - "CHANGELOG: v0.0.0"
+  - "OBJECT CLASS: SAFE"
+  - "THE STORE IS NOW CLOSED"
 
 # Cursed author names — rarely used instead of a gibberish author
 cursed_authors:
@@ -89,6 +121,12 @@ cursed_authors:
   - "jeb_"
   - "The Library Itself"
   - "A Future Version of You"
+  - "Dr. ████"
+  - "D-9035"
+  - "SCP Foundation"
+  - "The Staff"
+  - "The Old Man"
+  - "Null"
 
 # ─── Word Pool ───
 # Random words strung into pseudo-sentences for word-salad book generation.
@@ -259,6 +297,36 @@ word_pool:
   - "now"
   - "then"
   - "not"
+  # SCP-flavored
+  - "containment"
+  - "breach"
+  - "anomaly"
+  - "entity"
+  - "protocol"
+  - "specimen"
+  - "redacted"
+  - "keter"
+  - "euclid"
+  - "foundation"
+  - "classified"
+  - "quarantine"
+  - "observation"
+  - "neutralized"
+  # Backrooms-flavored
+  - "wanderer"
+  - "noclip"
+  - "liminal"
+  - "carpet"
+  - "fluorescent"
+  - "buzzing"
+  - "almond"
+  - "damp"
+  - "level"
+  - "wallpaper"
+  - "hum"
+  - "moist"
+  - "yellow"
+  - "faded"
 
 # ─── Pre-Written Books ───
 # Rare complete books with fixed title, author, and pages.
@@ -305,3 +373,46 @@ pre_written_books:
       - "Entry 6: The book you are looking for.\nEntry 7: The book you will find instead.\nEntry 8: The book that describes the difference between entries 6 and 7.\nEntry 9: The book that explains why there is no difference."
       - "Entry 10: A complete list of all entries in this catalogue. This entry is larger than the catalogue. This is expected.\nEntry 11: A book of corrections to this catalogue. It is also incorrect."
       - "Entry 12: The final entry. The catalogue after this entry is empty. The Library after this entry is full. The relationship between the catalogue and the Library is: the catalogue is a room in the Library. The Library is a sentence in the catalogue."
+
+  - title: "Exploration Log IV"
+    author: "Dr. ████"
+    pages:
+      - "Subject: D-9035. Location: Stairwell discovered in aisle 7,042. Descending. Audio equipment nominal. Subject reports concrete walls, no railing, fluorescent lighting. Stairs descend at 38 degrees."
+      - "Landing 1 (13 steps): Subject reports faint vocalizations from below. 'It sounds like a child. Maybe 200 meters down.' Instruments confirm audio source but cannot triangulate. Source distance remains constant."
+      - "Landing 5: Subject breathing heavily. 'The walls are wet. The lights are dimmer. I can still hear the crying but it's not getting closer. I've been descending for twenty minutes.' Stairwell dimensions unchanged."
+      - "Landing 12: 'There's a face on the landing below me. No — not a face. The suggestion of a face. No eyes, no mouth, just... the shape where a face should be. It's looking at me. It doesn't have eyes but it's looking at me.'"
+      - "Landing 13: Contact lost. Audio recording recovered 6 days later on a shelf in aisle 7,042. Final 4 seconds of audio: 14 knocks, evenly spaced. The stairwell is no longer accessible. The shelf where the recording was found smells faintly of concrete."
+
+  - title: "Staff Survival Guide"
+    author: "M.E.G. Operative #3291"
+    pages:
+      - "If you are reading this, you have entered the Backrooms. You did not choose to come here. Nobody does. What matters now is that you survive. This guide was compiled from the accounts of 347 wanderers. 12 of them made it out."
+      - "Level 0 — The Lobby: Yellow wallpaper. Damp carpet. Fluorescent hum at 277 Hz. ~600,000 sq. miles of empty office space. No entities confirmed, but do not trust movement in your peripheral vision. If something calls your name, it is not a person."
+      - "Entities: The Skin-Stealer wears faces it has taken. Light repels it. The Hound hunts by sound. The Wretch was human once. If you see another wanderer, confirm they cast a shadow. If they do not, run. Do not run in a straight line."
+      - "Almond Water: Found in bottles near supply caches. Drink it. It is the only safe consumable in the Backrooms. It tastes wrong. Drink it anyway. Dehydration kills faster than most entities."
+      - "Exits: Exist, but do not behave like exits. They appear when you stop looking for them. The M.E.G. theorizes the Backrooms respond to intent. Want to leave, and the walls give you more to search. Stop wanting, and a door appears. This is not a metaphor. This is the best intel we have."
+
+  - title: "Incident Report: The Old Man"
+    author: "SCP Foundation"
+    pages:
+      - "Item #: SCP-64637-A. Object Class: Keter. Description: An elderly humanoid entity observed in the restricted stacks of Level 64637. Appearance suggests advanced decomposition. Entity leaves a corrosive residue on all surfaces it contacts."
+      - "Behavior: SCP-64637-A phases through shelving units at will. It preferentially targets individuals who are actively reading. Pursuit is silent. Victims report a smell of rotting paper before visual contact."
+      - "Containment: All attempts to restrict SCP-64637-A to a single aisle have failed. The entity consistently breaches at moments when observation is most difficult. Researchers suspect it is aware of camera placement."
+      - "Addendum: On ██/██/████, SCP-64637-A was observed placing a book on a shelf. The book was recovered. It contained a detailed floor plan of the observation post. The floor plan was accurate. We have relocated."
+
+  - title: "CHANGELOG"
+    author: "HEROBRINE"
+    pages:
+      - "v0.0.0 — Added the void.\nv0.0.1 — Added light. Removed the void. The void is still there.\nv0.1.0 — Added the Library. The Library was already there.\nv0.2.0 — Added books. The books were already written."
+      - "v0.3.0 — Added the exit. Removed the exit. Added the exit again. The exit does not work.\nv0.4.0 — Removed Herobrine.\nv0.4.1 — Removed Herobrine.\nv0.4.2 — Removed Herobrine.\nv0.5.0 — Stopped removing Herobrine. He was never added."
+      - "v1.0.0 — Added players. Players cannot leave. This is not a bug.\nv1.0.1 — Added a staircase. The staircase goes down. There is no bottom.\nv1.1.0 — Players report an entity in the stacks. No entity was added. Investigating."
+      - "v2.0.0 — The Library has exceeded expected dimensions. Growth is exponential. Containment team reassigned to mapping. Mapping team has not reported back.\nv2.0.1 — Removed Herobrine.\nv999.999.999 — Final build. All features are the Library. The Library is all features. The changelog is a book in the Library. You are reading it now."
+
+  - title: "him.html"
+    author: "Unknown"
+    pages:
+      - "I saw him for the first time in aisle 9,000. Default skin. White eyes. He was standing at the end of the row, perfectly still. He didn't stay long. He looked at me and quickly moved into the shelves."
+      - "I started finding signs. Small ones, wooden, tucked between books. They said things like 'STOP' and 'WAKE UP.' I didn't place them. No one placed them. The wood was warm."
+      - "Then the tunnels. Perfect 2x2 squares cut through the shelves. No debris, no sawdust. The books on either side of the cut were undamaged. The tunnels went straight for hundreds of meters. At the end of each one: a single torch, still burning."
+      - "I sent a message to the other wanderers asking if they'd seen him. I received one reply. Username: 'Herobrine.' The message contained one word: 'Stop.'"
+      - "It has been reported that some victims, during prolonged exposure to liminal spaces, retreat into a fantasy world from which they cannot wake up. In this state, the victim inhabits a world just like their normal one, except the corridors are infinite and the books never end. The only way they realize they need to wake up is a note found in their fantasy world. You are reading that note. Wake up."
