@@ -147,6 +147,19 @@ public class LibraryBookshelfListener implements Listener {
         }
     }
 
+    /** Text generation style for procedural books. Ratio is 5:2:1 (GIBBERISH:SYLLABIC:WORD_SALAD). */
+    private enum GenerationMode {
+        GIBBERISH, SYLLABIC, WORD_SALAD
+    }
+
+    private GenerationMode pickMode(Random rng) {
+        if (config.wordPool().isEmpty()) return GenerationMode.GIBBERISH;
+        int roll = rng.nextInt(8); // 5:2:1 ratio
+        if (roll < 5) return GenerationMode.GIBBERISH;
+        if (roll < 7) return GenerationMode.SYLLABIC;
+        return GenerationMode.WORD_SALAD;
+    }
+
     private ItemStack createBook(Random rng) {
         // Rare pre-written books
         if (!config.preWrittenBooks().isEmpty()
@@ -167,40 +180,20 @@ public class LibraryBookshelfListener implements Listener {
 
         boolean isCursed = rng.nextDouble() < config.cursedChance()
                 && !config.cursedSnippets().isEmpty();
-
-        // Pick generation mode: 70% char gibberish, 20% syllabic, 8% word salad
-        double roll = rng.nextDouble();
-        int mode;
-        if (config.wordPool().isEmpty() || roll < 0.714) {
-            mode = 0; // char gibberish
-        } else if (roll < 0.918) {
-            mode = 1; // syllabic
-        } else {
-            mode = 2; // word salad
-        }
+        GenerationMode mode = pickMode(rng);
 
         // Title
         if (isCursed && rng.nextDouble() < 0.3 && !config.cursedTitles().isEmpty()) {
             meta.setTitle(config.cursedTitles().get(rng.nextInt(config.cursedTitles().size())));
         } else {
-            meta.setTitle(switch (mode) {
-                case 1 -> generateSyllabicWord(rng, 2 + rng.nextInt(3));
-                case 2 -> generateWordSalad(rng, 2 + rng.nextInt(3));
-                default -> generateGibberishTitle(rng);
-            });
+            meta.setTitle(generateTitle(rng, mode));
         }
 
         // Author
         if (isCursed && rng.nextDouble() < 0.3 && !config.cursedAuthors().isEmpty()) {
             meta.setAuthor(config.cursedAuthors().get(rng.nextInt(config.cursedAuthors().size())));
         } else {
-            meta.setAuthor(switch (mode) {
-                case 1 -> generateSyllabicWord(rng, 1 + rng.nextInt(2))
-                        + " " + generateSyllabicWord(rng, 1 + rng.nextInt(3));
-                case 2 -> config.wordPool().get(rng.nextInt(config.wordPool().size()))
-                        + " " + config.wordPool().get(rng.nextInt(config.wordPool().size()));
-                default -> generateGibberish(rng, 4 + rng.nextInt(8));
-            });
+            meta.setAuthor(generateAuthor(rng, mode));
         }
 
         // Pages
@@ -223,12 +216,29 @@ public class LibraryBookshelfListener implements Listener {
         return book;
     }
 
-    /** Dispatches to the right generator based on mode. wordCount is approximate word count. */
-    private String generateContent(Random rng, int mode, int wordCount) {
+    private String generateTitle(Random rng, GenerationMode mode) {
         return switch (mode) {
-            case 1 -> generateSyllabicText(rng, wordCount);
-            case 2 -> generateWordSalad(rng, wordCount);
-            default -> generateGibberish(rng, wordCount * 6);
+            case SYLLABIC   -> generateSyllabicWord(rng, 2 + rng.nextInt(3));
+            case WORD_SALAD -> generateWordSalad(rng, 2 + rng.nextInt(3));
+            case GIBBERISH  -> generateGibberishTitle(rng);
+        };
+    }
+
+    private String generateAuthor(Random rng, GenerationMode mode) {
+        return switch (mode) {
+            case SYLLABIC   -> generateSyllabicWord(rng, 1 + rng.nextInt(2))
+                    + " " + generateSyllabicWord(rng, 1 + rng.nextInt(3));
+            case WORD_SALAD -> config.wordPool().get(rng.nextInt(config.wordPool().size()))
+                    + " " + config.wordPool().get(rng.nextInt(config.wordPool().size()));
+            case GIBBERISH  -> generateGibberish(rng, 4 + rng.nextInt(8));
+        };
+    }
+
+    private String generateContent(Random rng, GenerationMode mode, int wordCount) {
+        return switch (mode) {
+            case SYLLABIC   -> generateSyllabicText(rng, wordCount);
+            case WORD_SALAD -> generateWordSalad(rng, wordCount);
+            case GIBBERISH  -> generateGibberish(rng, wordCount * 6);
         };
     }
 
