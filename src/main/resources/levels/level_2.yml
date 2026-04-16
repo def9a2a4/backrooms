@@ -56,9 +56,9 @@ event_config:
       - "no maintenance scheduled"
 
 exit_triggers:
-  - type: lever_pipe
+  - type: below_y
     target_level: level_37
-    trapdoor_material: COPPER_TRAPDOOR
+    y_threshold: -10
     transition:
       blindness_ticks: 80
       delay_ticks: 40

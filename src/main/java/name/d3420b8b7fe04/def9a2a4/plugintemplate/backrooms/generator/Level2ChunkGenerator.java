@@ -474,16 +474,6 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
 
         placeRoomLantern(chunkData, chunkX, chunkZ, centerWorldX, centerWorldZ, ceilingY);
 
-        // Rare lever placement (~5% of machinery rooms)
-        long leverHash = (long) centerWorldX * 198491317L ^ (long) centerWorldZ * 6542989L;
-        if (Math.floorMod(leverHash, 20) == 0) {
-            int lx = centerWorldX + 2 - chunkX * 16;
-            int lz = centerWorldZ - chunkZ * 16;
-            if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
-                chunkData.setBlock(lx, AIR_MIN_Y + 1, lz, Material.LEVER);
-            }
-        }
-
         // Trapdoor tunnel is placed in placeExitTunnels() after bedrock boundaries
     }
 
