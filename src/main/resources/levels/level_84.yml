@@ -67,7 +67,7 @@ level_config:
 exit_triggers:
   - type: below_y
     y_threshold: 49
-    target_level: level_4
+    target_level: level_3
     transition:
       blindness_ticks: 60
       delay_ticks: 20
@@ -75,7 +75,7 @@ exit_triggers:
   # wallTopY = bedrock_max_y + obsidian_layers + 1 + wall_height = 88
   - type: above_y
     y_threshold: 88
-    target_level: level_3
+    target_level: level_94
     transition:
       blindness_ticks: 60
       delay_ticks: 20

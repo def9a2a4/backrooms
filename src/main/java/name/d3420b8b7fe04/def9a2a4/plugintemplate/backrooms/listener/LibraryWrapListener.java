@@ -44,11 +44,9 @@ public class LibraryWrapListener implements Listener {
             dest.setY(y + Level64637ChunkGenerator.WRAP_OFFSET);
         }
 
-        // Cancel the move event and teleport directly — event.setTo() fights
-        // with Bukkit's post-event velocity recalculation, losing momentum.
-        event.setCancelled(true);
-        player.teleport(dest);
-        // Restore velocity next tick, after the teleport has been fully processed.
+        event.setTo(dest);
+        // Restore velocity next tick — the server resets it when processing
+        // the modified move destination in the current tick.
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (player.isOnline()) {
                 player.setVelocity(velocity);
