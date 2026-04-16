@@ -53,12 +53,13 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
 
     // Ground decoration — weighted entries; totalDecorationWeight is the sum of all weights
     private Material[] decorationMaterials = {
-            Material.MOSS_CARPET, Material.OAK_LEAVES, Material.SPRUCE_LEAVES,
-            Material.DARK_OAK_LEAVES, Material.BIRCH_LEAVES,
-            Material.RED_MUSHROOM, Material.BROWN_MUSHROOM
+            Material.MOSS_CARPET, Material.LEAF_LITTER,
+            Material.SHORT_GRASS, Material.FERN, Material.DEAD_BUSH,
+            Material.RED_MUSHROOM, Material.BROWN_MUSHROOM,
+            Material.FIREFLY_BUSH
     };
-    private int[] decorationWeights = { 20, 10, 10, 10, 10, 5, 5 };
-    private int totalDecorationWeight = 70;
+    private int[] decorationWeights = { 15, 25, 15, 10, 5, 4, 4, 1 };
+    private int totalDecorationWeight = 79;
     private int decorationEmptyChance = 50; // percent chance of nothing (0-100)
 
     // Derived

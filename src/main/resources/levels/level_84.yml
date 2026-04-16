@@ -48,13 +48,14 @@ generator_config:
   exit_chance: 60
   decoration_empty_chance: 50
   ground_decorations:
-    MOSS_CARPET: 20
-    OAK_LEAVES: 10
-    SPRUCE_LEAVES: 10
-    DARK_OAK_LEAVES: 10
-    BIRCH_LEAVES: 10
-    RED_MUSHROOM: 5
-    BROWN_MUSHROOM: 5
+    MOSS_CARPET: 15
+    LEAF_LITTER: 25
+    SHORT_GRASS: 15
+    FERN: 10
+    DEAD_BUSH: 5
+    RED_MUSHROOM: 4
+    BROWN_MUSHROOM: 4
+    FIREFLY_BUSH: 1
 
 level_config:
   punishment:
