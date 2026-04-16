@@ -16,6 +16,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.BedAnomal
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.AetherPortalEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.HerobrineShrineEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.SuffocationEntry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.TwilightPortalEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.VoidFallEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.BackroomsEvent;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.EventRegistry;
@@ -164,12 +165,14 @@ public class BackroomsPlugin {
         BedAnomalyEntry bedAnomaly = new BedAnomalyEntry(plugin);
         AetherPortalEntry aetherPortal = new AetherPortalEntry(plugin);
         HerobrineShrineEntry herobrineShrine = new HerobrineShrineEntry(plugin);
+        TwilightPortalEntry twilightPortal = new TwilightPortalEntry(plugin);
 
         entryTriggerRegistry.register(suffocation);
         entryTriggerRegistry.register(voidFall);
         entryTriggerRegistry.register(bedAnomaly);
         entryTriggerRegistry.register(aetherPortal);
         entryTriggerRegistry.register(herobrineShrine);
+        entryTriggerRegistry.register(twilightPortal);
 
         // 4. Load config — creates levels from config using generator registry
         loadConfig();
