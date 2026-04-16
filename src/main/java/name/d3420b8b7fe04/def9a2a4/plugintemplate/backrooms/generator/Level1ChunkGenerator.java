@@ -179,12 +179,13 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
         // Pass 6: Garden floor decorations
         placeGardenDecorations(chunkData, seed, chunkX, chunkZ, chunkRng);
 
-        // Pass 7: Rare garden exit structures (deep pool, ceiling breach)
-        placeGardenExits(chunkData, seed, chunkX, chunkZ);
-
         // Bedrock boundaries: 8-block floor, 10-block ceiling (onlySolid to avoid corridor airspace)
         applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 8, Material.BEDROCK, false);
         applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, true);
+
+        // Pass 7: Rare garden exit structures (deep pool, ceiling breach)
+        // Must run AFTER bedrock boundaries so breaches aren't overwritten
+        placeGardenExits(chunkData, seed, chunkX, chunkZ);
     }
 
     // ── Warehouse column (existing behavior) ────────────────────────────
@@ -476,32 +477,19 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
                 long exitHash = seed ^ ((long) worldX * 472882027L + (long) worldZ * 920419813L);
 
-                // Floor breach — 3x3 water shaft down to world bottom
+                // Floor breach — 1x1 water shaft down to world bottom
                 if (Math.floorMod(exitHash, 200) == 0) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        for (int dz = -1; dz <= 1; dz++) {
-                            int bx = x + dx, bz = z + dz;
-                            if (bx < 0 || bx >= 16 || bz < 0 || bz >= 16) continue;
-                            for (int y = AIR_MIN_Y; y >= chunkData.getMinHeight(); y--) {
-                                chunkData.setBlock(bx, y, bz, Material.WATER);
-                            }
-                        }
+                    for (int y = AIR_MIN_Y; y >= chunkData.getMinHeight(); y--) {
+                        chunkData.setBlock(x, y, z, Material.WATER);
                     }
                 }
 
-                // Ceiling breach — 3x3 hole through ceiling, center column has climbable vines
+                // Ceiling breach — 1x1 hole through ceiling with climbable vines inside
                 if (Math.floorMod(exitHash + 1, 200) == 0) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        for (int dz = -1; dz <= 1; dz++) {
-                            int bx = x + dx, bz = z + dz;
-                            if (bx < 0 || bx >= 16 || bz < 0 || bz >= 16) continue;
-                            // Clear the ceiling
-                            for (int y = CEILING_MIN_Y; y < CEILING_MAX_Y; y++) {
-                                chunkData.setBlock(bx, y, bz, Material.AIR);
-                            }
-                        }
+                    for (int y = CEILING_MIN_Y; y < CEILING_MAX_Y; y++) {
+                        chunkData.setBlock(x, y, z, Material.AIR);
                     }
-                    // Center column: cave vines from top of breach down to near floor
+                    // Cave vines from top of breach down to near floor
                     for (int y = CEILING_MAX_Y - 1; y >= AIR_MIN_Y + 1; y--) {
                         chunkData.setBlock(x, y, z,
                                 y == AIR_MIN_Y + 1 ? Material.CAVE_VINES : Material.CAVE_VINES_PLANT);

@@ -208,6 +208,8 @@ public class BackroomsPlugin {
                         loadLevelString("level_94", "transition_message",
                                 "\u00a7c[ERR] \u00a77Reality breach detected. Rerouting...")), plugin);
 
+        Bukkit.getPluginManager().registerEvents(loadLevel84Listener(), plugin);
+
         // 8b. Register PoweredCommandBlockTrigger instances as Bukkit listeners
         for (var level : levelRegistry.getAll()) {
             for (var trigger : level.getExitTriggers()) {
@@ -314,13 +316,54 @@ public class BackroomsPlugin {
                 return Level64637ChunkGenerator.BookConfig.DEFAULT;
             }
         }
+        List<Level64637ChunkGenerator.BookConfig.PreWrittenBook> preWrittenBooks =
+                new java.util.ArrayList<>();
+        if (yaml.contains("pre_written_books")) {
+            for (Object entry : yaml.getList("pre_written_books", List.of())) {
+                if (entry instanceof java.util.Map<?, ?> map) {
+                    String title = map.containsKey("title") ? String.valueOf(map.get("title")) : "Untitled";
+                    String author = map.containsKey("author") ? String.valueOf(map.get("author")) : "Unknown";
+                    Object pagesObj = map.get("pages");
+                    List<String> pages = new java.util.ArrayList<>();
+                    if (pagesObj instanceof List<?> pageList) {
+                        for (Object p : pageList) pages.add(String.valueOf(p));
+                    }
+                    preWrittenBooks.add(new Level64637ChunkGenerator.BookConfig.PreWrittenBook(
+                            title, author, pages));
+                }
+            }
+        }
+
         return new Level64637ChunkGenerator.BookConfig(
                 yaml.getString("gibberish_chars", "abcdefghijklmnopqrstuvwxyz .,;:'-"),
                 yaml.getDouble("cursed_chance", 0.15),
                 yaml.getStringList("cursed_snippets"),
                 yaml.getStringList("cursed_titles"),
-                yaml.getStringList("cursed_authors")
+                yaml.getStringList("cursed_authors"),
+                yaml.getStringList("word_pool"),
+                yaml.getDouble("pre_written_chance", 0.08),
+                preWrittenBooks
         );
+    }
+
+    private name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level84Listener loadLevel84Listener() {
+        File levelFile = new File(plugin.getDataFolder(), "levels/level_84.yml");
+        double damage = 2.0;
+        int poisonTicks = 600;
+        int poisonAmp = 0;
+        boolean disableBeds = true;
+        if (levelFile.exists()) {
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(levelFile);
+            ConfigurationSection punishment = yaml.getConfigurationSection("level_config.punishment");
+            if (punishment != null) {
+                damage = punishment.getDouble("damage", damage);
+                poisonTicks = punishment.getInt("poison_duration_ticks", poisonTicks);
+                poisonAmp = punishment.getInt("poison_amplifier", poisonAmp);
+            }
+            disableBeds = yaml.getBoolean("level_config.disable_beds", disableBeds);
+        }
+        return new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level84Listener(
+                damage, poisonTicks, poisonAmp, disableBeds);
     }
 
     private String loadLevelString(String levelId, String key, String defaultValue) {

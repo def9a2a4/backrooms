@@ -542,14 +542,22 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
             double cursedChance,
             List<String> cursedSnippets,
             List<String> cursedTitles,
-            List<String> cursedAuthors
+            List<String> cursedAuthors,
+            List<String> wordPool,
+            double preWrittenChance,
+            List<PreWrittenBook> preWrittenBooks
     ) {
+        public record PreWrittenBook(String title, String author, List<String> pages) {}
+
         public static final BookConfig DEFAULT = new BookConfig(
                 "abcdefghijklmnopqrstuvwxyz .,;:'-",
                 0.15,
                 List.of("you have been here before and you will be here again"),
                 List.of("FOR YOU"),
-                List.of("The Librarian")
+                List.of("The Librarian"),
+                List.of(),
+                0.0,
+                List.of()
         );
     }
 }

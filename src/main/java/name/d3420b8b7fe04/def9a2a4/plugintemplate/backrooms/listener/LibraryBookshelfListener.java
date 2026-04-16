@@ -33,6 +33,9 @@ public class LibraryBookshelfListener implements Listener {
     private static final int CELL_SIZE = 16;
     private static final double CHISELED_CHANCE = 0.12;
 
+    private static final String CONSONANTS = "bcdfghjklmnprstvwz";
+    private static final String VOWELS = "aeiou";
+
     private final JavaPlugin plugin;
     private final BookConfig config;
 
@@ -145,43 +148,83 @@ public class LibraryBookshelfListener implements Listener {
     }
 
     private ItemStack createBook(Random rng) {
+        // Rare pre-written books
+        if (!config.preWrittenBooks().isEmpty()
+                && rng.nextDouble() < config.preWrittenChance()) {
+            BookConfig.PreWrittenBook pw =
+                    config.preWrittenBooks().get(rng.nextInt(config.preWrittenBooks().size()));
+            ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
+            BookMeta meta = (BookMeta) book.getItemMeta();
+            meta.setTitle(pw.title());
+            meta.setAuthor(pw.author());
+            for (String page : pw.pages()) meta.addPage(page);
+            book.setItemMeta(meta);
+            return book;
+        }
+
         ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) book.getItemMeta();
 
         boolean isCursed = rng.nextDouble() < config.cursedChance()
                 && !config.cursedSnippets().isEmpty();
 
+        // Pick generation mode: 0 = char gibberish, 1 = syllabic, 2 = word salad
+        int mode = rng.nextInt(config.wordPool().isEmpty() ? 2 : 3);
+
         // Title
         if (isCursed && rng.nextDouble() < 0.3 && !config.cursedTitles().isEmpty()) {
             meta.setTitle(config.cursedTitles().get(rng.nextInt(config.cursedTitles().size())));
         } else {
-            meta.setTitle(generateGibberishTitle(rng));
+            meta.setTitle(switch (mode) {
+                case 1 -> generateSyllabicWord(rng, 2 + rng.nextInt(3));
+                case 2 -> generateWordSalad(rng, 2 + rng.nextInt(3));
+                default -> generateGibberishTitle(rng);
+            });
         }
 
         // Author
         if (isCursed && rng.nextDouble() < 0.3 && !config.cursedAuthors().isEmpty()) {
             meta.setAuthor(config.cursedAuthors().get(rng.nextInt(config.cursedAuthors().size())));
         } else {
-            meta.setAuthor(generateGibberish(rng, 4 + rng.nextInt(8)));
+            meta.setAuthor(switch (mode) {
+                case 1 -> generateSyllabicWord(rng, 1 + rng.nextInt(2))
+                        + " " + generateSyllabicWord(rng, 1 + rng.nextInt(3));
+                case 2 -> config.wordPool().get(rng.nextInt(config.wordPool().size()))
+                        + " " + config.wordPool().get(rng.nextInt(config.wordPool().size()));
+                default -> generateGibberish(rng, 4 + rng.nextInt(8));
+            });
         }
 
         // Pages
         int pageCount = 1 + rng.nextInt(3);
         for (int p = 0; p < pageCount; p++) {
+            String pageText;
             if (isCursed && p == rng.nextInt(pageCount)) {
                 String snippet = config.cursedSnippets().get(
                         rng.nextInt(config.cursedSnippets().size()));
-                String before = generateGibberish(rng, 20 + rng.nextInt(40));
-                String after = generateGibberish(rng, 20 + rng.nextInt(40));
-                meta.addPage(before + " " + snippet + " " + after);
+                String before = generateContent(rng, mode, 3 + rng.nextInt(5));
+                String after = generateContent(rng, mode, 3 + rng.nextInt(5));
+                pageText = before + " " + snippet + " " + after;
             } else {
-                meta.addPage(generateGibberish(rng, 80 + rng.nextInt(120)));
+                pageText = generateContent(rng, mode, 12 + rng.nextInt(18));
             }
+            meta.addPage(pageText);
         }
 
         book.setItemMeta(meta);
         return book;
     }
+
+    /** Dispatches to the right generator based on mode. wordCount is approximate word count. */
+    private String generateContent(Random rng, int mode, int wordCount) {
+        return switch (mode) {
+            case 1 -> generateSyllabicText(rng, wordCount);
+            case 2 -> generateWordSalad(rng, wordCount);
+            default -> generateGibberish(rng, wordCount * 6);
+        };
+    }
+
+    // ── Mode 0: Character gibberish (existing) ─────────────────────────
 
     private String generateGibberishTitle(Random rng) {
         StringBuilder sb = new StringBuilder();
@@ -201,5 +244,76 @@ public class LibraryBookshelfListener implements Listener {
             sb.append(chars.charAt(rng.nextInt(chars.length())));
         }
         return sb.toString();
+    }
+
+    // ── Mode 1: Syllabic nonsense ──────────────────────────────────────
+
+    /** Generates a single pronounceable nonsense word with the given number of syllables. */
+    private String generateSyllabicWord(Random rng, int syllables) {
+        StringBuilder sb = new StringBuilder();
+        for (int s = 0; s < syllables; s++) {
+            sb.append(CONSONANTS.charAt(rng.nextInt(CONSONANTS.length())));
+            sb.append(VOWELS.charAt(rng.nextInt(VOWELS.length())));
+            // Occasionally add a trailing consonant
+            if (rng.nextInt(3) == 0) {
+                sb.append(CONSONANTS.charAt(rng.nextInt(CONSONANTS.length())));
+            }
+        }
+        return sb.toString();
+    }
+
+    /** Generates a passage of syllabic nonsense words with punctuation. */
+    private String generateSyllabicText(Random rng, int wordCount) {
+        StringBuilder sb = new StringBuilder();
+        int untilPeriod = 5 + rng.nextInt(8);
+        boolean capitalize = true;
+        for (int w = 0; w < wordCount; w++) {
+            String word = generateSyllabicWord(rng, 2 + rng.nextInt(3));
+            if (capitalize) {
+                word = Character.toUpperCase(word.charAt(0)) + word.substring(1);
+                capitalize = false;
+            }
+            sb.append(word);
+            untilPeriod--;
+            if (untilPeriod <= 0) {
+                sb.append(". ");
+                untilPeriod = 5 + rng.nextInt(8);
+                capitalize = true;
+            } else if (rng.nextInt(8) == 0) {
+                sb.append(", ");
+            } else {
+                sb.append(' ');
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    // ── Mode 2: Word salad ─────────────────────────────────────────────
+
+    /** Generates a passage of random real words strung into pseudo-sentences. */
+    private String generateWordSalad(Random rng, int wordCount) {
+        List<String> pool = config.wordPool();
+        if (pool.isEmpty()) return generateGibberish(rng, wordCount * 6);
+
+        StringBuilder sb = new StringBuilder();
+        int untilPeriod = 5 + rng.nextInt(8);
+        boolean capitalize = true;
+        for (int w = 0; w < wordCount; w++) {
+            String word = pool.get(rng.nextInt(pool.size()));
+            if (capitalize) {
+                word = Character.toUpperCase(word.charAt(0)) + word.substring(1);
+                capitalize = false;
+            }
+            sb.append(word);
+            untilPeriod--;
+            if (untilPeriod <= 0) {
+                sb.append(". ");
+                untilPeriod = 5 + rng.nextInt(8);
+                capitalize = true;
+            } else {
+                sb.append(' ');
+            }
+        }
+        return sb.toString().trim();
     }
 }
