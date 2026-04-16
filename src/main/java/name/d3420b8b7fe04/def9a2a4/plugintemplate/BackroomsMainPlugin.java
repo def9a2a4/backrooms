@@ -6,8 +6,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class BackroomsMainPlugin extends JavaPlugin {
 
-    // Replace with your bStats plugin ID from https://bstats.org
-    private static final int BSTATS_ID = 00000;
+    private static final int BSTATS_ID = 30776;
 
     private BackroomsPlugin backrooms;
 
