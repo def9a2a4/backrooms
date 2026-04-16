@@ -1,8 +1,10 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level1ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
@@ -15,8 +17,6 @@ import org.bukkit.scheduler.BukkitTask;
  */
 public class Level1GardenEffectListener {
 
-    private static final double GARDEN_ZONE_SCALE = 0.004;
-    private static final double MIN_GARDEN_DISTANCE = 300.0;
     private static final int NAUSEA_DURATION = 100; // 5 seconds
     private static final int CHECK_INTERVAL = 40; // 2 seconds
 
@@ -43,13 +43,14 @@ public class Level1GardenEffectListener {
     private void tick() {
         for (var world : Bukkit.getWorlds()) {
             if (!world.getName().startsWith("bkrms_1")) continue;
+            if (!(world.getGenerator() instanceof Level1ChunkGenerator gen)) continue;
             long seed = world.getSeed();
 
             for (Player player : world.getPlayers()) {
                 int worldX = player.getLocation().getBlockX();
                 int worldZ = player.getLocation().getBlockZ();
 
-                if (isGardenZone(seed, worldX, worldZ)) {
+                if (isGardenZone(gen, seed, worldX, worldZ)) {
                     advancementManager.grantGardenDiscovery(player);
                     player.addPotionEffect(new PotionEffect(
                             PotionEffectType.NAUSEA, NAUSEA_DURATION, 0, true, false, false));
@@ -58,12 +59,14 @@ public class Level1GardenEffectListener {
         }
     }
 
-    private boolean isGardenZone(long seed, int worldX, int worldZ) {
+    private boolean isGardenZone(Level1ChunkGenerator gen, long seed, int worldX, int worldZ) {
+        double minDist = gen.getMinGardenDistance();
         double distSq = (double) worldX * worldX + (double) worldZ * worldZ;
-        if (distSq < MIN_GARDEN_DISTANCE * MIN_GARDEN_DISTANCE) return false;
+        if (distSq < minDist * minDist) return false;
 
+        double scale = gen.getGardenZoneScale();
         double gardenNoise = SimplexNoise.noise2(seed + 50,
-                worldX * GARDEN_ZONE_SCALE, worldZ * GARDEN_ZONE_SCALE);
-        return gardenNoise > 0.73;
+                worldX * scale, worldZ * scale);
+        return gardenNoise > gen.getGardenThreshold();
     }
 }

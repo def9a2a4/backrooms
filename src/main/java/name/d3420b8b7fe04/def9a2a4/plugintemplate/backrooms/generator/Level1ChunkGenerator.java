@@ -7,7 +7,9 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.generator.WorldInfo;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Random;
 
@@ -45,10 +47,11 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
     private static final double MATERIAL_SCALE = 0.02;
     private static final double ACCENT_SCALE = 0.15;
 
-    // Zone noise
+    // Zone noise (defaults, overridable via generator_config)
     private static final double CORRIDOR_ZONE_SCALE = 0.01; // low freq = larger zones
-    private static final double GARDEN_ZONE_SCALE = 0.004;  // lower = larger patches
-    private static final double MIN_GARDEN_DISTANCE = 300.0; // blocks from origin
+    private double gardenZoneScale = 0.002;       // lower = larger patches
+    private double gardenThreshold = 0.63;        // noise above this = garden
+    private double minGardenDistance = 300.0;      // blocks from origin
 
     // Corridor constants
     private static final int CORRIDOR_PERIOD = 7;
@@ -88,15 +91,28 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
             Material.JUNGLE_LEAVES, Material.DARK_OAK_LEAVES, Material.AZALEA_LEAVES
     };
 
+    // ── Config ──────────────────────────────────────────────────────────
+
+    @Override
+    public void configure(@Nullable ConfigurationSection config) {
+        if (config == null) return;
+        gardenZoneScale = config.getDouble("garden_zone_scale", gardenZoneScale);
+        gardenThreshold = config.getDouble("garden_threshold", gardenThreshold);
+        minGardenDistance = config.getDouble("min_garden_distance", minGardenDistance);
+    }
+
+    public double getGardenZoneScale() { return gardenZoneScale; }
+    public double getGardenThreshold() { return gardenThreshold; }
+    public double getMinGardenDistance() { return minGardenDistance; }
+
     // ── Zone selection ──────────────────────────────────────────────────
 
     private Zone getZone(long seed, int worldX, int worldZ) {
-        // Garden: large rare blobs (~4%), suppressed near origin
         double distSq = (double) worldX * worldX + (double) worldZ * worldZ;
-        if (distSq >= MIN_GARDEN_DISTANCE * MIN_GARDEN_DISTANCE) {
+        if (distSq >= minGardenDistance * minGardenDistance) {
             double gardenNoise = SimplexNoise.noise2(seed + 50,
-                    worldX * GARDEN_ZONE_SCALE, worldZ * GARDEN_ZONE_SCALE);
-            if (gardenNoise > 0.73) return Zone.GARDEN;
+                    worldX * gardenZoneScale, worldZ * gardenZoneScale);
+            if (gardenNoise > gardenThreshold) return Zone.GARDEN;
         }
 
         // Corridor: large connected zones (~19%)

@@ -6,6 +6,11 @@ dimension_type: dark
 biome: "backrooms:habitable_zone"
 enter_message: "§7Something drips in the distance."
 
+generator_config:
+  garden_zone_scale: 0.001    # lower = larger patches (default 0.002)
+  garden_threshold: 0.50      # noise above this = garden (default 0.63)
+  min_garden_distance: 300.0  # blocks from origin before gardens can appear
+
 events:
   - ambient_sound
   - footstep_echo
