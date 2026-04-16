@@ -1,5 +1,5 @@
 {
-  "parent": "backrooms:root",
+  "parent": "backrooms:escape/overworld",
   "display": {
     "icon": {
       "id": "minecraft:filled_map"

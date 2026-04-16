@@ -1,5 +1,5 @@
 {
-  "parent": "backrooms:root",
+  "parent": "backrooms:entry/suffocation",
   "display": {
     "icon": {
       "id": "minecraft:chiseled_bookshelf"

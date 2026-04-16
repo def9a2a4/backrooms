@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:diamond"
+    },
+    "title": {"text": "The Forest Calls", "color": "green"},
+    "description": {"text": "The forest calls to you", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

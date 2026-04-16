@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:entry/twilight",
+  "display": {
+    "icon": {
+      "id": "minecraft:oak_leaves"
+    },
+    "title": {"text": "The Hedge Maze", "color": "dark_green"},
+    "description": {"text": "The hedges close in behind you", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

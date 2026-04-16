@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_84",
+  "display": {
+    "icon": {
+      "id": "minecraft:hanging_roots"
+    },
+    "title": {"text": "The Roots Run Deep", "color": "dark_green"},
+    "description": {"text": "The ground gives way beneath you", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

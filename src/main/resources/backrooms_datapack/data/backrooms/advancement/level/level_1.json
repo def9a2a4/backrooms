@@ -1,5 +1,5 @@
 {
-  "parent": "backrooms:root",
+  "parent": "backrooms:level/level_0",
   "display": {
     "icon": {
       "id": "minecraft:verdant_froglight"

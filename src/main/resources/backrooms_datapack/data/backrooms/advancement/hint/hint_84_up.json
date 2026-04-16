@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_84",
+  "display": {
+    "icon": {
+      "id": "minecraft:shears"
+    },
+    "title": {"text": "Over the Hedge", "color": "dark_green"},
+    "description": {"text": "Boundary violation detected", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "parent": "backrooms:root",
+  "parent": "backrooms:entry/shrine",
   "display": {
     "icon": {
       "id": "minecraft:yellow_carpet"
