@@ -1,0 +1,70 @@
+id: level_84
+display_name: "The Hedge Maze"
+generator: maze
+environment: NORMAL
+dimension_type: twilight
+biome: "backrooms:hedge_maze"
+fixed_time: 14000
+spawn_radius: 50
+enter_message: "\u00a77\u00a7oThe hedges close in behind you..."
+
+events:
+  - ambient_sound
+  - footstep_echo
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 8
+    chance: 0.2
+    sounds:
+      - ambient.cave
+      - ambient.warped_forest.mood
+  footstep_echo:
+    enabled: true
+    check_interval_seconds: 10
+    chance: 0.3
+    delay_ticks: 15
+    offset_blocks: 10
+
+generator_config:
+  corridor_width: 3
+  wall_thickness: 3
+  wall_height: 20
+  bedrock_min_y: 48
+  bedrock_max_y: 64
+  obsidian_layers: 3
+  barrier_layers: 10
+  floor_material: GRASS_BLOCK
+  sub_floor_material: OBSIDIAN
+  wall_outer_materials:
+    - OAK_LEAVES
+    - SPRUCE_LEAVES
+    - DARK_OAK_LEAVES
+    - BIRCH_LEAVES
+  wall_inner_material: GREEN_TERRACOTTA
+  exit_min_distance: 200
+  exit_chance: 300
+
+level_config:
+  punishment:
+    damage: 2.0
+    poison_duration_ticks: 600
+    poison_amplifier: 0
+  disable_beds: true
+
+exit_triggers:
+  - type: below_y
+    y_threshold: 49
+    target_level: level_4
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "\u00a77The ground gives way beneath you..."
+  - type: above_y
+    y_threshold: 97
+    target_level: level_3
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "\u00a7c[ERR] \u00a77Boundary violation detected..."

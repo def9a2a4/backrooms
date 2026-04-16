@@ -25,6 +25,9 @@ backrooms:
     herobrine_shrine:
       enabled: true
       target_level: level_0
+    twilight_portal:
+      enabled: true
+      target_level: level_84
 
   # Entity spawner settings
   entity_spawner:

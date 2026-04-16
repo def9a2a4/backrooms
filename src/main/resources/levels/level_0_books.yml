@@ -249,3 +249,67 @@ multi_page_books:
       - "Tested voltage at fixture: 120V steady. At wire origin: 120V steady. Disconnected wire completely. Fixture continues to operate. Non-contact detector reads: entire ceiling radiates 120V."
       - "I cannot explain these findings. The lights work without wiring, without a power source, without a circuit. The flicker pattern is too regular for a fault. It's intentional."
       - "Closing as 'unable to resolve.' The lights flicker because they want to. I understand this is not satisfactory. I don't have a better answer. I'm going home. If I can find the exit."
+
+  - title: "Anomaly Report Form"
+    author: "Safety Department"
+    pages:
+      - "FORM 77-B: SPATIAL/TEMPORAL ANOMALY\n\nDate of incident: [BLANK]\nTime of incident: [BLANK]\nFloor: Sub-Level 0\nCorridor: [ILLEGIBLE]\nReporting employee: #2441"
+      - "Type of anomaly (check all that apply):\n[X] Hallway extension\n[X] Room duplication\n[ ] Gravity inversion\n[X] Temporal displacement\n[X] Door relocation\n[X] Wall migration\n[ ] Self-duplication"
+      - "Description: Corridor 14-D was 32m at 09:00 and 47m at 15:00. Three new rooms appeared. The rooms have furniture and nameplates. The names are mine."
+      - "Action taken: Measured hallway. Reported to supervisor. Supervisor not found. Filed Form 12-A (Missing Supervisor). Form 12-A returned: 'Supervisor does not exist.'"
+      - "Supervisor signature: [BLANK]\nDate reviewed: [BLANK]\nResolution: [STAMP: FILED]\n\n[Handwritten at bottom:] This is the ninth 77-B I've filed this week. No one has ever responded to any of them."
+
+  - title: "Exit Interview"
+    author: "HR Department"
+    pages:
+      - "EXIT INTERVIEW — CONFIDENTIAL\n\nEmployee: [REDACTED]\nDepartment: Sub-Level 0\nDate of separation: [BLANK]\nReason for leaving: [BLANK]"
+      - "Q: What did you enjoy most about your position?\nA: I don't remember my position.\n\nQ: What could we have done to retain you?\nA: Let me leave.\n\nQ: Where was your workstation located?\nA: It moves."
+      - "Q: How would you describe the work environment?\nA: Yellow.\n\nQ: Did you feel supported by management?\nA: I have never seen management.\n\nQ: Would you recommend this workplace?\nA: To whom? There is no one else here."
+      - "Q: Do you have any personal belongings to collect?\nA: I don't remember owning anything.\n\nQ: Please sign below to confirm your departure.\nA: I can't find the exit.\n\n[Form is blank from this point. The remaining pages are stuck together.]"
+
+  - title: "Room Reassignment Request"
+    author: "Employee #3190"
+    pages:
+      - "FORM 5-C: ROOM REASSIGNMENT\n\nCurrent room: 14-D-7\nRequested room: Any room that stays in one place\nReason: My current room has moved three times this week."
+      - "Update 1: Room 14-D-7 is now 14-D-12. I did not move. The room moved. My desk, my chair, and my nameplate moved with it. The view from the door is different.\n\nPlease reassign me."
+      - "Update 2: Room 14-D-12 no longer exists. I am now in 14-D-7 again, but it is not the same 14-D-7. The carpet is a different shade. There is a second desk.\n\nPlease reassign me urgently."
+      - "Update 3: There is no corridor 14-D. There is no room. I am filing this form from a hallway. The hallway has my nameplate on the wall. I think I live in the hallway now."
+
+  - title: "Workplace Injury Report"
+    author: "K. Marsh, Safety Officer"
+    pages:
+      - "FORM 22-A: WORKPLACE INJURY\n\nInjured party: Employee #4410\nDate: [ILLEGIBLE]\nLocation: Corridor 9-A\nNature of injury: Spatial disorientation, minor abrasions"
+      - "Description of incident: Employee walked through a doorway and exited from the ceiling of the adjacent room, falling approximately 3 meters. Room layout does not support this trajectory."
+      - "Witness statement: 'I watched them walk through the door normally. From my side, they just disappeared. I found them on the floor of the next room. The door between the rooms doesn't exist anymore.'"
+      - "Medical response: First aid applied. Employee returned to work. Employee later reported that the injury 'un-happened' — bruises faded within minutes, memory of the fall became uncertain."
+
+  - title: "Equipment Checkout Log"
+    author: "Facilities"
+    pages:
+      - "EQUIPMENT LOG — SUB-LEVEL 0\n\n04/01 — Flashlight, checked out by #2441. Returned.\n04/01 — Flashlight, checked out by #2441. Returned.\n04/01 — Flashlight, checked out by #2441. Not returned.\n[Same entry repeats 14 more times on this page]"
+      - "04/03 — Measuring tape, #3190. Returned 2cm shorter.\n04/05 — Measuring tape, #3190. Returned 4cm shorter.\n04/06 — Measuring tape, #3190. Returned as a ruler.\n04/08 — Ruler, #3190. Not returned. No such item in inventory."
+      - "04/10 — Mop and bucket, Janitorial. Returned to 7-B-4.\n04/10 — Room 7-B-4 does not exist. Listed as lost.\n04/12 — 7-B-4 exists again. Mop and bucket inside, dry.\n04/12 — Mop and bucket checked out again. By no one. The entry wrote itself."
+
+  - title: "Visitor Sign-In Sheet"
+    author: "Reception"
+    pages:
+      - "VISITOR LOG — SUB-LEVEL 0\n\nName: J. Kowalski\nTime in: 08:00\nDestination: Maintenance\nBadge #: V-001\n\nName: J. Kowalski\nTime in: 08:00\nDestination: Maintenance\nBadge #: V-002"
+      - "Name: J. Kowalski\nTime in: 08:00\nDestination: Maintenance\nBadge #: V-003\n\nName: J. Kowalski\nTime in: 08:00\nDestination: Maintenance\nBadge #: V-004\n\n[Entries continue in the same handwriting]"
+      - "Name: J. Kowalski\nTime in: 08:00\nDestination: [BLANK]\nBadge #: V-047\n\nName: J. Kowalski\nTime in: [BLANK]\nDestination: [BLANK]\nBadge #: V-048\n\n[Handwriting is deteriorating]"
+      - "[Final entry, barely legible:]\n\nName: J. Kowalski\nTime in: always\nDestination: here\nBadge #: V-∞\nTime out: never\n\n[The rest of the page is filled with the word 'Kowalski' in increasingly small text]"
+
+  - title: "Performance Review"
+    author: "HR Department"
+    pages:
+      - "ANNUAL PERFORMANCE REVIEW\n\nEmployee: #2441\nReview period: [BLANK] to [BLANK]\nSupervisor: [NOT FOUND]\nDepartment: Sub-Level 0, General"
+      - "Duties performed:\n- Hallway monitoring (not assigned)\n- Book collection (not assigned)\n- Carpet moisture assessment (not assigned)\n- Hum frequency logging (not assigned)\n\nAll duties performed satisfactorily despite not being assigned."
+      - "Areas for improvement:\n- Employee has been 'exploring' outside assigned sector\n- Employee has filed 34 Anomaly Report Forms this quarter\n- Employee continues to ask about Floor 2\n- Employee has not attended any meetings (no meetings have been scheduled)"
+      - "Overall rating: MEETS EXPECTATIONS\n\nEmployee signature: [BLANK]\nSupervisor signature: [BLANK]\n\n[Stamped:] EMPLOYEE HAS BEEN WITH THE COMPANY FOR [ERROR: DURATION OVERFLOW] YEARS"
+
+  - title: "Elevator Inspection Certificate"
+    author: "Building Management"
+    pages:
+      - "ELEVATOR INSPECTION\nUnit: Sub-Level 0, East Wing\nDate of inspection: [BLANK]\nInspector: K. Marsh\n\nFloors served: 1\nButtons present: 1\nDoors: 2 (front, rear)\nCapacity: 6 persons or 450 kg"
+      - "Test results:\nDoor open/close: PASS\nEmergency stop: PASS\nOverload alarm: PASS\nFloor leveling: N/A (one floor)\nTravel between floors: N/A (one floor)"
+      - "Notes: Elevator operates normally. Doors open and close. Machinery engages when button is pressed. Car does not move. Inspector rode elevator for 45 minutes. Exited on same floor.\n\nOn 17th test, carpet inside car was slightly different shade."
+      - "CERTIFICATION: APPROVED for continued operation.\n\n[Handwritten:] I am certifying an elevator that goes nowhere. It works perfectly. It will never take anyone anywhere. This is the most functional equipment on Sub-Level 0."
