@@ -2,11 +2,11 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.impl;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.AbstractExitTrigger;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level3ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
@@ -15,10 +15,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockRedstoneEvent;
+import org.bukkit.generator.ChunkGenerator;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -76,6 +76,23 @@ public class PoweredCommandBlockTrigger extends AbstractExitTrigger implements L
 
         // Must be in a backrooms world
         if (levelRegistry == null || !levelRegistry.isBackroomsWorld(block.getWorld())) return;
+
+        // Determine which kind of command block this is and only handle matching ones
+        if (block.getWorld().getGenerator() instanceof Level3ChunkGenerator l3gen) {
+            List<Level3ChunkGenerator.CommandBlockKind> kinds = l3gen.getCommandBlockKinds();
+            if (!kinds.isEmpty()) {
+                int worldX = block.getX();
+                int worldZ = block.getZ();
+                long posHash = block.getWorld().getSeed()
+                        ^ ((long) worldX * 198491317L + (long) worldZ * 6542989L + 12345L);
+                long kindHash = posHash ^ 0xC0D_B10CL;
+                int kindIndex = l3gen.pickKind(kindHash >> 16);
+                if (kindIndex >= kinds.size()
+                        || !kinds.get(kindIndex).target().equals(getTargetLevelId())) {
+                    return;
+                }
+            }
+        }
 
         long now = block.getWorld().getFullTime();
         long blockKey = packBlockPos(block);

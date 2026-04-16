@@ -9,7 +9,7 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * Triggers when player has collected enough of a specific item in their inventory.
- * Used for: L0→L1 (collect 16 written books), L64637→overworld (collect 16 books).
+ * Used for: L0→L1 (collect 7 written books), L64637→overworld (collect 16 books).
  *
  * Config:
  *   type: collect_items
