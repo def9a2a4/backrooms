@@ -108,8 +108,11 @@ public class FloatingHeadEntity implements BackroomsEntity {
         if (primary == null || primary.isDead()) return;
         if (!primary.getWorld().equals(target.getWorld())) return;
 
-        // Face the player
+        // Face the player (ItemDisplay HEAD transform is 180° from entity yaw)
         EntityUtil.facePlayer(primary, target);
+        Location loc = primary.getLocation();
+        loc.setYaw(loc.getYaw() + 180f);
+        primary.teleport(loc);
 
         // Delegate to behavior
         if (behavior != null) {

@@ -69,12 +69,42 @@ entity_instances:
     behavior: patrol
     spawn_chance: 0.08
     min_escalation: 0
-  level0_floating_head_null:
+  level0_floating_head_null_scary:
     type: floating_head
     skin: "https://textures.minecraft.net/texture/bd1d18e03278a7057ff7c4fe10b8c99f31529b1d6e6683ef122d3a825358a60e"  # null-scary-face
     scale: 1.2
     behavior: flee
     spawn_chance: 0.08
+    min_escalation: 0
+    flee:
+      trigger_distance: 15.0
+      look_angle: 30.0
+      flee_speed: 0.12
+      max_distance: 50.0
+  level0_floating_head_null:
+    type: floating_head
+    skin: "https://textures.minecraft.net/texture/b089eda62a203acf6d6425d95129bb5b0df07761092c18e882ed0470842ee6d1"  # null
+    scale: 1.0
+    behavior: stationary_stare
+    spawn_chance: 0.08
+    min_escalation: 0
+    stationary_stare:
+      despawn_distance: 6.0
+  level0_floating_head_null_eyes:
+    type: floating_head
+    skin: "https://textures.minecraft.net/texture/1daa0dbc6ae76a5caa826d0bc0f18e792c7d5d761e4b30eddba6a76203cee37"  # null-eyes
+    scale: 1.0
+    behavior: stationary_stare
+    spawn_chance: 0.08
+    min_escalation: 0
+    stationary_stare:
+      despawn_distance: 6.0
+  level0_floating_head_null_eyes_red:
+    type: floating_head
+    skin: "https://textures.minecraft.net/texture/1a3ff7558569a21e1d6bc1f586b0edc05c03289791025408653dd4b0bc92010a"  # null-eyes-red
+    scale: 1.1
+    behavior: flee
+    spawn_chance: 0.09
     min_escalation: 0
     flee:
       trigger_distance: 15.0
@@ -91,6 +121,23 @@ entity_instances:
     stalk:
       approach_speed: 0.03
       despawn_distance: 5.0
+  level0_mannequin_null_scary:
+    type: mannequin
+    skin: "https://textures.minecraft.net/texture/bd1d18e03278a7057ff7c4fe10b8c99f31529b1d6e6683ef122d3a825358a60e"  # null-scary-face
+    scale: 1.0
+    behavior: stalk
+    spawn_chance: 0.07
+    min_escalation: 0
+    stalk:
+      approach_speed: 0.03
+      despawn_distance: 5.0
+  level0_mannequin_null_eyes_red:
+    type: mannequin
+    skin: "https://textures.minecraft.net/texture/1a3ff7558569a21e1d6bc1f586b0edc05c03289791025408653dd4b0bc92010a"  # null-eyes-red
+    scale: 1.0
+    behavior: patrol
+    spawn_chance: 0.07
+    min_escalation: 0
   level0_floating_head_grey:
     type: floating_head
     skin: "https://textures.minecraft.net/texture/55f38460d590fd3b912c57f678212295c9fe3205c2b5793fa1ab7f3b74fb80c0"  # herobrine-grey

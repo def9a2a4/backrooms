@@ -24,6 +24,7 @@ public class EntitySpawner {
 
     private int maxEntitiesPerPlayer = 3;
     private int spawnCheckIntervalTicks = 100;
+    // TODO: make spawn distances configurable per-level and per-entity-instance
     private int spawnDistanceMin = 30;
     private int spawnDistanceMax = 60;
 
