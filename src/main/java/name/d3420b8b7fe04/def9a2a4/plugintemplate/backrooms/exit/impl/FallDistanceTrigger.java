@@ -47,17 +47,18 @@ public class FallDistanceTrigger extends AbstractExitTrigger {
 
         state.setCustomData(KEY_LAST_Y, String.valueOf(currentY));
 
-        if (delta > 0) {
-            if (delta < WRAP_THRESHOLD) {
-                // Normal descent — accumulate
-                String cumStr = state.getCustomData(KEY_CUMULATIVE);
-                double cumulative = cumStr != null ? Double.parseDouble(cumStr) : 0.0;
-                cumulative += delta;
-                state.setCustomData(KEY_CUMULATIVE, String.valueOf(cumulative));
-                return cumulative >= fallDistance;
-            }
-            // Large jump from wrap teleport — skip this tick
+        if (Math.abs(delta) >= WRAP_THRESHOLD) {
+            // Large Y change from wrap teleport — skip this tick, preserve cumulative
             return false;
+        }
+
+        if (delta > 0) {
+            // Normal descent — accumulate
+            String cumStr = state.getCustomData(KEY_CUMULATIVE);
+            double cumulative = cumStr != null ? Double.parseDouble(cumStr) : 0.0;
+            cumulative += delta;
+            state.setCustomData(KEY_CUMULATIVE, String.valueOf(cumulative));
+            return cumulative >= fallDistance;
         } else {
             // Ascended or stayed level — reset
             state.setCustomData(KEY_CUMULATIVE, "0");
