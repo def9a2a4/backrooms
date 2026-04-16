@@ -168,8 +168,16 @@ public class LibraryBookshelfListener implements Listener {
         boolean isCursed = rng.nextDouble() < config.cursedChance()
                 && !config.cursedSnippets().isEmpty();
 
-        // Pick generation mode: 0 = char gibberish, 1 = syllabic, 2 = word salad
-        int mode = rng.nextInt(config.wordPool().isEmpty() ? 2 : 3);
+        // Pick generation mode: 70% char gibberish, 20% syllabic, 8% word salad
+        double roll = rng.nextDouble();
+        int mode;
+        if (config.wordPool().isEmpty() || roll < 0.714) {
+            mode = 0; // char gibberish
+        } else if (roll < 0.918) {
+            mode = 1; // syllabic
+        } else {
+            mode = 2; // word salad
+        }
 
         // Title
         if (isCursed && rng.nextDouble() < 0.3 && !config.cursedTitles().isEmpty()) {

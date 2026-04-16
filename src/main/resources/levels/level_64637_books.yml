@@ -263,7 +263,7 @@ word_pool:
 # ─── Pre-Written Books ───
 # Rare complete books with fixed title, author, and pages.
 # These are the only fully coherent texts in the Library.
-pre_written_chance: 0.08
+pre_written_chance: 0.02
 
 pre_written_books:
   - title: "A Note from the Librarian"

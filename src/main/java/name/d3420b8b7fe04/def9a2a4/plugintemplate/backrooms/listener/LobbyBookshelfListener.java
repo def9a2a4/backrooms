@@ -95,14 +95,16 @@ public class LobbyBookshelfListener implements Listener {
                 block.setBlockData(savedData, false);
 
                 if (block.getState() instanceof ChiseledBookshelf shelf) {
-                    // Fill 1-3 random slots with written books
-                    int bookCount = 1 + rng.nextInt(3);
+                    // Fill 2-5 random slots with written books
+                    int bookCount = 2 + rng.nextInt(4);
                     for (int i = 0; i < bookCount; i++) {
-                        int slot = rng.nextInt(6);
-                        if (shelf.getInventory().getItem(slot) != null) continue;
-
-                        ItemStack book = createLoreBook(rng);
-                        shelf.getInventory().setItem(slot, book);
+                        int slot;
+                        int attempts = 0;
+                        do {
+                            slot = rng.nextInt(6);
+                        } while (shelf.getInventory().getItem(slot) != null && ++attempts < 6);
+                        if (attempts >= 6) break;
+                        shelf.getInventory().setItem(slot, createLoreBook(rng));
                     }
                     shelf.update();
                 }
