@@ -167,18 +167,30 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         // Cap slabs skip the ceiling hole area (see inCeilingHole guard)
         placeWrapSlabs(chunkData, chunkX, chunkZ, seed, cellX, cellZ);
 
-        // Build void staircase extensions for all-layer staircases
+        // Build void staircase extensions for all-layer staircases.
+        // The enclosure punches through fake layer floor/ceiling solids (Y=70-72, Y=160-162)
+        // to connect the void shaft to the existing stairwell.
+        // The slab ranges are wider than the enclosure: they also fill the fake layers and
+        // base/cap regions where placeStaircaseColumn doesn't place slabs (its r loop starts
+        // at r=0 with blockY=83, and caps at maxBlockY=152, leaving fake layers empty).
         if (isStaircase(seed, cellX, cellZ) && getStaircaseSpan(seed, cellX, cellZ) >= NUM_LAYERS) {
-            // Below: extend from below the initial fill region down into void
-            buildVoidShaftEnclosure(chunkData, VOID_BOTTOM_Y, BASE_Y - FLOOR_SPACING,
+            int fakeBottomAirMin = BASE_Y - FLOOR_SPACING + REL_AIR_MIN;  // 73
+            int fakeTopAirMax = BASE_Y + NUM_LAYERS * FLOOR_SPACING + REL_AIR_MAX;  // 160
+            int mainSpiralStart = BASE_Y + REL_AIR_MIN;  // 83 — r=0 lowest blockY
+            int mainSpiralEnd = mainSpiralStart + 10 * NUM_LAYERS;  // 153 — first Y above maxBlockY
+
+            // Below: enclosure punches through fake layer -1 floor (Y=70-72)
+            buildVoidShaftEnclosure(chunkData, VOID_BOTTOM_Y, fakeBottomAirMin,
                                     chunkX, chunkZ, true);
-            placeVoidStairSlabs(chunkData, VOID_BOTTOM_Y, BASE_Y - FLOOR_SPACING,
+            // Slabs cover void + fake layer -1 + base shaft (everything below main spiral)
+            placeVoidStairSlabs(chunkData, VOID_BOTTOM_Y, mainSpiralStart,
                                 chunkX, chunkZ);
 
-            // Above: extend from above the initial fill region up into void
-            buildVoidShaftEnclosure(chunkData, CAP_MAX_Y + FLOOR_SPACING, VOID_TOP_Y,
+            // Above: enclosure punches through fake layer 7 ceiling (Y=160-162)
+            buildVoidShaftEnclosure(chunkData, fakeTopAirMax, VOID_TOP_Y,
                                     chunkX, chunkZ, false);
-            placeVoidStairSlabs(chunkData, CAP_MAX_Y + FLOOR_SPACING, VOID_TOP_Y,
+            // Slabs cover cap + fake layer 7 + void (everything above main spiral)
+            placeVoidStairSlabs(chunkData, mainSpiralEnd, VOID_TOP_Y,
                                 chunkX, chunkZ);
         }
     }
