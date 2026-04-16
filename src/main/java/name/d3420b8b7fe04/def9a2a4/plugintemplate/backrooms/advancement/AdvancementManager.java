@@ -7,6 +7,8 @@ import org.bukkit.advancement.AdvancementProgress;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,7 +52,6 @@ public class AdvancementManager {
             Map.entry("level_84", key("level/level_84"))
     );
 
-    // Exit hints: keyed by "currentLevel:targetLevel" or "currentLevel:exitType" for ambiguous cases
     private final Map<String, NamespacedKey> exitHintKeys = Map.ofEntries(
             Map.entry("level_0:level_1", key("hint/hint_0")),
             Map.entry("level_1:level_2", key("hint/hint_1_down")),
@@ -68,9 +69,24 @@ public class AdvancementManager {
             Map.entry("level_84:level_3", key("hint/hint_84_up"))
     );
 
-    // Direct hint keys for special triggers (L5 jukebox, L94 cascade)
     private final NamespacedKey hint5Key = key("hint/hint_5");
     private final NamespacedKey hint94Key = key("hint/hint_94");
+
+    // All known advancement paths for tab completion and grantAll
+    private static final List<String> ALL_PATHS = List.of(
+            "root",
+            "entry/shrine", "entry/suffocation", "entry/void", "entry/bed",
+            "entry/aether", "entry/twilight",
+            "level/level_0", "level/level_1", "level/level_1_garden",
+            "level/level_2", "level/level_3", "level/level_4", "level/level_5",
+            "level/level_7", "level/level_37", "level/level_64637",
+            "level/level_94", "level/level_84",
+            "hint/hint_0", "hint/hint_1_down", "hint/hint_1_up",
+            "hint/hint_2", "hint/hint_3", "hint/hint_4", "hint/hint_5",
+            "hint/hint_7", "hint/hint_37", "hint/hint_64637_fall",
+            "hint/hint_84_down", "hint/hint_84_up", "hint/hint_94",
+            "escape/overworld", "escape/all_levels"
+    );
 
     public AdvancementManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -85,8 +101,7 @@ public class AdvancementManager {
     }
 
     public void grantLevelDiscovery(Player player, String levelId) {
-        // Grant the full structural chain so the entire tree is visible
-        grantStructuralChain(player);
+        grant(player, rootKey);
         NamespacedKey discoveryKey = levelKeys.get(levelId);
         if (discoveryKey != null) {
             grant(player, discoveryKey);
@@ -94,26 +109,6 @@ public class AdvancementManager {
         checkAllLevelsVisited(player);
     }
 
-    /**
-     * Grants root + all entries + all level discoveries + garden so that
-     * the entire hint/escape layer is visible in the advancement screen.
-     * These are structural — their JSONs have show_toast:false.
-     */
-    private void grantStructuralChain(Player player) {
-        grant(player, rootKey);
-        for (NamespacedKey entryKey : entryKeys.values()) {
-            grant(player, entryKey);
-        }
-        for (NamespacedKey levelKey : levelKeys.values()) {
-            grant(player, levelKey);
-        }
-        grant(player, gardenKey);
-    }
-
-    /**
-     * Grants the hint advancement for the exit used.
-     * The hint is determined by currentLevel + targetLevel.
-     */
     public void grantExitHint(Player player, String currentLevelId, String targetLevelId,
                               String exitTriggerType) {
         NamespacedKey hintKey = exitHintKeys.get(currentLevelId + ":" + targetLevelId);
@@ -122,23 +117,74 @@ public class AdvancementManager {
         }
     }
 
-    /** Grant hint_5 — L5 jukebox death (called from Disc11JukeboxListener). */
     public void grantDisc11Hint(Player player) {
         grant(player, hint5Key);
     }
 
-    /** Grant hint_94 — L94 barrier cascade (called from Level94Listener). */
     public void grantSkyblockHint(Player player) {
         grant(player, hint94Key);
     }
 
-    /** Grant the garden discovery advancement (called from Level1GardenEffectListener). */
     public void grantGardenDiscovery(Player player) {
         grant(player, gardenKey);
     }
 
     public void grantEscape(Player player) {
         grant(player, escapeKey);
+    }
+
+    // ── Debug command support ──────────────────────────────────────────
+
+    /** Grant a specific advancement by path (e.g. "level/level_3"), plus all ancestors. */
+    public boolean grantByPath(Player player, String path) {
+        NamespacedKey advKey = key(path);
+        Advancement advancement = Bukkit.getAdvancement(advKey);
+        if (advancement == null) return false;
+
+        // Walk up the parent chain and grant ancestors first (breadcrumbs)
+        grantWithAncestors(player, advancement);
+        return true;
+    }
+
+    /** Grant all known backrooms advancements. Returns the count granted. */
+    public int grantAll(Player player) {
+        int count = 0;
+        for (String path : ALL_PATHS) {
+            Advancement adv = Bukkit.getAdvancement(key(path));
+            if (adv != null) {
+                AdvancementProgress progress = player.getAdvancementProgress(adv);
+                if (!progress.isDone()) {
+                    progress.awardCriteria(CRITERION);
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /** Returns all advancement paths for tab completion. */
+    public List<String> getAllAdvancementPaths() {
+        return ALL_PATHS;
+    }
+
+    // ── Internal ───────────────────────────────────────────────────────
+
+    private void grantWithAncestors(Player player, Advancement advancement) {
+        // Collect the ancestor chain
+        List<Advancement> chain = new ArrayList<>();
+        Advancement current = advancement;
+        while (current != null) {
+            chain.add(current);
+            current = current.getParent();
+        }
+
+        // Grant from root down to the target
+        for (int i = chain.size() - 1; i >= 0; i--) {
+            AdvancementProgress progress = player.getAdvancementProgress(chain.get(i));
+            if (!progress.isDone()) {
+                progress.awardCriteria(CRITERION);
+            }
+        }
     }
 
     private void checkAllLevelsVisited(Player player) {

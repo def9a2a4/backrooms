@@ -7,8 +7,8 @@
     "title": [{"text": "The ", "color": "dark_green"}, {"text": "XXX", "obfuscated": true, "color": "dark_green"}, {"text": " Lands", "color": "dark_green"}],
     "description": {"text": "The horizon refuses to get closer", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
-    "show_toast": false,
-    "announce_to_chat": false
+    "show_toast": true,
+    "announce_to_chat": true
   },
   "criteria": {
     "impossible": {

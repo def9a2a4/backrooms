@@ -7,8 +7,8 @@
     "title": {"text": "The Habitable Zone", "color": "green"},
     "description": {"text": "Almost normal Almost", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
-    "show_toast": false,
-    "announce_to_chat": false
+    "show_toast": true,
+    "announce_to_chat": true
   },
   "criteria": {
     "impossible": {
