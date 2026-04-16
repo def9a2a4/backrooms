@@ -181,14 +181,14 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
             // Below: enclosure punches through fake layer -1 floor (Y=70-72)
             buildVoidShaftEnclosure(chunkData, VOID_BOTTOM_Y, fakeBottomAirMin,
-                                    chunkX, chunkZ, true);
+                                    chunkX, chunkZ);
             // Slabs cover void + fake layer -1 + base shaft (everything below main spiral)
             placeVoidStairSlabs(chunkData, VOID_BOTTOM_Y, mainSpiralStart,
                                 chunkX, chunkZ);
 
             // Above: enclosure punches through fake layer 7 ceiling (Y=160-162)
             buildVoidShaftEnclosure(chunkData, fakeTopAirMax, VOID_TOP_Y,
-                                    chunkX, chunkZ, false);
+                                    chunkX, chunkZ);
             // Slabs cover cap + fake layer 7 + void (everything above main spiral)
             placeVoidStairSlabs(chunkData, mainSpiralEnd, VOID_TOP_Y,
                                 chunkX, chunkZ);
@@ -248,7 +248,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
      * clears the 6x6 interior to air, and places a solid cap at the terminal Y.
      */
     private void buildVoidShaftEnclosure(ChunkData data, int yMin, int yMax,
-                                          int chunkX, int chunkZ, boolean capAtBottom) {
+                                          int chunkX, int chunkZ) {
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int worldX = chunkX * 16 + x;
@@ -272,12 +272,6 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                     for (int y = yMin; y < yMax; y++) {
                         data.setBlock(x, y, z, Material.AIR);
                     }
-                }
-
-                // Solid cap to hide the void edge
-                if (inInterior || isWall) {
-                    int capY = capAtBottom ? yMin : yMax - 1;
-                    data.setBlock(x, capY, z, Material.OAK_PLANKS);
                 }
             }
         }

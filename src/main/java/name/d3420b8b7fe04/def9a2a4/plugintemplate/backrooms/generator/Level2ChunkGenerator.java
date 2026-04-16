@@ -273,6 +273,48 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
         // Bedrock boundaries: 6-block floor, 10-block ceiling (onlySolid for ceiling)
         applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 6, Material.BEDROCK, false);
         applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, true);
+
+        // Must run AFTER bedrock boundaries so tunnels aren't overwritten
+        placeExitTunnels(chunkData, seed, chunkX, chunkZ);
+    }
+
+    /**
+     * Places copper trapdoor exit tunnels in machinery rooms.
+     * Runs after bedrock so the carved shafts aren't overwritten.
+     */
+    private void placeExitTunnels(ChunkData chunkData, long seed, int chunkX, int chunkZ) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+
+                int xMod = Math.floorMod(worldX, HALLWAY_PERIOD);
+                int zMod = Math.floorMod(worldZ, HALLWAY_PERIOD);
+                if (xMod != 0 || zMod != 0) continue;
+
+                int gridX = Math.floorDiv(worldX, HALLWAY_PERIOD);
+                int gridZ = Math.floorDiv(worldZ, HALLWAY_PERIOD);
+
+                if (!isLineActive(seed, gridZ, 0) && !isLineActive(seed, gridX, 1)) continue;
+
+                double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
+                if (roomNoise <= 0.3 || roomNoise > 0.7) continue; // skip non-rooms and boiler rooms
+
+                long leverHash = (long) worldX * 198491317L ^ (long) worldZ * 6542989L;
+                if (Math.floorMod(leverHash + 1, 10) != 0) continue;
+
+                int tx = worldX - 3 - chunkX * 16;
+                int tz = worldZ - chunkZ * 16;
+                if (tx < 0 || tx >= 16 || tz < 0 || tz >= 16) continue;
+
+                // Trapdoor at floor level
+                chunkData.setBlock(tx, AIR_MIN_Y, tz, Material.COPPER_TRAPDOOR);
+                // Carve 1x1 shaft down through floor and bedrock
+                for (int y = FLOOR_HEIGHT - 1; y >= FLOOR_Y; y--) {
+                    chunkData.setBlock(tx, y, tz, Material.AIR);
+                }
+            }
+        }
     }
 
     /**
@@ -440,20 +482,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
 
-        // Very rare copper trapdoor tunnel opening (~2% of machinery rooms)
-        // Trapdoor in the floor → shaft carved down through floor, stone, and bedrock to void
-        if (Math.floorMod(leverHash + 1, 10) == 0) {
-            int tx = centerWorldX - 3 - chunkX * 16;
-            int tz = centerWorldZ - chunkZ * 16;
-            if (tx >= 0 && tx < 16 && tz >= 0 && tz < 16) {
-                // Trapdoor at floor level
-                chunkData.setBlock(tx, AIR_MIN_Y, tz, Material.COPPER_TRAPDOOR);
-                // Carve 1x1 shaft down through floor to Y=0
-                for (int y = FLOOR_HEIGHT - 1; y >= FLOOR_Y; y--) {
-                    chunkData.setBlock(tx, y, tz, Material.AIR);
-                }
-            }
-        }
+        // Trapdoor tunnel is placed in placeExitTunnels() after bedrock boundaries
     }
 
     private void placeRoomLantern(ChunkData chunkData, int chunkX, int chunkZ,

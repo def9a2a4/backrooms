@@ -4,6 +4,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.generator.WorldInfo;
 import org.jetbrains.annotations.Nullable;
@@ -155,7 +156,7 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
                     if (shouldPlaceExit(worldX, worldZ, seed)) {
                         // Punch hole from floor down to bedrock top
                         chunkData.setBlock(x, floorY, z, Material.AIR);
-                        for (int y = bedrockMaxY; y < floorY; y++) {
+                        for (int y = bedrockMinY; y < floorY; y++) {
                             chunkData.setBlock(x, y, z, Material.AIR);
                         }
                     }
@@ -255,9 +256,13 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
         }
 
         Material material = getWallMaterial(depth, worldX, worldZ, seed);
+        BlockData blockData = material.createBlockData();
+        if (blockData instanceof org.bukkit.block.data.type.Leaves leaves) {
+            leaves.setPersistent(true);
+        }
 
         for (int y = wallBaseY; y < wallTopY; y++) {
-            chunkData.setBlock(x, y, z, material);
+            chunkData.setBlock(x, y, z, blockData);
         }
     }
 

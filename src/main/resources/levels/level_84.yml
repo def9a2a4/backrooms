@@ -1,7 +1,7 @@
 id: level_84
 display_name: "The Hedge Maze"
 generator: maze
-environment: NORMAL
+environment: NETHER
 dimension_type: twilight
 biome: "backrooms:hedge_maze"
 fixed_time: 14000
