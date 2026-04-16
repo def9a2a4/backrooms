@@ -479,7 +479,7 @@ public class Level1ChunkGenerator extends BackroomsChunkGenerator {
 
                 // Floor breach — 1x1 water shaft down to world bottom
                 if (Math.floorMod(exitHash, 200) == 0) {
-                    for (int y = AIR_MIN_Y; y >= chunkData.getMinHeight(); y--) {
+                    for (int y = FLOOR_HEIGHT - 1; y >= chunkData.getMinHeight(); y--) {
                         chunkData.setBlock(x, y, z, Material.WATER);
                     }
                 }

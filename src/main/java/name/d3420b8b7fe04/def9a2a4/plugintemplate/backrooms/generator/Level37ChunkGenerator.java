@@ -24,14 +24,14 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         super(biomeKey);
     }
 
-    // Y layout
-    private static final int FLOOR_Y = -10;
-    private static final int FLOOR_HEIGHT = 8;
-    private static final int CEILING_Y = 20;        // normal ceiling
-    private static final int TALL_CEILING_Y = 28;    // tall rooms
-    private static final int CEILING_MAX_Y = 44;     // universal ceiling slab top (all room types)
-    private static final int SKYLIGHT_MAX_Y = 34;   // skylight clears up to here (below barrier zone)
-    private static final int MID_FLOOR_Y = 14;       // second story floor for short rooms
+    // Y layout (shifted +64 from original; FLOOR_Y lowered further to keep bedrock below deepest pools)
+    private static final int FLOOR_Y = 42;
+    private static final int FLOOR_HEIGHT = 72;
+    private static final int CEILING_Y = 84;         // normal ceiling
+    private static final int TALL_CEILING_Y = 92;    // tall rooms
+    private static final int CEILING_MAX_Y = 108;    // universal ceiling slab top (all room types)
+    private static final int SKYLIGHT_MAX_Y = 98;    // skylight clears up to here (below barrier zone)
+    private static final int MID_FLOOR_Y = 78;       // second story floor for short rooms
 
     // Room height classes
     private static final int CLASS_SHORT = 0;
@@ -78,8 +78,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
     private static final int POOL_CHANNEL = 3;    // 4-wide water strip through center
     private static final int POOL_MOAT = 4;       // perimeter water ring, dry center
     private static final int POOL_HALF = 5;       // one half wet, one dry
-    private static final int POOL_ABYSS = 6;      // extra-deep stepped pool
-    private static final int POOL_ABYSS_DEEP = 7; // rare extra-extra-deep pool with side drain tunnel
+    private static final int POOL_ABYSS = 6;      // extra-deep stepped pool (random depth 5-20)
 
     @Override
     public void configure(@Nullable ConfigurationSection config) {
@@ -221,7 +220,6 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     int skylightType = getSkylightType(cellX, cellZ, seed);
                     placeInterior(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette, light, roomType, ceilingY, skylightType);
                     placePool(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed, palette);
-                    placeDrainTunnel(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed);
                 }
 
                 // Ceiling
@@ -311,6 +309,21 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         // Bedrock floor (6 blocks), barrier ceiling (10 blocks including over skylights)
         applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 6, Material.BEDROCK, false);
         applyBoundaryLayer(chunkData, SKYLIGHT_MAX_Y, CEILING_MAX_Y, Material.BARRIER, false);
+
+        // Third pass: escape pipes (must run after bedrock boundary to carve through it)
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                int cellX = Math.floorDiv(worldX, CELL_SIZE);
+                int cellZ = Math.floorDiv(worldZ, CELL_SIZE);
+                int localX = Math.floorMod(worldX, CELL_SIZE);
+                int localZ = Math.floorMod(worldZ, CELL_SIZE);
+                int masterCellX = getMasterCellX(cellX, cellZ, seed);
+                int masterCellZ = getMasterCellZ(cellX, cellZ, seed);
+                placeEscapePipe(chunkData, x, z, localX, localZ, masterCellX, masterCellZ, seed);
+            }
+        }
     }
 
     // --- Symmetric distance helpers ---
@@ -454,8 +467,13 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         if (roll < 69) return POOL_CHANNEL;
         if (roll < 79) return POOL_MOAT;
         if (roll < 88) return POOL_HALF;
-        if (roll < 97) return POOL_ABYSS;
-        return POOL_ABYSS_DEEP;
+        return POOL_ABYSS;  // 12% chance
+    }
+
+    /** Deterministic random depth (5–20 inclusive) for POOL_ABYSS cells. */
+    private int getAbyssDepth(int cellX, int cellZ, long seed) {
+        Random rng = new Random(seed ^ ((long) cellX * 628318530L + (long) cellZ * 141421356L));
+        return 5 + rng.nextInt(16);
     }
 
     private int getSkylightType(int cellX, int cellZ, long seed) {
@@ -1105,25 +1123,8 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
             case POOL_ABYSS -> {
-                // Extra-deep stepped pool (5 blocks at center)
-                if (distFromPoolEdge <= 1) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
-                } else if (distFromPoolEdge == 2) {
-                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 2; y--) {
-                        chunkData.setBlock(x, y, z, Material.WATER);
-                    }
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 2, z, palette.floor());
-                } else {
-                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 5; y--) {
-                        chunkData.setBlock(x, y, z, Material.WATER);
-                    }
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 5, z, palette.floor());
-                }
-            }
-            case POOL_ABYSS_DEEP -> {
-                // Rare extra-extra-deep pool (7 blocks at center)
-                // A drain tunnel extends from the +X wall — see placeDrainTunnel()
+                // Extra-deep stepped pool (random depth 5–20 at center)
+                int depth = getAbyssDepth(masterCellX, masterCellZ, seed);
                 if (distFromPoolEdge <= 1) {
                     chunkData.setBlock(x, FLOOR_HEIGHT, z, Material.WATER);
                     chunkData.setBlock(x, FLOOR_HEIGHT - 1, z, palette.floor());
@@ -1133,49 +1134,46 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
                     }
                     chunkData.setBlock(x, FLOOR_HEIGHT - 3, z, palette.floor());
                 } else {
-                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - 7; y--) {
+                    for (int y = FLOOR_HEIGHT; y > FLOOR_HEIGHT - depth; y--) {
                         chunkData.setBlock(x, y, z, Material.WATER);
                     }
-                    chunkData.setBlock(x, FLOOR_HEIGHT - 7, z, palette.floor());
+                    chunkData.setBlock(x, FLOOR_HEIGHT - depth, z, palette.floor());
                 }
             }
         }
     }
 
     /**
-     * Carves a drain tunnel for POOL_ABYSS_DEEP rooms.
-     * The tunnel goes from the +X edge of the pool, horizontally through the wall
-     * for ~10 blocks, then drops down into the void.
-     * Tunnel is 2 wide (Z axis) at the pool's bottom Y level.
+     * Carves a 1x1 escape pipe for deep POOL_ABYSS rooms (depth >= 16).
+     * The pipe runs horizontally from the pool center for 10 blocks (+X),
+     * then drops vertically through bedrock to trigger the below_y exit.
+     * Must run AFTER applyBoundaryLayer so it can carve through bedrock.
      */
-    private void placeDrainTunnel(ChunkData chunkData, int x, int z,
-                                  int localX, int localZ,
-                                  int masterCellX, int masterCellZ, long seed) {
+    private void placeEscapePipe(ChunkData chunkData, int x, int z,
+                                 int localX, int localZ,
+                                 int masterCellX, int masterCellZ, long seed) {
         int poolType = getPoolType(masterCellX, masterCellZ, seed);
-        if (poolType != POOL_ABYSS_DEEP) return;
+        if (poolType != POOL_ABYSS) return;
 
-        // Drain tunnel: 2x2 (2 wide in Z, 2 tall in Y)
-        // Runs along +X from the pool interior edge through the wall
-        // Z center of the cell: localZ 11 and 12
-        int poolBottom = FLOOR_HEIGHT - 7;
-        int tunnelZ0 = CELL_SIZE / 2 - 1; // localZ = 11
-        int tunnelZ1 = CELL_SIZE / 2;     // localZ = 12
+        int depth = getAbyssDepth(masterCellX, masterCellZ, seed);
+        if (depth < 16) return;
 
-        if (localZ != tunnelZ0 && localZ != tunnelZ1) return;
+        // Pipe at center Z of cell, at pool bottom Y
+        int pipeZ = CELL_SIZE / 2; // localZ = 12
+        if (localZ != pipeZ) return;
 
-        int interiorEnd = CELL_SIZE - WALL_THICK - 2;
+        int pipeY = FLOOR_HEIGHT - depth;
+        int pipeStartX = CELL_SIZE / 2;       // localX = 12 (pool center)
+        int pipeEndX = pipeStartX + 10;        // localX = 22
 
-        // Horizontal section: from pool edge through wall area (+X direction)
-        if (localX >= interiorEnd && localX < CELL_SIZE) {
-            // Carve 2-tall water tunnel at pool bottom level
-            chunkData.setBlock(x, poolBottom, z, Material.WATER);
-            chunkData.setBlock(x, poolBottom + 1, z, Material.WATER);
+        // Horizontal section: 10 blocks from pool center toward +X wall
+        if (localX >= pipeStartX && localX < pipeEndX) {
+            chunkData.setBlock(x, pipeY, z, Material.WATER);
         }
 
-        // Vertical drop: at the far end of the tunnel (last 2 blocks before cell edge)
-        if (localX >= CELL_SIZE - 2 && localX < CELL_SIZE) {
-            // Carve downward from pool bottom into void
-            for (int y = poolBottom - 1; y >= chunkData.getMinHeight(); y--) {
+        // Vertical drop: at the end of the horizontal pipe, down through bedrock
+        if (localX == pipeEndX - 1) {
+            for (int y = pipeY - 1; y >= FLOOR_Y - 2; y--) {
                 chunkData.setBlock(x, y, z, Material.WATER);
             }
         }
@@ -1196,7 +1194,7 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
     private static final String[] CLASS_NAMES = { "SHORT", "NORMAL", "TALL" };
     private static final String[] SKYLIGHT_TYPE_NAMES = { "None", "Standard", "Pinhole", "Cross", "Bars" };
-    private static final String[] POOL_TYPE_NAMES = { "Dry", "Shallow", "Deep", "Channel", "Moat", "Half", "Abyss", "Deep Abyss" };
+    private static final String[] POOL_TYPE_NAMES = { "Dry", "Shallow", "Deep", "Channel", "Moat", "Half", "Abyss" };
 
     public static String getDebugInfo(int worldX, int worldZ, long seed) {
         int cellX = Math.floorDiv(worldX, CELL_SIZE);
@@ -1288,15 +1286,22 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
         else if (poolRoll < 69) poolType = POOL_CHANNEL;
         else if (poolRoll < 79) poolType = POOL_MOAT;
         else if (poolRoll < 88) poolType = POOL_HALF;
-        else if (poolRoll < 97) poolType = POOL_ABYSS;
-        else poolType = POOL_ABYSS_DEEP;
+        else poolType = POOL_ABYSS;
+
+        // Abyss depth (same RNG logic as getAbyssDepth)
+        String abyssInfo = "";
+        if (poolType == POOL_ABYSS) {
+            Random depthRng = new Random(seed ^ ((long) cx * 628318530L + (long) cz * 141421356L));
+            int abyssDepth = 5 + depthRng.nextInt(16);
+            abyssInfo = "(" + abyssDepth + (abyssDepth >= 16 ? ",pipe" : "") + ")";
+        }
 
         String className = CLASS_NAMES[roomClass];
         String paletteName = DEFAULT_PALETTES[paletteIndex].name();
         String typeName = (roomType >= 0 && roomType < ROOM_TYPE_NAMES.length && ROOM_TYPE_NAMES[roomType] != null)
                 ? ROOM_TYPE_NAMES[roomType] : "Unknown(" + roomType + ")";
         String skylightName = SKYLIGHT_TYPE_NAMES[skylightType];
-        String poolName = POOL_TYPE_NAMES[poolType];
+        String poolName = POOL_TYPE_NAMES[poolType] + abyssInfo;
 
         return "§e" + className + " §7| §b" + paletteName + " §7| §a" + typeName
                 + " §7| §dSky:" + skylightName + " §7| §9Pool:" + poolName;

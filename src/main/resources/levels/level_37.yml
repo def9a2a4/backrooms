@@ -68,7 +68,7 @@ event_config:
 exit_triggers:
   - type: below_y
     target_level: level_3
-    y_threshold: -10
+    y_threshold: 42
     transition:
       blindness_ticks: 100
       delay_ticks: 40
