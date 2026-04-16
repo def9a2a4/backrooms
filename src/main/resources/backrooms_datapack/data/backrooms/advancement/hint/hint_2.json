@@ -2,9 +2,9 @@
   "parent": "backrooms:level/level_2",
   "display": {
     "icon": {
-      "id": "minecraft:lever"
+      "id": "minecraft:copper_trapdoor"
     },
-    "title": {"text": "Copper Answers to the Lever", "color": "gold"},
+    "title": {"text": "Trap Door", "color": "gold"},
     "description": {"text": "The mechanism is simple finding it is not", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "goal",
     "show_toast": true,

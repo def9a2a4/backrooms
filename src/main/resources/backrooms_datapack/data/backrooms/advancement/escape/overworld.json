@@ -1,5 +1,5 @@
 {
-  "parent": "backrooms:level/level_7",
+  "parent": "backrooms:hint/hint_7",
   "display": {
     "icon": {
       "id": "minecraft:clock"

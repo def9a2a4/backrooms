@@ -52,6 +52,7 @@ public class AdvancementManager {
             Map.entry("level_84", key("level/level_84"))
     );
 
+    // Exit hints: keyed by "currentLevel:targetLevel" with optional ":exitType" suffix for disambiguation
     private final Map<String, NamespacedKey> exitHintKeys = Map.ofEntries(
             Map.entry("level_0:level_1", key("hint/hint_0")),
             Map.entry("level_1:level_2", key("hint/hint_1_down")),
@@ -64,9 +65,10 @@ public class AdvancementManager {
             Map.entry("level_4:level_3", key("hint/hint_4")),
             Map.entry("level_7:overworld", key("hint/hint_7")),
             Map.entry("level_37:level_3", key("hint/hint_37")),
-            Map.entry("level_64637:overworld", key("hint/hint_64637_fall")),
-            Map.entry("level_84:level_4", key("hint/hint_84_down")),
-            Map.entry("level_84:level_3", key("hint/hint_84_up"))
+            Map.entry("level_64637:overworld:fall_distance", key("hint/hint_64637_fall")),
+            Map.entry("level_64637:overworld:collect_items", key("hint/hint_64637_books")),
+            Map.entry("level_84:level_3", key("hint/hint_84_down")),
+            Map.entry("level_84:level_94", key("hint/hint_84_up"))
     );
 
     private final NamespacedKey hint5Key = key("hint/hint_5");
@@ -83,7 +85,7 @@ public class AdvancementManager {
             "level/level_94", "level/level_84",
             "hint/hint_0", "hint/hint_1_down", "hint/hint_1_up",
             "hint/hint_2", "hint/hint_3", "hint/hint_4", "hint/hint_5",
-            "hint/hint_7", "hint/hint_37", "hint/hint_64637_fall",
+            "hint/hint_7", "hint/hint_37", "hint/hint_64637_fall", "hint/hint_64637_books",
             "hint/hint_84_down", "hint/hint_84_up", "hint/hint_94",
             "escape/overworld", "escape/all_levels"
     );
@@ -111,7 +113,12 @@ public class AdvancementManager {
 
     public void grantExitHint(Player player, String currentLevelId, String targetLevelId,
                               String exitTriggerType) {
-        NamespacedKey hintKey = exitHintKeys.get(currentLevelId + ":" + targetLevelId);
+        // Try specific key first (currentLevel:targetLevel:exitType) for disambiguation,
+        // then fall back to generic key (currentLevel:targetLevel)
+        NamespacedKey hintKey = exitHintKeys.get(currentLevelId + ":" + targetLevelId + ":" + exitTriggerType);
+        if (hintKey == null) {
+            hintKey = exitHintKeys.get(currentLevelId + ":" + targetLevelId);
+        }
         if (hintKey != null) {
             grant(player, hintKey);
         }
