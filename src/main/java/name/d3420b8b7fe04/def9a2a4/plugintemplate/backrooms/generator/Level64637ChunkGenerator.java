@@ -60,6 +60,12 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
     // Wrap teleportation offset (layer 0 ↔ layer 6, identical rooms)
     public static final int WRAP_OFFSET = 6 * FLOOR_SPACING; // 60
 
+    // Void staircase extension for all-layer staircases
+    private static final int VOID_EXTEND_REVOLUTIONS = 5;
+    private static final int VOID_EXTENSION = VOID_EXTEND_REVOLUTIONS * 6;  // 30 blocks
+    private static final int VOID_BOTTOM_Y = BASE_Y - FLOOR_SPACING - VOID_EXTENSION;  // 40
+    private static final int VOID_TOP_Y = CAP_MAX_Y + FLOOR_SPACING + VOID_EXTENSION;  // 193
+
     public enum RoomType { EMPTY, PILLAR, STAIRCASE }
 
     public Level64637ChunkGenerator(NamespacedKey biomeKey) {
@@ -160,6 +166,21 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
         // Place wrap slabs in the base and cap shafts (after bedrock so they aren't overwritten)
         // Cap slabs skip the ceiling hole area (see inCeilingHole guard)
         placeWrapSlabs(chunkData, chunkX, chunkZ, seed, cellX, cellZ);
+
+        // Build void staircase extensions for all-layer staircases
+        if (isStaircase(seed, cellX, cellZ) && getStaircaseSpan(seed, cellX, cellZ) >= NUM_LAYERS) {
+            // Below: extend from below the initial fill region down into void
+            buildVoidShaftEnclosure(chunkData, VOID_BOTTOM_Y, BASE_Y - FLOOR_SPACING,
+                                    chunkX, chunkZ, true);
+            placeVoidStairSlabs(chunkData, VOID_BOTTOM_Y, BASE_Y - FLOOR_SPACING,
+                                chunkX, chunkZ);
+
+            // Above: extend from above the initial fill region up into void
+            buildVoidShaftEnclosure(chunkData, CAP_MAX_Y + FLOOR_SPACING, VOID_TOP_Y,
+                                    chunkX, chunkZ, false);
+            placeVoidStairSlabs(chunkData, CAP_MAX_Y + FLOOR_SPACING, VOID_TOP_Y,
+                                chunkX, chunkZ);
+        }
     }
 
     /**
@@ -203,6 +224,88 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                 if ((adjX && inRangeZ) || (adjZ && inRangeX)) {
                     for (int y = yMin; y < yMax; y++) {
                         data.setBlock(x, y, z, Material.OAK_PLANKS);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Builds a shaft enclosure in void space for all-layer staircases.
+     * Places oak planks walls around the 8x8 perimeter (STAIR_MIN-1 to STAIR_MAX+1),
+     * clears the 6x6 interior to air, and places a solid cap at the terminal Y.
+     */
+    private void buildVoidShaftEnclosure(ChunkData data, int yMin, int yMax,
+                                          int chunkX, int chunkZ, boolean capAtBottom) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                int localX = Math.floorMod(worldX, CELL_SIZE);
+                int localZ = Math.floorMod(worldZ, CELL_SIZE);
+
+                boolean inInterior = localX >= STAIR_MIN && localX <= STAIR_MAX
+                                  && localZ >= STAIR_MIN && localZ <= STAIR_MAX;
+                boolean adjX = localX == STAIR_MIN - 1 || localX == STAIR_MAX + 1;
+                boolean adjZ = localZ == STAIR_MIN - 1 || localZ == STAIR_MAX + 1;
+                boolean inRangeX = localX >= STAIR_MIN - 1 && localX <= STAIR_MAX + 1;
+                boolean inRangeZ = localZ >= STAIR_MIN - 1 && localZ <= STAIR_MAX + 1;
+                boolean isWall = (adjX && inRangeZ) || (adjZ && inRangeX);
+
+                if (isWall) {
+                    for (int y = yMin; y < yMax; y++) {
+                        data.setBlock(x, y, z, Material.OAK_PLANKS);
+                    }
+                } else if (inInterior) {
+                    for (int y = yMin; y < yMax; y++) {
+                        data.setBlock(x, y, z, Material.AIR);
+                    }
+                }
+
+                // Solid cap to hide the void edge
+                if (inInterior || isWall) {
+                    int capY = capAtBottom ? yMin : yMax - 1;
+                    data.setBlock(x, capY, z, Material.OAK_PLANKS);
+                }
+            }
+        }
+    }
+
+    /**
+     * Places spiral stair slabs in the void extension region for all-layer staircases.
+     * Continues the spiral pattern using the same offset/revolution formula.
+     */
+    private void placeVoidStairSlabs(ChunkData data, int yMin, int yMax,
+                                      int chunkX, int chunkZ) {
+        int startY = BASE_Y + REL_AIR_MIN;
+
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int worldX = chunkX * 16 + x;
+                int worldZ = chunkZ * 16 + z;
+                int localX = Math.floorMod(worldX, CELL_SIZE);
+                int localZ = Math.floorMod(worldZ, CELL_SIZE);
+
+                if (localX < STAIR_MIN || localX > STAIR_MAX
+                        || localZ < STAIR_MIN || localZ > STAIR_MAX) continue;
+
+                int sx = localX - STAIR_MIN;
+                int sz = localZ - STAIR_MIN;
+                int offset = STAIR_OFFSET[sz][sx];
+                if (offset == -1) continue; // center shaft
+
+                boolean isTop = STAIR_IS_TOP[sz][sx];
+                Slab slab = (Slab) Material.OAK_SLAB.createBlockData();
+                slab.setType(isTop ? Slab.Type.TOP : Slab.Type.BOTTOM);
+
+                // Compute revolution range that could produce blockY in [yMin, yMax)
+                int rMin = (int) Math.floor((double) (yMin - startY - offset) / 6.0);
+                int rMax = (int) Math.ceil((double) (yMax - startY - offset) / 6.0);
+
+                for (int r = rMin; r <= rMax; r++) {
+                    int blockY = startY + offset + 6 * r;
+                    if (blockY >= yMin && blockY < yMax) {
+                        data.setBlock(x, blockY, z, slab);
                     }
                 }
             }
