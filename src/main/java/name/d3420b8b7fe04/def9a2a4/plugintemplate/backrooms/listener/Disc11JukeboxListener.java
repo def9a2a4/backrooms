@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
@@ -13,6 +14,12 @@ import org.bukkit.event.player.PlayerInteractEvent;
  */
 public class Disc11JukeboxListener implements Listener {
 
+    private final AdvancementManager advancementManager;
+
+    public Disc11JukeboxListener(AdvancementManager advancementManager) {
+        this.advancementManager = advancementManager;
+    }
+
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getClickedBlock() == null) return;
@@ -24,6 +31,7 @@ public class Disc11JukeboxListener implements Listener {
         event.setCancelled(true);
         block.setType(Material.AIR);
         block.getWorld().createExplosion(block.getLocation(), 6.0f, false, true);
+        advancementManager.grantDisc11Hint(event.getPlayer());
         // Guaranteed kill regardless of armor/health
         event.getPlayer().setHealth(0.0);
     }

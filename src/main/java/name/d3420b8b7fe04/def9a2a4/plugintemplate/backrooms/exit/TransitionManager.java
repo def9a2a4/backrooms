@@ -78,9 +78,12 @@ public class TransitionManager {
         if ("overworld".equals(targetId)) {
             exit.playTransitionSequence(player, () -> {
                 try {
+                    String currentLevelId = currentLevel.getId();
+                    String exitType = exit.getId();
                     returnToOverworld(player, state, currentLevel);
                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
                         if (player.isOnline()) {
+                            advancementManager.grantExitHint(player, currentLevelId, "overworld", exitType);
                             advancementManager.grantEscape(player);
                         }
                     }, 1L);
@@ -112,8 +115,11 @@ public class TransitionManager {
                 player.teleport(spawn);
                 state.setCurrentLevelId(targetId);
                 targetLevel.onPlayerEnter(player, state);
+                String fromLevelId = currentLevel.getId();
+                String exitType = exit.getId();
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     if (player.isOnline()) {
+                        advancementManager.grantExitHint(player, fromLevelId, targetId, exitType);
                         advancementManager.grantLevelDiscovery(player, targetId);
                     }
                 }, 1L);

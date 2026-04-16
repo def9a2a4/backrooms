@@ -7,7 +7,6 @@ import org.bukkit.advancement.AdvancementProgress;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,10 +20,11 @@ public class AdvancementManager {
     private final NamespacedKey rootKey = key("root");
     private final NamespacedKey escapeKey = key("escape/overworld");
     private final NamespacedKey allLevelsKey = key("escape/all_levels");
+    private final NamespacedKey gardenKey = key("level/level_1_garden");
 
     private static final Set<String> ALL_LEVEL_IDS = Set.of(
             "level_0", "level_1", "level_2", "level_3", "level_4",
-            "level_5", "level_7", "level_37", "level_64637", "level_94"
+            "level_5", "level_7", "level_37", "level_64637", "level_94", "level_84"
     );
 
     private final Map<String, NamespacedKey> entryKeys = Map.of(
@@ -32,7 +32,8 @@ public class AdvancementManager {
             "void_fall", key("entry/void"),
             "bed_anomaly", key("entry/bed"),
             "aether_portal", key("entry/aether"),
-            "herobrine_shrine", key("entry/shrine")
+            "herobrine_shrine", key("entry/shrine"),
+            "twilight_portal", key("entry/twilight")
     );
 
     private final Map<String, NamespacedKey> levelKeys = Map.ofEntries(
@@ -45,21 +46,33 @@ public class AdvancementManager {
             Map.entry("level_7", key("level/level_7")),
             Map.entry("level_37", key("level/level_37")),
             Map.entry("level_64637", key("level/level_64637")),
-            Map.entry("level_94", key("level/level_94"))
+            Map.entry("level_94", key("level/level_94")),
+            Map.entry("level_84", key("level/level_84"))
     );
 
-    private final Map<String, List<NamespacedKey>> hintKeys = Map.ofEntries(
-            Map.entry("level_0", List.of(key("hint/hint_0"))),
-            Map.entry("level_1", List.of(key("hint/hint_1_down"), key("hint/hint_1_up"))),
-            Map.entry("level_2", List.of(key("hint/hint_2"))),
-            Map.entry("level_3", List.of(key("hint/hint_3"))),
-            Map.entry("level_4", List.of(key("hint/hint_4"))),
-            Map.entry("level_5", List.of(key("hint/hint_5"))),
-            Map.entry("level_7", List.of(key("hint/hint_7"))),
-            Map.entry("level_37", List.of(key("hint/hint_37"))),
-            Map.entry("level_64637", List.of(key("hint/hint_64637_books"), key("hint/hint_64637_fall"))),
-            Map.entry("level_94", List.of(key("hint/hint_94")))
+    // Exit hints: keyed by "currentLevel:targetLevel" or "currentLevel:exitType" for ambiguous cases
+    private final Map<String, NamespacedKey> exitHintKeys = Map.ofEntries(
+            Map.entry("level_0:level_1", key("hint/hint_0")),
+            Map.entry("level_1:level_2", key("hint/hint_1_down")),
+            Map.entry("level_1:level_94", key("hint/hint_1_up")),
+            Map.entry("level_2:level_37", key("hint/hint_2")),
+            Map.entry("level_3:level_4", key("hint/hint_3")),
+            Map.entry("level_3:level_5", key("hint/hint_3")),
+            Map.entry("level_3:level_7", key("hint/hint_3")),
+            Map.entry("level_3:level_64637", key("hint/hint_3")),
+            Map.entry("level_4:level_3", key("hint/hint_4")),
+            Map.entry("level_7:overworld", key("hint/hint_7")),
+            Map.entry("level_37:level_3", key("hint/hint_37")),
+            // L64637 has two exits to overworld — distinguished by trigger type
+            Map.entry("level_64637:collect_items", key("hint/hint_64637_books")),
+            Map.entry("level_64637:fall_distance", key("hint/hint_64637_fall")),
+            Map.entry("level_84:level_4", key("hint/hint_84_down")),
+            Map.entry("level_84:level_3", key("hint/hint_84_up"))
     );
+
+    // Direct hint keys for special triggers (L5 jukebox, L94 cascade)
+    private final NamespacedKey hint5Key = key("hint/hint_5");
+    private final NamespacedKey hint94Key = key("hint/hint_94");
 
     public AdvancementManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -79,22 +92,44 @@ public class AdvancementManager {
         if (discoveryKey != null) {
             grant(player, discoveryKey);
         }
+        checkAllLevelsVisited(player);
+    }
 
-        // Schedule hints after a short delay so toasts don't overlap
-        List<NamespacedKey> hints = hintKeys.get(levelId);
-        if (hints != null) {
-            int delay = 60; // 3 seconds
-            for (NamespacedKey hintKey : hints) {
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (player.isOnline()) {
-                        grant(player, hintKey);
-                    }
-                }, delay);
-                delay += 40; // stagger multiple hints
+    /**
+     * Grants the hint advancement for the exit used.
+     * For most levels, the hint is determined by currentLevel + targetLevel.
+     * For L64637 (two exits to overworld), pass the exit trigger type instead.
+     */
+    public void grantExitHint(Player player, String currentLevelId, String targetLevelId,
+                              String exitTriggerType) {
+        // For L64637 → overworld, use trigger type to distinguish book vs fall exit
+        if ("level_64637".equals(currentLevelId) && "overworld".equals(targetLevelId)) {
+            NamespacedKey hintKey = exitHintKeys.get("level_64637:" + exitTriggerType);
+            if (hintKey != null) {
+                grant(player, hintKey);
             }
+            return;
         }
 
-        checkAllLevelsVisited(player);
+        NamespacedKey hintKey = exitHintKeys.get(currentLevelId + ":" + targetLevelId);
+        if (hintKey != null) {
+            grant(player, hintKey);
+        }
+    }
+
+    /** Grant hint_5 — L5 jukebox death (called from Disc11JukeboxListener). */
+    public void grantDisc11Hint(Player player) {
+        grant(player, hint5Key);
+    }
+
+    /** Grant hint_94 — L94 barrier cascade (called from Level94Listener). */
+    public void grantSkyblockHint(Player player) {
+        grant(player, hint94Key);
+    }
+
+    /** Grant the garden discovery advancement (called from Level1GardenEffectListener). */
+    public void grantGardenDiscovery(Player player) {
+        grant(player, gardenKey);
     }
 
     public void grantEscape(Player player) {

@@ -190,7 +190,7 @@ public class BackroomsPlugin {
         eventScheduler.start();
         entitySpawner.start();
         transitionManager.start();
-        gardenEffectListener = new Level1GardenEffectListener(plugin);
+        gardenEffectListener = new Level1GardenEffectListener(plugin, advancementManager);
         gardenEffectListener.start();
 
         // 8. Register Bukkit listeners
@@ -200,14 +200,14 @@ public class BackroomsPlugin {
                 new ExitEventListener(levelRegistry, playerStateManager, transitionManager), plugin);
         Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
         Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin, loadLobbyBookConfig()), plugin);
-        Bukkit.getPluginManager().registerEvents(new Disc11JukeboxListener(), plugin);
+        Bukkit.getPluginManager().registerEvents(new Disc11JukeboxListener(advancementManager), plugin);
         Bukkit.getPluginManager().registerEvents(new ServerRoomLecternListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryWrapListener(), plugin);
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(
                 new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level94Listener(
-                        plugin, levelRegistry, playerStateManager,
+                        plugin, levelRegistry, playerStateManager, advancementManager,
                         loadLevelString("level_94", "transition_message",
                                 "\u00a7c[ERR] \u00a77Reality breach detected. Rerouting...")), plugin);
 

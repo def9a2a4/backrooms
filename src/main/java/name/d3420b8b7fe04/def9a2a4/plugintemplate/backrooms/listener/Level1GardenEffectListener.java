@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -20,10 +21,12 @@ public class Level1GardenEffectListener {
     private static final int CHECK_INTERVAL = 40; // 2 seconds
 
     private final JavaPlugin plugin;
+    private final AdvancementManager advancementManager;
     private BukkitTask task;
 
-    public Level1GardenEffectListener(JavaPlugin plugin) {
+    public Level1GardenEffectListener(JavaPlugin plugin, AdvancementManager advancementManager) {
         this.plugin = plugin;
+        this.advancementManager = advancementManager;
     }
 
     public void start() {
@@ -47,6 +50,7 @@ public class Level1GardenEffectListener {
                 int worldZ = player.getLocation().getBlockZ();
 
                 if (isGardenZone(seed, worldX, worldZ)) {
+                    advancementManager.grantGardenDiscovery(player);
                     player.addPotionEffect(new PotionEffect(
                             PotionEffectType.NAUSEA, NAUSEA_DURATION, 0, true, false, false));
                 }

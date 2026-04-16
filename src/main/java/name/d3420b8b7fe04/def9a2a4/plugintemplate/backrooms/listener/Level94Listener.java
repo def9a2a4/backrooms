@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level94ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
@@ -40,6 +41,7 @@ public class Level94Listener implements Listener {
     private final JavaPlugin plugin;
     private final LevelRegistry levelRegistry;
     private final PlayerStateManager playerStateManager;
+    private final AdvancementManager advancementManager;
     private final String transitionMessage;
 
     private final Set<UUID> fallCooldown = new HashSet<>();
@@ -47,10 +49,13 @@ public class Level94Listener implements Listener {
     private boolean chestPopulated = false;
 
     public Level94Listener(JavaPlugin plugin, LevelRegistry levelRegistry,
-                           PlayerStateManager playerStateManager, String transitionMessage) {
+                           PlayerStateManager playerStateManager,
+                           AdvancementManager advancementManager,
+                           String transitionMessage) {
         this.plugin = plugin;
         this.levelRegistry = levelRegistry;
         this.playerStateManager = playerStateManager;
+        this.advancementManager = advancementManager;
         this.transitionMessage = transitionMessage;
         instance = this;
     }
@@ -286,6 +291,9 @@ public class Level94Listener implements Listener {
             if (targetLevel != null) {
                 targetLevel.onPlayerEnter(player, state);
             }
+
+            advancementManager.grantSkyblockHint(player);
+            advancementManager.grantLevelDiscovery(player, "level_3");
 
             animating.remove(uuid);
 
