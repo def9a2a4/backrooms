@@ -28,6 +28,7 @@ public class HerobrineShrineEntry implements EntryTrigger {
     private String entryMessage = "\u00a74\u00a7oYou feel a presence watching you...";
     private Set<String> enabledWorlds = new HashSet<>();
     private final JavaPlugin plugin;
+    private Block pendingCleanupBlock;
 
     public HerobrineShrineEntry(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -57,14 +58,8 @@ public class HerobrineShrineEntry implements EntryTrigger {
 
         if (!isShrineValid(clickedBlock)) return null;
 
-        // Cancel the flint & steel use and extinguish fire on next tick
-        interact.setCancelled(true);
-        Block aboveNetherrack = clickedBlock.getRelative(BlockFace.UP);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (aboveNetherrack.getType() == Material.FIRE) {
-                aboveNetherrack.setType(Material.AIR);
-            }
-        }, 1L);
+        // Let the fire light — we'll clean it up during the entry sequence
+        pendingCleanupBlock = clickedBlock.getRelative(BlockFace.UP);
 
         return targetLevel;
     }
@@ -104,6 +99,18 @@ public class HerobrineShrineEntry implements EntryTrigger {
         if (blindnessDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, blindnessDuration, 1, false, false));
         if (blindnessDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, blindnessDuration, 0, false, false));
         player.sendMessage(entryMessage);
+
+        // Extinguish the fire partway through the sequence
+        if (pendingCleanupBlock != null) {
+            Block cleanup = pendingCleanupBlock;
+            pendingCleanupBlock = null;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (cleanup.getType() == Material.FIRE) {
+                    cleanup.setType(Material.AIR);
+                }
+            }, Math.max(1, delayTicks - 5));
+        }
+
         Bukkit.getScheduler().runTaskLater(plugin, onComplete, delayTicks);
     }
 

@@ -87,8 +87,12 @@ public class LobbyBookshelfListener implements Listener {
                 Block block = chunk.getBlock(x, AIR_MIN_Y, z);
                 if (block.getType() != Material.CHISELED_BOOKSHELF) continue;
 
-                // Force tile entity creation on freshly-generated blocks
-                block.setBlockData(block.getBlockData(), false);
+                // Force fresh tile entity: destroy and recreate the block
+                // (re-applying same data doesn't create a new tile entity,
+                //  but cycling through AIR does — same reason Library listener works)
+                org.bukkit.block.data.BlockData savedData = block.getBlockData();
+                block.setType(Material.AIR, false);
+                block.setBlockData(savedData, false);
 
                 if (block.getState() instanceof ChiseledBookshelf shelf) {
                     // Fill 1-3 random slots with written books

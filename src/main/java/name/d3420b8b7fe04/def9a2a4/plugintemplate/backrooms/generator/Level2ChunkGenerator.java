@@ -27,9 +27,7 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
         super(biomeKey);
     }
 
-    private static final int BEDROCK_Y = -15;
-    private static final int STONE_Y = -5;      // 10 layers of bedrock below this
-    private static final int FLOOR_Y = 0;       // 5 layers of stone below this
+    private static final int FLOOR_Y = 0;
     private static final int FLOOR_HEIGHT = 8;
     private static final int AIR_MIN_Y = 8;
     private static final int CEILING_LOW = 11;
@@ -50,10 +48,6 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
         long seed = worldInfo.getSeed();
-
-        // Sub-floor: 10 layers of bedrock, then 5 layers of stone
-        chunkData.setRegion(0, BEDROCK_Y, 0, 16, STONE_Y, 16, Material.BEDROCK);
-        chunkData.setRegion(0, STONE_Y, 0, 16, FLOOR_Y, 16, Material.DEEPSLATE);
 
         // Floor
         chunkData.setRegion(0, FLOOR_Y, 0, 16, FLOOR_HEIGHT, 16, Material.DEEPSLATE);
@@ -448,18 +442,14 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
 
         // Very rare copper trapdoor tunnel opening (~2% of machinery rooms)
         // Trapdoor in the floor → shaft carved down through floor, stone, and bedrock to void
-        if (Math.floorMod(leverHash + 1, 50) == 0) {
+        if (Math.floorMod(leverHash + 1, 10) == 0) {
             int tx = centerWorldX - 3 - chunkX * 16;
             int tz = centerWorldZ - chunkZ * 16;
             if (tx >= 0 && tx < 16 && tz >= 0 && tz < 16) {
                 // Trapdoor at floor level
                 chunkData.setBlock(tx, AIR_MIN_Y, tz, Material.COPPER_TRAPDOOR);
-                // Carve 1x1 shaft all the way down through floor, stone, and bedrock
-                for (int y = FLOOR_HEIGHT - 1; y >= BEDROCK_Y; y--) {
-                    chunkData.setBlock(tx, y, tz, Material.AIR);
-                }
-                // Air below bedrock for void fall
-                for (int y = BEDROCK_Y - 1; y >= BEDROCK_Y - 5; y--) {
+                // Carve 1x1 shaft down through floor to Y=0
+                for (int y = FLOOR_HEIGHT - 1; y >= FLOOR_Y; y--) {
                     chunkData.setBlock(tx, y, tz, Material.AIR);
                 }
             }

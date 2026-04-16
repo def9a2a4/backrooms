@@ -27,6 +27,7 @@ public class AetherPortalEntry implements EntryTrigger {
     private int delayTicks = 40;
     private Set<String> enabledWorlds = new HashSet<>();
     private final JavaPlugin plugin;
+    private Block pendingCleanupBlock;
 
     public AetherPortalEntry(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -58,13 +59,8 @@ public class AetherPortalEntry implements EntryTrigger {
 
         if (!isInsideGlowstonePortalFrame(waterBlock)) return null;
 
-        // Cancel the bucket use and remove water on next tick
-        interact.setCancelled(true);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (waterBlock.getType() == Material.WATER) {
-                waterBlock.setType(Material.AIR);
-            }
-        }, 1L);
+        // Let the water place — we'll clean it up during the entry sequence
+        pendingCleanupBlock = waterBlock;
 
         return targetLevel;
     }
@@ -162,6 +158,18 @@ public class AetherPortalEntry implements EntryTrigger {
     public void playEntrySequence(Player player, Runnable onComplete) {
         if (blindnessDuration > 0) player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, blindnessDuration, 1, false, false));
         player.sendMessage("\u00a7b\u00a7oThe light engulfs you...");
+
+        // Remove the water partway through the sequence
+        if (pendingCleanupBlock != null) {
+            Block cleanup = pendingCleanupBlock;
+            pendingCleanupBlock = null;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (cleanup.getType() == Material.WATER) {
+                    cleanup.setType(Material.AIR);
+                }
+            }, Math.max(1, delayTicks - 5));
+        }
+
         Bukkit.getScheduler().runTaskLater(plugin, onComplete, delayTicks);
     }
 
