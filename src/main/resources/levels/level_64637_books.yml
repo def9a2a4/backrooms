@@ -9,7 +9,7 @@
 gibberish_chars: "abcdefghijklmnopqrstuvwxyz .,;:'-"
 
 # Chance (0.0-1.0) that a book contains a cursed snippet instead of pure gibberish
-cursed_chance: 0.15
+cursed_chance: 0.05
 
 # Cursed snippets — one is randomly embedded in a page of gibberish
 cursed_snippets:

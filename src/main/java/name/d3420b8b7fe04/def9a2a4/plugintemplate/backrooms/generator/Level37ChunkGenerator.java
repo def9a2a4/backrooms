@@ -1178,24 +1178,24 @@ public class Level37ChunkGenerator extends BackroomsChunkGenerator {
 
         int pipeY = FLOOR_HEIGHT - depth;
 
-        // Pipe starts at the +X interior edge and goes outward for 10 blocks
-        int pipeStartX = CELL_SIZE - WALL_THICK; // localX = 22 (interior edge)
-        int pipeEndX = pipeStartX + 10;           // localX = 32 (extends into next cell)
+        // Pipe starts at the +X pool edge and goes outward for 10 blocks
+        int pipeStartX = CELL_SIZE - WALL_THICK - 2 - 1; // localX = 19 (last pool water block)
+        int pipeEndX = pipeStartX + 10;                   // localX = 29 (extends into next cell)
 
         // Skip blocks outside the pipe range
         if (localX < pipeStartX || localX >= pipeEndX) return;
 
-        // For the source cell's own call, only handle localX < CELL_SIZE (22-23)
-        // For the neighbor call, only handle localX >= CELL_SIZE (24-31, i.e. 0-7 in this cell)
+        // For the source cell's own call, only handle localX < CELL_SIZE (19-23)
+        // For the neighbor call, only handle localX >= CELL_SIZE (24-28, i.e. 0-4 in this cell)
         if (!fromNeighbor && localX >= CELL_SIZE) return;
         if (fromNeighbor && localX < CELL_SIZE) return;
 
-        // Horizontal section
-        chunkData.setBlock(x, pipeY, z, Material.WATER);
+        // Horizontal section (one block above pool floor so it's in the wall, not the floor)
+        chunkData.setBlock(x, pipeY + 1, z, Material.WATER);
 
         // Vertical drop at the last block of the pipe
         if (localX == pipeEndX - 1) {
-            for (int y = pipeY - 1; y >= FLOOR_Y - 2; y--) {
+            for (int y = pipeY; y >= FLOOR_Y - 2; y--) {
                 chunkData.setBlock(x, y, z, Material.WATER);
             }
         }

@@ -300,12 +300,14 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
                 if (roomNoise <= 0.3 || roomNoise > 0.7) continue; // skip non-rooms and boiler rooms
 
-                // TODO: restore rarity after debugging — was Math.floorMod(leverHash + 1, 10) != 0
-                // long leverHash = (long) worldX * 198491317L ^ (long) worldZ * 6542989L;
-
                 int tx = worldX - 3 - chunkX * 16;
                 int tz = worldZ - chunkZ * 16;
                 if (tx < 0 || tx >= 16 || tz < 0 || tz >= 16) continue;
+
+                int trapdoorChunkX = Math.floorDiv(worldX - 3, 16);
+                int trapdoorChunkZ = Math.floorDiv(worldZ, 16);
+                long chunkHash = (long) trapdoorChunkX * 198491317L ^ (long) trapdoorChunkZ * 6542989L;
+                if (Math.floorMod(chunkHash, 20) != 0) continue;
 
                 // Trapdoor at floor level
                 chunkData.setBlock(tx, AIR_MIN_Y, tz, Material.COPPER_TRAPDOOR);

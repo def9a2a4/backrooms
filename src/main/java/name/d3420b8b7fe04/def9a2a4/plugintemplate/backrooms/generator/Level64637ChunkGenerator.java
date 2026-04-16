@@ -660,7 +660,7 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
 
         public static final BookConfig DEFAULT = new BookConfig(
                 "abcdefghijklmnopqrstuvwxyz .,;:'-",
-                0.15,
+                0.05,
                 List.of("you have been here before and you will be here again"),
                 List.of("FOR YOU"),
                 List.of("The Librarian"),
