@@ -104,7 +104,7 @@ exit_triggers:
       message: "The water pulls you under..."
   - type: above_y
     target_level: level_94
-    y_threshold: 30
+    y_threshold: 27
     transition:
       blindness_ticks: 60
       nausea_ticks: 60

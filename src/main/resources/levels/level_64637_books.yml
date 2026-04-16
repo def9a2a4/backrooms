@@ -1,6 +1,9 @@
 # ─── Library of Babel — Book Text Configuration ───
 # All text content for books found in chiseled bookshelves on Level 64637.
 # Server admins can freely add, remove, or edit entries here.
+# Cursed snippets are embedded within pages of random gibberish characters.
+# Longer snippets are more unsettling because the reader has to process them
+# surrounded by meaningless text — like finding a scream in a sea of static.
 
 # Characters used to generate random gibberish pages (Babel-style)
 gibberish_chars: "abcdefghijklmnopqrstuvwxyz .,;:'-"
@@ -10,6 +13,7 @@ cursed_chance: 0.15
 
 # Cursed snippets — one is randomly embedded in a page of gibberish
 cursed_snippets:
+  # --- Original short snippets ---
   - "you have been here before and you will be here again"
   - "the exit was removed from the index on purpose"
   - "someone is reading over your shoulder right now"
@@ -25,21 +29,33 @@ cursed_snippets:
   - "you are not the first to stand in this exact spot"
   - "this room was not here a moment ago"
   - "the walls are listening"
+  # --- Minecraft-specific ---
   - "the seed was set to zero and the library grew from it"
   - "this world was last saved by Herobrine"
   - "the index lists a book with your coordinates as the title"
-  - "every book you have ever read is a translation of one found here"
   - "the library predates the server"
-  - "there is a book here that describes your death. it has been checked out"
-  - "the catalogue has a section for books that will be written tomorrow"
-  - "the librarian is not a person. the librarian is the library"
-  - "you will put this book back on the shelf and forget what it said"
-  - "the library contains a complete copy of itself including this sentence"
-  - "the gaps between the shelves are getting narrower"
-  - "there is no ground floor. there is no top floor"
-  - "the lights flicker in a pattern. the pattern is your heartbeat"
   - "one of these books contains the command to shut down the server"
-  - "the library remembers every player who has ever entered. none have left"
+  # --- Longer, more developed passages ---
+  - "every book you have ever read is a translation of a book found here. the original is always worse. the original contains the parts that were cut for your safety."
+  - "there is a book here that describes your death. it has been checked out. the borrower's name is your name. the due date was yesterday."
+  - "the catalogue has a section for books that will be written tomorrow. it is the largest section. it is growing faster than the rest of the library combined."
+  - "the librarian is not a person. the librarian is a function of the library. it indexes. it shelves. it watches. it does not blink because it has no eyes. it does not need eyes."
+  - "you will put this book back on the shelf and forget what it said. you will walk three aisles over and pick up another book. it will contain this same sentence. you will not notice."
+  - "the library contains a complete copy of itself, including this sentence, including the copy, including the copy of the copy. the recursion has no bottom."
+  - "the gaps between the shelves are getting narrower. you have not noticed because you have been getting narrower too. you will fit perfectly between them soon."
+  - "there is no ground floor. there is no top floor. the stairs go in both directions forever. the landings are numbered but the numbers are not sequential and some of them are negative."
+  - "the lights flicker in a pattern. the pattern is your heartbeat. when your heartbeat changes, the lights adjust. they have been synchronized since you arrived. you did not consent to this."
+  - "the library remembers every player who has ever entered. their names are written in a book on the top shelf of aisle 0. the book has no last page. none of the names have been crossed out. none have left."
+  - "you are reading this because the library wanted you to find this book on this shelf at this moment. every book you passed over was placed there to guide you here. you have no free will in the library. you only have the illusion of browsing."
+  - "there is a section of the library where the books are warm to the touch. the pages pulse. the ink moves when you are not looking directly at it. the librarians do not go there. the section is growing."
+  - "the oldest book in the library predates language. its pages are blank. or rather, its pages contain a language so old that your eyes slide off it. you have read it before. you will read it again. you will never remember what it says."
+  - "every book in the library has the same number of pages. they are all the same book, translated into every possible arrangement of characters. one arrangement is your life story. most are gibberish. you cannot tell which is which."
+  - "the library does not end. this is not a metaphor or an exaggeration. it does not end. it extends in all directions past the boundaries of the world. the world was built inside the library, not the other way around."
+  - "the book you are holding is aware that you are holding it. not in the way a person is aware. in the way a mousetrap is aware of the mouse. you are already caught. the pages are the jaws."
+  - "somewhere in this library is a book that contains only the word 'help,' repeated for every page. it was not written. it was grown. the shelf it sits on is warmer than the others."
+  - "the catalogue uses a notation that no one invented. the librarians follow it because it works. it describes the location of every book, including books that have not been written yet. it is always correct."
+  - "if you rearrange the gibberish on this page it spells a name. the name is yours. every page in every book spells a name. the library has enough pages for everyone. it has had enough pages since before there was anyone."
+  - "the last sentence of the last book on the last shelf of the last aisle reads: 'and then the library began.' this is not the last book. the library does not know which book is last. the library is afraid to find out."
 
 # Cursed book titles — rarely used instead of a gibberish title
 cursed_titles:
@@ -55,6 +71,9 @@ cursed_titles:
   - "EVERY BOOK CONTAINS THIS SENTENCE"
   - "THE LAST BOOK"
   - "README.TXT"
+  - "ERRATUM"
+  - "A COMPLETE HISTORY OF EVERYTHING"
+  - "THE BORROWER'S RECORD"
 
 # Cursed author names — rarely used instead of a gibberish author
 cursed_authors:
@@ -68,3 +87,5 @@ cursed_authors:
   - "HEROBRINE"
   - "Entity 303"
   - "jeb_"
+  - "The Library Itself"
+  - "A Future Version of You"

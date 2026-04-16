@@ -10,7 +10,7 @@ backrooms:
     suffocation_noclip:
       enabled: true
       damage_threshold: 16.0
-      target_level: level_64637
+      target_level: level_0
     void_fall:
       enabled: true
       target_level: level_64637
