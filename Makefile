@@ -40,6 +40,10 @@ server: build server-plugin-copy server-start
 .PHONY: all
 all: clean build server
 
+.PHONY: check-book-lengths
+check-book-lengths:
+	python3 scripts/check_book_lengths.py
+
 # =============================================================================
 # Test Server
 # =============================================================================
