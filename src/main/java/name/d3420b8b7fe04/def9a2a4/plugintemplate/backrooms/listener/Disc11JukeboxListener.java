@@ -3,9 +3,11 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 
 /**
@@ -28,11 +30,20 @@ public class Disc11JukeboxListener implements Listener {
         if (block.getType() != Material.JUKEBOX) return;
         if (!block.getWorld().getName().startsWith("bkrms_5")) return;
 
+        Player player = event.getPlayer();
+        if (player.isDead()) return;
+
         event.setCancelled(true);
         block.setType(Material.AIR);
         block.getWorld().createExplosion(block.getLocation(), 6.0f, false, true);
-        advancementManager.grantDisc11Hint(event.getPlayer());
+        advancementManager.grantDisc11Hint(player);
         // Guaranteed kill regardless of armor/health
-        event.getPlayer().setHealth(0.0);
+        player.setHealth(0.0);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        if (!event.getEntity().getWorld().getName().startsWith("bkrms_5")) return;
+        event.setDeathMessage(event.getEntity().getName() + " heard something");
     }
 }

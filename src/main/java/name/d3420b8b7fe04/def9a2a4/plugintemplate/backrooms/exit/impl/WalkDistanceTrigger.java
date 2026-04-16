@@ -27,9 +27,8 @@ public class WalkDistanceTrigger extends AbstractExitTrigger {
     @Override
     public boolean check(Player player, BackroomsPlayerState state) {
         Location spawn = player.getWorld().getSpawnLocation();
-        double dx = player.getLocation().getX() - spawn.getX();
-        double dz = player.getLocation().getZ() - spawn.getZ();
-        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
-        return horizontalDistance >= distanceBlocks;
+        double dx = Math.abs(player.getLocation().getX() - spawn.getX());
+        double dz = Math.abs(player.getLocation().getZ() - spawn.getZ());
+        return dx >= distanceBlocks && dz >= distanceBlocks;
     }
 }
