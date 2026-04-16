@@ -7,8 +7,8 @@
     "title": {"text": "The Lobby", "color": "yellow"},
     "description": {"text": "Mono-yellow fluorescent buzzing no exit", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
-    "show_toast": true,
-    "announce_to_chat": true
+    "show_toast": false,
+    "announce_to_chat": false
   },
   "criteria": {
     "impossible": {

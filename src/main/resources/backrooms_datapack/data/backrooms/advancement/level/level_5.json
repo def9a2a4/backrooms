@@ -7,8 +7,8 @@
     "title": {"text": "Disc 11", "color": "dark_gray"},
     "description": {"text": "The music stopped you didnt", "color": "gray", "italic": true, "obfuscated": true},
     "frame": "task",
-    "show_toast": true,
-    "announce_to_chat": true
+    "show_toast": false,
+    "announce_to_chat": false
   },
   "criteria": {
     "impossible": {

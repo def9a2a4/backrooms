@@ -1,5 +1,5 @@
 {
-  "parent": "backrooms:level/level_1",
+  "parent": "backrooms:level/level_1_garden",
   "display": {
     "icon": {
       "id": "minecraft:water_bucket"
