@@ -1,11 +1,13 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
 /**
@@ -18,6 +20,12 @@ public class LibraryWrapListener implements Listener {
 
     private static final double UPPER_THRESHOLD = Level64637ChunkGenerator.BASE_Y + 66.0;
     private static final double LOWER_THRESHOLD = Level64637ChunkGenerator.BASE_Y + 5.0;
+
+    private final JavaPlugin plugin;
+
+    public LibraryWrapListener(JavaPlugin plugin) {
+        this.plugin = plugin;
+    }
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
@@ -35,7 +43,16 @@ public class LibraryWrapListener implements Listener {
         } else {
             dest.setY(y + Level64637ChunkGenerator.WRAP_OFFSET);
         }
-        event.setTo(dest);
-        player.setVelocity(velocity);
+
+        // Cancel the move event and teleport directly — event.setTo() fights
+        // with Bukkit's post-event velocity recalculation, losing momentum.
+        event.setCancelled(true);
+        player.teleport(dest);
+        // Restore velocity next tick, after the teleport has been fully processed.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (player.isOnline()) {
+                player.setVelocity(velocity);
+            }
+        });
     }
 }
