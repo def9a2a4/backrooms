@@ -382,17 +382,10 @@ public class Level3ChunkGenerator extends BackroomsChunkGenerator {
         if (!commandBlockKinds.isEmpty()) {
             long cmdHash = posHash ^ 0xC0D_B10CL;
             if (Math.floorMod(cmdHash, commandBlockChance) == 0) {
-                // Command block ON TOP of the floor, lectern ON TOP of the command block
+                // Command block ON TOP of the floor, placeholder ON TOP for the listener
+                // to convert to LECTERN (type change forces tile entity creation).
                 chunkData.setBlock(x, FLOOR_HEIGHT + 1, z, Material.COMMAND_BLOCK);
-                try {
-                    org.bukkit.block.data.BlockData lecternData = Bukkit.createBlockData(Material.LECTERN);
-                    if (lecternData instanceof Directional d && d.getFaces().contains(facing)) {
-                        d.setFacing(facing);
-                    }
-                    chunkData.setBlock(x, FLOOR_HEIGHT + 2, z, lecternData);
-                } catch (Exception e) {
-                    chunkData.setBlock(x, FLOOR_HEIGHT + 2, z, Material.LECTERN);
-                }
+                chunkData.setBlock(x, FLOOR_HEIGHT + 2, z, Material.SMOOTH_STONE_SLAB);
             }
         }
     }

@@ -1,11 +1,13 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.ChiseledBookshelf;
 import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.type.Stairs;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -13,6 +15,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -68,52 +71,70 @@ public class LobbyBookshelfListener implements Listener {
         );
     }
 
+    private record ShelfCandidate(int x, int y, int z, BlockFace facing, long seed) {}
+
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
         if (!event.isNewChunk()) return;
         if (!event.getWorld().getName().startsWith("bkrms_0")) return;
 
         Chunk chunk = event.getChunk();
-        // Run on next tick to avoid tile entity issues during generation
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> populateChunk(chunk), 1L);
-    }
-
-    private void populateChunk(Chunk chunk) {
-        if (!chunk.isLoaded()) return;
-
         Random rng = new Random(chunk.getChunkKey() ^ 0xB00C5L);
 
-        // Scan for chiseled bookshelves at desk Y level
+        // Collect BOOKSHELF candidates during event (before deferring)
+        List<ShelfCandidate> candidates = new ArrayList<>();
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 Block block = chunk.getBlock(x, AIR_MIN_Y, z);
-                if (block.getType() != Material.CHISELED_BOOKSHELF) continue;
+                if (block.getType() != Material.BOOKSHELF) continue;
+                BlockFace facing = computeFacing(chunk, x, z);
+                candidates.add(new ShelfCandidate(x, AIR_MIN_Y, z, facing, rng.nextLong()));
+            }
+        }
+        if (candidates.isEmpty()) return;
 
-                // Capture facing, clear to AIR, then set fresh CHISELED_BOOKSHELF data.
-                // The type change (AIR → CHISELED_BOOKSHELF) forces tile entity creation.
-                BlockFace facing = (block.getBlockData() instanceof Directional d)
-                        ? d.getFacing() : BlockFace.NORTH;
-                block.setType(Material.AIR, false);
-                Directional fresh = (Directional) Material.CHISELED_BOOKSHELF.createBlockData();
-                fresh.setFacing(facing);
-                block.setBlockData(fresh, false);
+        // Deferred: convert BOOKSHELF → CHISELED_BOOKSHELF (type change forces tile entity)
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!chunk.isLoaded()) return;
+            for (ShelfCandidate c : candidates) {
+                Block block = chunk.getBlock(c.x, c.y, c.z);
+                if (block.getType() != Material.BOOKSHELF) continue;
+
+                Directional data = (Directional) Material.CHISELED_BOOKSHELF.createBlockData();
+                data.setFacing(c.facing);
+                block.setBlockData(data, false);
 
                 if (block.getState() instanceof ChiseledBookshelf shelf) {
-                    // Fill 2-5 random slots with written books
-                    int bookCount = 2 + rng.nextInt(4);
+                    Random bookRng = new Random(c.seed);
+                    int bookCount = 2 + bookRng.nextInt(4);
                     for (int i = 0; i < bookCount; i++) {
                         int slot;
                         int attempts = 0;
                         do {
-                            slot = rng.nextInt(6);
+                            slot = bookRng.nextInt(6);
                         } while (shelf.getInventory().getItem(slot) != null && ++attempts < 6);
                         if (attempts >= 6) break;
-                        shelf.getInventory().setItem(slot, createLoreBook(rng));
+                        shelf.getInventory().setItem(slot, createLoreBook(bookRng));
                     }
-                    shelf.update();
                 }
             }
-        }
+        });
+    }
+
+    /**
+     * Determines bookshelf facing by looking for an adjacent OAK_STAIRS block.
+     * The shelf faces 90° clockwise from the stair direction.
+     */
+    private BlockFace computeFacing(Chunk chunk, int x, int z) {
+        if (x > 0 && isStair(chunk, x - 1, z)) return BlockFace.NORTH;  // stair to west
+        if (z > 0 && isStair(chunk, x, z - 1)) return BlockFace.EAST;   // stair to north
+        if (x < 15 && isStair(chunk, x + 1, z)) return BlockFace.SOUTH; // stair to east
+        if (z < 15 && isStair(chunk, x, z + 1)) return BlockFace.WEST;  // stair to south
+        return BlockFace.NORTH;
+    }
+
+    private boolean isStair(Chunk chunk, int x, int z) {
+        return chunk.getBlock(x, AIR_MIN_Y, z).getBlockData() instanceof Stairs;
     }
 
     private ItemStack createLoreBook(Random rng) {

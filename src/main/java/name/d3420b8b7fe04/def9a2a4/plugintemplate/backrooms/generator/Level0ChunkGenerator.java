@@ -7,7 +7,6 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.Stairs;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
@@ -253,25 +252,25 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
         int z = baseZ + 1;
         int y = AIR_MIN_Y;
 
-        BlockFace stair0Face, stair1Face, shelfFace;
+        BlockFace stair0Face, stair1Face;
         int s0x, s0z, s1x, s1z, bx, bz;
 
         switch (orientation) {
             case 0 -> { // line along +X
                 s0x = x; s0z = z; s1x = x + 1; s1z = z; bx = x + 2; bz = z;
-                stair0Face = BlockFace.WEST; stair1Face = BlockFace.EAST; shelfFace = BlockFace.NORTH;
+                stair0Face = BlockFace.WEST; stair1Face = BlockFace.EAST;
             }
             case 1 -> { // line along +Z
                 s0x = x; s0z = z; s1x = x; s1z = z + 1; bx = x; bz = z + 2;
-                stair0Face = BlockFace.NORTH; stair1Face = BlockFace.SOUTH; shelfFace = BlockFace.EAST;
+                stair0Face = BlockFace.NORTH; stair1Face = BlockFace.SOUTH;
             }
             case 2 -> { // line along -X
                 s0x = x + 2; s0z = z; s1x = x + 1; s1z = z; bx = x; bz = z;
-                stair0Face = BlockFace.EAST; stair1Face = BlockFace.WEST; shelfFace = BlockFace.SOUTH;
+                stair0Face = BlockFace.EAST; stair1Face = BlockFace.WEST;
             }
             default -> { // line along -Z
                 s0x = x; s0z = z + 2; s1x = x; s1z = z + 1; bx = x; bz = z;
-                stair0Face = BlockFace.SOUTH; stair1Face = BlockFace.NORTH; shelfFace = BlockFace.WEST;
+                stair0Face = BlockFace.SOUTH; stair1Face = BlockFace.NORTH;
             }
         }
 
@@ -289,11 +288,9 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
         }
         chunkData.setBlock(s1x, y, s1z, stair1);
 
-        org.bukkit.block.data.BlockData shelf = Bukkit.createBlockData(Material.CHISELED_BOOKSHELF);
-        if (shelf instanceof Directional d) {
-            d.setFacing(shelfFace);
-        }
-        chunkData.setBlock(bx, y, bz, shelf);
+        // Place plain BOOKSHELF — the LobbyBookshelfListener converts it to
+        // CHISELED_BOOKSHELF at runtime, which forces proper tile entity creation.
+        chunkData.setBlock(bx, y, bz, Material.BOOKSHELF);
     }
 
     @Override
