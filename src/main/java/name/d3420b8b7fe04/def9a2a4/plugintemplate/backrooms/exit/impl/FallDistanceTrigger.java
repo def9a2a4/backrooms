@@ -59,10 +59,11 @@ public class FallDistanceTrigger extends AbstractExitTrigger {
             cumulative += delta;
             state.setCustomData(KEY_CUMULATIVE, String.valueOf(cumulative));
             return cumulative >= fallDistance;
-        } else {
-            // Ascended or stayed level — reset
+        } else if (delta < 0) {
+            // Ascended — reset
             state.setCustomData(KEY_CUMULATIVE, "0");
-            return false;
         }
+        // delta == 0 (standing still / horizontal movement): preserve cumulative
+        return false;
     }
 }
