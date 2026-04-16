@@ -40,7 +40,7 @@ public class TransitionManager {
     }
 
     public void start() {
-        tickTask = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
+        tickTask = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 1L);
     }
 
     public void stop() {
@@ -74,6 +74,10 @@ public class TransitionManager {
     public void performTransition(Player player, BackroomsPlayerState state,
                                   BackroomsLevel currentLevel, ExitTrigger exit) {
         if (!transitioning.add(player.getUniqueId())) return; // Already transitioning
+
+        // Reset all trigger counters (e.g. fall distance cumulative) immediately
+        // so nothing accumulates further during the transition sequence.
+        state.getCustomData().clear();
 
         String targetId = exit.getTargetLevelId();
 
@@ -115,6 +119,7 @@ public class TransitionManager {
                 currentLevel.onPlayerLeave(player, state);
                 Location spawn = findSpawnForLevel(targetLevel, targetWorld);
                 player.teleport(spawn);
+                SpawnFinder.clearFallDamage(player);
                 state.setCurrentLevelId(targetId);
                 targetLevel.onPlayerEnter(player, state);
                 String fromLevelId = currentLevel.getId();
@@ -138,8 +143,12 @@ public class TransitionManager {
         World targetWorld = levelRegistry.getWorld(targetLevel);
         if (targetWorld == null) return;
 
+        // Clear stale trigger state from any prior visit.
+        state.getCustomData().clear();
+
         Location spawn = findSpawnForLevel(targetLevel, targetWorld);
         player.teleport(spawn);
+        SpawnFinder.clearFallDamage(player);
         state.setCurrentLevelId(targetLevelId);
         targetLevel.onPlayerEnter(player, state);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -163,6 +172,9 @@ public class TransitionManager {
             spawnY = bGen.getSpawnY();
         }
 
+        if (radius == 0) {
+            return SpawnFinder.findSurfaceSpawn(targetWorld, 0, 0, spawnY);
+        }
         return SpawnFinder.findRandomSpawn(targetWorld, radius, spawnY, fixedSpawn);
     }
 
@@ -178,6 +190,7 @@ public class TransitionManager {
         }
 
         player.teleport(returnLoc);
+        SpawnFinder.clearFallDamage(player);
         playerStateManager.remove(player);
     }
 }

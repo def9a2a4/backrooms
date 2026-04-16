@@ -14,6 +14,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManag
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.SpawnFinder;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import net.md_5.bungee.api.ChatMessageType;
@@ -168,6 +169,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
             }
             BackroomsPlayerState state = playerStateManager.getOrCreate(player);
             player.teleport(targetWorld.getSpawnLocation());
+            SpawnFinder.clearFallDamage(player);
             state.setCurrentLevelId(levelId);
             player.sendMessage("Teleported to " + targetLevel.getDisplayName() + ".");
             return true;

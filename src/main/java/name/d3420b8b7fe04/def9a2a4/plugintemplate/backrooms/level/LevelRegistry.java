@@ -113,6 +113,7 @@ public class LevelRegistry {
             World overworld = Bukkit.getWorlds().get(0);
             for (var player : world.getPlayers()) {
                 player.teleport(overworld.getSpawnLocation());
+                SpawnFinder.clearFallDamage(player);
                 player.sendMessage("The Backrooms are being regenerated...");
             }
             worldToLevel.remove(world);

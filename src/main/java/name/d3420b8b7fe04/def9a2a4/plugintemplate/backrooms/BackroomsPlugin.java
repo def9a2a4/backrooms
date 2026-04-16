@@ -156,7 +156,6 @@ public class BackroomsPlugin {
         exitTriggerRegistry.register("collect_items", CollectItemsTrigger::new);
         exitTriggerRegistry.register("walk_distance", WalkDistanceTrigger::new);
         exitTriggerRegistry.register("powered_command_block", PoweredCommandBlockTrigger::new);
-        exitTriggerRegistry.register("lever_pipe", LeverPipeTrigger::new);
         exitTriggerRegistry.register("fall_distance", FallDistanceTrigger::new);
 
         // 4b. Register built-in entry triggers
@@ -204,7 +203,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(entryManager, plugin);
         Bukkit.getPluginManager().registerEvents(
                 new ExitEventListener(levelRegistry, playerStateManager, transitionManager), plugin);
-        Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry), plugin);
+        Bukkit.getPluginManager().registerEvents(new BackroomsListener(levelRegistry, playerStateManager), plugin);
         Bukkit.getPluginManager().registerEvents(new Disc11JukeboxListener(advancementManager), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryWrapListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new Level1WaterDripListener(plugin), plugin);

@@ -4,6 +4,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.Advancem
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level94ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.SpawnFinder;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.*;
@@ -286,6 +287,7 @@ public class Level94Listener implements Listener {
             }
 
             player.teleport(targetWorld.getSpawnLocation());
+            SpawnFinder.clearFallDamage(player);
             state.setCurrentLevelId("level_3");
 
             if (targetLevel != null) {

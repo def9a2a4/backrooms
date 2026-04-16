@@ -2,6 +2,9 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -28,6 +31,21 @@ public class SpawnFinder {
             }
         }
         return fallback;
+    }
+
+    public static Location findSurfaceSpawn(World world, int x, int z, int startY) {
+        int maxY = world.getMaxHeight() - 1;
+        for (int y = startY; y < maxY; y++) {
+            if (isSafe(world, x, y, z)) {
+                return new Location(world, x + 0.5, y, z + 0.5);
+            }
+        }
+        return new Location(world, x + 0.5, startY, z + 0.5);
+    }
+
+    public static void clearFallDamage(Player player) {
+        player.setFallDistance(0);
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 20, 3));
     }
 
     private static boolean isSafe(World world, int x, int y, int z) {
