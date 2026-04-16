@@ -38,6 +38,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1Garde
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LobbyBookshelfListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.ServerRoomLecternListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryWrapListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.VanillaAdvancementBlocker;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.Bukkit;
@@ -214,6 +215,7 @@ public class BackroomsPlugin {
                                 "\u00a7c[ERR] \u00a77Reality breach detected. Rerouting...")), plugin);
 
         Bukkit.getPluginManager().registerEvents(loadLevel84Listener(), plugin);
+        Bukkit.getPluginManager().registerEvents(new VanillaAdvancementBlocker(plugin, levelRegistry), plugin);
 
         // 8b. Register PoweredCommandBlockTrigger instances as Bukkit listeners
         for (var level : levelRegistry.getAll()) {
