@@ -73,10 +73,10 @@ public class ServerRoomLecternListener implements Listener {
                 CommandBlockKind kind = kinds.get(kindIndex);
                 if (kind.messages().isEmpty()) continue;
 
-                // Force fresh tile entity: cycle through AIR to create a new one
-                org.bukkit.block.data.BlockData savedData = lecternBlock.getBlockData();
+                // Clear to AIR then set fresh LECTERN data — the type change
+                // (AIR → LECTERN) forces tile entity creation.
                 lecternBlock.setType(Material.AIR, false);
-                lecternBlock.setBlockData(savedData, false);
+                lecternBlock.setBlockData(Material.LECTERN.createBlockData(), false);
                 if (lecternBlock.getState() instanceof Lectern lectern) {
                     Random rng = new Random(posHash);
                     String message = kind.messages().get(rng.nextInt(kind.messages().size()));

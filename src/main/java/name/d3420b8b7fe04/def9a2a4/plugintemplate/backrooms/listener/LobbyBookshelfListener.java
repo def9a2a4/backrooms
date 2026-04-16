@@ -3,7 +3,9 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.ChiseledBookshelf;
+import org.bukkit.block.data.Directional;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -87,12 +89,14 @@ public class LobbyBookshelfListener implements Listener {
                 Block block = chunk.getBlock(x, AIR_MIN_Y, z);
                 if (block.getType() != Material.CHISELED_BOOKSHELF) continue;
 
-                // Force fresh tile entity: destroy and recreate the block
-                // (re-applying same data doesn't create a new tile entity,
-                //  but cycling through AIR does — same reason Library listener works)
-                org.bukkit.block.data.BlockData savedData = block.getBlockData();
+                // Capture facing, clear to AIR, then set fresh CHISELED_BOOKSHELF data.
+                // The type change (AIR → CHISELED_BOOKSHELF) forces tile entity creation.
+                BlockFace facing = (block.getBlockData() instanceof Directional d)
+                        ? d.getFacing() : BlockFace.NORTH;
                 block.setType(Material.AIR, false);
-                block.setBlockData(savedData, false);
+                Directional fresh = (Directional) Material.CHISELED_BOOKSHELF.createBlockData();
+                fresh.setFacing(facing);
+                block.setBlockData(fresh, false);
 
                 if (block.getState() instanceof ChiseledBookshelf shelf) {
                     // Fill 2-5 random slots with written books
