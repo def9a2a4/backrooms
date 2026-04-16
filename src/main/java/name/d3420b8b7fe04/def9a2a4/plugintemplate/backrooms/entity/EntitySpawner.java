@@ -156,7 +156,20 @@ public class EntitySpawner {
         double distance = spawnDistanceMin + rng.nextDouble() * (spawnDistanceMax - spawnDistanceMin);
         double x = base.getX() + Math.cos(angle) * distance;
         double z = base.getZ() + Math.sin(angle) * distance;
-        return new Location(base.getWorld(), x, base.getY(), z);
+        int playerY = base.getBlockY();
+        World world = base.getWorld();
+
+        // Scan for an air block near player Y level
+        for (int dy = 0; dy <= 10; dy++) {
+            for (int sign : new int[]{1, -1}) {
+                int y = playerY + dy * sign;
+                if (y < world.getMinHeight() || y >= world.getMaxHeight()) continue;
+                if (world.getBlockAt((int) x, y, (int) z).getType().isAir()) {
+                    return new Location(world, x, y, z);
+                }
+            }
+        }
+        return null;
     }
 
     public EntityHandle spawnFor(Player player, BackroomsEntity entity) {
