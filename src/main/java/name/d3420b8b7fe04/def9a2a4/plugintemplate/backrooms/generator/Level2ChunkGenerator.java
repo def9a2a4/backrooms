@@ -300,8 +300,8 @@ public class Level2ChunkGenerator extends BackroomsChunkGenerator {
                 double roomNoise = SimplexNoise.noise2(seed + 7, gridX * 0.9, gridZ * 0.9);
                 if (roomNoise <= 0.3 || roomNoise > 0.7) continue; // skip non-rooms and boiler rooms
 
-                long leverHash = (long) worldX * 198491317L ^ (long) worldZ * 6542989L;
-                if (Math.floorMod(leverHash + 1, 10) != 0) continue;
+                // TODO: restore rarity after debugging — was Math.floorMod(leverHash + 1, 10) != 0
+                // long leverHash = (long) worldX * 198491317L ^ (long) worldZ * 6542989L;
 
                 int tx = worldX - 3 - chunkX * 16;
                 int tz = worldZ - chunkZ * 16;
