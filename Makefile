@@ -168,4 +168,4 @@ clean-download-cache:
 
 .PHONY: readme-external
 readme-external:
-	sed 's|docs/assets/|https://github.com/def9a2a4/backrooms/tree/main/docs/assets/|g' README.md
+	sed 's|docs/assets/|https://raw.githubusercontent.com/def9a2a4/backrooms/refs/heads/main/docs/assets/|g' README.md
