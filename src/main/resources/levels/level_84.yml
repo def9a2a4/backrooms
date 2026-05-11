@@ -34,7 +34,9 @@ generator_config:
   bedrock_min_y: 48
   bedrock_max_y: 64
   obsidian_layers: 3
-  wall_open_chance: 55
+  wall_open_chance: 65
+  spawn_dampen_radius: 5
+  spawn_dampen_chance: 80
   teleport_ceiling_offset: 0
   floor_material: GRASS_BLOCK
   sub_floor_material: OBSIDIAN

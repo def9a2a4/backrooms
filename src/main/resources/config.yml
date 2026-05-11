@@ -13,7 +13,7 @@ backrooms:
       target_level: level_0
     void_fall:
       enabled: true
-      target_level: level_64637
+      target_level: level_0
     bed_anomaly:
       enabled: true
       chance: 0.05

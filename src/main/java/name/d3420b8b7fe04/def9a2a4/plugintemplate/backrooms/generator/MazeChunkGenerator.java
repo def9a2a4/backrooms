@@ -33,7 +33,11 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
     private int obsidianLayers = 3;
 
     // Maze openness: percentage of wall segments that are carved open (0-100)
-    private int wallOpenChance = 55;
+    private int wallOpenChance = 65;
+
+    // Spawn dampening: increase wall openness near origin so spawn area is easier to navigate
+    private int spawnDampenRadius = 5;       // in cells
+    private int spawnDampenChance = 80;      // wall_open_chance at the very center (lerps to wallOpenChance at edge)
 
     // Materials
     private Material floorMaterial = Material.GRASS_BLOCK;
@@ -84,6 +88,8 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
         bedrockMaxY = config.getInt("bedrock_max_y", bedrockMaxY);
         obsidianLayers = config.getInt("obsidian_layers", obsidianLayers);
         wallOpenChance = config.getInt("wall_open_chance", wallOpenChance);
+        spawnDampenRadius = config.getInt("spawn_dampen_radius", spawnDampenRadius);
+        spawnDampenChance = config.getInt("spawn_dampen_chance", spawnDampenChance);
         teleportCeilingOffset = config.getInt("teleport_ceiling_offset", teleportCeilingOffset);
 
         String floorStr = config.getString("floor_material");
@@ -250,7 +256,17 @@ public class MazeChunkGenerator extends BackroomsChunkGenerator {
         h ^= h >>> 33;
         h *= 0xc4ceb9fe1a85ec53L;
         h ^= h >>> 33;
-        return Math.floorMod(h, 100) < wallOpenChance;
+
+        int effectiveChance = wallOpenChance;
+        if (spawnDampenRadius > 0) {
+            double dist = Math.sqrt((double) cellX * cellX + (double) cellZ * cellZ);
+            if (dist < spawnDampenRadius) {
+                double t = dist / spawnDampenRadius;
+                effectiveChance = (int) (spawnDampenChance + t * (wallOpenChance - spawnDampenChance));
+            }
+        }
+
+        return Math.floorMod(h, 100) < effectiveChance;
     }
 
     // ---------------------------------------------------------------
