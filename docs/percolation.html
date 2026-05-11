@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Maze Percolation Sim</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a1a; color: #ddd; font-family: monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; gap: 16px; }
+  h1 { font-size: 18px; color: #aaa; }
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: center; }
+  .control { display: flex; flex-direction: column; gap: 4px; }
+  .control label { font-size: 12px; color: #888; }
+  .control input[type=range] { width: 140px; }
+  .control .value { font-size: 14px; color: #fff; text-align: center; }
+  canvas { border: 1px solid #333; cursor: crosshair; }
+  button { background: #333; color: #ddd; border: 1px solid #555; padding: 6px 14px; cursor: pointer; font-family: monospace; font-size: 13px; }
+  button:hover { background: #444; }
+  .stats { font-size: 13px; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>Maze Percolation Simulator</h1>
+
+<div class="controls">
+  <div class="control">
+    <label>Wall Open Chance</label>
+    <input type="range" id="openChance" min="0" max="100" value="45">
+    <div class="value" id="openChanceVal">45%</div>
+  </div>
+  <div class="control">
+    <label>Spawn Dampen Radius</label>
+    <input type="range" id="dampenRadius" min="0" max="30" value="10">
+    <div class="value" id="dampenRadiusVal">10</div>
+  </div>
+  <div class="control">
+    <label>Spawn Dampen Chance</label>
+    <input type="range" id="dampenChance" min="0" max="100" value="70">
+    <div class="value" id="dampenChanceVal">70%</div>
+  </div>
+  <div class="control">
+    <label>Grid Size</label>
+    <input type="range" id="gridSize" min="10" max="80" value="40">
+    <div class="value" id="gridSizeVal">40</div>
+  </div>
+  <div class="control">
+    <label>Seed</label>
+    <input type="range" id="seed" min="0" max="9999" value="42">
+    <div class="value" id="seedVal">42</div>
+  </div>
+  <div class="control" style="justify-content: flex-end;">
+    <button id="regenerate">Regenerate</button>
+    <button id="randomSeed">Random Seed</button>
+  </div>
+</div>
+
+<canvas id="canvas"></canvas>
+<div class="stats" id="stats"></div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const sliders = {
+  openChance:   { el: document.getElementById('openChance'),   valEl: document.getElementById('openChanceVal'),   fmt: v => v + '%' },
+  dampenRadius: { el: document.getElementById('dampenRadius'), valEl: document.getElementById('dampenRadiusVal'), fmt: v => '' + v },
+  dampenChance: { el: document.getElementById('dampenChance'), valEl: document.getElementById('dampenChanceVal'), fmt: v => v + '%' },
+  gridSize:     { el: document.getElementById('gridSize'),     valEl: document.getElementById('gridSizeVal'),     fmt: v => '' + v },
+  seed:         { el: document.getElementById('seed'),         valEl: document.getElementById('seedVal'),         fmt: v => '' + v },
+};
+
+function getParams() {
+  return {
+    openChance:   +sliders.openChance.el.value,
+    dampenRadius: +sliders.dampenRadius.el.value,
+    dampenChance: +sliders.dampenChance.el.value,
+    gridSize:     +sliders.gridSize.el.value,
+    seed:         +sliders.seed.el.value,
+  };
+}
+
+// --- Hash (matches the Java MazeChunkGenerator logic) ---
+function mulhi64(a, b) {
+  // 64-bit multiply using BigInt, return lower 64 bits
+  const r = BigInt.asIntN(64, a * b);
+  return r;
+}
+
+function hash64(cellX, cellZ, wallType, seed) {
+  let h = BigInt(seed);
+  h ^= BigInt(cellX) * 0x517cc1b727220a95n;
+  h = BigInt.asIntN(64, h);
+  h ^= BigInt(cellZ) * 0x6c62272e07bb0142n;
+  h = BigInt.asIntN(64, h);
+  h += BigInt(wallType) * 0x6364136223846793n;
+  h = BigInt.asIntN(64, h);
+  h ^= h >> 33n;
+  h = BigInt.asIntN(64, h);
+  h = mulhi64(h, 0xff51afd7ed558ccdn);
+  h ^= h >> 33n;
+  h = BigInt.asIntN(64, h);
+  h = mulhi64(h, 0xc4ceb9fe1a85ec53n);
+  h ^= h >> 33n;
+  h = BigInt.asIntN(64, h);
+  return h;
+}
+
+function floorMod(a, b) {
+  const bb = BigInt(b);
+  let r = a % bb;
+  if (r < 0n) r += bb;
+  return Number(r);
+}
+
+function isWallOpen(cellX, cellZ, wallType, seed, params) {
+  const h = hash64(cellX, cellZ, wallType, seed);
+  let effectiveChance = params.openChance;
+  if (params.dampenRadius > 0) {
+    const dist = Math.sqrt(cellX * cellX + cellZ * cellZ);
+    if (dist < params.dampenRadius) {
+      const t = dist / params.dampenRadius;
+      effectiveChance = Math.round(params.dampenChance + t * (params.openChance - params.dampenChance));
+    }
+  }
+  return floorMod(h, 100) < effectiveChance;
+}
+
+// --- Maze grid ---
+// Each cell (cx, cz) has an east wall (wallType=0) and a south wall (wallType=1).
+// A wall is present if !isWallOpen.
+
+function buildMaze(params) {
+  const n = params.gridSize;
+  // eastOpen[cz][cx] = true if the wall between (cx,cz) and (cx+1,cz) is open
+  // southOpen[cz][cx] = true if the wall between (cx,cz) and (cx,cz+1) is open
+  const eastOpen = [];
+  const southOpen = [];
+  const half = Math.floor(n / 2);
+
+  for (let cz = 0; cz < n; cz++) {
+    eastOpen[cz] = [];
+    southOpen[cz] = [];
+    for (let cx = 0; cx < n; cx++) {
+      // Center the grid so spawn (0,0) is in the middle
+      const rx = cx - half;
+      const rz = cz - half;
+      eastOpen[cz][cx] = (cx < n - 1) && isWallOpen(rx, rz, 0, params.seed, params);
+      southOpen[cz][cx] = (cz < n - 1) && isWallOpen(rx, rz, 1, params.seed, params);
+    }
+  }
+  return { n, eastOpen, southOpen };
+}
+
+function floodFill(maze, startCx, startCz) {
+  const { n, eastOpen, southOpen } = maze;
+  const visited = Array.from({ length: n }, () => new Uint8Array(n));
+  const queue = [[startCx, startCz]];
+  visited[startCz][startCx] = 1;
+  let count = 0;
+
+  while (queue.length > 0) {
+    const [cx, cz] = queue.shift();
+    count++;
+    // East
+    if (cx < n - 1 && eastOpen[cz][cx] && !visited[cz][cx + 1]) {
+      visited[cz][cx + 1] = 1;
+      queue.push([cx + 1, cz]);
+    }
+    // West
+    if (cx > 0 && eastOpen[cz][cx - 1] && !visited[cz][cx - 1]) {
+      visited[cz][cx - 1] = 1;
+      queue.push([cx - 1, cz]);
+    }
+    // South
+    if (cz < n - 1 && southOpen[cz][cx] && !visited[cz + 1][cx]) {
+      visited[cz + 1][cx] = 1;
+      queue.push([cx, cz + 1]);
+    }
+    // North
+    if (cz > 0 && southOpen[cz - 1][cx] && !visited[cz - 1][cx]) {
+      visited[cz - 1][cx] = 1;
+      queue.push([cx, cz - 1]);
+    }
+  }
+  return { visited, count };
+}
+
+// --- Rendering ---
+let maze = null;
+let fillResult = null;
+let floodOrigin = null;
+
+function render() {
+  const params = getParams();
+  const n = params.gridSize;
+  const cellPx = Math.max(4, Math.min(16, Math.floor(700 / n)));
+  const wallPx = Math.max(1, Math.round(cellPx * 0.3));
+  const totalPx = n * cellPx + wallPx;
+
+  canvas.width = totalPx;
+  canvas.height = totalPx;
+
+  // Background
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, totalPx, totalPx);
+
+  if (!maze) return;
+  const { eastOpen, southOpen } = maze;
+  const half = Math.floor(n / 2);
+
+  // Draw cells
+  for (let cz = 0; cz < n; cz++) {
+    for (let cx = 0; cx < n; cx++) {
+      const x = cx * cellPx + wallPx;
+      const y = cz * cellPx + wallPx;
+
+      // Cell fill
+      if (fillResult && fillResult.visited[cz][cx]) {
+        // Distance-based color
+        const dx = cx - floodOrigin[0];
+        const dz = cz - floodOrigin[1];
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        const maxDist = n * 0.7;
+        const t = Math.min(1, dist / maxDist);
+        const r = Math.round(40 + t * 60);
+        const g = Math.round(180 - t * 100);
+        const b = Math.round(120 + t * 80);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+      } else {
+        ctx.fillStyle = '#222';
+      }
+      ctx.fillRect(x, y, cellPx - wallPx, cellPx - wallPx);
+
+      // Spawn indicator
+      if (cx === half && cz === half) {
+        ctx.fillStyle = '#ff4444';
+        const r = Math.max(2, cellPx * 0.25);
+        ctx.beginPath();
+        ctx.arc(x + (cellPx - wallPx) / 2, y + (cellPx - wallPx) / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Draw walls
+  ctx.fillStyle = '#8b7355';
+
+  // Outer border
+  ctx.fillRect(0, 0, totalPx, wallPx); // top
+  ctx.fillRect(0, 0, wallPx, totalPx); // left
+  ctx.fillRect(0, totalPx - wallPx, totalPx, wallPx); // bottom
+  ctx.fillRect(totalPx - wallPx, 0, wallPx, totalPx); // right
+
+  for (let cz = 0; cz < n; cz++) {
+    for (let cx = 0; cx < n; cx++) {
+      // East wall
+      if (cx < n - 1 && !eastOpen[cz][cx]) {
+        const x = (cx + 1) * cellPx;
+        const y = cz * cellPx;
+        ctx.fillRect(x, y, wallPx, cellPx + wallPx);
+      }
+      // South wall
+      if (cz < n - 1 && !southOpen[cz][cx]) {
+        const x = cx * cellPx;
+        const y = (cz + 1) * cellPx;
+        ctx.fillRect(x, y, cellPx + wallPx, wallPx);
+      }
+    }
+  }
+}
+
+function regenerate() {
+  const params = getParams();
+  maze = buildMaze(params);
+  // Default flood from center (spawn)
+  const half = Math.floor(params.gridSize / 2);
+  floodOrigin = [half, half];
+  fillResult = floodFill(maze, half, half);
+  render();
+  updateStats(params);
+}
+
+function updateStats(params) {
+  const total = params.gridSize * params.gridSize;
+  const reached = fillResult ? fillResult.count : 0;
+  const pct = ((reached / total) * 100).toFixed(1);
+  document.getElementById('stats').textContent =
+    `Reachable from flood origin: ${reached} / ${total} cells (${pct}%)`;
+}
+
+// --- Events ---
+for (const [key, s] of Object.entries(sliders)) {
+  s.el.addEventListener('input', () => {
+    s.valEl.textContent = s.fmt(+s.el.value);
+    regenerate();
+  });
+  s.valEl.textContent = s.fmt(+s.el.value);
+}
+
+document.getElementById('regenerate').addEventListener('click', regenerate);
+document.getElementById('randomSeed').addEventListener('click', () => {
+  const v = Math.floor(Math.random() * 10000);
+  sliders.seed.el.value = v;
+  sliders.seed.valEl.textContent = '' + v;
+  regenerate();
+});
+
+canvas.addEventListener('click', (e) => {
+  if (!maze) return;
+  const params = getParams();
+  const n = params.gridSize;
+  const cellPx = Math.max(4, Math.min(16, Math.floor(700 / n)));
+  const wallPx = Math.max(1, Math.round(cellPx * 0.3));
+
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const cx = Math.floor((mx - wallPx) / cellPx);
+  const cz = Math.floor((my - wallPx) / cellPx);
+
+  if (cx >= 0 && cx < n && cz >= 0 && cz < n) {
+    floodOrigin = [cx, cz];
+    fillResult = floodFill(maze, cx, cz);
+    render();
+    updateStats(params);
+  }
+});
+
+regenerate();
+</script>
+</body>
+</html>
