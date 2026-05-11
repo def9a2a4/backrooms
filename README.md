@@ -4,14 +4,14 @@
 
 I set off some AI agents to explore how to write level generation plugins. After a few days, I came back to this. They did things I didn't ask for. There's levels and levels, and some of the levels have... things in them. The agents say there is a way to escape, but I don't believe them.
 
-![](docs/assets/lobby-shaders.png)
+![The Lobby (with shaders)](docs/assets/lobby-shaders.png)
 
 | | | |
 |---|---|---|
-| ![](docs/assets/lobby.png) | ![](docs/assets/habitable.png) | ![](docs/assets/pipeworks.png) |
-| ![](docs/assets/poolrooms.png) | ![](docs/assets/disc_11.png) | ![](docs/assets/library.png) |
-| ![](docs/assets/corrupted.png) | ![](docs/assets/poolrooms-2.png) | ![](docs/assets/far.png) |
-| ![](docs/assets/glowstone.png) | ![](docs/assets/gold.png) | ![](docs/assets/twilight.png) |
+| ![The Lobby: classic backrooms of yellow office space](docs/assets/lobby.png) | ![The Habitable Zone: dim parking garage/warehouse vibes](docs/assets/habitable.png) | ![The Pipe Works:  dark industrial tunnels](docs/assets/pipeworks.png) |
+| ![The Poolrooms: sunlit white quartz halls with turquoise water](docs/assets/poolrooms.png) | ![Disc 11: a jukebox in a dark stone dead end](docs/assets/disc_11.png) | ![The Library:  bookshelves lining every wall](docs/assets/library.png) |
+| ![The Corrupted Chunk: a gigantic bloody notch stares at you](docs/assets/corrupted.png) | ![The Poolrooms: a view of the skylights](docs/assets/poolrooms-2.png) | ![The Far Lands: terrain glitch from classic minecraft](docs/assets/far.png) |
+| ![a glowstone frame with water bucket in the overworld](docs/assets/glowstone.png) | ![Herobrine Shrine: gold blocks with redstone torches and netherrack, flint and steel suggestively floating on the netherrack](docs/assets/gold.png) | ![Twilight Portal - a flower ring around a water pool with a thrown diamond](docs/assets/twilight.png) |
 
 
 ---
@@ -30,7 +30,7 @@ Players are pulled out of normal gameplay through various triggers and dropped i
 
 Jokes aside, this plugin may break your saves. I suggest using it on a fresh server and letting players discover things for themselves. it comes with an advancements system to give some hints and guidance. Feedback on the difficulty would be appreciated.
 
-![](docs/assets/advancements.png)
+![Custom advancement tree for The Backrooms](docs/assets/advancements.png)
 
 ## Levels
 
@@ -38,23 +38,23 @@ All level parameters (generation, events, entities, exits) are configurable in `
 
 | Level | Name | Screenshot | Description | Entry | Exit |
 |-------|------|------------|-------------|-------|------|
-| 0 | The Lobby | ![](docs/assets/lobby.png) | Infinite office space corridors lit by ochre froglights. The classic Backrooms. | Suffocation (16+ damage in blocks), Void Fall (below Y=-64), Herobrine Shrine ![](docs/assets/gold.png) | Collect 7 written books → Level 1 |
-| 1 | The Habitable Zone | ![](docs/assets/habitable.png) | Parking garage and warehouse vibes, corridors, overgrown garden patches. Gardens generate far from spawn and contain exits both above and below. | From Level 0 | Submerge in a garden pool → Level 2, Climb through a garden breach → Level 94 |
-| 2 | The Pipe Works | ![](docs/assets/pipeworks.png) | Cramped industrial pipe networks. Small 1x1 tunnels (copper trapdoors) generate in ~1/20 eligible rooms, punching through the bedrock floor. | From Level 1 | Find and drop through a tunnel → Level 37 |
-| 3 | The Server Room | ![](docs/assets/server.png) | Nonsensical redstone contraptions in fullbright white rooms. Hub level — four exits to different levels. Command blocks generate with lecterns on top containing cryptic hints about each destination. | From Level 37, Level 4, Level 84, Level 94 | Rapidly power the same command block many times (e.g. redstone clock) → Level 4, 5, 7, or 64637 depending on which block |
-| 4 | The Far Lands | ![](docs/assets/far_.png) | Broken terrain simulating Minecraft's legacy coordinate overflow bug. Fixed at dusk. | From Level 3 | Walk 1000 blocks → Level 3 |
-| 5 | Disc 11 | ![](docs/assets/disc_11.png) | Dead-end level. An invisible pursuer follows you. Torches decay. | From Level 3 | Right-click a jukebox — it explodes and kills you (respawn in Level 0) |
-| 7 | The Corrupted Chunk | ![](docs/assets/chunk.png) | Every block type at once, random structures everywhere. A giant Notch watches you. | From Level 3 | Fall below Y=0 → Overworld (escape) |
-| 37 | The Poolrooms | ![](docs/assets/poolrooms.png) | Peaceful white pools with soft lighting. Multiple material palettes. A safe zone. Some pools are extra deep with a side drain that leads down. | From Level 2 | Find a drain and fall through → Level 3 |
-| 64637 | The Library | ![](docs/assets/library.png) | Infinite bookshelves containing pre-written and procedurally generated books. | Bed Anomaly (5% chance during thunderstorm), from Level 3 | Collect 16 written books → Overworld (escape), Fall 200 blocks → Overworld (escape) |
-| 84 | The Hedge Maze | ![](docs/assets/hedge.png) | A tall leaf-walled maze with poison punishment. Twilight sky. Bedrock holes generate at 200+ blocks from spawn (~1/60 chance per corridor cell). | Twilight Portal (flowers, throw diamond) ![](docs/assets/twilight.png) | Fall through a bedrock hole → Level 3, Climb above the walls → Level 94 |
-| 94 | Skyblock | ![](docs/assets/sky.png) | A single floating island. Presented as a "reality breach" error. | "Aether" Portal (use water bucket) ![](docs/assets/glowstone.png) Also from Level 1, from Level 84 | Bridge outward and left-click the invisible barrier wall. <details><summary>Spoiler</summary>The barrier shatters in an expanding cascade revealing command blocks behind it. ![](docs/assets/lies.png) ![](docs/assets/reality.png)</details> → Level 3 |
+| 0 | The Lobby | ![The Lobby](docs/assets/lobby.png) | Infinite office space corridors lit by ochre froglights. The classic Backrooms. | Suffocation (16+ damage in blocks), Void Fall (below Y=-64), Herobrine Shrine ![Herobrine Shrine: 3x3 gold base, netherrack on top, 4 redstone torches placed on the gold to each side of the netherrack. light the top.](docs/assets/gold.png) | Collect 7 written books → Level 1 |
+| 1 | The Habitable Zone | ![The Habitable Zone](docs/assets/habitable.png) | Parking garage and warehouse vibes, corridors, overgrown garden patches. Gardens generate far from spawn and contain exits both above and below. | From Level 0 | Submerge in a garden pool → Level 2, Climb through a garden breach → Level 94 |
+| 2 | The Pipe Works | ![The Pipe Works](docs/assets/pipeworks.png) | Cramped industrial pipe networks. Small 1x1 tunnels (copper trapdoors) generate in ~1/20 eligible rooms, punching through the bedrock floor. | From Level 1 | Find and drop through a tunnel → Level 37 |
+| 3 | The Server Room | ![The Server Room](docs/assets/server.png) | Nonsensical redstone contraptions in fullbright white rooms. Hub level - four exits to different levels. Command blocks generate with lecterns on top containing cryptic hints about each destination. | From Level 37, Level 4, Level 84, Level 94 | Rapidly power the same command block many times (e.g. redstone clock) → Level 4, 5, 7, or 64637 depending on which block |
+| 4 | The Far Lands | ![The Far Lands stretch off into the distance](docs/assets/far_.png) | Broken terrain simulating Minecraft's legacy coordinate overflow bug. Fixed at dusk. | From Level 3 | Walk 1000 blocks → Level 3 |
+| 5 | Disc 11 | ![Disc 11](docs/assets/disc_11.png) | Dead-end level. An invisible pursuer follows you. Torches decay. | From Level 3 | Right-click a jukebox - it explodes and kills you (respawn in Level 0) |
+| 7 | The Corrupted Chunk | ![The corrupted chunk: nonsensical structures placed among random blocks of all kinds](docs/assets/chunk.png) | Every block type at once, random structures everywhere. A giant Notch watches you. | From Level 3 | Fall below Y=0 → Overworld (escape) |
+| 37 | The Poolrooms | ![The Poolrooms](docs/assets/poolrooms.png) | Peaceful white pools with soft lighting. Multiple material palettes. A safe zone. Some pools are extra deep with a side drain that leads down. | From Level 2 | Find a drain and fall through → Level 3 |
+| 64637 | The Library | ![The Library](docs/assets/library.png) | Infinite bookshelves containing pre-written and procedurally generated books. | Bed Anomaly (5% chance during thunderstorm), from Level 3 | Collect 16 written books → Overworld (escape), Fall 200 blocks → Overworld (escape) |
+| 84 | The Hedge Maze | ![The Hedge Maze](docs/assets/hedge.png) | A tall leaf-walled maze with poison punishment. Twilight sky. Bedrock holes generate at 200+ blocks from spawn (~1/60 chance per corridor cell). | Twilight Portal (flowers, throw diamond) ![twilight portal: 2x2 water pool, flowers around it. throw a diamond in.](docs/assets/twilight.png) | Fall through a bedrock hole → Level 3, Climb above the walls → Level 94 |
+| 94 | Skyblock | ![A skyblock island, but something is not right.](docs/assets/sky.png) | A single floating island. Presented as a "reality breach" error. | "Aether" Portal (use water bucket) ![a glowstone portal, with a water bucket suggestively floating in it.](docs/assets/glowstone.png) Also from Level 1, from Level 84 | Bridge outward and left-click the invisible barrier wall. <details><summary>Spoiler</summary>The barrier shatters in an expanding cascade revealing command blocks behind it. ![bridge out to the invisible barrier and click it.](docs/assets/lies.png) ![the skyblock island is revealed to be a simulation all along](docs/assets/reality.png)</details> → Level 3 |
 
 On entry from the overworld, the player's return location is saved and can be restored with `/backrooms leave`.
 
 ## Entities
 
-Entities are still WIP — more to come. They spawn around players at configurable distances and escalation thresholds. Each level's YAML file defines which entities appear, their skins, scale, behavior, spawn chance, and minimum escalation level.
+Entities are still WIP - more to come. They spawn around players at configurable distances and escalation thresholds. Each level's YAML file defines which entities appear, their skins, scale, behavior, spawn chance, and minimum escalation level.
 
 **Entity types:**
 
@@ -81,7 +81,7 @@ Entities are still WIP — more to come. They spawn around players at configurab
 
 Each level has configurable atmospheric events (ambient sounds, light flickering, blackouts, fake chat messages, footstep echoes, block corruption, inventory glitches, sign placement, and more). Events fire on randomized per-player timers with configurable intervals and chances. See `event_config` in each level's YAML for the full list and tuning parameters.
 
-The plugin also tracks how long each player has spent in the Backrooms. As time increases, the escalation level rises (default thresholds: 5, 15, 30, 60, 120 minutes — configurable in `config.yml`). Each entity instance has a `min_escalation` requirement, so passive entities appear early while more aggressive ones only show up after the player has been trapped for a while. This part is still in development.
+The plugin also tracks how long each player has spent in the Backrooms. As time increases, the escalation level rises (default thresholds: 5, 15, 30, 60, 120 minutes - configurable in `config.yml`). Each entity instance has a `min_escalation` requirement, so passive entities appear early while more aggressive ones only show up after the player has been trapped for a while. This part is still in development.
 
 ## Commands & Permissions
 
@@ -119,9 +119,9 @@ All commands are under `/backrooms`:
 ### Main config (`config.yml`)
 
 Controls global settings:
-- **Entry triggers** — enable/disable each trigger, set damage thresholds, target levels, and trigger chances.
-- **Entity spawner** — max entities per player (default 3), spawn check interval, min/max spawn distance.
-- **Player** — death respawn level, escalation time thresholds.
+- **Entry triggers** - enable/disable each trigger, set damage thresholds, target levels, and trigger chances.
+- **Entity spawner** - max entities per player (default 3), spawn check interval, min/max spawn distance.
+- **Player** - death respawn level, escalation time thresholds.
 
 ### Per-level configs (`levels/level_*.yml`)
 
