@@ -14,28 +14,23 @@ I set off some AI agents to explore how to write level generation plugins. After
 | ![](docs/assets/glowstone.png) | ![](docs/assets/gold.png) | ![](docs/assets/twilight.png) |
 
 
-<details>
-<summary>SPOILERS</summary>
+---
+
+# Plugin Info (warning: spoilers)
 
 This is an in-development survival horror plugin inspired by the [Backrooms](https://en.wikipedia.org/wiki/The_Backrooms) and minecraft "lore". It adds 11 unique levels, with more to come. Suggestions are welcome.
 
-# THIS SOFTWARE IS IN PRE-ALPHA AND PROVIDED AS-IS
+Players are pulled out of normal gameplay through various triggers and dropped into a series of procedurally generated liminal levels. Each level has its own world generator, atmosphere, entities, and exit conditions. The plugin tracks per-player state, escalates difficulty over time, and includes a custom advancement tree.
 
-# SERIOUSLY, MAKE A BACKUP OF YOUR WORLD!
+# NOTE:
+
+**THIS SOFTWARE IS IN PRE-ALPHA AND PROVIDED AS-IS**
+
+**SERIOUSLY, MAKE A BACKUP OF YOUR WORLD!**
 
 Jokes aside, this plugin may break your saves. I suggest using it on a fresh server and letting players discover things for themselves. it comes with an advancements system to give some hints and guidance. Feedback on the difficulty would be appreciated.
 
 ![](docs/assets/advancements.png)
-
-</details>
-
----
-
-## Overview
-
-A survival horror plugin for [Paper](https://papermc.io/) servers inspired by the [Backrooms](https://en.wikipedia.org/wiki/The_Backrooms) creepypasta and Minecraft community lore. Players are pulled out of normal gameplay through various triggers and dropped into a series of procedurally generated liminal levels. Each level has its own world generator, atmosphere, entities, and exit conditions. The plugin tracks per-player state, escalates difficulty over time, and includes a custom advancement tree.
-
-**Status:** Pre-alpha. Expect bugs and breaking changes. Back up your world before installing.
 
 ## Levels
 
@@ -86,7 +81,7 @@ Entities are still WIP — more to come. They spawn around players at configurab
 
 Each level has configurable atmospheric events (ambient sounds, light flickering, blackouts, fake chat messages, footstep echoes, block corruption, inventory glitches, sign placement, and more). Events fire on randomized per-player timers with configurable intervals and chances. See `event_config` in each level's YAML for the full list and tuning parameters.
 
-The plugin also tracks how long each player has spent in the Backrooms. As time increases, the escalation level rises (default thresholds: 5, 15, 30, 60, 120 minutes — configurable in `config.yml`). Each entity instance has a `min_escalation` requirement, so passive entities appear early while more aggressive ones only show up after the player has been trapped for a while.
+The plugin also tracks how long each player has spent in the Backrooms. As time increases, the escalation level rises (default thresholds: 5, 15, 30, 60, 120 minutes — configurable in `config.yml`). Each entity instance has a `min_escalation` requirement, so passive entities appear early while more aggressive ones only show up after the player has been trapped for a while. This part is still in development.
 
 ## Commands & Permissions
 
