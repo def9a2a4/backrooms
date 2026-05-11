@@ -165,3 +165,7 @@ clean-test-server:
 .PHONY: clean-download-cache
 clean-download-cache:
 	rm -rf $(DOWNLOAD_CACHE)
+
+.PHONY: readme-external
+readme-external:
+	sed 's|docs/assets/|https://github.com/def9a2a4/backrooms/tree/main/docs/assets/|g' README.md
