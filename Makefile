@@ -61,8 +61,10 @@ MINECRAFT_VERSION ?= 26.1.2
 
 $(DOWNLOAD_CACHE)/paper-%.jar:
 	@mkdir -p $(DOWNLOAD_CACHE)
-	$(eval BUILD := $(shell curl -s "https://api.papermc.io/v2/projects/paper/versions/$*/builds" | jq -r '.builds[-1].build'))
-	curl -o $@ "https://api.papermc.io/v2/projects/paper/versions/$*/builds/$(BUILD)/downloads/paper-$*-$(BUILD).jar"
+	url=$$(curl -fsSL -H "User-Agent: backrooms-ci (github actions)" \
+		"https://fill.papermc.io/v3/projects/paper/versions/$*/builds/latest" \
+		| jq -r '.downloads."server:default".url'); \
+	curl -fsSL -o $@ "$$url"
 
 $(DOWNLOAD_CACHE)/purpur-%.jar:
 	@mkdir -p $(DOWNLOAD_CACHE)
