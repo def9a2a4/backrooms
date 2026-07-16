@@ -2,6 +2,8 @@
   "pack": {
     "description": "Backrooms custom biomes",
     "pack_format": 57,
-    "supported_formats": [57, 107]
+    "supported_formats": [57, 107],
+    "min_format": 57,
+    "max_format": 107
   }
 }
