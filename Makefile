@@ -59,17 +59,30 @@ DOWNLOAD_CACHE := .download-cache
 SERVER_VARIANT ?= paper
 MINECRAFT_VERSION ?= 26.1.2
 
+# Delete partially-written targets when a recipe fails, so a bad download
+# doesn't get cached and treated as a valid jar on the next run.
+.DELETE_ON_ERROR:
+
 $(DOWNLOAD_CACHE)/paper-%.jar:
 	@mkdir -p $(DOWNLOAD_CACHE)
 	url=$$(curl -fsSL -H "User-Agent: backrooms-ci (github actions)" \
 		"https://fill.papermc.io/v3/projects/paper/versions/$*/builds/latest" \
 		| jq -r '.downloads."server:default".url'); \
-	curl -fsSL -o $@ "$$url"
+	if [ -z "$$url" ] || [ "$$url" = "null" ]; then \
+		echo "ERROR: could not resolve Paper $* download URL from fill.papermc.io" >&2; \
+		exit 1; \
+	fi; \
+	curl -fsSL -o $@ "$$url" || { echo "ERROR: failed to download Paper $* from $$url" >&2; exit 1; }
 
 $(DOWNLOAD_CACHE)/purpur-%.jar:
 	@mkdir -p $(DOWNLOAD_CACHE)
-	$(eval BUILD := $(shell curl -s "https://api.purpurmc.org/v2/purpur/$*" | jq -r '.builds.latest'))
-	curl -o $@ "https://api.purpurmc.org/v2/purpur/$*/$(BUILD)/download"
+	build=$$(curl -fsSL "https://api.purpurmc.org/v2/purpur/$*" | jq -r '.builds.latest'); \
+	if [ -z "$$build" ] || [ "$$build" = "null" ]; then \
+		echo "ERROR: could not resolve latest Purpur build for $* from api.purpurmc.org" >&2; \
+		exit 1; \
+	fi; \
+	curl -fsSL -o $@ "https://api.purpurmc.org/v2/purpur/$*/$$build/download" \
+		|| { echo "ERROR: failed to download Purpur $* build $$build" >&2; exit 1; }
 
 .PHONY: test-server-download
 test-server-download: $(DOWNLOAD_CACHE)/$(SERVER_VARIANT)-$(MINECRAFT_VERSION).jar
@@ -99,58 +112,63 @@ test-server-local:
 .PHONY: test-server-ci
 test-server-ci:
 	@cd $(TEST_SERVER_DIR) && \
-	mkfifo server_input 2>/dev/null || true; \
-	tail -f server_input | java -Xmx1G -Xms1G -jar server.jar nogui > server.log 2>&1 & \
+	rm -f server_input; \
+	mkfifo server_input; \
+	sleep 3600 > server_input & \
+	FEEDER_PID=$$!; \
+	java -Xmx1G -Xms1G -jar server.jar nogui < server_input > server.log 2>&1 & \
 	SERVER_PID=$$!; \
-	sleep 0.5; \
-	echo "Waiting for server to start..."; \
+	trap 'kill $$SERVER_PID $$FEEDER_PID 2>/dev/null; rm -f server_input' INT TERM; \
+	echo "Waiting for server to start... (first boot patches the mojang jar and can take minutes)"; \
+	STARTED=0; \
 	for i in $$(seq 1 600); do \
 		if grep -q "Done.*For help" server.log 2>/dev/null; then \
-			echo ""; \
-			echo "========== Server started successfully =========="; \
+			STARTED=1; \
 			break; \
 		fi; \
 		if ! kill -0 $$SERVER_PID 2>/dev/null; then \
-			echo ""; \
-			echo "========== Server process died unexpectedly =========="; \
-			cat server.log; \
-			exit 1; \
+			break; \
 		fi; \
 		sleep 1; \
 	done; \
-	if ! grep -q "Done.*For help" server.log 2>/dev/null; then \
+	if [ $$STARTED -ne 1 ]; then \
 		echo ""; \
-		echo "========== Server startup timed out =========="; \
+		echo "========== Server failed to start =========="; \
 		cat server.log; \
-		kill $$SERVER_PID 2>/dev/null || true; \
+		kill $$SERVER_PID $$FEEDER_PID 2>/dev/null || true; \
 		rm -f server_input; \
 		exit 1; \
 	fi; \
-	if ! grep -q "$(PLUGIN_NAME).*enabled" server.log; then \
+	echo ""; \
+	echo "========== Server started successfully =========="; \
+	PLUGIN_OK=1; \
+	if grep -q "$(PLUGIN_NAME).*enabled" server.log; then \
+		echo "$(PLUGIN_NAME) plugin loaded"; \
+	else \
 		echo "$(PLUGIN_NAME) plugin failed to load"; \
-		cat server.log; \
-		kill $$SERVER_PID 2>/dev/null || true; \
-		rm -f server_input; \
-		exit 1; \
+		PLUGIN_OK=0; \
 	fi; \
-	echo "$(PLUGIN_NAME) plugin loaded"; \
 	echo ""; \
 	echo "========== Shutting down server =========="; \
-	echo "stop" > server_input; \
-	for i in $$(seq 1 30); do \
+	if kill -0 $$SERVER_PID 2>/dev/null; then \
+		echo "stop" > server_input; \
+	fi; \
+	for i in $$(seq 1 60); do \
 		if ! kill -0 $$SERVER_PID 2>/dev/null; then \
 			break; \
 		fi; \
 		sleep 1; \
 	done; \
-	kill $$SERVER_PID 2>/dev/null || true; \
+	kill $$SERVER_PID $$FEEDER_PID 2>/dev/null || true; \
 	rm -f server_input; \
-	rm -f errors.log; \
-	FAILED=0; \
+	echo ""; \
+	echo "========== Server log =========="; \
+	cat server.log; \
+	echo ""; \
+	FAILED=$$((1 - PLUGIN_OK)); \
 	if grep -qE "ERROR.*$(PLUGIN_NAME)|$(PLUGIN_NAME).*Exception" server.log 2>/dev/null; then \
-		echo "" | tee -a errors.log; \
-		echo "=== SERVER ERRORS ===" | tee -a errors.log; \
-		grep -E "ERROR.*$(PLUGIN_NAME)|$(PLUGIN_NAME).*Exception" server.log | tee -a errors.log; \
+		echo "=== SERVER ERRORS ==="; \
+		grep -E "ERROR.*$(PLUGIN_NAME)|$(PLUGIN_NAME).*Exception" server.log; \
 		FAILED=1; \
 	fi; \
 	if [ $$FAILED -eq 1 ]; then \

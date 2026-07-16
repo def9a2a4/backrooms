@@ -183,7 +183,14 @@ public class ConfigDrivenLevel extends AbstractLevel {
     public void configureWorld(World world) {
         super.configureWorld(world);
         if (fixedTime >= 0) {
-            world.setTime(fixedTime);
+            try {
+                world.setTime(fixedTime);
+            } catch (IllegalArgumentException e) {
+                // 26.x throws "Cannot set time in world without world clock" for
+                // dimension types without a day/night cycle; time is frozen there anyway.
+                plugin.getJavaPlugin().getLogger().warning("Could not set fixed time for world "
+                        + world.getName() + ": " + e.getMessage());
+            }
         }
     }
 
