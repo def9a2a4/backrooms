@@ -32,7 +32,7 @@ server-clean:
 
 .PHONY: server-start
 server-start:
-	cd server && java -Xmx2G -Xms2G -jar paper-1.21.11-55.jar nogui
+	cd server && java -Xmx2G -Xms2G -jar paper-*.jar nogui
 
 .PHONY: server
 server: build server-plugin-copy server-start
@@ -57,7 +57,7 @@ check-book-lengths:
 TEST_SERVER_DIR := test-server
 DOWNLOAD_CACHE := .download-cache
 SERVER_VARIANT ?= paper
-MINECRAFT_VERSION ?= 1.21.11
+MINECRAFT_VERSION ?= 26.1.2
 
 $(DOWNLOAD_CACHE)/paper-%.jar:
 	@mkdir -p $(DOWNLOAD_CACHE)

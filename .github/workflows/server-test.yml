@@ -1,19 +1,15 @@
-name: Server Integration Test
+name: Version Matrix
 
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        minecraft: ['1.21.11']
-        server: ['paper']
-
-    name: ${{ matrix.server }} ${{ matrix.minecraft }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -29,20 +25,61 @@ jobs:
       - name: Build plugin
         run: make build
 
-      - name: Download server
-        run: make test-server-download-all SERVER_VARIANT=${{ matrix.server }} MINECRAFT_VERSION=${{ matrix.minecraft }}
+      - name: Upload plugin jars
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugins
+          path: bin/*.jar
 
-      - name: Setup test server
-        run: make test-server-setup
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        minecraft: ['1.21.11', '26.1.2', '26.2']
+        server: ['paper', 'purpur']
 
-      - name: Start server and verify plugin loads
-        run: make test-server-ci MINECRAFT_VERSION=${{ matrix.minecraft }}
+    name: ${{ matrix.server }} ${{ matrix.minecraft }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ startsWith(matrix.minecraft, '26.') && '25' || '21' }}
+
+      - name: Download plugin jars
+        uses: actions/download-artifact@v4
+        with:
+          name: plugins
+          path: bin/
+
+      - name: Server test
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-logs
+          make test-server-download SERVER_VARIANT=${{ matrix.server }} MINECRAFT_VERSION=${{ matrix.minecraft }}
+          make test-server-setup
+          make test-server-ci MINECRAFT_VERSION=${{ matrix.minecraft }} \
+            2>&1 | tee ci-logs/test-${{ matrix.server }}-${{ matrix.minecraft }}.log
+
+      - name: Check for logged errors
+        if: always()
+        run: |
+          if grep -nE ' (ERROR|FATAL)\]|SEVERE\]|^[[:space:]]+at [A-Za-z]|Caused by:' ci-logs/*.log \
+               | grep -v 'No key layers in MapLike'; then
+            echo "::error::Errors were logged during the server test"
+            exit 1
+          fi
+          echo "No logged errors found."
 
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: logs-${{ matrix.server }}-${{ matrix.minecraft }}
-          path: |
-            test-server/server.log
-            test-server/errors.log
+          path: ci-logs/
