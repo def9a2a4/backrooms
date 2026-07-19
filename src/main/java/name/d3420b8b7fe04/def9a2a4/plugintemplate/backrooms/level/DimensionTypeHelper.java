@@ -27,6 +27,7 @@ public class DimensionTypeHelper {
     private Object brightBlackCrimsonHolder;
     private Object dayHolder;
     private Object twilightHolder;
+    private Object alphaHolder;
 
     public DimensionTypeHelper(Logger logger) {
         this.logger = logger;
@@ -60,6 +61,11 @@ public class DimensionTypeHelper {
     public boolean applyTwilightDimension(World world) {
         ensureResolved();
         return applyDimension(world, "twilight", twilightHolder);
+    }
+
+    public boolean applyAlphaDimension(World world) {
+        ensureResolved();
+        return applyDimension(world, "alpha", alphaHolder);
     }
 
     private boolean applyDimension(World world, String label, Object holder) {
@@ -112,7 +118,8 @@ public class DimensionTypeHelper {
                     + ", fullbright=" + (fullbrightHolder != null)
                     + ", bright_black_crimson=" + (brightBlackCrimsonHolder != null)
                     + ", day=" + (dayHolder != null)
-                    + ", twilight=" + (twilightHolder != null) + ")");
+                    + ", twilight=" + (twilightHolder != null)
+                    + ", alpha=" + (alphaHolder != null) + ")");
         } catch (Exception e) {
             available = false;
             logger.warning("Dimension type helper failed: " + e.getMessage());
@@ -166,12 +173,14 @@ public class DimensionTypeHelper {
         Object bbcLocation = fromNsAndPath.invoke(null, "backrooms", "bright_black_crimson");
         Object dayLocation = fromNsAndPath.invoke(null, "backrooms", "day");
         Object twilightLocation = fromNsAndPath.invoke(null, "backrooms", "twilight");
+        Object alphaLocation = fromNsAndPath.invoke(null, "backrooms", "alpha");
         Object darkKey = createKey.invoke(null, dimTypeRegistryKey, darkLocation);
         Object lightKey = createKey.invoke(null, dimTypeRegistryKey, lightLocation);
         Object fullbrightKey = createKey.invoke(null, dimTypeRegistryKey, fullbrightLocation);
         Object bbcKey = createKey.invoke(null, dimTypeRegistryKey, bbcLocation);
         Object dayKey = createKey.invoke(null, dimTypeRegistryKey, dayLocation);
         Object twilightKey = createKey.invoke(null, dimTypeRegistryKey, twilightLocation);
+        Object alphaKey = createKey.invoke(null, dimTypeRegistryKey, alphaLocation);
 
         // Look up holders: registry.getHolder(ResourceKey) -> Optional<Holder.Reference>
         Method getHolderMethod = findGetHolderMethod(registry, resourceKeyClass);
@@ -182,11 +191,12 @@ public class DimensionTypeHelper {
             brightBlackCrimsonHolder = unwrapOptional(getHolderMethod.invoke(registry, bbcKey));
             dayHolder = unwrapOptional(getHolderMethod.invoke(registry, dayKey));
             twilightHolder = unwrapOptional(getHolderMethod.invoke(registry, twilightKey));
+            alphaHolder = unwrapOptional(getHolderMethod.invoke(registry, alphaKey));
         }
 
         if (darkHolder == null || lightHolder == null || fullbrightHolder == null
                 || brightBlackCrimsonHolder == null || dayHolder == null
-                || twilightHolder == null) {
+                || twilightHolder == null || alphaHolder == null) {
             // Dump registered keys for debugging
             StringBuilder sb = new StringBuilder("Registered dimension types: ");
             try {

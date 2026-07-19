@@ -12,9 +12,10 @@
   "carvers": [],
   "features": [],
   "attributes": {
-    "minecraft:visual/sky_color": 16777215,
-    "minecraft:visual/fog_color": 16777215,
-    "minecraft:visual/water_fog_color": 16777215,
+    "minecraft:visual/sky_light_factor": 0.45,
+    "minecraft:visual/sky_color": 14211288,
+    "minecraft:visual/fog_color": 14211288,
+    "minecraft:visual/water_fog_color": 14211288,
     "minecraft:visual/fog_start_distance": 12.0,
     "minecraft:visual/fog_end_distance": 64.0,
     "minecraft:visual/sky_fog_end_distance": 64.0,

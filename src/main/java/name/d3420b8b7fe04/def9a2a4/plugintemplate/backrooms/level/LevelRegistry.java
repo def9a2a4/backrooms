@@ -164,6 +164,7 @@ public class LevelRegistry {
             case "bright_black_crimson" -> dimensionTypeHelper.applyBrightBlackCrimsonDimension(world);
             case "day" -> dimensionTypeHelper.applyDayDimension(world);
             case "twilight" -> dimensionTypeHelper.applyTwilightDimension(world);
+            case "alpha" -> dimensionTypeHelper.applyAlphaDimension(world);
             // "default" — no NMS swap, use vanilla dimension type
         }
     }

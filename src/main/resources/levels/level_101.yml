@@ -2,20 +2,16 @@ id: level_101
 display_name: "Alpha"
 generator: level_101
 environment: NORMAL
-dimension_type: day
+dimension_type: alpha
 biome: "backrooms:alpha"
-fixed_time: 6000
+fixed_time: 13400
 spawn_radius: 100
 enter_message: "§7§oThe fog swallows the horizon..."
 
 generator_config:
-  tree_chunk_chance: 30
-  structure_chunk_chance: 5
-  decoration_empty_chance: 90
-  ground_decorations:
-    SHORT_GRASS: 60
-    DANDELION: 25
-    POPPY: 15
+  tree_chunk_chance: 8
+  structure_chunk_chance: 2
+  void_pit_chunk_chance: 0.15
 
 exit_triggers:
   - type: bed_sleep
