@@ -416,3 +416,11 @@ pre_written_books:
       - "Then the tunnels. Perfect 2x2 squares cut through the shelves. No debris, no sawdust. The books on either side of the cut were undamaged. The tunnels went straight for hundreds of meters. At the end of each one: a single torch, still burning."
       - "I sent a message to the other wanderers asking if they'd seen him. I received one reply. Username: 'Herobrine.' The message contained one word: 'Stop.'"
       - "It has been reported that some victims, during prolonged exposure to liminal spaces, retreat into a fantasy world from which they cannot wake up. In this state, the victim inhabits a world just like their normal one, except the corridors are infinite and the books never end. The only way they realize they need to wake up is a note found in their fantasy world. You are reading that note. Wake up."
+
+  - title: "level.dat"
+    author: "unknown"
+    pages:
+      - "§8[NBT] root\n§8 ├ Data\n§8 │ ├ LevelName: §7World1§8\n§8 │ ├ version: §7— §8\n§8 │ ├ LastPlayed: §7?????????§8\n§8 │ └ SpawnX: 0\n§8 │   SpawnY: 65\n§8 │   SpawnZ: 0"
+      - "§8 │ ├ Time: §76000§8 (frozen)\n§8 │ ├ raining: 0\n§8 │ ├ thundering: 0\n§8 │ └ Player\n§8 │   ├ Health: 20\n§8 │   ├ Pos: [0.5, 65.0, 0.5]\n§8 │   └ Inventory: §7empty§8"
+      - "§7The file is intact. The world is still there. The grass is still green. The trees are still standing. The house is still where you left it.\n\n§8Nothing has moved since the last save."
+      - "§7It has been waiting a very long time.\n\n\n§0load this world?"

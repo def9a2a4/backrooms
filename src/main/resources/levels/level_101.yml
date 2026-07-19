@@ -1,0 +1,26 @@
+id: level_101
+display_name: "Alpha"
+generator: level_101
+environment: NORMAL
+dimension_type: day
+biome: "backrooms:alpha"
+fixed_time: 6000
+spawn_radius: 100
+enter_message: "§7§oThe fog swallows the horizon..."
+
+generator_config:
+  tree_chunk_chance: 30
+  structure_chunk_chance: 5
+  decoration_empty_chance: 90
+  ground_decorations:
+    SHORT_GRASS: 60
+    DANDELION: 25
+    POPPY: 15
+
+exit_triggers:
+  - type: bed_sleep
+    target_level: level_0
+    transition:
+      blindness_ticks: 100
+      delay_ticks: 30
+      message: "§7You have no home bed or charged respawn anchor, or it was obstructed."

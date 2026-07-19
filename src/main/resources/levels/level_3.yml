@@ -45,6 +45,15 @@ generator_config:
         - "§7> cat /archive/index.dat\n§8[INFO] Index contains your name.\n§7// How?"
         - "§7> du -sh /archive/\n§8  Size: NaN\n§8  Files: more than last time\n§7// Archive is still growing."
         - "§7/* Entry 64637.0.0.1:\n   Title: This Terminal\n   Author: You\n   Status: Being Read Right Now */"
+    - weight: 1
+      target: level_101
+      messages:
+        - "§7// RESTORE world --snapshot=alpha\n§8[WARN] Snapshot predates changelog.\n§7// Last verified: a long time ago"
+        - "§7> ls /backups/\n§8  world_alpha/  §7(untouched)\n§8[INFO] Nothing has moved since\n§8  the last save."
+        - "§7/* Rollback target: the first day.\n   Grass. Trees. A house someone\n   built and never came back to. */"
+        - "§7> diff world/ backups/world_alpha/\n§8  Everything is different.\n§8  Nothing has changed."
+        - "§7// WARNING: rollback cannot be\n// undone. The old world does not\n// know about you yet.\n§8// Proceed? [Y/n]"
+        - "§7> stat world_alpha/level.dat\n§8  Modified: ?????????\n§8  Accessed: just now\n§7// Who opened it?"
 
 events:
   - ambient_sound
@@ -124,3 +133,12 @@ exit_triggers:
       blindness_ticks: 60
       delay_ticks: 20
       message: "// LOADING archive_64637.lib ..."
+  - type: powered_command_block
+    target_level: level_101
+    power_count: 16
+    window_ticks: 80
+    radius: 20
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "§7> restoring world from snapshot alpha ... §aOK"

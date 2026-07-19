@@ -43,3 +43,10 @@ exit_triggers:
       darkness_ticks: 80
       delay_ticks: 40
       message: "§7The stairs end. You feel yourself falling... and then, light."
+  - type: open_book
+    target_level: level_101
+    book_title: "level.dat"
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 30
+      message: "§7Opening level.dat ... §8last played: a long time ago"
