@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "name.d3420b8b7fe04.def9a2a4"
-version = "0.2.2"
+version = "0.3.0"
 
 java {
     toolchain {
