@@ -12,6 +12,12 @@ public class BackroomsBootstrap implements PluginBootstrap {
 
     @Override
     public void bootstrap(@NotNull BootstrapContext context) {
+        if (!ServerVersionCheck.isSupported()) {
+            // Registering the datapack on an older server aborts the whole server boot.
+            context.getLogger().error("Backrooms requires Minecraft {}+ (this server is {}); not registering the backrooms datapack.",
+                    ServerVersionCheck.MIN_VERSION, ServerVersionCheck.serverVersion());
+            return;
+        }
         context.getLifecycleManager().registerEventHandler(LifecycleEvents.DATAPACK_DISCOVERY, event -> {
             try {
                 URI uri = getClass().getResource("/backrooms_datapack").toURI();

@@ -2,9 +2,9 @@ name: Backrooms
 main: name.d3420b8b7fe04.def9a2a4.plugintemplate.BackroomsMainPlugin
 bootstrapper: name.d3420b8b7fe04.def9a2a4.plugintemplate.BackroomsBootstrap
 version: ${version}
-api-version: "1.21"
-author: You
-description: A Paper plugin.
+api-version: "1.21.11"
+author: def9a2a4
+description: Multi-level Backrooms horror experience built on Minecraft lore.
 
 permissions:
   backrooms.reload:

@@ -81,8 +81,9 @@ public class LevelRegistry {
                         world.setSpawnLocation(spawn);
                     }
                 }
-                level.configureWorld(world);
+                // Swap the dimension type first: on 26.x setTime needs the final type's world clock.
                 applyDimensionType(level, world);
+                level.configureWorld(world);
                 cleanEndFeatures(world);
                 worldToLevel.put(world, level);
                 levelToWorld.put(level.getId(), world);
@@ -135,8 +136,9 @@ public class LevelRegistry {
 
         World newWorld = creator.createWorld();
         if (newWorld != null) {
-            level.configureWorld(newWorld);
+            // Swap the dimension type first: on 26.x setTime needs the final type's world clock.
             applyDimensionType(level, newWorld);
+            level.configureWorld(newWorld);
             cleanEndFeatures(newWorld);
             worldToLevel.put(newWorld, level);
             levelToWorld.put(levelId, newWorld);

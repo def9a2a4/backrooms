@@ -12,6 +12,12 @@ public class BackroomsMainPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        if (!ServerVersionCheck.isSupported()) {
+            getLogger().severe("Backrooms requires Minecraft " + ServerVersionCheck.MIN_VERSION
+                    + " or newer (this server is " + ServerVersionCheck.serverVersion() + "). Disabling.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         new Metrics(this, BSTATS_ID);
         saveDefaultConfig();
 

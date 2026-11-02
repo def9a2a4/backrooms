@@ -28,6 +28,8 @@ Players are pulled out of normal gameplay through various triggers and dropped i
 
 **SERIOUSLY, MAKE A BACKUP OF YOUR WORLD!**
 
+**Requirements:** Paper or Purpur **1.21.11** (Java 21) or **26.1+** (Java 25, tested through 26.3). Older versions (1.21.10 and below) are not supported; the plugin will refuse to load on them.
+
 Jokes aside, this plugin may break your saves. I suggest using it on a fresh server and letting players discover things for themselves. it comes with an advancements system to give some hints and guidance. Feedback on the difficulty would be appreciated.
 
 ![Custom advancement tree for The Backrooms](docs/assets/advancements.png)

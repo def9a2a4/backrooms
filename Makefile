@@ -57,7 +57,7 @@ check-book-lengths:
 TEST_SERVER_DIR := test-server
 DOWNLOAD_CACHE := .download-cache
 SERVER_VARIANT ?= paper
-MINECRAFT_VERSION ?= 26.1.2
+MINECRAFT_VERSION ?= 26.3
 
 # Delete partially-written targets when a recipe fails, so a bad download
 # doesn't get cached and treated as a valid jar on the next run.

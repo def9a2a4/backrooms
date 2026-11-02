@@ -31,7 +31,7 @@ public class Level7ChunkGenerator extends BackroomsChunkGenerator {
 
     // Every block type in the game (for truly random placement)
     private static final Material[] ALL_BLOCKS = Arrays.stream(Material.values())
-            .filter(Material::isBlock)
+            .filter(m -> !m.isLegacy() && m.isBlock())
             .toArray(Material[]::new);
 
     // Every possible block that could appear in the corruption
