@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.DebugLog;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.BackroomsPlugin;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -20,11 +21,10 @@ public class BackroomsMainPlugin extends JavaPlugin {
         }
         new Metrics(this, BSTATS_ID);
         saveDefaultConfig();
+        DebugLog.setEnabled(getConfig().getBoolean("debug", false));
 
         backrooms = new BackroomsPlugin(this);
         backrooms.enable();
-
-        getLogger().info("Backrooms enabled.");
     }
 
     @Override
@@ -32,6 +32,5 @@ public class BackroomsMainPlugin extends JavaPlugin {
         if (backrooms != null) {
             backrooms.disable();
         }
-        getLogger().info("Backrooms disabled.");
     }
 }

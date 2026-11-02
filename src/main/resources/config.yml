@@ -1,6 +1,11 @@
 settings:
   example_option: true
 
+# Verbose logging for troubleshooting. When true, Backrooms writes extra "[debug]" lines (per-level
+# loading, dimension-type swaps, ...) to logs/latest.log. Also toggled live with /backrooms debug on|off,
+# which saves the setting here.
+debug: false
+
 backrooms:
   # Entry triggers (overworld -> backrooms)
   entry:

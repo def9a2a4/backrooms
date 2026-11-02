@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.DebugLog;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -87,7 +88,7 @@ public class LevelRegistry {
                 cleanEndFeatures(world);
                 worldToLevel.put(world, level);
                 levelToWorld.put(level.getId(), world);
-                logger.info("Loaded backrooms level: " + level.getId() + " (world: " + worldName + ")");
+                DebugLog.log(logger, "Loaded backrooms level: " + level.getId() + " (world: " + worldName + ")");
             } else {
                 logger.severe("Failed to create world for level: " + level.getId());
             }

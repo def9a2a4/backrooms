@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command.BackroomsCommand;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
@@ -254,8 +255,10 @@ public class BackroomsPlugin {
         autoSaveTask = Bukkit.getScheduler().runTaskTimer(plugin,
                 playerStateManager::saveAll, 6000L, 6000L);
 
-        plugin.getLogger().info("Backrooms framework enabled with " +
-                levelRegistry.getAll().size() + " level(s).");
+        plugin.getLogger().info("Backrooms enabled with " + levelRegistry.getAll().size() + " level(s): "
+                + levelRegistry.getAll().stream().map(BackroomsLevel::getId).sorted()
+                        .collect(java.util.stream.Collectors.joining(", "))
+                + (DebugLog.enabled() ? "; debug logging ON" : "") + ".");
     }
 
     public void disable() {
@@ -521,7 +524,7 @@ public class BackroomsPlugin {
                 }
             }
 
-            plugin.getLogger().info("Loaded level: " + levelId + " (" + level.getDisplayName()
+            DebugLog.log(plugin.getLogger(), "Loaded level: " + levelId + " (" + level.getDisplayName()
                     + ") from " + levelFile.getName());
         }
     }

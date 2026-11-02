@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.DebugLog;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 
@@ -77,7 +78,7 @@ public class DimensionTypeHelper {
         try {
             Object serverLevel = world.getClass().getMethod("getHandle").invoke(world);
             dimensionTypeField.set(serverLevel, holder);
-            logger.info("Applied " + label + " dimension type to world: " + world.getName());
+            DebugLog.log(logger, "Applied " + label + " dimension type to world: " + world.getName());
             return true;
         } catch (Exception e) {
             logger.warning("Dimension type swap failed for " + world.getName()
@@ -113,7 +114,7 @@ public class DimensionTypeHelper {
             lookupDatapackHolders();
 
             available = true;
-            logger.info("Dimension type helper resolved (dark=" + (darkHolder != null)
+            DebugLog.log(logger, "Dimension type helper resolved (dark=" + (darkHolder != null)
                     + ", light=" + (lightHolder != null)
                     + ", fullbright=" + (fullbrightHolder != null)
                     + ", bright_black_crimson=" + (brightBlackCrimsonHolder != null)
@@ -221,7 +222,7 @@ public class DimensionTypeHelper {
                 String typeName = f.getGenericType().toString();
                 if (typeName.contains("Holder") && typeName.contains(dimTypeClass.getSimpleName())) {
                     f.setAccessible(true);
-                    logger.info("Found dimension type field: " + f.getName()
+                    DebugLog.log(logger, "Found dimension type field: " + f.getName()
                             + " on " + current.getSimpleName());
                     return f;
                 }

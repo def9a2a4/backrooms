@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.DebugLog;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level37ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
@@ -79,6 +80,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         return switch (args[0].toLowerCase()) {
             case "regenerate" -> handleRegenerate(sender, args.length > 1 ? args[1] : null);
             case "list" -> handleList(sender, args.length > 1 ? args[1] : null);
+            case "debug" -> handleDebug(sender, args.length > 1 ? args[1] : null);
             case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37", "skyblock_trigger_cascade", "advance" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("This command can only be used by players.");
@@ -255,6 +257,22 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("You don't have permission to use this command.");
             return false;
         }
+        return true;
+    }
+
+    private boolean handleDebug(CommandSender sender, String arg) {
+        if (!requireAdmin(sender)) return true;
+        if (arg != null) {
+            if (!arg.equalsIgnoreCase("on") && !arg.equalsIgnoreCase("off")) {
+                sender.sendMessage("Usage: /backrooms debug [on|off]");
+                return true;
+            }
+            DebugLog.setEnabled(arg.equalsIgnoreCase("on"));
+            plugin.getConfig().set("debug", DebugLog.enabled());
+            plugin.saveConfig();
+        }
+        sender.sendMessage("Debug logging " + (DebugLog.enabled() ? "ON" : "OFF")
+                + " - [debug] lines go to logs/latest.log");
         return true;
     }
 
@@ -523,7 +541,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of("leave", "status"));
             if (sender.hasPermission("backrooms.admin") || sender.isOp()) {
-                subs.addAll(List.of("goto", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "advance", "debug37", "skyblock_trigger_cascade"));
+                subs.addAll(List.of("goto", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "advance", "debug37", "skyblock_trigger_cascade", "debug"));
             }
             if (sender.hasPermission("backrooms.regenerate") || sender.isOp()) {
                 subs.add("regenerate");
@@ -544,6 +562,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
                 case "spawn" -> filterStartsWith(entityIds(), args[1]);
                 case "enter" -> filterStartsWith(triggerIds(), args[1]);
                 case "escalation" -> filterStartsWith(List.of("0", "1", "2", "3", "4", "5"), args[1]);
+                case "debug" -> filterStartsWith(List.of("on", "off"), args[1]);
                 case "advance" -> {
                     List<String> opts = new ArrayList<>(advancementManager.getAllAdvancementPaths());
                     opts.add(0, "*");
