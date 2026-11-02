@@ -3,6 +3,7 @@ PLUGIN_NAME := Backrooms
 .PHONY: build
 build:
 	gradle clean shadowJar
+	rm -rf bin
 	mkdir -p bin
 	cp build/libs/$(PLUGIN_NAME)*.jar bin/
 
@@ -43,6 +44,16 @@ all: clean build server
 .PHONY: check-book-lengths
 check-book-lengths:
 	python3 scripts/check_book_lengths.py
+
+# 26.x world-clock overlay: regenerate after editing level fixed_time/dimension_type
+# or any dimension_type JSON it covers; CI runs the check.
+.PHONY: gen-overlay
+gen-overlay:
+	python3 scripts/gen_overlay_26x.py
+
+.PHONY: check-overlay
+check-overlay:
+	python3 scripts/gen_overlay_26x.py --check
 
 # =============================================================================
 # Test Server
