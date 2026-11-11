@@ -231,9 +231,9 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
         }
         Random rng = new Random(hash);
         int roll = rng.nextInt(100);
-        if (roll < 30) return;   // empty
+        if (roll < 45) return;   // empty
 
-        if (roll < 75) {
+        if (roll < 92) {
             Palette p = Palette.pick(rng);
             int r = p == Palette.STAR ? 3 + rng.nextInt(4) : 6 + rng.nextInt(10);
             out.add(new Planet(
@@ -241,7 +241,7 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
             return;
         }
 
-        int count = 1 + rng.nextInt(4);
+        int count = 1 + rng.nextInt(3);
         for (int i = 0; i < count; i++) {
             int r = 2 + rng.nextInt(4);
             int ext = r + ASTEROID_LUMP;

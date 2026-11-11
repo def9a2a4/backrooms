@@ -11,22 +11,26 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Random;
 
 /**
- * Level 590 — "The Sponge". A single Menger sponge of sponge blocks floating in the void.
+ * Level 590 — "The Sponge". A Menger sponge of sponge blocks, tiled forever in x and z.
  *
- * <p>The cube is 3^order blocks on a side (243 at the default order 5), with its minimum corner at
- * (origin_x, base_y, origin_z). A block is removed when, at any base-3 digit position, at least two
+ * <p>Each tile is 3^order blocks on a side (243 at the default order 5) and spans
+ * y in [base_y, base_y + size). A block is removed when, at any base-3 digit position, at least two
  * of its local x/y/z digits are 1 — the standard Menger construction, one block per unit cell.
+ * Tiles share faces, so the big tunnels of neighbouring tiles join into endless corridors.
  *
- * <p>The corner column at (origin_x, origin_z) is always solid (all digits 0), so spawn sits there
- * on the top face.
+ * <p>The tiling is shifted so world (0, 0) sits inside the sponge: on the floor of the largest
+ * tunnel running along z (local x = t + t/2, y = t, z = 0 with t = size / 3). There, the local x
+ * and y top digits are 1 (a hole the whole tunnel height) and the floor below has all y digits
+ * 2 and all z digits 0, so it is always solid.
  */
 public class Level590ChunkGenerator extends BackroomsChunkGenerator {
 
     private int order = 5;
     private int baseY = 6;
-    private int originX = 0;
-    private int originZ = 0;
     private int size = 243;
+    /** World x/z of a tile's local origin; chosen so world (0, 0) is the spawn column. */
+    private int originX = -(81 + 40);
+    private int originZ = 0;
 
     public Level590ChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
@@ -35,14 +39,16 @@ public class Level590ChunkGenerator extends BackroomsChunkGenerator {
     @Override
     public void configure(@Nullable ConfigurationSection config) {
         if (config != null) {
-            order = Math.max(1, Math.min(5, config.getInt("order", order)));
+            // order >= 2 so the spawn tunnel is at least 3 blocks tall
+            order = Math.max(2, Math.min(5, config.getInt("order", order)));
             baseY = config.getInt("base_y", baseY);
-            originX = config.getInt("origin_x", originX);
-            originZ = config.getInt("origin_z", originZ);
         }
         int s = 1;
         for (int i = 0; i < order; i++) s *= 3;
         size = s;
+        int t = size / 3;
+        originX = -(t + t / 2);
+        originZ = 0;
     }
 
     /** True if local cube coordinate (lx, ly, lz), each in [0, size), is solid. */
@@ -61,20 +67,13 @@ public class Level590ChunkGenerator extends BackroomsChunkGenerator {
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData chunkData) {
         int baseX = chunkX * 16;
         int baseZ = chunkZ * 16;
-        if (baseX + 16 <= originX || baseX >= originX + size
-                || baseZ + 16 <= originZ || baseZ >= originZ + size) {
-            return;
-        }
-
         int yMin = Math.max(baseY, chunkData.getMinHeight());
         int yMax = Math.min(baseY + size, chunkData.getMaxHeight());
 
         for (int x = 0; x < 16; x++) {
-            int lx = baseX + x - originX;
-            if (lx < 0 || lx >= size) continue;
+            int lx = Math.floorMod(baseX + x - originX, size);
             for (int z = 0; z < 16; z++) {
-                int lz = baseZ + z - originZ;
-                if (lz < 0 || lz >= size) continue;
+                int lz = Math.floorMod(baseZ + z - originZ, size);
                 for (int y = yMin; y < yMax; y++) {
                     if (isSponge(lx, y - baseY, lz)) {
                         chunkData.setBlock(x, y, z, Material.SPONGE);
@@ -85,10 +84,10 @@ public class Level590ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     @Override
-    public int getSpawnY() { return baseY + size - 4; }
+    public int getSpawnY() { return baseY + size / 3; }
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, originX + 0.5, baseY + size, originZ + 0.5);
+        return new Location(world, 0.5, getSpawnY(), 0.5);
     }
 }
