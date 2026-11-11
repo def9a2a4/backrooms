@@ -28,6 +28,8 @@ public class TransitionManager {
     private final PlayerStateManager playerStateManager;
     private final AdvancementManager advancementManager;
     private final Set<UUID> transitioning = new HashSet<>();
+    private final java.util.Map<UUID, Long> lastRefusal = new java.util.HashMap<>();
+    private final Set<String> refusedTargets = new HashSet<>();
     private BukkitTask tickTask;
 
     public TransitionManager(JavaPlugin plugin, LevelRegistry levelRegistry,
@@ -79,7 +81,12 @@ public class TransitionManager {
         // so nothing accumulates further during the transition sequence.
         state.getCustomData().clear();
 
-        String targetId = exit.getTargetLevelId();
+        String targetId = resolveTarget(exit);
+        if (targetId == null) {
+            refuse(player, exit.getTargetLevelId());
+            transitioning.remove(player.getUniqueId());
+            return;
+        }
 
         if ("overworld".equals(targetId)) {
             exit.playTransitionSequence(player, () -> {
@@ -136,6 +143,38 @@ public class TransitionManager {
         });
     }
 
+    /** The exit's target, else its fallback while the target is unavailable, else null. */
+    private String resolveTarget(ExitTrigger exit) {
+        String target = exit.getTargetLevelId();
+        if ("overworld".equals(target) || levelRegistry.getWorld(target) != null) return target;
+        String fallback = exit.getFallbackLevelId();
+        if (fallback != null && ("overworld".equals(fallback) || levelRegistry.getWorld(fallback) != null)) {
+            return fallback;
+        }
+        return null;
+    }
+
+    /**
+     * Tell the player the way is shut: the target is disabled (scan levels with mesh downloads
+     * off), still loading, or misconfigured. Tick-based triggers keep firing, so the message is
+     * rate-limited per player and the log line printed once per target.
+     */
+    private void refuse(Player player, String targetId) {
+        long now = System.currentTimeMillis();
+        Long last = lastRefusal.get(player.getUniqueId());
+        if (last == null || now - last > 4000) {
+            lastRefusal.put(player.getUniqueId(), now);
+            player.sendActionBar(net.kyori.adventure.text.Component.text(levelRegistry.get(targetId) == null
+                    ? "This way is closed." : "This place is still arriving. Try again soon.",
+                    net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                    .decorate(net.kyori.adventure.text.format.TextDecoration.ITALIC));
+        }
+        if (refusedTargets.add(targetId)) {
+            plugin.getLogger().info("Exit to " + targetId + " refused: "
+                    + (levelRegistry.get(targetId) == null ? "level not loaded (disabled or unknown)" : "world not ready yet"));
+        }
+    }
+
     public void enterBackrooms(Player player, BackroomsPlayerState state, String targetLevelId) {
         BackroomsLevel targetLevel = levelRegistry.get(targetLevelId);
         if (targetLevel == null) return;
@@ -173,7 +212,8 @@ public class TransitionManager {
         }
 
         if (radius == 0) {
-            return SpawnFinder.findSurfaceSpawn(targetWorld, 0, 0, spawnY);
+            // the generator's fixed spawn column (0, 0 for most levels)
+            return SpawnFinder.findSurfaceSpawn(targetWorld, fixedSpawn.getBlockX(), fixedSpawn.getBlockZ(), spawnY);
         }
         return SpawnFinder.findRandomSpawn(targetWorld, radius, spawnY, fixedSpawn);
     }
