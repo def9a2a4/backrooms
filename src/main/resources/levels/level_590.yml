@@ -1,0 +1,29 @@
+id: level_590
+display_name: "The Sponge"
+generator: level_590
+environment: NETHER
+dimension_type: fullbright
+biome: "backrooms:sponge"
+spawn_radius: 0
+enter_message: "§e§oEverything here is full of holes. So are you."
+generator_config:
+  order: 5        # cube is 3^order blocks on a side (max 5 = 243, to fit the 0..256 build height)
+  base_y: 6
+  origin_x: 0
+  origin_z: 0
+events: [ambient_sound]
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 8
+    chance: 0.3
+    sounds: [block.pointed_dripstone.drip_water, block.sponge.absorb, ambient.cave]
+exit_triggers:
+  # Not yet connected to other levels: falling out of the sponge returns you to its top.
+  - type: below_y
+    y_threshold: -20
+    target_level: level_590
+    transition:
+      blindness_ticks: 40
+      delay_ticks: 10
+      message: "§7§oYou are squeezed back out on top."
