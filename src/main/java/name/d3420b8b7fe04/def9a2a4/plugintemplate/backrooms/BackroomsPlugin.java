@@ -197,7 +197,8 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin, loadLobbyBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new ServerRoomLecternListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
-        Bukkit.getPluginManager().registerEvents(new Level101SignListener(plugin), plugin);
+        Bukkit.getPluginManager().registerEvents(
+                new Level101SignListener(plugin, loadLevel101SignConfig()), plugin);
 
         // 7. Apply NMS dimension types and create worlds
         levelRegistry.setDimensionTypeHelper(new DimensionTypeHelper(plugin.getLogger()));
@@ -416,6 +417,23 @@ public class BackroomsPlugin {
         return defaultValue;
     }
 
+    /**
+     * Sign text pools for the Alpha level. Data folder first (user-editable),
+     * jar resource as fallback; null lets the listener use built-in defaults.
+     */
+    private YamlConfiguration loadLevel101SignConfig() {
+        File signFile = new File(plugin.getDataFolder(), "levels/level_101_signs.yml");
+        if (signFile.exists()) {
+            return YamlConfiguration.loadConfiguration(signFile);
+        }
+        InputStream resource = plugin.getResource("levels/level_101_signs.yml");
+        if (resource != null) {
+            return YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(resource, StandardCharsets.UTF_8));
+        }
+        return null;
+    }
+
     private LobbyBookshelfListener.LobbyBookConfig loadLobbyBookConfig() {
         File bookFile = new File(plugin.getDataFolder(), "levels/level_0_books.yml");
         YamlConfiguration yaml;
@@ -486,7 +504,8 @@ public class BackroomsPlugin {
             return;
         }
 
-        File[] levelFiles = levelsDir.listFiles((dir, name) -> name.endsWith(".yml") && !name.endsWith("_books.yml"));
+        File[] levelFiles = levelsDir.listFiles((dir, name) -> name.endsWith(".yml")
+                && !name.endsWith("_books.yml") && !name.endsWith("_signs.yml"));
         if (levelFiles == null || levelFiles.length == 0) {
             plugin.getLogger().warning("No .yml files found in levels/ — no levels loaded.");
             return;

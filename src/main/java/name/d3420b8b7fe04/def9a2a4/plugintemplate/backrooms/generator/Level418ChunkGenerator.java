@@ -176,8 +176,9 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
 
     /**
      * The Cornell box: white floor, ceiling and back wall, red left wall, green right wall, a light
-     * panel in the ceiling, open at the front. Local (u, w) is (left→right, front→back) before the
-     * room's quarter turn.
+     * panel in the ceiling, open at the front. Walls and ceiling are two blocks thick so the colors
+     * and the light only show inside; outside it is a plain white box. Local (u, w) is
+     * (left→right, front→back) before the room's quarter turn.
      */
     private void writeCornell(Placement p, int x0, int z0, ChunkData chunkData) {
         int s = p.size(), base = p.baseY();
@@ -188,14 +189,16 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
                 int u = uw[0], w = uw[1];
                 for (int v = 0; v < s; v++) {
                     Material m;
-                    if (v == s - 1) {
+                    if (u == 0 || u == s - 1 || v == s - 1 || w == s - 1 || v == 0) {
+                        m = Material.WHITE_CONCRETE;                 // outer shell
+                    } else if (v == s - 2) {
                         m = u >= light0 && u <= light1 && w >= light0 && w <= light1
                                 ? Material.SEA_LANTERN : Material.WHITE_CONCRETE;
-                    } else if (u == 0) {
+                    } else if (u == 1) {
                         m = Material.RED_CONCRETE;
-                    } else if (u == s - 1) {
+                    } else if (u == s - 2) {
                         m = Material.GREEN_CONCRETE;
-                    } else if (v == 0 || w == s - 1) {
+                    } else if (w == s - 2) {
                         m = Material.WHITE_CONCRETE;
                     } else {
                         continue;
@@ -267,7 +270,7 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
         int half = CELL / 2 - MARGIN;
 
         if (r.nextDouble() < cornellChance) {
-            int s = 15 + 2 * r.nextInt(7);   // odd sides 15..27
+            int s = 19 + 2 * r.nextInt(7);   // odd sides 19..31
             int q = r.nextInt(4);
             int rx = x0 + MARGIN + r.nextInt(CELL - 2 * MARGIN - s + 1);
             int rz = z0 + MARGIN + r.nextInt(CELL - 2 * MARGIN - s + 1);

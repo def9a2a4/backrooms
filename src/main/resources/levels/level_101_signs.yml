@@ -1,0 +1,283 @@
+# Sign text pools for Level 101 "Alpha" (consumed by Level101SignListener,
+# not loaded as a level). Every line renders ~15 characters wide on a sign;
+# keep names <= 13 characters so "<name>'s" still fits.
+
+# Shared pool: gravestone occupants and house owners.
+names:
+  - Steve
+  - Alex
+  - Dave
+  - Sarah
+  - Mark
+  - Emily
+  - Kevin
+  - Anna
+  - Josh
+  - Rachel
+  - Ben
+  - Laura
+  - Mike
+  - Tom
+  - Greg
+  - Pete
+  - Claire
+  - Doug
+  - Wendy
+  - Carl
+  - Nina
+  - Ray
+  - June
+  - Walt
+  - Iris
+  - Hal
+  - Meg
+  - Roy
+  - Fern
+  - Gus
+  - Ruth
+  - Owen
+  - Cora
+  - Ned
+  - Elsie
+  - Frank
+  - Hazel
+  - Burt
+  - Opal
+  - Cliff
+  - Mabel
+  - Earl
+  - Vera
+  - Hank
+  - Edith
+  - Lloyd
+  - Ida
+  - Chester
+  - Pearl
+  - Amos
+  - Flora
+  - Silas
+  - Etta
+  - Rufus
+  - Ada
+  - Cyrus
+  - Enid
+  - Jasper
+  - Dot
+  - Linus
+  - Faye
+  - Milo
+  - Greta
+  - Oscar
+  - Maude
+  - Felix
+  - Ina
+  - Homer
+  - Bess
+  - Virgil
+  - Lena
+  - Edgar
+  - builder2010
+  - xX_miner_Xx
+  - coolguy42
+  - worldeater99
+  - gravedigger
+  - lonelyplayer
+  - Player2
+  - guest
+  - notch_fan
+  - pigman
+  - zombieslayer
+  - creeperman
+  - diamondboy
+  - ironpick
+  - torchguy88
+  - dirtlord
+  - cobblefan
+  - treepuncher
+  - skyman2009
+  - caveman_dan
+  - blockhead
+  - wolfboy
+  - minecart_mike
+  - redstoner
+  - farmhand22
+  - nightwatch
+  - seedfinder
+  - mapmaker
+  - oldtimer
+  - firstplayer
+
+grave:
+  weird_name_chance: 0.12     # name drawn from weird_names instead of names
+  rip_chance: 0.4             # top line reads RIP
+  epitaph_chance: 0.15        # epitaph instead of dates
+  ordered_dates_chance: 0.8   # otherwise the years stay exactly as rolled
+  weird_death_chance: 0.08    # death line from weird_death_lines
+  no_death_chance: 0.06       # no death date. nobody added one.
+  weird_names:
+    - unknown
+    - "???"
+    - me
+    - you
+    - nobody
+    - HEROBRINE
+    - the first one
+    - same as above
+    - all of them
+    - no one
+    - someone
+    - the builder
+    - the digger
+    - not Steve
+    - also Steve
+    - Steve again
+    - the pig
+    - grave 7
+    - vacancy
+    - reserved
+  epitaphs:
+    - gone mining
+    - be right back
+    - dug too deep
+    - went outside
+    - still digging
+    - came back
+    - came back wrong
+    - logged off
+    - respawn failed
+    - asleep
+    - not sleeping
+    - went home
+    - still here
+    - lost the map
+    - out of torches
+    - hit bedrock
+    - found the edge
+    - saw the fog
+    - went swimming
+    - forgot to eat
+    - fell
+    - fell again
+    - never found
+    - door left open
+    - taken by night
+    - waited too long
+    - no respawn
+    - autosaved
+  weird_death_lines:
+    - "d. ????"
+    - d. soon
+    - d. tomorrow
+    - d. 10000
+    - d. yes
+    - d. twice
+    - d. ongoing
+    - d. -1
+    - d. 0
+    - d. same day
+    - d. see above
+    - d. pending
+
+house:
+  weird_chance: 0.2           # label from weird instead of <name>'s <kind>
+  herobrine_chance: 0.04      # owner is Herobrine
+  kinds:                      # weighted: <name>'s <kind>
+    house: 10
+    place: 3
+    home: 2
+    farm: 2
+    base: 2
+    shop: 1
+    hut: 1
+  weird:
+    - home
+    - my house
+    - your house
+    - nobody's house
+    - our house
+    - the house
+    - no one home
+    - do not knock
+    - KEEP OUT
+    - for sale
+    - come in
+    - it's open
+    - not my house
+    - still here
+    - back soon
+    - gone mining
+    - free house
+    - mine now
+    - this is mine
+    - don't move in
+    - who lives here
+    - not a house
+    - just walls
+    - no beds
+    - beds inside
+    - home sweet home
+    - knock first
+    - wipe your feet
+
+chest:
+  weird_chance: 0.25
+  mundane:
+    - ores
+    - stuff
+    - tools
+    - wood
+    - food
+    - junk
+    - cobble
+    - important
+    - do not open
+    - empty
+    - dirt
+    - seeds
+    - saplings
+    - spare picks
+    - torches
+    - wool
+    - misc
+    - sort later
+    - old stuff
+    - good stuff
+    - extra
+    - backup
+    - flint
+    - feathers
+    - buckets
+    - maps
+    - books
+    - armor
+    - arrows
+    - eggs
+    - string
+    - gravel
+  weird:
+    - tomorrow
+    - yesterday
+    - what's left
+    - the rest
+    - winter
+    - mine
+    - the old days
+    - before
+    - after
+    - everything
+    - nothing
+    - the first day
+    - do not count
+    - still full
+    - was full
+    - not yet
+    - him
+    - her
+    - us
+    - more of it
+    - it
+    - open it
+    - don't
+    - look inside
+    - never opened
+    - day one

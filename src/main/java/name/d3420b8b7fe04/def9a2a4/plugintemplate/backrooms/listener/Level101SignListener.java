@@ -8,10 +8,12 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,9 +31,11 @@ import java.util.Random;
  *   - standing sign beside a dirt mound -> gravestone (name, b. / d. years)
  *   - anything else (signpost clusters, the open grave) stays blank
  *
- * Text is derived deterministically from the world seed and sign position, so
- * a regenerated world gets the same names. Signs are waxed — the old world's
- * words are not editable.
+ * Text pools and chances come from levels/level_101_signs.yml (loaded in
+ * BackroomsPlugin); the small built-in pools below are only a fallback for a
+ * missing config. Text is derived deterministically from the world seed and
+ * sign position, so a regenerated world gets the same names. Signs are waxed —
+ * the old world's words are not editable.
  */
 public class Level101SignListener implements Listener {
 
@@ -39,58 +43,73 @@ public class Level101SignListener implements Listener {
     private static final int SCAN_MIN_Y = 58;   // dungeon-breach chest labels sit at y60
     private static final int SCAN_MAX_Y = 78;
 
-    // Sign lines render ~15 characters wide; every entry below must fit,
-    // including names with "'s" appended.
-    private static final String[] NAMES = {
-            "Steve", "Alex", "Dave", "Sarah", "Mark", "Emily", "Kevin", "Anna",
-            "Josh", "Rachel", "Ben", "Laura", "Mike", "Tom", "Greg", "Pete",
-            "Claire", "Doug", "Wendy", "Carl", "Nina", "Ray", "June", "Walt",
-            "Iris", "Hal", "Meg", "Roy", "Fern", "Gus",
-            "builder2010", "xX_miner_Xx", "coolguy42", "worldeater99",
-            "gravedigger", "lonelyplayer", "Player2", "guest"
-    };
+    private List<String> names = List.of("Steve", "Alex", "Sarah", "Mark");
+    private List<String> graveWeirdNames = List.of("unknown", "???", "nobody");
+    private List<String> epitaphs = List.of("gone mining", "be right back");
+    private List<String> weirdDeathLines = List.of("d. ????", "d. soon");
+    private List<String> houseKinds = List.of("house", "house", "house", "place");
+    private List<String> houseWeird = List.of("home", "my house", "nobody's house");
+    private List<String> chestMundane = List.of("ores", "stuff", "tools", "empty");
+    private List<String> chestWeird = List.of("tomorrow", "what's left");
 
-    private static final String[] GRAVE_NAMES_WEIRD = {
-            "unknown", "???", "me", "you", "nobody", "HEROBRINE",
-            "the first one", "same as above", "all of them"
-    };
-
-    private static final String[] EPITAPHS = {
-            "gone mining", "be right back", "dug too deep", "went outside",
-            "still digging", "came back", "logged off", "respawn failed",
-            "asleep", "not sleeping", "went home", "still here"
-    };
-
-    private static final String[] WEIRD_DEATH_LINES = {
-            "d. ????", "d. soon", "d. tomorrow", "d. 10000"
-    };
-
-    private static final String[] HOUSE_WEIRD = {
-            "home", "my house", "your house", "nobody's house",
-            "our house", "the house", "no one home", "do not knock",
-            "KEEP OUT", "for sale", "come in", "it's open",
-            "not my house", "still here"
-    };
-
-    private static final String[] CHEST_MUNDANE = {
-            "ores", "stuff", "tools", "wood", "food", "junk",
-            "cobble", "important", "do not open", "empty",
-            "dirt", "seeds", "saplings", "spare picks", "torches",
-            "wool", "misc", "sort later", "old stuff", "good stuff",
-            "extra", "backup"
-    };
-
-    private static final String[] CHEST_WEIRD = {
-            "tomorrow", "yesterday", "what's left", "the rest",
-            "winter", "mine", "the old days", "before", "after",
-            "everything", "nothing", "the first day", "do not count",
-            "still full", "was full", "not yet", "him"
-    };
+    private double graveWeirdNameChance = 0.12;
+    private double ripChance = 0.4;
+    private double epitaphChance = 0.15;
+    private double orderedDatesChance = 0.8;
+    private double weirdDeathChance = 0.08;
+    private double noDeathChance = 0.06;
+    private double houseWeirdChance = 0.2;
+    private double herobrineChance = 0.04;
+    private double chestWeirdChance = 0.25;
 
     private final JavaPlugin plugin;
 
-    public Level101SignListener(JavaPlugin plugin) {
+    public Level101SignListener(JavaPlugin plugin, @Nullable ConfigurationSection config) {
         this.plugin = plugin;
+        if (config == null) return;
+
+        names = listOrDefault(config, "names", names);
+
+        ConfigurationSection grave = config.getConfigurationSection("grave");
+        if (grave != null) {
+            graveWeirdNames = listOrDefault(grave, "weird_names", graveWeirdNames);
+            epitaphs = listOrDefault(grave, "epitaphs", epitaphs);
+            weirdDeathLines = listOrDefault(grave, "weird_death_lines", weirdDeathLines);
+            graveWeirdNameChance = grave.getDouble("weird_name_chance", graveWeirdNameChance);
+            ripChance = grave.getDouble("rip_chance", ripChance);
+            epitaphChance = grave.getDouble("epitaph_chance", epitaphChance);
+            orderedDatesChance = grave.getDouble("ordered_dates_chance", orderedDatesChance);
+            weirdDeathChance = grave.getDouble("weird_death_chance", weirdDeathChance);
+            noDeathChance = grave.getDouble("no_death_chance", noDeathChance);
+        }
+
+        ConfigurationSection house = config.getConfigurationSection("house");
+        if (house != null) {
+            houseWeird = listOrDefault(house, "weird", houseWeird);
+            houseWeirdChance = house.getDouble("weird_chance", houseWeirdChance);
+            herobrineChance = house.getDouble("herobrine_chance", herobrineChance);
+            ConfigurationSection kinds = house.getConfigurationSection("kinds");
+            if (kinds != null) {
+                List<String> expanded = new ArrayList<>();
+                for (String kind : kinds.getKeys(false)) {
+                    int weight = kinds.getInt(kind, 1);
+                    for (int i = 0; i < weight; i++) expanded.add(kind);
+                }
+                if (!expanded.isEmpty()) houseKinds = expanded;
+            }
+        }
+
+        ConfigurationSection chest = config.getConfigurationSection("chest");
+        if (chest != null) {
+            chestMundane = listOrDefault(chest, "mundane", chestMundane);
+            chestWeird = listOrDefault(chest, "weird", chestWeird);
+            chestWeirdChance = chest.getDouble("weird_chance", chestWeirdChance);
+        }
+    }
+
+    private static List<String> listOrDefault(ConfigurationSection config, String key, List<String> fallback) {
+        List<String> list = config.getStringList(key);
+        return list.isEmpty() ? fallback : list;
     }
 
     @EventHandler
@@ -158,54 +177,51 @@ public class Level101SignListener implements Listener {
         return false;
     }
 
-    private static String[] gravestone(Random rng) {
-        String name = rng.nextInt(100) < 12
-                ? GRAVE_NAMES_WEIRD[rng.nextInt(GRAVE_NAMES_WEIRD.length)]
-                : NAMES[rng.nextInt(NAMES.length)];
-        String header = rng.nextInt(100) < 40 ? "RIP" : "";
+    private static String pick(List<String> pool, Random rng) {
+        return pool.get(rng.nextInt(pool.size()));
+    }
+
+    private String[] gravestone(Random rng) {
+        String name = rng.nextDouble() < graveWeirdNameChance
+                ? pick(graveWeirdNames, rng)
+                : pick(names, rng);
+        String header = rng.nextDouble() < ripChance ? "RIP" : "";
 
         // Some graves carry an epitaph instead of dates
-        if (rng.nextInt(100) < 15) {
-            return new String[]{ header, name, EPITAPHS[rng.nextInt(EPITAPHS.length)], "" };
+        if (rng.nextDouble() < epitaphChance) {
+            return new String[]{ header, name, pick(epitaphs, rng), "" };
         }
 
         int a = rng.nextInt(10000);
         int b = rng.nextInt(10000);
         // Usually the dates are in order. Sometimes they are not, and nothing explains it.
-        if (rng.nextInt(100) < 80 && a > b) {
+        if (rng.nextDouble() < orderedDatesChance && a > b) {
             int t = a; a = b; b = t;
         }
         String deathLine = "d. " + b;
-        int quirk = rng.nextInt(100);
-        if (quirk < 8) {
-            deathLine = WEIRD_DEATH_LINES[rng.nextInt(WEIRD_DEATH_LINES.length)];
-        } else if (quirk < 14) {
+        double quirk = rng.nextDouble();
+        if (quirk < weirdDeathChance) {
+            deathLine = pick(weirdDeathLines, rng);
+        } else if (quirk < weirdDeathChance + noDeathChance) {
             deathLine = ""; // no death date. nobody added one.
         }
         return new String[]{ header, name, "b. " + a, deathLine };
     }
 
-    private static String[] houseNameplate(Random rng) {
-        if (rng.nextInt(100) < 80) {
-            String name = rng.nextInt(100) < 4
+    private String[] houseNameplate(Random rng) {
+        if (rng.nextDouble() >= houseWeirdChance) {
+            String name = rng.nextDouble() < herobrineChance
                     ? "Herobrine"
-                    : NAMES[rng.nextInt(NAMES.length)];
-            String kind = switch (rng.nextInt(10)) {
-                case 0, 1 -> "place";
-                case 2 -> "home";
-                case 3 -> "farm";
-                case 4 -> "shop";
-                default -> "house";
-            };
-            return new String[]{ "", name + "'s", kind };
+                    : pick(names, rng);
+            return new String[]{ "", name + "'s", pick(houseKinds, rng) };
         }
-        return new String[]{ "", HOUSE_WEIRD[rng.nextInt(HOUSE_WEIRD.length)] };
+        return new String[]{ "", pick(houseWeird, rng) };
     }
 
-    private static String[] chestLabel(Random rng) {
-        String text = rng.nextInt(100) < 75
-                ? CHEST_MUNDANE[rng.nextInt(CHEST_MUNDANE.length)]
-                : CHEST_WEIRD[rng.nextInt(CHEST_WEIRD.length)];
+    private String[] chestLabel(Random rng) {
+        String text = rng.nextDouble() < chestWeirdChance
+                ? pick(chestWeird, rng)
+                : pick(chestMundane, rng);
         return new String[]{ "", text };
     }
 }
