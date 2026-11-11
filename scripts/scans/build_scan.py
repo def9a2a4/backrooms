@@ -41,9 +41,10 @@ BLOCKS = json.loads((ROOT / "scripts/voxel-preview/blocks.json").read_text())
 MC_ASSETS = ("https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/"
              "58d92c8cee4c7ac22d02988fb2bc3e4648af9ef2/assets/minecraft/textures/block")
 
-GREYS = ["stone", "smooth_stone", "andesite", "polished_andesite", "tuff", "gray_concrete",
-         "light_gray_concrete", "cyan_terracotta", "light_gray_terracotta", "deepslate",
-         "gray_concrete_powder", "light_gray_concrete_powder", "black_concrete", "white_concrete"]
+# IronSource's "concrete" material list (assets/mc_blocks.toml), plus black for soot and stains.
+GREYS = ["light_gray_concrete", "gray_concrete", "smooth_stone", "stone", "andesite",
+         "polished_andesite", "tuff", "light_gray_terracotta", "cyan_terracotta", "white_concrete",
+         "black_concrete"]
 COLORS = ["red_concrete", "orange_concrete", "yellow_concrete", "lime_concrete", "green_concrete",
           "cyan_concrete", "light_blue_concrete", "blue_concrete", "purple_concrete",
           "magenta_concrete", "pink_concrete", "yellow_terracotta", "red_terracotta"]
@@ -59,8 +60,8 @@ MODELS = {
         "palette": ["coarse_dirt", "dirt", "rooted_dirt", "packed_mud", "mud_bricks",
                     "dripstone_block", "sandstone", "smooth_sandstone", "terracotta",
                     "white_terracotta", "light_gray_terracotta", "brown_terracotta", "gravel",
-                    "tuff", "andesite", "granite"],
-        "cast": 0.6,
+                    "tuff", "andesite", "granite", "calcite"],
+        "penalty": {"calcite": 0.01},     # IronSource: calcite only for very white
     },
     "skatepark": {
         "input": "southbank_undercroft_skatepark.glb",
@@ -81,12 +82,13 @@ MODELS = {
         "input": "hintze_hall.glb",
         "meters_per_unit": 1.0,
         "mode": "shell",
-        "palette": ["white_terracotta", "light_gray_terracotta", "terracotta", "brown_terracotta",
-                    "gray_terracotta", "cyan_terracotta", "smooth_sandstone", "sandstone",
-                    "cut_sandstone", "stone_bricks", "polished_andesite", "smooth_stone",
-                    "spruce_planks", "dark_oak_planks", "bone_block", "mud_bricks", "packed_mud",
-                    "dripstone_block", "black_concrete", "quartz_block"],
-        "cast": 0.5,
+        # IronSource's building list, minus brick and metal (Waterhouse's terracotta hall)
+        "palette": ["white_terracotta", "smooth_sandstone", "calcite", "light_gray_terracotta",
+                    "terracotta", "mud_bricks", "packed_mud", "brown_terracotta", "gray_terracotta",
+                    "cyan_terracotta", "stone", "smooth_stone", "andesite", "polished_andesite",
+                    "tuff", "stone_bricks", "polished_deepslate", "spruce_planks",
+                    "dark_oak_planks", "bone_block"],
+        "penalty": {"calcite": 0.01},
     },
 }
 
@@ -105,27 +107,32 @@ def fetch_texture(name: str) -> Path:
     return path
 
 
-def block_color(block: str) -> np.ndarray:
-    """Average opaque-pixel RGB, sides and top weighted equally (first animation frame only)."""
-    t = textures_of(block)
-    acc = []
-    fetch_texture(t["bottom"])
-    for face in ("side", "top"):
-        img = np.asarray(Image.open(fetch_texture(t[face])).convert("RGBA"), float)
+def srgb_to_linear(c: np.ndarray) -> np.ndarray:
+    c = c / 255.0
+    return np.where(c > 0.04045, ((c + 0.055) / 1.055) ** 2.4, c / 12.92)
+
+
+def oklab(lin: np.ndarray) -> np.ndarray:
+    """Linear sRGB (0..1) -> OKLab."""
+    m1 = np.array([[0.4122214708, 0.5363325363, 0.0514459929],
+                   [0.2119034982, 0.6806995451, 0.1073969566],
+                   [0.0883024619, 0.2817188376, 0.6299787005]])
+    m2 = np.array([[0.2104542553, 0.7936177850, -0.0040720468],
+                   [1.9779984951, -2.4285922050, 0.4505937099],
+                   [0.0259040371, 0.7827717662, -0.8086757660]])
+    return np.cbrt(lin @ m1.T) @ m2.T
+
+
+def block_color(block: str) -> dict:
+    """OKLab per face (side, top, bottom): alpha-weighted mean of the texture in linear light
+    (first frame of animated strips). After IronSource's ironsource-convert palette.rs."""
+    out = {}
+    for face, name in textures_of(block).items():
+        img = np.asarray(Image.open(fetch_texture(name)).convert("RGBA"), float)
         img = img[: img.shape[1]]
-        px = img[img[..., 3] > 0][:, :3]
-        acc.append(px.mean(axis=0))
-    return np.mean(acc, axis=0)
-
-
-def to_lab(rgb: np.ndarray) -> np.ndarray:
-    c = rgb / 255.0
-    c = np.where(c > 0.04045, ((c + 0.055) / 1.055) ** 2.4, c / 12.92)
-    m = np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]])
-    xyz = c @ m.T / np.array([0.9505, 1.0, 1.089])
-    f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116)
-    return np.stack([116 * f[..., 1] - 16, 500 * (f[..., 0] - f[..., 1]),
-                     200 * (f[..., 1] - f[..., 2])], axis=-1)
+        a = img[..., 3:] / 255
+        out[face] = oklab((srgb_to_linear(img[..., :3]) * a).sum(axis=(0, 1)) / a.sum())
+    return out
 
 
 def load_faces(name: str, cfg: dict):
@@ -138,6 +145,7 @@ def load_faces(name: str, cfg: dict):
     scene = trimesh.load(TEMP / cfg["input"])
     V, F, C = [], [], []
     off = 0
+    arrays = {}                  # one RGB array per distinct texture, not per primitive
     for g in scene.dump(concatenate=False):
         m = g.visual.material
         # some scans are exported unlit: the color lives in the emissive texture
@@ -146,7 +154,9 @@ def load_faces(name: str, cfg: dict):
         if tex is None or uv is None:
             col = np.full((len(g.faces), 3), 128.0)
         else:
-            t = np.asarray(tex.convert("RGB"))
+            if id(tex) not in arrays:
+                arrays[id(tex)] = (tex, np.asarray(tex.convert("RGB")))
+            t = arrays[id(tex)][1]
             h, w, _ = t.shape
             col = np.zeros((len(g.faces), 3))
             for a, b, c in [(1 / 3, 1 / 3, 1 / 3), (0.6, 0.2, 0.2), (0.2, 0.6, 0.2), (0.2, 0.2, 0.6)]:
@@ -164,22 +174,38 @@ def load_faces(name: str, cfg: dict):
     return V, F, C
 
 
-def assign(colors: np.ndarray, area: np.ndarray, cfg: dict):
-    """Nearest palette block per face, after mapping the scan's color statistics onto the
-    palette's. Returns (palette indices, palette Lab)."""
+def assign(colors: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict):
+    """Nearest palette block per face in OKLab, IronSource-style: the block's top and side
+    colors mixed by how much the face looks up (or down: bottom), lightness counting a quarter
+    (baked light and shadow make it the least reliable channel). The scan's lightness is first
+    mapped onto the palette's range, and `cast` of its average tint removed (white balance).
+    Returns (palette indices, palette OKLab as seen from the side)."""
     pal = cfg["palette"]
-    plab = to_lab(np.array([block_color(b) for b in pal]))
-    lab = to_lab(colors.astype(float))
+    faces = [block_color(b) for b in pal]
+    side = np.array([f["side"] for f in faces])
+    top = np.array([f["top"] for f in faces])
+    bottom = np.array([f["bottom"] for f in faces])
+    lab = oklab(srgb_to_linear(colors.astype(float)))
     w = area / area.sum()
     fmean = (lab * w[:, None]).sum(axis=0)
     fstd = np.sqrt((((lab - fmean) ** 2) * w[:, None]).sum(axis=0))
-    pmean, pstd = plab.mean(axis=0), plab.std(axis=0)
-    out = np.empty_like(lab)
-    out[:, 0] = (lab[:, 0] - fmean[0]) / max(fstd[0], 1e-6) * pstd[0] * cfg.get("spread", 0.8) + pmean[0]
-    cast = cfg.get("cast", 0.5)      # 1 = remove the scan's average tint entirely
-    out[:, 1:] = (lab[:, 1:] - fmean[1:]) * cfg.get("chroma", 1.0) + fmean[1:] * (1 - cast) + pmean[1:] * cast
-    d = ((out[:, None, :] - plab[None, :, :]) ** 2 * np.array([1.0, 1.4, 1.4])).sum(axis=2)
-    return d.argmin(axis=1), plab
+    pl = (side + top) / 2
+    pmean, pstd = pl.mean(axis=0), pl.std(axis=0)
+    q = np.empty_like(lab)
+    q[:, 0] = (lab[:, 0] - fmean[0]) / max(fstd[0], 1e-6) * pstd[0] * cfg.get("spread", 0.8) + pmean[0]
+    cast = cfg.get("cast", 0.0)      # 1 = remove the scan's average tint entirely (to neutral)
+    q[:, 1:] = (lab[:, 1:] - fmean[1:]) * cfg.get("chroma", 1.0) + fmean[1:] * (1 - cast)
+    f = np.clip(up, 0, 1)[:, None, None]
+    g = np.clip(-up, 0, 1)[:, None, None]
+    best = np.empty(len(q), int)
+    penalty = np.array([cfg.get("penalty", {}).get(b, 0.0) for b in pal])
+    for s0 in range(0, len(q), 200_000):      # chunked: faces x palette x 3 floats
+        sl = slice(s0, s0 + 200_000)
+        cand = side[None] * (1 - f[sl] - g[sl]) + top[None] * f[sl] + bottom[None] * g[sl]
+        d = q[sl, None, :] - cand
+        dist = 0.25 * d[..., 0] ** 2 + d[..., 1] ** 2 + d[..., 2] ** 2 + penalty[None]
+        best[sl] = dist.argmin(axis=1)
+    return best, side
 
 
 def decimate(verts, faces, target, agg=7):
@@ -241,15 +267,20 @@ def build(name: str, args):
     print(f"  {len(F)} tris, extent {(hi - lo).round(1)} m")
 
     tri = V[F]
-    area = np.linalg.norm(np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0]), axis=1) / 2
-    mat, plab = assign(C, area, cfg)
+    n = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+    area = np.linalg.norm(n, axis=1) / 2
+    up = n[:, 1] / np.maximum(2 * area, 1e-12)
+    if cfg["mode"] == "shell":
+        up = np.abs(up)        # floors and ceilings alike read as tops; winding isn't reliable
+    mat, plab = assign(C, area, up, cfg)
     pal = cfg["palette"]
     for i in np.argsort(-np.bincount(mat, weights=area, minlength=len(pal))):
         share = area[mat == i].sum() / area.sum() * 100
         if share >= 0.1:
             print(f"    {pal[i]:28s} {share:5.1f}%")
     # variants: each block mixed with its two nearest palette neighbors by color
-    dist = ((plab[:, None] - plab[None]) ** 2).sum(axis=2)
+    dd = plab[:, None] - plab[None]
+    dist = 0.25 * dd[..., 0] ** 2 + dd[..., 1] ** 2 + dd[..., 2] ** 2
     variants = [[(i, 70)] + [(int(j), wt) for j, wt in zip(np.argsort(dist[i])[1:3], (18, 12))]
                 for i in range(len(pal))]
 

@@ -257,6 +257,62 @@ function plain(v) {
   return { ...v, vol, ids: ['stone'] };
 }
 
+// ── reduced mesh view ───────────────────────────────────────────────────────────────────────────
+// The decimated triangles as they are, before voxelizing: flat-shaded, both sides (scan winding
+// isn't reliable), each vertex colored with its block's average top/side texture color.
+
+const blockColors = new Map();
+async function blockColor(id) {
+  if (!blockColors.has(id)) {
+    blockColors.set(id, (async () => {
+      const acc = [0, 0, 0];
+      for (const face of [2, 0]) {
+        const img = new Image();
+        img.src = `${TEX_URL}${texFor(id, face)}.png`;
+        await img.decode();
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = img.width;               // first frame of animated strips
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const px = ctx.getImageData(0, 0, img.width, img.width).data;
+        const sum = [0, 0, 0];
+        let n = 0;
+        for (let i = 0; i < px.length; i += 4) {
+          if (!px[i + 3]) continue;
+          for (let c = 0; c < 3; c++) sum[c] += px[i + c];
+          n++;
+        }
+        const tint = id === 'grass_block' && face === 2 ? new THREE.Color(GRASS_TINT) : null;
+        const t = tint ? [tint.r, tint.g, tint.b].map((x) => x * 255) : [255, 255, 255];
+        for (let c = 0; c < 3; c++) acc[c] += (sum[c] / Math.max(n, 1)) * (t[c] / 255) / 2;
+      }
+      return new THREE.Color().setRGB(acc[0] / 255, acc[1] / 255, acc[2] / 255, THREE.SRGBColorSpace);
+    })());
+  }
+  return blockColors.get(id);
+}
+
+async function solidMesh(mesh, scale, baseY, mats) {
+  const colors = await Promise.all(mesh.palette.map((e) => blockColor(e.id)));
+  const plainColor = new THREE.Color(0x9a9a9a);
+  const nt = mesh.tris.length;
+  const pos = new Float32Array(nt * 3), col = new Float32Array(nt * 3);
+  for (let i = 0; i < nt; i++) {
+    const v = mesh.tris[i];
+    pos[i * 3] = mesh.verts[v * 3] * scale;
+    pos[i * 3 + 1] = (mesh.verts[v * 3 + 1] - baseY) * scale;
+    pos[i * 3 + 2] = mesh.verts[v * 3 + 2] * scale;
+    const c = mats ? colors[mesh.vmat[v]] : plainColor;
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  const material = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, flatShading: true });
+  return new THREE.Mesh(g, material);
+}
+
 let first = true;
 async function build() {
   const m = model();
@@ -271,6 +327,30 @@ async function build() {
     return;
   }
   const ext = [0, 1, 2].map((c) => (mesh.hi[c] - mesh.lo[c]) * scale);
+  const finish = () => {
+    if (first || $('refit').checked) fit(ext);
+    first = false;
+    const q = new URLSearchParams(location.search);
+    q.set('model', m.id);
+    q.set('scale', scale);
+    q.set('view', $('view').value);
+    history.replaceState(null, '', `?${q}`);
+  };
+  if ($('view').value === 'mesh') {
+    const baseY = m.mode === 'shell' ? mesh.lo[1] : mesh.groundRef;
+    clear(voxels);
+    voxels = await solidMesh(mesh, scale, baseY, $('mats').checked);
+    scene.add(voxels);
+    clear(wire);
+    wire = wireframe(mesh, scale, baseY);
+    wire.visible = $('wire').checked;
+    scene.add(wire);
+    stats.textContent =
+      `mesh      ${(mesh.bytes / 1024).toFixed(1)} KB raw, ${mesh.tris.length / 3} tris, ${mesh.verts.length / 3} verts\n` +
+      `size      ${ext.map((e) => Math.round(e)).join(' × ')} blocks (x y z)`;
+    finish();
+    return;
+  }
   const side = (c) => Math.min(ext[c] + 8, 2 * radius + 1);
   const est = side(0) * side(2) * (ext[1] + (m.mode === 'column' ? 6.25 * scale + 8 : 8));
   if (est > MAX_VOXELS) {
@@ -308,12 +388,7 @@ async function build() {
     `height    ${v.y0}..${v.y0 + v.ny - 1}\n` +
     `quads     ${quads.toLocaleString()}\n` +
     `voxelize  ${(t1 - t0).toFixed(0)} ms, mesh ${(t2 - t1).toFixed(0)} ms`;
-  if (first || $('refit').checked) fit(ext);
-  first = false;
-  const q = new URLSearchParams(location.search);
-  q.set('model', m.id);
-  q.set('scale', scale);
-  history.replaceState(null, '', `?${q}`);
+  finish();
 }
 
 function fit(ext) {
@@ -326,6 +401,8 @@ function fit(ext) {
 $('build').onclick = build;
 $('model').onchange = () => { selectModel(model()); build(); };
 $('mats').onchange = build;
+$('view').onchange = build;
+if (params.get('view')) $('view').value = params.get('view');
 $('wire').onchange = () => { if (wire) wire.visible = $('wire').checked; };
 $('fog').onchange = applyFog;
 
