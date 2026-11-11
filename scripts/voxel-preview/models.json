@@ -37,7 +37,8 @@
       "250 KB": "/.temp/meshes/gobekli_250k.mesh.gz",
       "1 MB": "/.temp/meshes/gobekli_1m.mesh.gz",
       "4 MB": "/.temp/meshes/gobekli_4m.mesh.gz",
-      "8 MB": "/.temp/meshes/gobekli_8m.mesh.gz"
+      "8 MB": "/.temp/meshes/gobekli_8m.mesh.gz",
+      "1 MB full": "/.temp/meshes/gobekli_1m_full.mesh.gz"
     }
   },
   {
@@ -58,7 +59,8 @@
       "250 KB": "/.temp/meshes/skatepark_250k.mesh.gz",
       "1 MB": "/.temp/meshes/skatepark_1m.mesh.gz",
       "4 MB": "/.temp/meshes/skatepark_4m.mesh.gz",
-      "8 MB": "/.temp/meshes/skatepark_8m.mesh.gz"
+      "8 MB": "/.temp/meshes/skatepark_8m.mesh.gz",
+      "1 MB full": "/.temp/meshes/skatepark_1m_full.mesh.gz"
     }
   },
   {
@@ -79,7 +81,8 @@
       "250 KB": "/.temp/meshes/skatepark_grey_250k.mesh.gz",
       "1 MB": "/.temp/meshes/skatepark_grey_1m.mesh.gz",
       "4 MB": "/.temp/meshes/skatepark_grey_4m.mesh.gz",
-      "8 MB": "/.temp/meshes/skatepark_grey_8m.mesh.gz"
+      "8 MB": "/.temp/meshes/skatepark_grey_8m.mesh.gz",
+      "1 MB full": "/.temp/meshes/skatepark_grey_1m_full.mesh.gz"
     }
   },
   {
@@ -100,7 +103,8 @@
       "250 KB": "/.temp/meshes/hall_250k.mesh.gz",
       "1 MB": "/.temp/meshes/hall_1m.mesh.gz",
       "4 MB": "/.temp/meshes/hall_4m.mesh.gz",
-      "8 MB": "/.temp/meshes/hall_8m.mesh.gz"
+      "8 MB": "/.temp/meshes/hall_8m.mesh.gz",
+      "1 MB full": "/.temp/meshes/hall_1m_full.mesh.gz"
     }
   }
 ]

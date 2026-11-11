@@ -91,5 +91,30 @@
     "side": "deepslate",
     "top": "deepslate_top",
     "bottom": "deepslate_top"
+  },
+  "blackstone": {
+    "side": "blackstone",
+    "top": "blackstone_top",
+    "bottom": "blackstone_top"
+  },
+  "podzol": {
+    "side": "podzol_side",
+    "top": "podzol_top",
+    "bottom": "podzol_top"
+  },
+  "smooth_red_sandstone": {
+    "side": "red_sandstone_top",
+    "top": "red_sandstone_top",
+    "bottom": "red_sandstone_top"
+  },
+  "smooth_quartz": {
+    "side": "quartz_block_bottom",
+    "top": "quartz_block_bottom",
+    "bottom": "quartz_block_bottom"
+  },
+  "quartz_pillar": {
+    "side": "quartz_pillar",
+    "top": "quartz_pillar_top",
+    "bottom": "quartz_pillar_top"
   }
 }

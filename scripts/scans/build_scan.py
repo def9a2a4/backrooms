@@ -17,6 +17,7 @@ Usage: uv run scripts/scans/build_scan.py gobekli [--max-kb 50] [--output ...]
 """
 
 import argparse
+import functools
 import gzip
 import io
 import json
@@ -125,6 +126,7 @@ def oklab(lin: np.ndarray) -> np.ndarray:
     return np.cbrt(lin @ m1.T) @ m2.T
 
 
+@functools.cache
 def block_color(block: str) -> dict:
     """OKLab per face (side, top, bottom): alpha-weighted mean of the texture in linear light
     (first frame of animated strips). After IronSource's ironsource-convert palette.rs."""
@@ -176,18 +178,19 @@ def load_faces(name: str, cfg: dict):
     return V, F, C
 
 
-def assign(colors: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict):
+def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contrast=None):
     """Nearest palette block per face in OKLab, IronSource-style: the block's top and side
     colors mixed by how much the face looks up (or down: bottom), lightness counting a quarter
     (baked light and shadow make it the least reliable channel). The scan's lightness is first
     mapped onto the palette's range, and `cast` of its average tint removed (white balance).
-    Returns (palette indices, palette OKLab as seen from the side)."""
+    With `contrast` (std of OKLab L inside each sample), blocks whose texture is as busy as the
+    surface win: + PATTERN_WEIGHT * (contrast - block contrast)^2 (IronSource's pattern term,
+    contrast only). Returns (palette indices, palette OKLab as seen from the side).""" 
     pal = cfg["palette"]
     faces = [block_color(b) for b in pal]
     side = np.array([f["side"] for f in faces])
     top = np.array([f["top"] for f in faces])
     bottom = np.array([f["bottom"] for f in faces])
-    lab = oklab(srgb_to_linear(colors.astype(float)))
     w = area / area.sum()
     fmean = (lab * w[:, None]).sum(axis=0)
     fstd = np.sqrt((((lab - fmean) ** 2) * w[:, None]).sum(axis=0))
@@ -208,13 +211,70 @@ def assign(colors: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict):
     g = np.clip(-up, 0, 1)[:, None, None]
     best = np.empty(len(q), int)
     penalty = np.array([cfg.get("penalty", {}).get(b, 0.0) for b in pal])
+    bcon = np.array([block_contrast(b) for b in pal]) if contrast is not None else None
     for s0 in range(0, len(q), 200_000):      # chunked: faces x palette x 3 floats
         sl = slice(s0, s0 + 200_000)
         cand = side[None] * (1 - f[sl] - g[sl]) + top[None] * f[sl] + bottom[None] * g[sl]
         d = q[sl, None, :] - cand
         dist = 0.25 * d[..., 0] ** 2 + d[..., 1] ** 2 + d[..., 2] ** 2 + penalty[None]
+        if bcon is not None:
+            dist += PATTERN_WEIGHT * (contrast[sl, None] - bcon[None]) ** 2
         best[sl] = dist.argmin(axis=1)
     return best, side
+
+
+PATTERN_WEIGHT = 0.5    # IronSource's weight for texture contrast/grain differences
+FULL_PALETTE = json.loads((ROOT / "scripts/scans/full_palette.json").read_text())["blocks"]
+
+
+@functools.cache
+def block_contrast(block: str) -> float:
+    """Std of OKLab L over the block's side texture at 16x16: how busy it looks."""
+    t = textures_of(block)["side"]
+    img = np.asarray(Image.open(fetch_texture(t)).convert("RGBA"), float)
+    img = img[: img.shape[1]]
+    px = img[img[..., 3] > 0][:, :3]
+    return float(oklab(srgb_to_linear(px))[:, 0].std())
+
+
+def match_cells(cen, area, lab, up, cfg, cell, smooth):
+    """Blocks per grid cell instead of per face (style "full"): each cell's area-weighted mean
+    color (blended with its 26 neighbors by `smooth`, light denoising), the spread of lightness
+    inside it as surface contrast, then assign() with the pattern term.
+    Returns (grid tuple for write_grid, cell centers in meters, cell materials, palette OKLab)."""
+    origin = cen.min(axis=0)
+    q = np.floor((cen - origin) / cell).astype(np.int64)
+    dims = q.max(axis=0) + 1
+    lin = (q[:, 0] * dims[2] + q[:, 2]) * dims[1] + q[:, 1]
+    keys, inv = np.unique(lin, return_inverse=True)
+    wsum = np.bincount(inv, weights=area)
+    mean = np.stack([np.bincount(inv, weights=area * lab[:, c]) / wsum for c in range(3)], axis=1)
+    l2 = np.bincount(inv, weights=area * lab[:, 0] ** 2) / wsum
+    contrast = np.sqrt(np.maximum(l2 - mean[:, 0] ** 2, 0))
+    upm = np.bincount(inv, weights=area * up) / wsum
+    cx = keys // (dims[1] * dims[2])
+    cz = (keys // dims[1]) % dims[2]
+    cy = keys % dims[1]
+    if smooth > 0:
+        acc = mean * wsum[:, None]
+        tot = wsum.copy()
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    if dx == dy == dz == 0:
+                        continue
+                    nx, ny, nz = cx + dx, cy + dy, cz + dz
+                    ok = (nx >= 0) & (ny >= 0) & (nz >= 0) & (nx < dims[0]) & (ny < dims[1]) & (nz < dims[2])
+                    nk = (nx * dims[2] + nz) * dims[1] + ny
+                    j = np.clip(np.searchsorted(keys, nk), 0, len(keys) - 1)
+                    ok &= keys[j] == nk
+                    wt = smooth / np.sqrt(dx * dx + dy * dy + dz * dz) * wsum[j] * ok
+                    acc += mean[j] * wt[:, None]
+                    tot += wt
+        mean = acc / tot[:, None]
+    mat, plab = assign(mean, wsum, upm, cfg, contrast)
+    centers = origin + (np.stack([cx, cy, cz], axis=1) + 0.5) * cell
+    return (origin, dims, keys, mat.astype(np.uint8)), centers, mat, plab
 
 
 def decimate(verts, faces, target, agg=7):
@@ -316,7 +376,16 @@ def build(name: str, args):
     up = n[:, 1] / np.maximum(2 * area, 1e-12)
     if cfg["mode"] == "shell":
         up = np.abs(up)        # floors and ceilings alike read as tops; winding isn't reliable
-    mat, plab = assign(C, area, up, cfg)
+    lab = oklab(srgb_to_linear(C.astype(float)))
+    if args.style == "full":
+        cfg = dict(cfg, palette=FULL_PALETTE)
+        grid, cell_centers, cell_mat, plab = match_cells(tri.mean(axis=1), area, lab, up, cfg,
+                                                       args.tex_cell, args.smooth)
+        # faces take their cell's block, so the per-vertex fallback agrees with the grid
+        _, near = cKDTree(cell_centers).query(tri.mean(axis=1))
+        mat = cell_mat[near]
+    else:
+        mat, plab = assign(lab, area, up, cfg)
     pal = cfg["palette"]
     for i in np.argsort(-np.bincount(mat, weights=area, minlength=len(pal))):
         share = area[mat == i].sum() / area.sum() * 100
@@ -347,7 +416,8 @@ def build(name: str, args):
         size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out)
     geo = size
     if args.tex_cell > 0:
-        grid = surface_grid(tri.mean(axis=1), area, mat, len(pal), args.tex_cell)
+        if args.style != "full":
+            grid = surface_grid(tri.mean(axis=1), area, mat, len(pal), args.tex_cell)
         size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out,
                           grid, args.tex_cell)
         print(f"  surface grid: {len(grid[2])} cells of {args.tex_cell} m, "
@@ -364,6 +434,13 @@ def main():
                     help="surface material grid cell in meters (0: none, per-vertex only)")
     ap.add_argument("--tolerance", type=float, default=0.03,
                     help="accept sizes within this fraction of --max-kb (fewer decimation passes)")
+    ap.add_argument("--style", choices=["palette", "full"], default="palette",
+                    help="palette: the model's own block list, per face; full: IronSource's full "
+                         "block list matched per grid cell with light smoothing and a texture "
+                         "contrast term")
+    ap.add_argument("--smooth", type=float, default=0.05,
+                    help="--style full: weight of each neighbor cell in the color smoothing "
+                         "(26 neighbors: 0.05 gives them about as much weight as the cell)")
     ap.add_argument("--output", help="default .temp/meshes/<model>.mesh.gz")
     args = ap.parse_args()
     for name in (MODELS if args.model == "all" else [args.model]):
