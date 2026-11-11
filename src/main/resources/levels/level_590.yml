@@ -7,7 +7,7 @@ biome: "backrooms:sponge"
 spawn_radius: 0
 enter_message: "§e§oEverything here is full of holes. So are you."
 generator_config:
-  order: 5        # each tile is 3^order blocks on a side (2..5; 5 = 243 fits the 0..256 build height); tiles repeat forever in x/z
+  order: 5        # each tile is 3^order blocks on a side (3..5; 5 = 243 fits the 0..256 build height); tiles repeat forever in x/z
   base_y: 6
 events: [ambient_sound]
 event_config:

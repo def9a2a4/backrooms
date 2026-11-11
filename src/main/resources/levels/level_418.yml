@@ -10,15 +10,17 @@ enter_subtitle: "§7I'm a teapot"
 enter_message: "§c[ERR] §7Block engine not found. Falling back to voxel renderer."
 
 # A voxel engine's test scene: Utah teapots, Suzanne, the Stanford bunny / dragon / Lucy, primitives
-# and Cornell boxes on an endless checkerboard, all in flat concrete. Meshes are voxelized at runtime from
-# structures/testscene/*.mesh.gz (scripts/testscene/build_meshes.py).
-# Every 384x384 super-cell holds one small stone cube with a single oak log on top: the only real
-# Minecraft in the level. Breaking any wood leaves.
+# and Cornell boxes on an endless checkerboard, all in flat concrete, upright or tumbled in 3D and
+# never touching the floor. Meshes are voxelized at runtime from structures/testscene/*.mesh.gz
+# (scripts/testscene/build_meshes.py). Each 384-block region is a quadtree whose leaves (48 to 384
+# blocks) each hold one thing sized to fill it; leaves get bigger further from spawn.
+# Every region holds one small stone cube with a single oak log on top: the only real Minecraft in
+# the level. Breaking any wood leaves.
 generator_config:
   floor_y: 8
-  empty_chance: 0.3       # chance a 48-block cell is empty
-  cornell_chance: 0.08    # chance a non-empty cell is a Cornell box
-  giant_chance: 0.6       # chance a super-cell holds a giant (Lucy, teapot, dragon, ...)
+  empty_chance: 0.3       # chance a 48-block leaf is empty (a third of that for bigger leaves)
+  cornell_chance: 0.08    # chance a 48- or 96-block leaf is a Cornell box
+  far_distance: 2500      # blocks from spawn at which leaves reach their largest typical size
 
 events:
   - ambient_sound

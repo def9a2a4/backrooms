@@ -148,7 +148,8 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320 } = {}) 
   }
   const family = (v) => palette[vmat[v]].family;
   const pal = Object.fromEntries(palette.map((p, i) => [p.id, i]));
-  const DIRT = pal.dirt, STONE = pal.stone;
+  // fill blocks: scan palettes may lack stone or dirt
+  const STONE = pal.stone ?? pal.tuff ?? pal.andesite ?? 0, DIRT = pal.dirt ?? STONE;
   // Below this level everything is plain stone: no variants, no stone-material lookups.
   let meshMinY = Infinity;
   for (let i = 0; i < nv; i++) meshMinY = Math.min(meshMinY, W[i * 3 + 1]);
@@ -317,9 +318,126 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320 } = {}) 
       }
     }
   }
-  return { vol, nx: n, ny, nz: n, y0, ids: palette.map((p) => p.id) };
+  return { vol, nx: n, ny, nz: n, x0: -radius, y0, z0: -radius, ids: palette.map((p) => p.id) };
 }
 
 function cellKey(x, y, z) {
   return ((x + 1024) * 2048 + (y + 1024)) * 2048 + (z + 1024);
+}
+
+// ── shell voxelizer (interiors) ─────────────────────────────────────────────────────────────────
+// Scans of rooms are single-sided sheets with unreliable winding, so there's no inside/outside:
+// every block whose center lies within `thickness` (± noise) of a triangle is solid. Each
+// triangle is swept along its dominant axis: per cell of the other two axes, only the few
+// blocks within reach of the plane are tested. The first triangle to claim a block wins (the
+// file's triangle order), and the block takes the material of a vertex picked with probability
+// equal to its barycentric weight at the closest point.
+
+const SHELL_BUMP = 0.6;      // blocks; noise on the shell thickness, hides flat-triangle facets
+const SHELL_BUMP_SCALE = 6;
+const SALT_SHELL = 53;
+
+/** Closest point on triangle abc to p (Ericson, RTCD 5.1.5); returns barycentrics [u, v, w]. */
+function closestBary(px, py, pz, ax, ay, az, bx, by, bz, cx, cy, cz) {
+  const abx = bx - ax, aby = by - ay, abz = bz - az, acx = cx - ax, acy = cy - ay, acz = cz - az;
+  const apx = px - ax, apy = py - ay, apz = pz - az;
+  const d1 = abx * apx + aby * apy + abz * apz, d2 = acx * apx + acy * apy + acz * apz;
+  if (d1 <= 0 && d2 <= 0) return [1, 0, 0];
+  const bpx = px - bx, bpy = py - by, bpz = pz - bz;
+  const d3 = abx * bpx + aby * bpy + abz * bpz, d4 = acx * bpx + acy * bpy + acz * bpz;
+  if (d3 >= 0 && d4 <= d3) return [0, 1, 0];
+  const vc = d1 * d4 - d3 * d2;
+  if (vc <= 0 && d1 >= 0 && d3 <= 0) { const v = d1 / (d1 - d3); return [1 - v, v, 0]; }
+  const cpx = px - cx, cpy = py - cy, cpz = pz - cz;
+  const d5 = abx * cpx + aby * cpy + abz * cpz, d6 = acx * cpx + acy * cpy + acz * cpz;
+  if (d6 >= 0 && d5 <= d6) return [0, 0, 1];
+  const vb = d5 * d2 - d1 * d6;
+  if (vb <= 0 && d2 >= 0 && d6 <= 0) { const w = d2 / (d2 - d6); return [1 - w, 0, w]; }
+  const va = d3 * d6 - d5 * d4;
+  if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
+    const w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+    return [0, 1 - w, w];
+  }
+  const denom = 1 / (va + vb + vc);
+  const v = vb * denom, w = vc * denom;
+  return [1 - v - w, v, w];
+}
+
+/**
+ * Voxelize as a thickened surface. The lowest point of the mesh lands on groundY.
+ * Same return shape as voxelize(), plus x0/z0 (world x/z of volume index 0).
+ */
+export function voxelizeShell(mesh, { scale = 8, groundY = 64, radius = 1000, thickness = 1.5 } = {}) {
+  const { verts, tris, vmat, palette } = mesh;
+  const nv = verts.length / 3;
+  const W = new Float64Array(nv * 3);
+  let minY = Infinity;
+  for (let i = 0; i < nv; i++) minY = Math.min(minY, verts[i * 3 + 1]);
+  for (let i = 0; i < nv; i++) {
+    W[i * 3] = verts[i * 3] * scale;
+    W[i * 3 + 1] = (verts[i * 3 + 1] - minY) * scale + groundY;
+    W[i * 3 + 2] = verts[i * 3 + 2] * scale;
+  }
+  const reach = thickness + SHELL_BUMP;
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < nv; i++) for (let c = 0; c < 3; c++) {
+    lo[c] = Math.min(lo[c], W[i * 3 + c]);
+    hi[c] = Math.max(hi[c], W[i * 3 + c]);
+  }
+  const x0 = Math.max(-radius, Math.floor(lo[0] - reach)), x1 = Math.min(radius, Math.ceil(hi[0] + reach));
+  const z0 = Math.max(-radius, Math.floor(lo[2] - reach)), z1 = Math.min(radius, Math.ceil(hi[2] + reach));
+  const y0 = Math.floor(lo[1] - reach), y1 = Math.ceil(hi[1] + reach);
+  const nx = x1 - x0 + 1, ny = y1 - y0 + 1, nz = z1 - z0 + 1;
+  const vol = new Uint8Array(nx * ny * nz);
+  const min = [x0, y0, z0], max = [x1, y1, z1];
+
+  for (let t = 0; t < tris.length; t += 3) {
+    const a = tris[t], b = tris[t + 1], c = tris[t + 2];
+    const A = [W[a * 3], W[a * 3 + 1], W[a * 3 + 2]];
+    const B = [W[b * 3], W[b * 3 + 1], W[b * 3 + 2]];
+    const C = [W[c * 3], W[c * 3 + 1], W[c * 3 + 2]];
+    const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2];
+    const vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
+    const N = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+    const len = Math.sqrt(N[0] * N[0] + N[1] * N[1] + N[2] * N[2]);
+    if (len < 1e-12) continue;
+    const D = N[0] * A[0] + N[1] * A[1] + N[2] * A[2];
+    let d = 0;
+    if (Math.abs(N[1]) > Math.abs(N[d])) d = 1;
+    if (Math.abs(N[2]) > Math.abs(N[d])) d = 2;
+    const u = (d + 1) % 3, w = (d + 2) % 3;
+    const span = reach * len / Math.abs(N[d]);     // plane slab half-width along d
+    const r2max = reach * reach;
+    const p = [0, 0, 0];
+    const u0 = Math.max(min[u], Math.floor(Math.min(A[u], B[u], C[u]) - reach - 0.5));
+    const u1 = Math.min(max[u], Math.ceil(Math.max(A[u], B[u], C[u]) + reach - 0.5));
+    const w0 = Math.max(min[w], Math.floor(Math.min(A[w], B[w], C[w]) - reach - 0.5));
+    const w1 = Math.min(max[w], Math.ceil(Math.max(A[w], B[w], C[w]) + reach - 0.5));
+    for (let iu = u0; iu <= u1; iu++) {
+      for (let iw = w0; iw <= w1; iw++) {
+        const cu = iu + 0.5, cw = iw + 0.5;
+        const cd = (D - N[u] * cu - N[w] * cw) / N[d];
+        const d0 = Math.max(min[d], Math.floor(cd - span - 0.5));
+        const d1 = Math.min(max[d], Math.ceil(cd + span - 0.5));
+        for (let id = d0; id <= d1; id++) {
+          p[d] = id; p[u] = iu; p[w] = iw;
+          const k = ((p[0] - x0) * nz + (p[2] - z0)) * ny + (p[1] - y0);
+          if (vol[k]) continue;
+          const px = p[0] + 0.5, py = p[1] + 0.5, pz = p[2] + 0.5;
+          const [ba, bb, bc] = closestBary(px, py, pz, A[0], A[1], A[2], B[0], B[1], B[2], C[0], C[1], C[2]);
+          const qx = ba * A[0] + bb * B[0] + bc * C[0] - px;
+          const qy = ba * A[1] + bb * B[1] + bc * C[1] - py;
+          const qz = ba * A[2] + bb * B[2] + bc * C[2] - pz;
+          const dist2 = qx * qx + qy * qy + qz * qz;
+          if (dist2 > r2max) continue;
+          const th = thickness + (vnoise(px / SHELL_BUMP_SCALE, py / SHELL_BUMP_SCALE, pz / SHELL_BUMP_SCALE, SALT_SHELL) * 2 - 1) * SHELL_BUMP;
+          if (dist2 > th * th) continue;
+          const r = unit(hash(p[0], p[1], p[2]));
+          const pick = r < ba ? a : r < ba + bb ? b : c;
+          vol[k] = variant(palette, vmat[pick], p[0], p[1], p[2]) + 1;
+        }
+      }
+    }
+  }
+  return { vol, nx, ny, nz, x0, y0, z0, ids: palette.map((e) => e.id) };
 }

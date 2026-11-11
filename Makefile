@@ -56,11 +56,15 @@ gen-overlay:
 stonehenge-mesh:
 	uv run scripts/stonehenge/build_mesh.py
 
-# Browser preview of the voxelized mesh: http://localhost:8056/scripts/stonehenge/preview/
-.PHONY: stonehenge-preview
-stonehenge-preview:
-	@test -d .temp/textures || uv run scripts/stonehenge/build_mesh.py
-	python3 scripts/stonehenge/preview/serve.py
+# Scan meshes for the voxel preview (sources in .temp/, output in .temp/meshes/): MODEL=gobekli etc.
+.PHONY: scan-meshes
+scan-meshes:
+	uv run scripts/scans/build_scan.py $(or $(MODEL),all)
+
+# Browser preview of the voxelized meshes: http://localhost:8056/scripts/voxel-preview/
+.PHONY: voxel-preview stonehenge-preview
+voxel-preview stonehenge-preview:
+	python3 scripts/voxel-preview/serve.py
 
 # Level 418: rebuild the test-scene meshes (teapot, Suzanne, Stanford models). Sources cache in .temp/.
 .PHONY: testscene-meshes

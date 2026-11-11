@@ -1,0 +1,57 @@
+[
+  {
+    "id": "stonehenge",
+    "title": "Stonehenge (Level 56)",
+    "mesh": "/src/main/resources/structures/stonehenge.mesh.gz",
+    "build": "make stonehenge-mesh",
+    "mode": "column",
+    "scale": 16,
+    "radius": 320,
+    "altar": true,
+    "fog": [11844029, 24, 192],
+    "credit": ["Stonehenge England - VR", "Graphic solutions",
+               "https://sketchfab.com/3d-models/stonehenge-england-vr-7e7febabef2045a68755cc39c8c7c91f"]
+  },
+  {
+    "id": "gobekli",
+    "title": "Göbekli Tepe",
+    "mesh": "/.temp/meshes/gobekli.mesh.gz",
+    "build": "uv run scripts/scans/build_scan.py gobekli",
+    "mode": "column",
+    "scale": 8,
+    "radius": 400,
+    "credit": ["Gobekli Tepe", "rmark", "https://sketchfab.com/3d-models/gobekli-tepe-5a4d25c355ff48d59ab76c36812b9cf3"]
+  },
+  {
+    "id": "skatepark",
+    "title": "Southbank Undercroft (color)",
+    "mesh": "/.temp/meshes/skatepark.mesh.gz",
+    "build": "uv run scripts/scans/build_scan.py skatepark",
+    "mode": "shell",
+    "scale": 8,
+    "radius": 400,
+    "credit": ["Southbank Undercroft Skatepark", "artfletch",
+               "https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d"]
+  },
+  {
+    "id": "skatepark_grey",
+    "title": "Southbank Undercroft (grey)",
+    "mesh": "/.temp/meshes/skatepark_grey.mesh.gz",
+    "build": "uv run scripts/scans/build_scan.py skatepark_grey",
+    "mode": "shell",
+    "scale": 8,
+    "radius": 400,
+    "credit": ["Southbank Undercroft Skatepark", "artfletch",
+               "https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d"]
+  },
+  {
+    "id": "hall",
+    "title": "Hintze Hall",
+    "mesh": "/.temp/meshes/hall.mesh.gz",
+    "build": "uv run scripts/scans/build_scan.py hall",
+    "mode": "shell",
+    "scale": 8,
+    "radius": 400,
+    "credit": ["Hintze Hall", "artfletch", "https://sketchfab.com/3d-models/hintze-hall-45f5e56887f44075bbf283977c99541f"]
+  }
+]

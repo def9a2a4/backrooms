@@ -1,0 +1,95 @@
+{
+  "_comment": "Block id -> vanilla texture names (1.21.4). A string is used on every face; an object gives side/top/bottom. Read by the preview and by scripts/scans/build_scan.py (texture fetch + average block colors).",
+  "grass_block": {
+    "side": "grass_block_side",
+    "top": "grass_block_top",
+    "bottom": "dirt"
+  },
+  "dirt_path": {
+    "side": "dirt_path_side",
+    "top": "dirt_path_top",
+    "bottom": "dirt"
+  },
+  "lodestone": {
+    "side": "lodestone_side",
+    "top": "lodestone_top",
+    "bottom": "lodestone_top"
+  },
+  "bone_block": {
+    "side": "bone_block_side",
+    "top": "bone_block_top",
+    "bottom": "bone_block_top"
+  },
+  "sandstone": {
+    "side": "sandstone",
+    "top": "sandstone_top",
+    "bottom": "sandstone_bottom"
+  },
+  "smooth_sandstone": "sandstone_top",
+  "cut_sandstone": {
+    "side": "cut_sandstone",
+    "top": "sandstone_top",
+    "bottom": "sandstone_top"
+  },
+  "chiseled_sandstone": {
+    "side": "chiseled_sandstone",
+    "top": "sandstone_top",
+    "bottom": "sandstone_top"
+  },
+  "red_sandstone": {
+    "side": "red_sandstone",
+    "top": "red_sandstone_top",
+    "bottom": "red_sandstone_bottom"
+  },
+  "quartz_block": {
+    "side": "quartz_block_side",
+    "top": "quartz_block_top",
+    "bottom": "quartz_block_bottom"
+  },
+  "smooth_stone": "smooth_stone",
+  "basalt": {
+    "side": "basalt_side",
+    "top": "basalt_top",
+    "bottom": "basalt_top"
+  },
+  "polished_basalt": {
+    "side": "polished_basalt_side",
+    "top": "polished_basalt_top",
+    "bottom": "polished_basalt_top"
+  },
+  "ochre_froglight": {
+    "side": "ochre_froglight_side",
+    "top": "ochre_froglight_top",
+    "bottom": "ochre_froglight_top"
+  },
+  "pearlescent_froglight": {
+    "side": "pearlescent_froglight_side",
+    "top": "pearlescent_froglight_top",
+    "bottom": "pearlescent_froglight_top"
+  },
+  "verdant_froglight": {
+    "side": "verdant_froglight_side",
+    "top": "verdant_froglight_top",
+    "bottom": "verdant_froglight_top"
+  },
+  "hay_block": {
+    "side": "hay_block_side",
+    "top": "hay_block_top",
+    "bottom": "hay_block_top"
+  },
+  "farmland": {
+    "side": "dirt",
+    "top": "farmland",
+    "bottom": "dirt"
+  },
+  "muddy_mangrove_roots": {
+    "side": "muddy_mangrove_roots_side",
+    "top": "muddy_mangrove_roots_top",
+    "bottom": "muddy_mangrove_roots_top"
+  },
+  "deepslate": {
+    "side": "deepslate",
+    "top": "deepslate_top",
+    "bottom": "deepslate_top"
+  }
+}

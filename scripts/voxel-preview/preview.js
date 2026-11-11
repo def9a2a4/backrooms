@@ -1,36 +1,38 @@
-// Browser preview for the Level 56 Stonehenge: decodes the shipped stonehenge.mesh.gz, runs the
-// reference voxelizer (voxelize.js), greedy-meshes the visible faces and renders them with the
-// vanilla block textures the build script cached in .temp/textures/. Viewer setup follows
-// defCoreLib's docs/util/placed3d.js makeViewer().
+// Browser preview of voxelized meshes: Level 56's shipped stonehenge.mesh.gz and the scan builds
+// in .temp/meshes/ (models.json lists them). Runs the reference voxelizers (voxelize.js: column
+// rays for terrain, a thickened shell for interiors), greedy-meshes the visible faces and renders
+// them with vanilla block textures from .temp/textures/ (serve.py fetches missing ones). Viewer
+// setup follows defCoreLib's docs/util/placed3d.js makeViewer().
 //
-// Serve the repo root (make stonehenge-preview) and open /scripts/stonehenge/preview/.
+// Serve the repo root (make voxel-preview) and open /scripts/voxel-preview/.
+// URL params: ?model=<id>&scale=<n>, or ?mesh=<url> to preview any .mesh.gz as a column model.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { loadMesh, voxelize } from './voxelize.js';
+import { loadMesh, voxelize, voxelizeShell } from './voxelize.js';
 
-// ?mesh=/.temp/other.mesh.gz previews an alternate build without replacing the shipped file
-const MESH_URL = new URLSearchParams(location.search).get('mesh')
-  || '/src/main/resources/structures/stonehenge.mesh.gz';
 const TEX_URL = '/.temp/textures/';
 const GROUND_Y = 64;
 // Must match GRASS_TINT in build_mesh.py and grass_color in the salisbury biome.
 const GRASS_TINT = 0x8ab64e;
-const FOG_COLOR = 0xb4b9bd;
+const SKY = 0x9fb4c8;
+const MAX_VOXELS = 400e6;   // dense volume budget; past this the tab runs out of memory
+
+const BLOCKS = await (await fetch('./blocks.json')).json();
+const MODELS = await (await fetch('./models.json')).json();
 
 // Texture per (block, face). Faces: 0 +x, 1 -x, 2 +y (top), 3 -y, 4 +z, 5 -z.
-const FACE_TEX = {
-  grass_block: ['grass_block_side', 'grass_block_side', 'grass_block_top', 'dirt', 'grass_block_side', 'grass_block_side'],
-  dirt_path: ['dirt_path_side', 'dirt_path_side', 'dirt_path_top', 'dirt', 'dirt_path_side', 'dirt_path_side'],
-  lodestone: ['lodestone_side', 'lodestone_side', 'lodestone_top', 'lodestone_top', 'lodestone_side', 'lodestone_side'],
-};
-const texFor = (id, face) => (FACE_TEX[id] ? FACE_TEX[id][face] : id);
+function texFor(id, face) {
+  const t = BLOCKS[id] ?? id;
+  if (typeof t === 'string') return t;
+  return face === 2 ? t.top : face === 3 ? t.bottom : t.side;
+}
 
 // ── viewer ──────────────────────────────────────────────────────────────────────────────────────
 
 const container = document.getElementById('view');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9fb4c8);
+scene.background = new THREE.Color(SKY);
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 1, 20000);
 camera.position.set(-420, 260, 420);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -62,7 +64,11 @@ const loader = new THREE.TextureLoader();
 const materials = new Map();
 function materialFor(tex) {
   if (!materials.has(tex)) {
-    const t = loader.load(`${TEX_URL}${tex}.png`);
+    // animated textures are vertical strips: show the first frame
+    const t = loader.load(`${TEX_URL}${tex}.png`, (t) => {
+      const { width, height } = t.image;
+      if (height > width) t.repeat.set(1, width / height);
+    });
     t.magFilter = THREE.NearestFilter;
     t.minFilter = THREE.NearestMipmapLinearFilter;
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -80,7 +86,7 @@ function materialFor(tex) {
 // block units with RepeatWrapping, so merged quads still show one texture tile per block.
 
 function greedy(v) {
-  const { vol, nx, ny, nz, y0, ids } = v;
+  const { vol, nx, ny, nz, x0, y0, z0, ids } = v;
   const dims = [nx, ny, nz];
   const at = (x, y, z) => (x < 0 || y < 0 || z < 0 || x >= nx || y >= ny || z >= nz)
     ? (y < 0 ? 1 : 0)                       // below the volume counts as solid
@@ -138,7 +144,7 @@ function greedy(v) {
     const corner = (du, dw) => {
       const p = [0, 0, 0];
       p[d] = layer; p[u] = i + du; p[w] = j + dw;
-      b.pos.push(p[0] - (nx - 1) / 2, p[1] + y0 - GROUND_Y, p[2] - (nz - 1) / 2);
+      b.pos.push(p[0] + x0, p[1] + y0 - GROUND_Y, p[2] + z0);
       const nrm = [0, 0, 0]; nrm[d] = c > 0 ? 1 : -1;
       b.nrm.push(...nrm);
       // side faces: v runs up the world Y axis so textures stand upright
@@ -187,12 +193,12 @@ function placeAltar(v) {
 
 // ── source mesh overlay ─────────────────────────────────────────────────────────────────────────
 
-function wireframe(mesh, scale) {
+function wireframe(mesh, scale, baseY) {
   const g = new THREE.BufferGeometry();
   const p = new Float32Array(mesh.verts.length);
   for (let i = 0; i < p.length; i += 3) {
     p[i] = mesh.verts[i] * scale;
-    p[i + 1] = (mesh.verts[i + 1] - mesh.groundRef) * scale + 0.05;
+    p[i + 1] = (mesh.verts[i + 1] - baseY) * scale + 0.05;
     p[i + 2] = mesh.verts[i + 2] * scale;
   }
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
@@ -204,7 +210,13 @@ function wireframe(mesh, scale) {
 
 const $ = (id) => document.getElementById(id);
 const stats = $('stats');
-let mesh = null, voxels = null, wire = null;
+const params = new URLSearchParams(location.search);
+if (params.get('mesh')) {
+  MODELS.unshift({ id: 'custom', title: params.get('mesh'), mesh: params.get('mesh'), mode: 'column', scale: 16, radius: 320 });
+}
+for (const m of MODELS) $('model').add(new Option(m.title, m.id));
+const meshes = new Map();       // url -> decoded mesh
+let voxels = null, wire = null;
 
 function clear(obj) {
   if (!obj) return;
@@ -212,45 +224,110 @@ function clear(obj) {
   obj.traverse((o) => o.geometry && o.geometry.dispose());
 }
 
+const model = () => MODELS.find((m) => m.id === $('model').value);
+
+function selectModel(m, scale) {
+  $('model').value = m.id;
+  $('scale').value = String(scale ?? m.scale);
+  $('radius').value = m.radius;
+  $('thick-row').style.display = m.mode === 'shell' ? '' : 'none';
+  const [title, author, url] = m.credit ?? [];
+  $('credit').innerHTML = title
+    ? `"<a href="${url}">${title}</a>" by ${author}, CC BY 4.0. Decimated and voxelized.` : '';
+  applyFog();
+}
+
+function applyFog() {
+  const fog = model().fog;
+  $('fog-row').style.display = fog ? '' : 'none';
+  const on = fog && $('fog').checked;
+  scene.fog = on ? new THREE.Fog(fog[0], fog[1], fog[2]) : null;
+  scene.background.set(on ? fog[0] : SKY);
+}
+
+async function getMesh(m) {
+  if (!meshes.has(m.mesh)) meshes.set(m.mesh, await loadMesh(m.mesh));
+  return meshes.get(m.mesh);
+}
+
+/** Every solid block as one plain block: shows the shape without the inferred materials. */
+function plain(v) {
+  const vol = new Uint8Array(v.vol.length);
+  for (let i = 0; i < vol.length; i++) vol[i] = v.vol[i] ? 1 : 0;
+  return { ...v, vol, ids: ['stone'] };
+}
+
+let first = true;
 async function build() {
+  const m = model();
   const scale = Number($('scale').value);
   const radius = Number($('radius').value);
+  stats.textContent = 'loading…';
+  let mesh;
+  try {
+    mesh = await getMesh(m);
+  } catch (e) {
+    stats.textContent = `${e.message}\nbuild it: ${m.build ?? ''}`;
+    return;
+  }
+  const ext = [0, 1, 2].map((c) => (mesh.hi[c] - mesh.lo[c]) * scale);
+  const side = (c) => Math.min(ext[c] + 8, 2 * radius + 1);
+  const est = side(0) * side(2) * (ext[1] + (m.mode === 'column' ? 6.25 * scale + 8 : 8));
+  if (est > MAX_VOXELS) {
+    stats.textContent = `~${(est / 1e6).toFixed(0)}M voxels: too big.\nLower the scale or the crop radius.`;
+    return;
+  }
   stats.textContent = 'voxelizing…';
   await new Promise((r) => setTimeout(r, 20));
   const t0 = performance.now();
-  const v = voxelize(mesh, { scale, groundY: GROUND_Y, radius });
-  placeAltar(v);
+  let v, baseY;
+  if (m.mode === 'shell') {
+    v = voxelizeShell(mesh, { scale, groundY: GROUND_Y, radius, thickness: Number($('thick').value) });
+    baseY = mesh.lo[1];
+  } else {
+    v = voxelize(mesh, { scale, groundY: GROUND_Y, radius });
+    baseY = mesh.groundRef;
+    if (m.altar) placeAltar(v);
+  }
   const t1 = performance.now();
-  const { group, quads } = greedy(v);
+  const { group, quads } = greedy($('mats').checked ? v : plain(v));
   const t2 = performance.now();
   clear(voxels);
   voxels = group;
   scene.add(voxels);
   clear(wire);
-  wire = wireframe(mesh, scale);
+  wire = wireframe(mesh, scale, baseY);
   wire.visible = $('wire').checked;
   scene.add(wire);
   let solid = 0;
   for (const b of v.vol) if (b) solid++;
   stats.textContent =
     `mesh      ${(mesh.bytes / 1024).toFixed(1)} KB raw, ${mesh.tris.length / 3} tris, ${mesh.verts.length / 3} verts\n` +
+    `size      ${ext.map((e) => Math.round(e)).join(' × ')} blocks (x y z)\n` +
     `volume    ${v.nx}×${v.ny}×${v.nz}, ${solid.toLocaleString()} solid\n` +
     `height    ${v.y0}..${v.y0 + v.ny - 1}\n` +
     `quads     ${quads.toLocaleString()}\n` +
     `voxelize  ${(t1 - t0).toFixed(0)} ms, mesh ${(t2 - t1).toFixed(0)} ms`;
+  if (first || $('refit').checked) fit(ext);
+  first = false;
+  const q = new URLSearchParams(location.search);
+  q.set('model', m.id);
+  q.set('scale', scale);
+  history.replaceState(null, '', `?${q}`);
+}
+
+function fit(ext) {
+  const r = Math.max(ext[0], ext[2]) / 2;
+  controls.target.set(0, ext[1] * 0.3, 0);
+  camera.position.set(-r * 1.1, r * 0.7 + ext[1], r * 1.1);
+  controls.update();
 }
 
 $('build').onclick = build;
+$('model').onchange = () => { selectModel(model()); build(); };
+$('mats').onchange = build;
 $('wire').onchange = () => { if (wire) wire.visible = $('wire').checked; };
-$('fog').onchange = () => {
-  scene.fog = $('fog').checked ? new THREE.Fog(FOG_COLOR, 24, 192) : null;
-  scene.background.set($('fog').checked ? FOG_COLOR : 0x9fb4c8);
-};
+$('fog').onchange = applyFog;
 
-try {
-  mesh = await loadMesh(MESH_URL);
-  await build();
-} catch (e) {
-  stats.textContent = `error: ${e.message}`;
-  console.error(e);
-}
+selectModel(MODELS.find((m) => m.id === params.get('model')) ?? MODELS[0], params.get('scale'));
+await build();

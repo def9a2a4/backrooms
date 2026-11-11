@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockBreakEvent;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -18,7 +19,9 @@ import java.util.logging.Logger;
 
 /**
  * Triggers when the player breaks one of the listed blocks. Entries are material names or block
- * tags prefixed with '#'. Used for: L418→L94 (break the only wood in the voxel engine).
+ * tags prefixed with '#'. Tags are checked when the block breaks, not when the config loads, so
+ * they always reflect the server's loaded datapacks. Used for: L418→L94 (break the only wood in
+ * the voxel engine).
  *
  * Config:
  *   type: break_block
@@ -28,6 +31,7 @@ import java.util.logging.Logger;
 public class BreakBlockTrigger extends AbstractExitTrigger {
 
     private final Set<Material> materials = EnumSet.noneOf(Material.class);
+    private final List<Tag<Material>> tags = new ArrayList<>();
 
     public BreakBlockTrigger(ConfigurationSection config) {
         super(config);
@@ -36,7 +40,7 @@ public class BreakBlockTrigger extends AbstractExitTrigger {
                 NamespacedKey key = NamespacedKey.fromString(entry.substring(1));
                 Tag<Material> tag = key == null ? null : Bukkit.getTag(Tag.REGISTRY_BLOCKS, key, Material.class);
                 if (tag != null) {
-                    materials.addAll(tag.getValues());
+                    tags.add(tag);
                     continue;
                 }
             } else {
@@ -62,6 +66,12 @@ public class BreakBlockTrigger extends AbstractExitTrigger {
 
     @Override
     public boolean checkEvent(Event event, Player player, BackroomsPlayerState state) {
-        return event instanceof BlockBreakEvent e && materials.contains(e.getBlock().getType());
+        if (!(event instanceof BlockBreakEvent e)) return false;
+        Material type = e.getBlock().getType();
+        if (materials.contains(type)) return true;
+        for (Tag<Material> tag : tags) {
+            if (tag.isTagged(type)) return true;
+        }
+        return false;
     }
 }

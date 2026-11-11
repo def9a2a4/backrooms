@@ -1,7 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -19,10 +18,11 @@ import java.util.Random;
  *
  * <p>Space is cut into 40-block cubic cells. Each cell independently (hashed from the world seed and
  * the cell coordinate) holds nothing, one planet, or a cluster of asteroids, always fully inside the
- * cell — so bodies never overlap and a chunk only needs to look at the cells it touches.
+ * cell — so bodies never overlap and a chunk only needs to look at the cells it touches. A
+ * low-frequency noise over cell coordinates empties out large regions entirely.
  *
- * <p>Planets are perfect spheres with a shell block and a core block (leaves around wood, stone around
- * ores, dirt around water, ...). Asteroids are small, noise-roughened, and rich in good ores.
+ * <p>Planets are perfect spheres layered from shell to core; see {@link PlanetPalettes} for the
+ * materials. Asteroids are small, rare, noise-roughened, and rich in good ores.
  *
  * <p>The cell at (0, 3, 0) is always a grass planet centered on (0, 120, 0); spawn is on its top.
  */
@@ -41,19 +41,16 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
 
     private static final int ASTEROID_LUMP = 2;   // max outward bulge beyond r from the noise
 
-    private static final BlockData OAK_LEAVES = persistentLeaf(Material.OAK_LEAVES);
-    private static final BlockData BIRCH_LEAVES = persistentLeaf(Material.BIRCH_LEAVES);
-    private static final BlockData SPRUCE_LEAVES = persistentLeaf(Material.SPRUCE_LEAVES);
-
-    private static final Material[] CORE_ORES = {
-            Material.COAL_ORE, Material.COAL_ORE, Material.COAL_ORE, Material.COAL_ORE, Material.COAL_ORE, Material.COAL_ORE,
-            Material.IRON_ORE, Material.IRON_ORE, Material.IRON_ORE, Material.IRON_ORE, Material.IRON_ORE,
-            Material.COPPER_ORE, Material.COPPER_ORE, Material.COPPER_ORE,
-            Material.GOLD_ORE, Material.GOLD_ORE,
-            Material.REDSTONE_ORE, Material.REDSTONE_ORE,
-            Material.LAPIS_ORE,
-            Material.DIAMOND_ORE,
-    };
+    /**
+     * Large empty regions: a low-frequency noise over cell coordinates; cells where it falls below
+     * VOID_THRESHOLD hold nothing. Features span roughly 10 cells (~400 blocks). Cells within
+     * SPAWN_CLEAR of the spawn cell ignore it, so spawn always has neighbours in view.
+     */
+    private static final double VOID_FREQ_XZ = 0.09;
+    private static final double VOID_FREQ_Y = 0.2;
+    private static final double VOID_THRESHOLD = -0.05;
+    private static final int SPAWN_CLEAR = 2;
+    private static final long VOID_SALT = 0x5A17E5L;
 
     private static final Material[] ASTEROID_ORES = {
             Material.IRON_ORE, Material.IRON_ORE, Material.IRON_ORE, Material.IRON_ORE, Material.IRON_ORE,
@@ -69,42 +66,6 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
             Material.STONE, Material.ANDESITE, Material.TUFF, Material.COBBLESTONE,
     };
 
-    /** Planet kinds, picked by weight. coreFrac is the core radius as a fraction of the planet radius. */
-    private enum Palette {
-        OAK(6, 0.5), BIRCH(3, 0.5), SPRUCE(3, 0.5),
-        STONE(8, 0.45),
-        GRASS(8, 0.35),
-        AQUARIUM(3, 0.8),
-        ICE(4, 0.5),
-        NETHER(4, 0.4),
-        OBSIDIAN(2, 0.4),
-        STAR(3, 0.0);
-
-        final int weight;
-        final double coreFrac;
-
-        Palette(int weight, double coreFrac) {
-            this.weight = weight;
-            this.coreFrac = coreFrac;
-        }
-
-        static final int TOTAL_WEIGHT;
-        static {
-            int t = 0;
-            for (Palette p : values()) t += p.weight;
-            TOTAL_WEIGHT = t;
-        }
-
-        static Palette pick(Random rng) {
-            int roll = rng.nextInt(TOTAL_WEIGHT);
-            for (Palette p : values()) {
-                roll -= p.weight;
-                if (roll < 0) return p;
-            }
-            return STONE;
-        }
-    }
-
     private interface Body {
         /** Half-width of the axis-aligned box that contains every block of this body. */
         int extent();
@@ -114,50 +75,19 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
         void place(ChunkData chunkData, int localX, int wx, int wy, int localZ, int wz, long seed);
     }
 
-    private record Planet(int x, int y, int z, int r, Palette palette, long hash) implements Body {
+    private record Planet(int x, int y, int z, int r, PlanetPalettes.Palette palette, long hash) implements Body {
         @Override public int extent() { return r; }
 
         @Override
         public void place(ChunkData chunkData, int localX, int wx, int wy, int localZ, int wz, long seed) {
             int dx = wx - x, dy = wy - y, dz = wz - z;
-            double outer = (r + 0.5) * (r + 0.5);
+            double rr = r + 0.5;
+            double outer = rr * rr;
             int d2 = dx * dx + dy * dy + dz * dz;
             if (d2 > outer) return;
-            double cr = r * palette.coreFrac;
-            boolean core = cr > 0 && d2 <= (cr + 0.5) * (cr + 0.5);
-            switch (palette) {
-                case OAK -> set(chunkData, localX, wy, localZ, core ? Material.OAK_LOG : null, OAK_LEAVES);
-                case BIRCH -> set(chunkData, localX, wy, localZ, core ? Material.BIRCH_LOG : null, BIRCH_LEAVES);
-                case SPRUCE -> set(chunkData, localX, wy, localZ, core ? Material.SPRUCE_LOG : null, SPRUCE_LEAVES);
-                case STONE -> {
-                    Material m = Material.STONE;
-                    if (core) {
-                        long h = blockHash(hash, wx, wy, wz);
-                        m = (h & 0xFF) < 180 ? CORE_ORES[(int) ((h >>> 8) & 0x7FFFFFFF) % CORE_ORES.length] : Material.STONE;
-                    }
-                    chunkData.setBlock(localX, wy, localZ, m);
-                }
-                case GRASS -> {
-                    Material m;
-                    if (core) {
-                        m = Material.WATER;
-                    } else {
-                        int above = dx * dx + (dy + 1) * (dy + 1) + dz * dz;
-                        m = above > outer ? Material.GRASS_BLOCK : Material.DIRT;
-                    }
-                    chunkData.setBlock(localX, wy, localZ, m);
-                }
-                case AQUARIUM -> chunkData.setBlock(localX, wy, localZ, core ? Material.WATER : Material.GLASS);
-                case ICE -> chunkData.setBlock(localX, wy, localZ, core ? Material.BLUE_ICE : Material.PACKED_ICE);
-                case NETHER -> chunkData.setBlock(localX, wy, localZ, core ? Material.LAVA : Material.NETHERRACK);
-                case OBSIDIAN -> chunkData.setBlock(localX, wy, localZ, core ? Material.LAVA : Material.OBSIDIAN);
-                case STAR -> chunkData.setBlock(localX, wy, localZ, Material.GLOWSTONE);
-            }
-        }
-
-        private static void set(ChunkData chunkData, int x, int y, int z, Material core, BlockData shell) {
-            if (core != null) chunkData.setBlock(x, y, z, core);
-            else chunkData.setBlock(x, y, z, shell);
+            boolean top = dx * dx + (dy + 1) * (dy + 1) + dz * dz > outer;
+            BlockData b = palette.picker().pick(Math.sqrt(d2) / rr, top, blockHash(hash, wx, wy, wz), wx, wy, wz, hash);
+            if (b != null) chunkData.setBlock(localX, wy, localZ, b);
         }
     }
 
@@ -178,6 +108,7 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
 
     public Level974ChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
+        PlanetPalettes.ALL.size();   // build the palette BlockData on the main thread, not a chunk worker
     }
 
     @Override
@@ -226,16 +157,21 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
     private static void cellBodies(long seed, int cx, int cy, int cz, List<Body> out) {
         long hash = cellHash(seed, cx, cy, cz);
         if (cx == 0 && cy == SPAWN_CY && cz == 0) {
-            out.add(new Planet(0, SPAWN_CENTER_Y, 0, SPAWN_R, Palette.GRASS, hash));
+            out.add(new Planet(0, SPAWN_CENTER_Y, 0, SPAWN_R, PlanetPalettes.GRASS, hash));
             return;
+        }
+        boolean nearSpawn = Math.abs(cx) <= SPAWN_CLEAR && Math.abs(cz) <= SPAWN_CLEAR;
+        if (!nearSpawn && SimplexNoise.noise3(seed ^ VOID_SALT,
+                cx * VOID_FREQ_XZ, cy * VOID_FREQ_Y, cz * VOID_FREQ_XZ) < VOID_THRESHOLD) {
+            return;   // inside a void region
         }
         Random rng = new Random(hash);
         int roll = rng.nextInt(100);
-        if (roll < 45) return;   // empty
+        if (roll < 35) return;   // empty
 
         if (roll < 92) {
-            Palette p = Palette.pick(rng);
-            int r = p == Palette.STAR ? 3 + rng.nextInt(4) : 6 + rng.nextInt(10);
+            PlanetPalettes.Palette p = PlanetPalettes.pick(rng);
+            int r = p.rMin() + rng.nextInt(p.rMax() - p.rMin() + 1);
             out.add(new Planet(
                     jitter(rng, cx, r), jitter(rng, cy, r), jitter(rng, cz, r), r, p, hash));
             return;
@@ -270,10 +206,6 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
 
     private static long blockHash(long hash, int x, int y, int z) {
         return mix(hash ^ (x * 0x9E3779B97F4A7C15L) ^ (y * 0xC2B2AE3D27D4EB4FL) ^ (z * 0x165667B19E3779F9L));
-    }
-
-    private static BlockData persistentLeaf(Material leafMat) {
-        return Bukkit.createBlockData(leafMat, "[persistent=true]");
     }
 
     @Override

@@ -21,24 +21,25 @@ import java.util.logging.Logger;
  * Level 418 — "I'm a Teapot". You fell out of Minecraft's block engine into a voxel engine's test
  * scene: an endless checkerboard plane scattered with the classic graphics test assets, all in
  * flat colored concrete. Utah teapots, Suzanne, the Stanford bunny / dragon / Lucy, primitives,
- * and Cornell boxes, standing upright or tumbled at random in 3D. The only real Minecraft in the level is a small stone-and-dirt
- * cube with one oak log on top, one per super-cell; breaking wood is the way out.
+ * and Cornell boxes, upright or tumbled at random in 3D, none of them touching the floor. The
+ * only real Minecraft in the level is a small stone-and-dirt cube with one oak log on top, sitting
+ * on the floor like it obeys gravity; there is one per 384-block region, and breaking wood is the
+ * way out.
  *
- * <p>Layout: the plane is split into 48-block cells, each holding at most one object (or a Cornell
- * box) that stays inside the cell. Cells group into 8×8 super-cells (384 blocks); each super-cell
- * may hold one giant, which empties the small cells under it, and always holds one Minecraft cube.
- * Detailed meshes (the dragon, Lucy) only read at large sizes, so they only come as giants.
- * Chunks align to both grids, so each chunk reads exactly one cell and one super-cell. Everything
- * is hashed from the world seed and cell coordinates; shapes come voxelized from
- * {@link ShapeLibrary}.
+ * <p>Layout: each 384-block region is a quadtree. A node either holds one thing (a shape sized to
+ * fill it, a Cornell box, or nothing) or splits into four, down to 48-block leaves. Nodes near
+ * spawn almost always split; far away they split less, so things get bigger the further you go.
+ * Detailed meshes need many blocks to read, so they only fit in big leaves. Leaves are multiples
+ * of 16 and aligned, so each chunk lies in exactly one leaf. Everything is hashed from the world
+ * seed and node coordinates; shapes come voxelized from {@link ShapeLibrary}.
  */
 public class Level418ChunkGenerator extends BackroomsChunkGenerator {
 
     private static final Logger LOG = Logger.getLogger("Backrooms");
 
-    private static final int CELL = 48;
-    private static final int SUPER = 8;                // cells per super-cell side
-    private static final int MARGIN = 2;               // blocks kept clear at each cell edge
+    private static final int REGION = 384;
+    private static final int LEAF = 48;                // smallest quadtree node
+    private static final int MARGIN = 2;               // blocks kept clear at each leaf edge
     private static final int CHECK = 4;                // floor checker size
     private static final int MC_CUBE = 7;
 
@@ -57,22 +58,22 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
             Material.PINK_CONCRETE, Material.LIME_CONCRETE,
     };
 
-    // weighted pools: {shape, weight}
-    private static final Object[][] SMALL = {
-            {Shape.TEAPOT, 30}, {Shape.SUZANNE, 10}, {Shape.BUNNY, 10}, {Shape.CUBE, 8},
-            {Shape.PYRAMID, 6}, {Shape.CONE, 6}, {Shape.SPHERE, 8}, {Shape.TORUS, 8},
+    // weighted pool: {shape, weight}. Shapes too detailed for a leaf are re-picked.
+    private static final Object[][] POOL = {
+            {Shape.TEAPOT, 30}, {Shape.SUZANNE, 10}, {Shape.BUNNY, 10}, {Shape.DRAGON, 8},
+            {Shape.LUCY, 8}, {Shape.CUBE, 8}, {Shape.PYRAMID, 6}, {Shape.CONE, 6},
+            {Shape.SPHERE, 8}, {Shape.TORUS, 8},
     };
-    private static final Object[][] GIANT = {
-            {Shape.LUCY, 4}, {Shape.DRAGON, 4}, {Shape.TEAPOT, 3}, {Shape.BUNNY, 2},
-            {Shape.SUZANNE, 1}, {Shape.CUBE, 1}, {Shape.SPHERE, 1}, {Shape.TORUS, 1},
-    };
-    private static final double TUMBLE_SMALL = 0.65;   // chance a small object is rotated in 3D
-    private static final double TUMBLE_GIANT = 0.4;
+    private static final double TUMBLE = 0.6;          // chance a shape is rotated in 3D
+
+    // chance a node of 384 / 192 / 96 blocks splits, near spawn and from far_distance on
+    private static final double[] SPLIT_NEAR = {0.97, 0.9, 0.75};
+    private static final double[] SPLIT_FAR = {0.45, 0.45, 0.45};
 
     private int floorY = 8;
     private double emptyChance = 0.3;
     private double cornellChance = 0.08;
-    private double giantChance = 0.6;
+    private double farDistance = 2500;
 
     private volatile ShapeLibrary shapes;
 
@@ -87,8 +88,8 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
     private record Placement(Kind kind, Shape shape, int size, int orient, boolean shell,
                              int px, int baseY, int pz, Material block) {}
 
-    /** What a super-cell holds: an optional giant and the Minecraft cube's cell. */
-    private record SuperCell(@Nullable Placement giant, int mcCellX, int mcCellZ) {}
+    /** A quadtree leaf: min corner and side, in blocks. */
+    private record Leaf(int x0, int z0, int size) {}
 
     public Level418ChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
@@ -100,7 +101,7 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
             floorY = config.getInt("floor_y", floorY);
             emptyChance = config.getDouble("empty_chance", emptyChance);
             cornellChance = config.getDouble("cornell_chance", cornellChance);
-            giantChance = config.getDouble("giant_chance", giantChance);
+            farDistance = config.getDouble("far_distance", farDistance);
         }
         shapes = load();   // on the main thread, before any chunk generates
     }
@@ -144,12 +145,7 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
         }
 
         long seed = worldInfo.getSeed();
-        int cx = Math.floorDiv(x0, CELL), cz = Math.floorDiv(z0, CELL);
-        SuperCell sc = superCell(seed, Math.floorDiv(cx, SUPER), Math.floorDiv(cz, SUPER));
-        List<Placement> pieces = new ArrayList<>(cell(seed, cx, cz, sc));
-        if (sc.giant() != null) pieces.add(sc.giant());
-
-        for (Placement p : pieces) {
+        for (Placement p : contents(seed, leaf(seed, x0, z0))) {
             switch (p.kind()) {
                 case SHAPE -> writeShape(p, x0, z0, minY, maxY, chunkData);
                 case CORNELL -> writeCornell(p, x0, z0, chunkData);
@@ -246,77 +242,114 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
 
     // ── layout ───────────────────────────────────────────────────────────────────────────────────
 
-    /** The contents of small cell (cx, cz): nothing, one shape, a Cornell box, or the Minecraft cube. */
-    private List<Placement> cell(long seed, int cx, int cz, SuperCell sc) {
-        int x0 = cx * CELL, z0 = cz * CELL;
+    /** The quadtree leaf containing block (x, z). */
+    private Leaf leaf(long seed, int x, int z) {
+        int rx = Math.floorDiv(x, REGION), rz = Math.floorDiv(z, REGION);
+        int[] mc = minecraftCell(seed, rx, rz);
+        int nx = rx * REGION, nz = rz * REGION, size = REGION;
+        for (int depth = 0; size > LEAF; depth++) {
+            boolean split;
+            if (holds(nx, nz, size, mc[0] * LEAF, mc[1] * LEAF) || holds(nx, nz, size, 0, 0)) {
+                split = true;   // the Minecraft cube and the spawn teapot each get a smallest leaf
+            } else {
+                double cx = nx + size / 2.0, cz = nz + size / 2.0;
+                double t = Math.min(1, Math.hypot(cx, cz) / farDistance);
+                double chance = SPLIT_NEAR[depth] + (SPLIT_FAR[depth] - SPLIT_NEAR[depth]) * t;
+                split = rng(seed, nx, nz, 10 + depth).nextDouble() < chance;
+            }
+            if (!split) break;
+            size /= 2;
+            if (x >= nx + size) nx += size;
+            if (z >= nz + size) nz += size;
+        }
+        return new Leaf(nx, nz, size);
+    }
+
+    private static boolean holds(int nx, int nz, int size, int x, int z) {
+        return x >= nx && x < nx + size && z >= nz && z < nz + size;
+    }
+
+    /** The smallest-leaf cell (in LEAF units) of region (rx, rz) that holds its Minecraft cube. */
+    private static int[] minecraftCell(long seed, int rx, int rz) {
+        SplittableRandom r = rng(seed, rx, rz, 2);
+        int n = REGION / LEAF;
+        int cx = rx * n + r.nextInt(n), cz = rz * n + r.nextInt(n);
+        if (cx == 0 && cz == 0) cx += 2;   // the spawn leaf has its teapot
+        return new int[]{cx, cz};
+    }
+
+    /** What a leaf holds: nothing, one shape, a Cornell box, or the Minecraft cube. */
+    private List<Placement> contents(long seed, Leaf leaf) {
+        int x0 = leaf.x0(), z0 = leaf.z0(), side = leaf.size();
         int ground = ground();
-        if (cx == sc.mcCellX() && cz == sc.mcCellZ()) {
-            SplittableRandom r = rng(seed, cx, cz, 3);
-            int off = MARGIN + r.nextInt(CELL - 2 * MARGIN - MC_CUBE);
-            int off2 = MARGIN + r.nextInt(CELL - 2 * MARGIN - MC_CUBE);
-            return List.of(new Placement(Kind.MINECRAFT, null, MC_CUBE, 0, false,
-                    x0 + off, ground, z0 + off2, Material.STONE));
+        if (side == LEAF) {
+            int[] mc = minecraftCell(seed, Math.floorDiv(x0, REGION), Math.floorDiv(z0, REGION));
+            if (x0 == mc[0] * LEAF && z0 == mc[1] * LEAF) {
+                SplittableRandom r = rng(seed, x0, z0, 3);
+                int off = MARGIN + r.nextInt(LEAF - 2 * MARGIN - MC_CUBE);
+                int off2 = MARGIN + r.nextInt(LEAF - 2 * MARGIN - MC_CUBE);
+                return List.of(new Placement(Kind.MINECRAFT, null, MC_CUBE, 0, false,
+                        x0 + off, ground, z0 + off2, Material.STONE));
+            }
+            if (x0 == 0 && z0 == 0) {   // the first thing you see: a red teapot
+                return List.of(new Placement(Kind.SHAPE, Shape.TEAPOT, 18, 6, true,
+                        LEAF / 2, ground + 1, LEAF / 2, Material.RED_CONCRETE));
+            }
         }
-        if (sc.giant() != null && covers(sc.giant(), x0, z0, CELL, 4)) return List.of();
 
-        ShapeLibrary lib = shapes();
-        if (cx == 0 && cz == 0) {   // the first thing you see: a red teapot
-            return List.of(new Placement(Kind.SHAPE, Shape.TEAPOT, 14, 6, true,
-                    x0 + CELL / 2, ground, z0 + CELL / 2, Material.RED_CONCRETE));
-        }
+        SplittableRandom r = rng(seed, x0, z0, 1);
+        if (r.nextDouble() < (side == LEAF ? emptyChance : emptyChance / 3)) return List.of();
+        int half = side / 2 - MARGIN;
 
-        SplittableRandom r = rng(seed, cx, cz, 1);
-        if (r.nextDouble() < emptyChance) return List.of();
-        int half = CELL / 2 - MARGIN;
-
-        if (r.nextDouble() < cornellChance) {
-            int s = 19 + 2 * r.nextInt(7);   // odd sides 19..31
+        if (side <= 2 * LEAF && r.nextDouble() < cornellChance) {
+            int s = 19 + 2 * r.nextInt((Math.min(side - 2 * MARGIN, 47) - 19) / 2 + 1);   // odd sides
             int q = r.nextInt(4);
-            int rx = x0 + MARGIN + r.nextInt(CELL - 2 * MARGIN - s + 1);
-            int rz = z0 + MARGIN + r.nextInt(CELL - 2 * MARGIN - s + 1);
+            int rx = x0 + MARGIN + r.nextInt(side - 2 * MARGIN - s + 1);
+            int rz = z0 + MARGIN + r.nextInt(side - 2 * MARGIN - s + 1);
+            int base = ground + 1;
             List<Placement> out = new ArrayList<>();
-            out.add(new Placement(Kind.CORNELL, null, s, q, false, rx, ground, rz, Material.WHITE_CONCRETE));
+            out.add(new Placement(Kind.CORNELL, null, s, q, false, rx, base, rz, Material.WHITE_CONCRETE));
             if (r.nextDouble() < 0.75) {
-                out.add(roomPiece(Shape.TALL_BOX, (int) (s * 0.55), 1, s * 0.33, s * 0.62, s, q, rx, rz));
-                out.add(roomPiece(Shape.CUBE, (int) (s * 0.28), -1, s * 0.66, s * 0.35, s, q, rx, rz));
+                out.add(roomPiece(Shape.TALL_BOX, (int) (s * 0.55), 1, s * 0.33, s * 0.62, s, q, rx, rz, base));
+                out.add(roomPiece(Shape.CUBE, (int) (s * 0.28), -1, s * 0.66, s * 0.35, s, q, rx, rz, base));
             } else {
                 Shape guest = r.nextBoolean() ? Shape.TEAPOT : Shape.BUNNY;
                 out.add(roomPiece(guest, (int) (s * 0.4), r.nextInt(ShapeLibrary.UPRIGHT),
-                        s * 0.5, s * 0.5, s, q, rx, rz));
+                        s * 0.5, s * 0.5, s, q, rx, rz, base));
             }
             return out;
         }
 
-        Shape shape = pick(SMALL, r);
-        int orient = orientation(r, TUMBLE_SMALL);
-        double foot = lib.footprint(shape, orient);
-        int maxSize = Math.min(30, (int) ((half - 1) / foot));
-        int minSize = Math.min(maxSize, minSize(shape));
-        int size = minSize + r.nextInt(maxSize - minSize + 1);
-        int rb = (int) Math.ceil(foot * size) + 1;
-        int px = x0 + CELL / 2 + jitter(r, half - rb);
-        int pz = z0 + CELL / 2 + jitter(r, half - rb);
+        // pick a shape and orientation that fit the leaf at the shape's minimum size
+        ShapeLibrary lib = shapes();
+        int maxTop = worldTop() - ground - 2;
+        Shape shape = Shape.CUBE;
+        int orient = 0, minSize = 0, maxSize = 0;
+        for (int tries = 0; tries < 8; tries++) {
+            shape = tries < 7 ? pick(POOL, r) : Shape.SPHERE;
+            orient = r.nextDouble() < TUMBLE
+                    ? ShapeLibrary.UPRIGHT + r.nextInt(ShapeLibrary.ORIENTATIONS - ShapeLibrary.UPRIGHT)
+                    : r.nextInt(ShapeLibrary.UPRIGHT);
+            maxSize = (int) Math.min((half - 1) / lib.footprint(shape, orient), maxTop / lib.height(shape, orient));
+            minSize = minSize(shape);
+            if (maxSize >= minSize) break;
+        }
+        if (maxSize < minSize) return List.of();
+        // lean large: the leaf is the size class, the shape mostly fills it
+        int size = minSize + (int) ((maxSize - minSize) * (0.35 + 0.65 * r.nextDouble()));
+        int rb = (int) Math.ceil(lib.footprint(shape, orient) * size) + 1;
+        int px = x0 + side / 2 + jitter(r, half - rb);
+        int pz = z0 + side / 2 + jitter(r, half - rb);
         boolean teapot = shape == Shape.TEAPOT;
         Material color = teapot ? TEAPOT_COLORS[r.nextInt(TEAPOT_COLORS.length)] : COLORS[r.nextInt(COLORS.length)];
 
+        // never on the floor: hover a block or three, or float well up
         int h = (int) Math.ceil(lib.height(shape, orient) * size);
-        int base;
-        double pose = r.nextDouble();
-        if (pose < 0.55) {
-            base = ground;
-        } else if (pose < 0.7) {
-            base = ground - (int) (h * (0.2 + 0.25 * r.nextDouble()));
-        } else {
-            base = ground + 4 + r.nextInt(Math.max(1, Math.min(40, worldTop() - ground - h - 4)));
-        }
+        int room = worldTop() - ground - h - 1;
+        int base = r.nextDouble() < 0.6 || room < 8
+                ? ground + 1 + r.nextInt(Math.max(1, Math.min(3, room)))
+                : ground + 4 + r.nextInt(Math.min(60, room - 4));
         return List.of(new Placement(Kind.SHAPE, shape, size, orient, teapot, px, base, pz, color));
-    }
-
-    /** Upright and turned about Y, or (with chance tumble) rotated at random in 3D. */
-    private static int orientation(SplittableRandom r, double tumble) {
-        return r.nextDouble() < tumble
-                ? ShapeLibrary.UPRIGHT + r.nextInt(ShapeLibrary.ORIENTATIONS - ShapeLibrary.UPRIGHT)
-                : r.nextInt(ShapeLibrary.UPRIGHT);
     }
 
     /** Smallest size at which the shape still reads as itself: detailed meshes need more blocks. */
@@ -324,58 +357,18 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
         return switch (shape) {
             case LUCY -> 90;
             case DRAGON -> 50;
-            case BUNNY -> 12;
-            case SUZANNE, TEAPOT -> 8;
+            case BUNNY -> 24;
+            case SUZANNE, TEAPOT -> 16;
             default -> 6;
         };
     }
 
     /** A white shape inside a Cornell room, at room-local (u, w), turned with the room. */
-    private Placement roomPiece(Shape shape, int h, int yaw, double u, double w, int s, int q, int rx, int rz) {
+    private Placement roomPiece(Shape shape, int h, int yaw, double u, double w, int s, int q, int rx, int rz, int base) {
         int[] ab = fromRoom((int) u, (int) w, s, q);
         int orient = Math.floorMod(yaw + q * ShapeLibrary.UPRIGHT / 4, ShapeLibrary.UPRIGHT);
         return new Placement(Kind.SHAPE, shape, Math.max(3, h), orient,
-                false, rx + ab[0], ground() + 1, rz + ab[1], Material.WHITE_CONCRETE);
-    }
-
-    /** Super-cell (gx, gz): which cell holds the Minecraft cube, and maybe a giant. */
-    private SuperCell superCell(long seed, int gx, int gz) {
-        SplittableRandom r = rng(seed, gx, gz, 2);
-        int mcx = gx * SUPER + r.nextInt(SUPER), mcz = gz * SUPER + r.nextInt(SUPER);
-        if (mcx == 0 && mcz == 0) mcx += 2;   // the spawn cell has its teapot
-
-        Placement giant = null;
-        if (r.nextDouble() < giantChance) {
-            ShapeLibrary lib = shapes();
-            Shape shape = pick(GIANT, r);
-            int orient = orientation(r, TUMBLE_GIANT);
-            double foot = lib.footprint(shape, orient), tall = lib.height(shape, orient);
-            int span = SUPER * CELL;
-            int ground = ground();
-            int maxSize = Math.min((int) ((worldTop() - ground - 4) / tall), (int) ((span / 2.0 - 24) / foot));
-            int minSize = Math.min(maxSize, Math.max(60, minSize(shape)));
-            int size = minSize + r.nextInt(Math.max(1, maxSize - minSize + 1));
-            int rb = (int) Math.ceil(foot * size) + 1;
-            int px = gx * span + span / 2 + jitter(r, span / 2 - 8 - rb);
-            int pz = gz * span + span / 2 + jitter(r, span / 2 - 8 - rb);
-            int base = r.nextDouble() < 0.75 ? ground : ground - (int) (tall * size) / 5;
-            Material color = shape == Shape.TEAPOT ? TEAPOT_COLORS[r.nextInt(TEAPOT_COLORS.length)]
-                    : COLORS[r.nextInt(COLORS.length)];
-            giant = new Placement(Kind.SHAPE, shape, size, orient, shape == Shape.TEAPOT, px, base, pz, color);
-            // keep spawn and the Minecraft cube clear
-            if (covers(giant, -CELL, -CELL, 2 * CELL, 8) || covers(giant, mcx * CELL, mcz * CELL, CELL, 4)) {
-                giant = null;
-            }
-        }
-        return new SuperCell(giant, mcx, mcz);
-    }
-
-    /** Whether the giant's footprint circle, grown by pad, touches the square [x0, x0+size)². */
-    private boolean covers(Placement giant, int x0, int z0, int size, int pad) {
-        double r = shapes().footprint(giant.shape(), giant.orient()) * giant.size() + pad;
-        double dx = Math.max(Math.max(x0 - giant.px(), 0), giant.px() - (x0 + size));
-        double dz = Math.max(Math.max(z0 - giant.pz(), 0), giant.pz() - (z0 + size));
-        return dx * dx + dz * dz < r * r;
+                false, rx + ab[0], base + 1, rz + ab[1], Material.WHITE_CONCRETE);
     }
 
     private int worldTop() {

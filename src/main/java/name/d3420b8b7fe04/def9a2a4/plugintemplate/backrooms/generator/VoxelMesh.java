@@ -15,7 +15,7 @@ import java.util.zip.GZIPInputStream;
  * giant Stonehenge from a ~50 KB mesh instead of shipping voxel data.
  *
  * <p>The mesh file and its pipeline live in scripts/stonehenge/ (build_mesh.py writes it). The
- * browser preview's scripts/stonehenge/preview/voxelize.js is the reference implementation of
+ * browser preview's scripts/voxel-preview/voxelize.js is the reference implementation of
  * this class: same decode, same column-ray rules, same hash and noise, so the preview shows what
  * the server generates. Change one, change the other.
  *

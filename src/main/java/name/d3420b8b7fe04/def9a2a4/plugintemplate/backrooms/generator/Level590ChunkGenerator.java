@@ -18,18 +18,21 @@ import java.util.Random;
  * of its local x/y/z digits are 1 — the standard Menger construction, one block per unit cell.
  * Tiles share faces, so the big tunnels of neighbouring tiles join into endless corridors.
  *
- * <p>The tiling is shifted so world (0, 0) sits inside the sponge: on the floor of the largest
- * tunnel running along z (local x = t + t/2, y = t, z = 0 with t = size / 3). There, the local x
- * and y top digits are 1 (a hole the whole tunnel height) and the floor below has all y digits
- * 2 and all z digits 0, so it is always solid.
+ * <p>The tiling is shifted so world (0, 0) sits deep in solid sponge, on the floor of a 9-wide
+ * tunnel running along z, away from the big open voids. In base-3 digits (most significant first,
+ * order 5): local x = 2 2 1 1 1 (the tunnel's center column), feet y = 2 0 1 0 0 (the tunnel's
+ * floor level), z = 0. The x and y digits are both 1 only at the 9-block position, so the tunnel
+ * is a hole there and nothing larger is; the floor (y = 2 0 0 2 2) has no paired 1s, so it is solid.
  */
 public class Level590ChunkGenerator extends BackroomsChunkGenerator {
 
     private int order = 5;
     private int baseY = 6;
     private int size = 243;
+    /** Local y of the spawn tunnel's floor-level air block; see the class comment. */
+    private int spawnLy = 171;
     /** World x/z of a tile's local origin; chosen so world (0, 0) is the spawn column. */
-    private int originX = -(81 + 40);
+    private int originX = -229;
     private int originZ = 0;
 
     public Level590ChunkGenerator(NamespacedKey biomeKey) {
@@ -39,15 +42,18 @@ public class Level590ChunkGenerator extends BackroomsChunkGenerator {
     @Override
     public void configure(@Nullable ConfigurationSection config) {
         if (config != null) {
-            // order >= 2 so the spawn tunnel is at least 3 blocks tall
-            order = Math.max(2, Math.min(5, config.getInt("order", order)));
+            // order >= 3 so there is a 9-wide tunnel to spawn in
+            order = Math.max(3, Math.min(5, config.getInt("order", order)));
             baseY = config.getInt("base_y", baseY);
         }
         int s = 1;
         for (int i = 0; i < order; i++) s *= 3;
         size = s;
-        int t = size / 3;
-        originX = -(t + t / 2);
+        // x digits: 2 above the 9-block position, then 1 1 1. y: a leading 2, then 0 1 0 0.
+        int lx = 13;
+        for (int k = 3, p = 27; k < order; k++, p *= 3) lx += 2 * p;
+        spawnLy = 9 + (order > 3 ? 2 * (size / 3) : 0);
+        originX = -lx;
         originZ = 0;
     }
 
@@ -84,7 +90,7 @@ public class Level590ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     @Override
-    public int getSpawnY() { return baseY + size / 3; }
+    public int getSpawnY() { return baseY + spawnLy; }
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {

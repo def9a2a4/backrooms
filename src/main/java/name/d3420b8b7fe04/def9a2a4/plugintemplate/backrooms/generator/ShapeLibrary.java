@@ -23,10 +23,9 @@ import java.util.zip.GZIPInputStream;
  * orientations below {@link #UPRIGHT} stand upright and turn about Y, the rest are fixed random
  * rotations in 3D, the same in every world. The rotated shape rests with its lowest block on y=0.
  *
- * <p>Meshes are voxelized by casting a vertical ray through each block column and walking the hits
- * top-down: an up-facing hit starts solid, a down-facing hit ends it, and a span still open at the
- * bottom runs down to the base. This is the same rule as {@link VoxelMesh}, and it copes with
- * meshes that aren't watertight.
+ * <p>Meshes are voxelized by casting rays through block centers along all three axes; a block is
+ * solid when at least two of the three agree it is inside. That keeps small holes in the scanned
+ * meshes from leaking into pillars, which a single vertical ray (as in {@link VoxelMesh}) would.
  *
  * <p>Shell grids keep only the surface and open the shape's own base (the teapot's bottom, wherever
  * it points after rotation), so a hollow teapot can be walked into.
@@ -75,7 +74,7 @@ public final class ShapeLibrary {
             this.bits = new long[(int) (((long) sx * sy * sz + 63) >>> 6)];
         }
 
-        private int index(int x, int y, int z) {
+        int index(int x, int y, int z) {
             return (x * sz + z) * sy + y;
         }
 
@@ -271,52 +270,20 @@ public final class ShapeLibrary {
         VoxelGrid g = new VoxelGrid((int) Math.ceil(maxX) - ox + 1, (int) Math.ceil(maxY - minY) + 1,
                 (int) Math.ceil(maxZ) - oz + 1, ox, oz);
 
-        // hits per column as {y, up ? 1 : 0}, y measured from the lowest point
-        @SuppressWarnings("unchecked")
-        List<double[]>[] hits = new List[g.sx * g.sz];
-        int[] tris = m.tris;
-        for (int t3 = 0; t3 < tris.length; t3 += 3) {
-            int a = tris[t3], b = tris[t3 + 1], c = tris[t3 + 2];
-            double ax = w[a * 3] - ox, ay = w[a * 3 + 1] - minY, az = w[a * 3 + 2] - oz;
-            double bx = w[b * 3] - ox, by = w[b * 3 + 1] - minY, bz = w[b * 3 + 2] - oz;
-            double cx = w[c * 3] - ox, cy = w[c * 3 + 1] - minY, cz = w[c * 3 + 2] - oz;
-            double ux = bx - ax, uy = by - ay, uz = bz - az, vx = cx - ax, vy = cy - ay, vz = cz - az;
-            double nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-            if (ny * ny <= 1e-8 * (nx * nx + ny * ny + nz * nz)) continue;
-            double det = (bx - ax) * (cz - az) - (cx - ax) * (bz - az);
-            int x0 = Math.max(0, (int) Math.floor(Math.min(ax, Math.min(bx, cx)) - 0.5));
-            int x1 = Math.min(g.sx - 1, (int) Math.ceil(Math.max(ax, Math.max(bx, cx)) - 0.5));
-            int z0 = Math.max(0, (int) Math.floor(Math.min(az, Math.min(bz, cz)) - 0.5));
-            int z1 = Math.min(g.sz - 1, (int) Math.ceil(Math.max(az, Math.max(bz, cz)) - 0.5));
-            for (int x = x0; x <= x1; x++) {
-                for (int z = z0; z <= z1; z++) {
-                    double px = x + 0.5, pz = z + 0.5;
-                    double w1 = ((px - ax) * (cz - az) - (cx - ax) * (pz - az)) / det;
-                    double w2 = ((bx - ax) * (pz - az) - (px - ax) * (bz - az)) / det;
-                    double w0 = 1 - w1 - w2;
-                    if (w0 < 0 || w1 < 0 || w2 < 0) continue;
-                    int idx = x * g.sz + z;
-                    if (hits[idx] == null) hits[idx] = new ArrayList<>(4);
-                    hits[idx].add(new double[]{w0 * ay + w1 * by + w2 * cy, ny > 0 ? 1 : 0});
-                }
-            }
+        // vertices in grid coordinates: block (i, j, k) has its center at (i + 0.5, j + 0.5, k + 0.5)
+        double[] p = new double[w.length];
+        for (int i = 0; i < n; i++) {
+            p[i * 3] = w[i * 3] - ox;
+            p[i * 3 + 1] = w[i * 3 + 1] - minY;
+            p[i * 3 + 2] = w[i * 3 + 2] - oz;
         }
-
+        byte[] votes = new byte[g.sx * g.sy * g.sz];
+        for (int axis = 0; axis < 3; axis++) castAxis(p, m.tris, axis, g, votes);
         for (int x = 0; x < g.sx; x++) {
             for (int z = 0; z < g.sz; z++) {
-                List<double[]> list = hits[x * g.sz + z];
-                if (list == null) continue;
-                list.sort((p, q) -> Double.compare(q[0], p[0]));
-                double top = Double.NaN;
-                for (double[] hit : list) {
-                    if (hit[1] == 1) {
-                        if (Double.isNaN(top)) top = hit[0];
-                    } else if (!Double.isNaN(top)) {
-                        fill(g, x, z, (int) Math.floor(top - 0.5), (int) Math.ceil(hit[0] - 0.5));
-                        top = Double.NaN;
-                    }
+                for (int y = 0; y < g.sy; y++) {
+                    if (votes[g.index(x, y, z)] >= 2) g.set(x, y, z);
                 }
-                if (!Double.isNaN(top)) fill(g, x, z, (int) Math.floor(top - 0.5), 0);
             }
         }
 
@@ -338,8 +305,69 @@ public final class ShapeLibrary {
         return g;
     }
 
-    private static void fill(VoxelGrid g, int x, int z, int top, int bottom) {
-        for (int y = Math.max(0, bottom); y <= Math.min(g.sy - 1, top); y++) g.set(x, y, z);
+    /**
+     * Cast rays through block centers along one axis and vote for every block inside the mesh.
+     * Walking along +axis, a surface facing -axis enters the solid and one facing +axis leaves it.
+     * A span that never closes (a hole in the mesh) gets no votes, so a leak along one axis is
+     * outvoted by the other two instead of becoming a pillar.
+     */
+    private static void castAxis(double[] p, int[] tris, int a, VoxelGrid g, byte[] votes) {
+        int b = (a + 1) % 3, c = (a + 2) % 3;
+        int[] dim = {g.sx, g.sy, g.sz};
+        int nb = dim[b], nc = dim[c], na = dim[a];
+        @SuppressWarnings("unchecked")
+        List<double[]>[] hits = new List[nb * nc];   // per line: {t, leaving ? 1 : 0}
+        for (int t3 = 0; t3 < tris.length; t3 += 3) {
+            int i0 = tris[t3] * 3, i1 = tris[t3 + 1] * 3, i2 = tris[t3 + 2] * 3;
+            double[] u = {p[i1] - p[i0], p[i1 + 1] - p[i0 + 1], p[i1 + 2] - p[i0 + 2]};
+            double[] v = {p[i2] - p[i0], p[i2 + 1] - p[i0 + 1], p[i2 + 2] - p[i0 + 2]};
+            double[] nrm = {u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]};
+            double na2 = nrm[a] * nrm[a];
+            if (na2 <= 1e-8 * (nrm[0] * nrm[0] + nrm[1] * nrm[1] + nrm[2] * nrm[2])) continue;
+            double b0 = p[i0 + b], b1 = p[i1 + b], b2 = p[i2 + b];
+            double c0 = p[i0 + c], c1 = p[i1 + c], c2 = p[i2 + c];
+            double det = (b1 - b0) * (c2 - c0) - (b2 - b0) * (c1 - c0);
+            int lo1 = Math.max(0, (int) Math.floor(Math.min(b0, Math.min(b1, b2)) - 0.5));
+            int hi1 = Math.min(nb - 1, (int) Math.ceil(Math.max(b0, Math.max(b1, b2)) - 0.5));
+            int lo2 = Math.max(0, (int) Math.floor(Math.min(c0, Math.min(c1, c2)) - 0.5));
+            int hi2 = Math.min(nc - 1, (int) Math.ceil(Math.max(c0, Math.max(c1, c2)) - 0.5));
+            for (int i = lo1; i <= hi1; i++) {
+                for (int j = lo2; j <= hi2; j++) {
+                    double pb = i + 0.5, pc = j + 0.5;
+                    double w1 = ((pb - b0) * (c2 - c0) - (b2 - b0) * (pc - c0)) / det;
+                    double w2 = ((b1 - b0) * (pc - c0) - (pb - b0) * (c1 - c0)) / det;
+                    double w0 = 1 - w1 - w2;
+                    if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+                    int line = i * nc + j;
+                    if (hits[line] == null) hits[line] = new ArrayList<>(4);
+                    hits[line].add(new double[]{w0 * p[i0 + a] + w1 * p[i1 + a] + w2 * p[i2 + a], nrm[a] > 0 ? 1 : 0});
+                }
+            }
+        }
+
+        int[] pos = new int[3];
+        for (int i = 0; i < nb; i++) {
+            for (int j = 0; j < nc; j++) {
+                List<double[]> list = hits[i * nc + j];
+                if (list == null) continue;
+                list.sort((x, y) -> Double.compare(x[0], y[0]));
+                double open = Double.NaN;
+                pos[b] = i;
+                pos[c] = j;
+                for (double[] hit : list) {
+                    if (hit[1] == 0) {
+                        if (Double.isNaN(open)) open = hit[0];
+                    } else if (!Double.isNaN(open)) {
+                        int k0 = Math.max(0, (int) Math.ceil(open - 0.5)), k1 = Math.min(na - 1, (int) Math.floor(hit[0] - 0.5));
+                        for (int k = k0; k <= k1; k++) {
+                            pos[a] = k;
+                            votes[g.index(pos[0], pos[1], pos[2])]++;
+                        }
+                        open = Double.NaN;
+                    }
+                }
+            }
+        }
     }
 
     // ── primitives ───────────────────────────────────────────────────────────────────────────────

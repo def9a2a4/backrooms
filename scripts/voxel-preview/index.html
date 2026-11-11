@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Stonehenge Voxel Preview</title>
+  <title>Voxel Scan Preview</title>
   <script type="importmap">
     {
       "imports": {
@@ -21,7 +21,7 @@
       border-radius: 8px; min-width: 240px; max-width: calc(100vw - 48px); }
     #panel h1 { font-size: 14px; margin: 0 0 8px; }
     label { display: flex; justify-content: space-between; gap: 12px; margin: 4px 0; }
-    select, input[type=number] { width: 80px; background: #2a2d31; color: var(--fg); border: 1px solid #444;
+    select, input[type=number] { width: 80px; font: inherit; background: #2a2d31; color: var(--fg); border: 1px solid #444;
       border-radius: 4px; padding: 2px 4px; }
     button { margin-top: 8px; width: 100%; padding: 6px; background: #3b5bdb; color: white; border: 0;
       border-radius: 4px; cursor: pointer; }
@@ -33,18 +33,20 @@
 <body>
   <div id="view"></div>
   <div id="panel">
-    <h1>Level 56 voxel preview</h1>
-    <label>Scale <select id="scale"><option>4</option><option>8</option><option selected>16</option></select></label>
-    <label>Radius (blocks) <input id="radius" type="number" value="320" min="32" max="1200" step="16"></label>
-    <label>Fog <input id="fog" type="checkbox"></label>
+    <h1>Voxel preview</h1>
+    <label>Model <select id="model" style="width: 190px"></select></label>
+    <label>Scale <select id="scale"><option>1</option><option>2</option><option>4</option><option>6</option>
+      <option>8</option><option>12</option><option>16</option></select></label>
+    <label>Crop radius (blocks) <input id="radius" type="number" value="320" min="16" max="2000" step="16"></label>
+    <label id="thick-row">Shell thickness <input id="thick" type="number" value="1.5" min="0.5" max="6" step="0.25"></label>
+    <label>Surface materials <input id="mats" type="checkbox" checked></label>
+    <label id="fog-row">Fog <input id="fog" type="checkbox"></label>
     <label>Source mesh <input id="wire" type="checkbox"></label>
+    <label>Refit camera <input id="refit" type="checkbox"></label>
     <button id="build">Voxelize</button>
     <div id="stats">loading…</div>
   </div>
-  <div id="credit">
-    "<a href="https://sketchfab.com/3d-models/stonehenge-england-vr-7e7febabef2045a68755cc39c8c7c91f">Stonehenge England - VR</a>"
-    by Graphic solutions, CC BY 4.0. Decimated and voxelized.
-  </div>
+  <div id="credit"></div>
   <script type="module" src="./preview.js"></script>
 </body>
 </html>
