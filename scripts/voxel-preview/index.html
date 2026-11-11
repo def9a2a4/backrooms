@@ -35,13 +35,15 @@
   <div id="panel">
     <h1>Voxel preview</h1>
     <label>Model <select id="model" style="width: 190px"></select></label>
-    <label>View <select id="view"><option value="voxels">Voxels</option>
+    <label id="size-row">Mesh size <select id="size"></select></label>
+    <label>View <select id="viewmode"><option value="voxels">Voxels</option>
       <option value="mesh">Reduced mesh</option></select></label>
     <label>Scale <select id="scale"><option>1</option><option>2</option><option>4</option><option>6</option>
       <option>8</option><option>12</option><option>16</option></select></label>
     <label>Crop radius (blocks) <input id="radius" type="number" value="320" min="16" max="2000" step="16"></label>
     <label id="thick-row">Shell thickness <input id="thick" type="number" value="1.5" min="0.5" max="6" step="0.25"></label>
     <label>Surface materials <input id="mats" type="checkbox" checked></label>
+    <label id="grid-row">Surface grid (3D texture) <input id="grid" type="checkbox" checked></label>
     <label id="fog-row">Fog <input id="fog" type="checkbox"></label>
     <label>Source mesh <input id="wire" type="checkbox"></label>
     <label>Refit camera <input id="refit" type="checkbox"></label>

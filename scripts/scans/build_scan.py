@@ -32,7 +32,7 @@ from PIL import Image
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from meshlib import quantize, write_triangles, write_vertices  # noqa: E402
+from meshlib import quantize, varint, write_triangles, write_vertices  # noqa: E402
 
 Image.MAX_IMAGE_PIXELS = None
 ROOT = Path(__file__).resolve().parents[2]
@@ -70,6 +70,7 @@ MODELS = {
         "palette": GREYS + COLORS,
         "chroma": 1.6,
         "cast": 1.0,
+        "deadzone": 0.04,
     },
     "skatepark_grey": {
         "input": "southbank_undercroft_skatepark.glb",
@@ -77,6 +78,7 @@ MODELS = {
         "mode": "shell",
         "palette": GREYS,
         "cast": 1.0,
+        "deadzone": 0.04,
     },
     "hall": {
         "input": "hintze_hall.glb",
@@ -195,6 +197,13 @@ def assign(colors: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict):
     q[:, 0] = (lab[:, 0] - fmean[0]) / max(fstd[0], 1e-6) * pstd[0] * cfg.get("spread", 0.8) + pmean[0]
     cast = cfg.get("cast", 0.0)      # 1 = remove the scan's average tint entirely (to neutral)
     q[:, 1:] = (lab[:, 1:] - fmean[1:]) * cfg.get("chroma", 1.0) + fmean[1:] * (1 - cast)
+    # Grey scans: color noise around neutral (~0.02) outweighs the differences between grey
+    # blocks, so chroma below `deadzone` is squashed to neutral; stronger colors (paint) keep
+    # what's left above it.
+    dz = cfg.get("deadzone", 0.0)
+    if dz:
+        c = np.hypot(q[:, 1], q[:, 2])
+        q[:, 1:] *= (np.maximum(c - dz, 0) / np.maximum(c, 1e-9))[:, None]
     f = np.clip(up, 0, 1)[:, None, None]
     g = np.clip(-up, 0, 1)[:, None, None]
     best = np.empty(len(q), int)
@@ -229,9 +238,42 @@ def transfer(src_centroids, src_area, src_mat, dst_verts, n_pal, k=24):
     return votes.argmax(axis=1).astype(np.uint8)
 
 
-def write_mesh(verts, faces, vmat, palette, variants, ground_ref, island, path: Path):
-    """SHM2, as documented in scripts/stonehenge/build_mesh.py write_mesh(). Every entry is
-    family 1 (materials come from the nearest vertex, not the column's top hit)."""
+def surface_grid(centroids, area, mat, n_pal, cell):
+    """Material grid of the full-resolution surface: one palette index per `cell`-meter cube
+    the original surface passes through (area-weighted vote of the faces in it). A 3D texture
+    that survives decimation: the runtime looks blocks up by position instead of per vertex.
+    Returns (origin, dims, linear cell indices sorted, materials)."""
+    origin = centroids.min(axis=0)
+    q = np.floor((centroids - origin) / cell).astype(np.int64)
+    dims = q.max(axis=0) + 1
+    lin = (q[:, 0] * dims[2] + q[:, 2]) * dims[1] + q[:, 1]      # y fastest, then z, then x
+    keys, inv = np.unique(lin, return_inverse=True)
+    votes = np.bincount(inv * n_pal + mat, weights=area, minlength=len(keys) * n_pal)
+    return origin, dims, keys, votes.reshape(len(keys), n_pal).argmax(axis=1).astype(np.uint8)
+
+
+def write_grid(buf: io.BytesIO, grid, cell):
+    """Optional trailing section (readers that stop after the triangles ignore it):
+      "TEX1", f32 cell (meters), f32 origin[3], u16 dims[3] (x, y, z)
+      varint count, then per cell zigzag-free varint delta of the linear index
+        ((x * dimZ + z) * dimY + y, ascending), then u8[count] palette index per cell
+    """
+    origin, dims, keys, mats = grid
+    buf.write(b"TEX1")
+    buf.write(struct.pack("<4f3H", cell, *origin, *dims))
+    varint(buf, len(keys))
+    prev = 0
+    for k in keys.tolist():
+        varint(buf, k - prev)
+        prev = k
+    buf.write(mats.tobytes())
+
+
+def write_mesh(verts, faces, vmat, palette, variants, ground_ref, island, path: Path,
+               grid=None, cell=0.0):
+    """SHM2, as documented in scripts/stonehenge/build_mesh.py write_mesh(), plus the optional
+    TEX1 surface grid (write_grid). Every entry is family 1 (materials come from the grid or
+    the nearest vertex, not the column's top hit)."""
     lo, hi, q, order, f = quantize(verts, faces)
     vmat = vmat[order]
     buf = io.BytesIO()
@@ -247,6 +289,8 @@ def write_mesh(verts, faces, vmat, palette, variants, ground_ref, island, path: 
     write_vertices(buf, q)
     buf.write(vmat.astype(np.uint8).tobytes())
     write_triangles(buf, f)
+    if grid is not None:
+        write_grid(buf, grid, cell)
     data = gzip.compress(buf.getvalue(), compresslevel=9, mtime=0)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
@@ -284,30 +328,42 @@ def build(name: str, args):
     variants = [[(i, 70)] + [(int(j), wt) for j, wt in zip(np.argsort(dist[i])[1:3], (18, 12))]
                 for i in range(len(pal))]
 
-    out = Path(args.output) if args.output else TEMP / "meshes" / f"{name}.mesh.gz"
+    out = Path(args.output).resolve() if args.output else TEMP / "meshes" / f"{name}.mesh.gz"
     budget = args.max_kb * 1024
-    target, best = int(args.max_kb * 200), None
+    target, best = int(args.max_kb * 220), None      # ~220 tris per gzipped KB
     for _ in range(6):
         dec = decimate(V, F, target)
         vmat = transfer(tri.mean(axis=1), area, mat, dec.vertices, len(pal))
         size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out)
         print(f"  {len(dec.faces)} tris -> {size / 1024:.1f} KB")
-        if size <= budget and (best is None or len(dec.faces) > best[0]):
+        if size <= budget * (1 + args.tolerance / 2) and (best is None or len(dec.faces) > best[0]):
             best = (len(dec.faces), target)
-        if budget * 0.97 <= size <= budget:
+        if budget * (1 - args.tolerance) <= size <= budget * (1 + args.tolerance / 2):
             break
         target = int(target * budget * 0.985 / size)
     if best and best[0] != len(dec.faces):
         dec = decimate(V, F, best[1])
         vmat = transfer(tri.mean(axis=1), area, mat, dec.vertices, len(pal))
         size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out)
-    print(f"  wrote {out.relative_to(ROOT)}: {len(dec.faces)} tris, {size / 1024:.1f} KB")
+    geo = size
+    if args.tex_cell > 0:
+        grid = surface_grid(tri.mean(axis=1), area, mat, len(pal), args.tex_cell)
+        size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out,
+                          grid, args.tex_cell)
+        print(f"  surface grid: {len(grid[2])} cells of {args.tex_cell} m, "
+              f"{(size - geo) / 1024:.1f} KB")
+    print(f"  wrote {out.relative_to(ROOT)}: {len(dec.faces)} tris, {size / 1024:.1f} KB "
+          f"({geo / 1024:.1f} KB geometry)")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("model", choices=[*MODELS, "all"])
-    ap.add_argument("--max-kb", type=float, default=50.0, help="gzipped size budget")
+    ap.add_argument("--max-kb", type=float, default=50.0, help="gzipped geometry size budget")
+    ap.add_argument("--tex-cell", type=float, default=0.25,
+                    help="surface material grid cell in meters (0: none, per-vertex only)")
+    ap.add_argument("--tolerance", type=float, default=0.03,
+                    help="accept sizes within this fraction of --max-kb (fewer decimation passes)")
     ap.add_argument("--output", help="default .temp/meshes/<model>.mesh.gz")
     args = ap.parse_args()
     for name in (MODELS if args.model == "all" else [args.model]):

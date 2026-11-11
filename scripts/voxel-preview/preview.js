@@ -231,6 +231,10 @@ function selectModel(m, scale) {
   $('scale').value = String(scale ?? m.scale);
   $('radius').value = m.radius;
   $('thick-row').style.display = m.mode === 'shell' ? '' : 'none';
+  const sizes = Object.keys(m.sizes ?? {});
+  $('size-row').style.display = sizes.length ? '' : 'none';
+  $('size').replaceChildren(...sizes.map((k) => new Option(k, k)));
+  if (sizes.includes(params.get('size'))) $('size').value = params.get('size');
   const [title, author, url] = m.credit ?? [];
   $('credit').innerHTML = title
     ? `"<a href="${url}">${title}</a>" by ${author}, CC BY 4.0. Decimated and voxelized.` : '';
@@ -245,9 +249,12 @@ function applyFog() {
   scene.background.set(on ? fog[0] : SKY);
 }
 
+const meshUrl = (m) => (m.sizes ? m.sizes[$('size').value] : m.mesh);
+
 async function getMesh(m) {
-  if (!meshes.has(m.mesh)) meshes.set(m.mesh, await loadMesh(m.mesh));
-  return meshes.get(m.mesh);
+  const url = meshUrl(m);
+  if (!meshes.has(url)) meshes.set(url, await loadMesh(url));
+  return meshes.get(url);
 }
 
 /** Every solid block as one plain block: shows the shape without the inferred materials. */
@@ -323,20 +330,22 @@ async function build() {
   try {
     mesh = await getMesh(m);
   } catch (e) {
-    stats.textContent = `${e.message}\nbuild it: ${m.build ?? ''}`;
+    stats.textContent = `${e.message}\nbuild it: ${m.build ?? ''}${m.sizes ? ' --max-kb N --output ' + meshUrl(m).slice(1) : ''}`;
     return;
   }
   const ext = [0, 1, 2].map((c) => (mesh.hi[c] - mesh.lo[c]) * scale);
+  $('grid-row').style.display = mesh.grid ? '' : 'none';
   const finish = () => {
     if (first || $('refit').checked) fit(ext);
     first = false;
     const q = new URLSearchParams(location.search);
     q.set('model', m.id);
     q.set('scale', scale);
-    q.set('view', $('view').value);
+    q.set('view', $('viewmode').value);
+    if (m.sizes) q.set('size', $('size').value); else q.delete('size');
     history.replaceState(null, '', `?${q}`);
   };
-  if ($('view').value === 'mesh') {
+  if ($('viewmode').value === 'mesh') {
     const baseY = m.mode === 'shell' ? mesh.lo[1] : mesh.groundRef;
     clear(voxels);
     voxels = await solidMesh(mesh, scale, baseY, $('mats').checked);
@@ -362,10 +371,10 @@ async function build() {
   const t0 = performance.now();
   let v, baseY;
   if (m.mode === 'shell') {
-    v = voxelizeShell(mesh, { scale, groundY: GROUND_Y, radius, thickness: Number($('thick').value) });
+    v = voxelizeShell(mesh, { scale, groundY: GROUND_Y, radius, thickness: Number($('thick').value), useGrid: $('grid').checked });
     baseY = mesh.lo[1];
   } else {
-    v = voxelize(mesh, { scale, groundY: GROUND_Y, radius });
+    v = voxelize(mesh, { scale, groundY: GROUND_Y, radius, useGrid: $('grid').checked });
     baseY = mesh.groundRef;
     if (m.altar) placeAltar(v);
   }
@@ -384,6 +393,7 @@ async function build() {
   stats.textContent =
     `mesh      ${(mesh.bytes / 1024).toFixed(1)} KB raw, ${mesh.tris.length / 3} tris, ${mesh.verts.length / 3} verts\n` +
     `size      ${ext.map((e) => Math.round(e)).join(' × ')} blocks (x y z)\n` +
+    `grid      ${mesh.grid ? `${mesh.grid.cells.size.toLocaleString()} cells of ${mesh.grid.cell} m` : 'none'}\n` +
     `volume    ${v.nx}×${v.ny}×${v.nz}, ${solid.toLocaleString()} solid\n` +
     `height    ${v.y0}..${v.y0 + v.ny - 1}\n` +
     `quads     ${quads.toLocaleString()}\n` +
@@ -401,8 +411,10 @@ function fit(ext) {
 $('build').onclick = build;
 $('model').onchange = () => { selectModel(model()); build(); };
 $('mats').onchange = build;
-$('view').onchange = build;
-if (params.get('view')) $('view').value = params.get('view');
+$('viewmode').onchange = build;
+$('size').onchange = build;
+$('grid').onchange = build;
+if (params.get('view')) $('viewmode').value = params.get('view');
 $('wire').onchange = () => { if (wire) wire.visible = $('wire').checked; };
 $('fog').onchange = applyFog;
 

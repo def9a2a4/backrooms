@@ -62,7 +62,52 @@ export function decodeMesh(buf) {
     tris[i * 3 + 1] = a + zz();
     tris[i * 3 + 2] = a + zz();
   }
-  return { lo, hi, groundRef, island, palette, verts, vmat, tris, bytes: buf.length };
+  // optional TEX1 surface material grid (scripts/scans/build_scan.py write_grid)
+  let grid = null;
+  if (p + 4 <= buf.length && String.fromCharCode(buf[p], buf[p + 1], buf[p + 2], buf[p + 3]) === 'TEX1') {
+    p += 4;
+    const cell = f32();
+    const origin = [f32(), f32(), f32()];
+    const dims = [dv.getUint16(p, true), dv.getUint16(p + 2, true), dv.getUint16(p + 4, true)];
+    p += 6;
+    const n = varint();
+    const keys = new Float64Array(n);
+    let k = 0;
+    for (let i = 0; i < n; i++) keys[i] = k += varint();
+    const cells = new Map();
+    for (let i = 0; i < n; i++) cells.set(keys[i], buf[p + i]);
+    p += n;
+    grid = { cell, origin, dims, cells };
+  }
+  return { lo, hi, groundRef, island, palette, verts, vmat, tris, grid, bytes: buf.length };
+}
+
+/**
+ * Surface-grid material at mesh-space point (x, y, z) in meters: the cell containing it, else
+ * the nearest filled cell within `reach` cells (the decimated surface drifts off the original).
+ * Returns a palette index, or -1 when nothing is in reach.
+ */
+export function gridMaterial(grid, x, y, z, reach = 2) {
+  const { cell, origin, dims, cells } = grid;
+  const fx = (x - origin[0]) / cell, fy = (y - origin[1]) / cell, fz = (z - origin[2]) / cell;
+  const cx = Math.floor(fx), cy = Math.floor(fy), cz = Math.floor(fz);
+  const key = (ix, iy, iz) => (ix < 0 || iy < 0 || iz < 0 || ix >= dims[0] || iy >= dims[1] || iz >= dims[2])
+    ? -1 : (ix * dims[2] + iz) * dims[1] + iy;
+  const hit = cells.get(key(cx, cy, cz));
+  if (hit !== undefined) return hit;
+  let best = -1, bd = Infinity;
+  for (let r = 1; r <= reach; r++) {
+    for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) for (let dz = -r; dz <= r; dz++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)) !== r) continue;   // shell of the cube
+      const m = cells.get(key(cx + dx, cy + dy, cz + dz));
+      if (m === undefined) continue;
+      const ex = cx + dx + 0.5 - fx, ey = cy + dy + 0.5 - fy, ez = cz + dz + 0.5 - fz;
+      const d = ex * ex + ey * ey + ez * ez;
+      if (d < bd) { bd = d; best = m; }
+    }
+    if (best >= 0) return best;
+  }
+  return -1;
 }
 
 // ── hash and value noise (mirror VoxelMesh) ─────────────────────────────────────────────────────
@@ -113,6 +158,7 @@ const ISLAND_DEPTH = 6.25;   // underside depth at the island center, in blocks 
 const ISLAND_EDGE = 4;       // minimum thickness at the rim
 const ISLAND_RAGGED = 0.18;  // underside noise as a fraction of the local depth
 
+const GRID_JITTER = 0.25;   // fraction of MAT_WARP applied to surface-grid lookups
 const FILL = 2;              // pseudo-family for plain stone fill
 
 const SALT_WARP_X = 11, SALT_WARP_Z = 13, SALT_BUMP = 17, SALT_MAT = 23, SALT_CLUMP = 31,
@@ -136,8 +182,9 @@ function variant(palette, m, x, y, z) {
  * Returns { vol (Uint8Array, palette index + 1, 0 = air), nx, ny, nz, y0, ids } where volume
  * index is (x * nz + z) * ny + (y - y0) and x/z run from -radius..radius.
  */
-export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320 } = {}) {
+export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid = true } = {}) {
   const { verts, tris, vmat, palette } = mesh;
+  const surf = useGrid ? mesh.grid : null;
   const nv = verts.length / 3;
   // world-space vertices: x east, y up (groundRef → groundY), z south
   const W = new Float64Array(nv * 3);
@@ -292,7 +339,15 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320 } = {}) 
             const jx = (vnoise(x / MAT_WARP_SCALE, y / MAT_WARP_SCALE, z / MAT_WARP_SCALE, SALT_MAT) * 2 - 1) * MAT_WARP;
             const jy = (vnoise(x / MAT_WARP_SCALE, y / MAT_WARP_SCALE, z / MAT_WARP_SCALE, SALT_MAT + 1) * 2 - 1) * MAT_WARP;
             const jz = (vnoise(x / MAT_WARP_SCALE, y / MAT_WARP_SCALE, z / MAT_WARP_SCALE, SALT_MAT + 2) * 2 - 1) * MAT_WARP;
-            set(y, stoneMat(x + 0.5 + jx, y + 0.5 + jy, z + 0.5 + jz));
+            // surface grid near the surface (light jitter only: it carries real detail),
+            // nearest-vertex lattice deeper in
+            let m = -1;
+            if (surf) {
+              m = gridMaterial(surf, (x + 0.5 + jx * GRID_JITTER) / scale,
+                (y + 0.5 + jy * GRID_JITTER - groundY) / scale + mesh.groundRef,
+                (z + 0.5 + jz * GRID_JITTER) / scale);
+            }
+            set(y, m >= 0 ? m : stoneMat(x + 0.5 + jx, y + 0.5 + jy, z + 0.5 + jz));
           }
         }
       };
@@ -367,8 +422,9 @@ function closestBary(px, py, pz, ax, ay, az, bx, by, bz, cx, cy, cz) {
  * Voxelize as a thickened surface. The lowest point of the mesh lands on groundY.
  * Same return shape as voxelize(), plus x0/z0 (world x/z of volume index 0).
  */
-export function voxelizeShell(mesh, { scale = 8, groundY = 64, radius = 1000, thickness = 1.5 } = {}) {
+export function voxelizeShell(mesh, { scale = 8, groundY = 64, radius = 1000, thickness = 1.5, useGrid = true } = {}) {
   const { verts, tris, vmat, palette } = mesh;
+  const grid = useGrid ? mesh.grid : null;
   const nv = verts.length / 3;
   const W = new Float64Array(nv * 3);
   let minY = Infinity;
@@ -432,9 +488,13 @@ export function voxelizeShell(mesh, { scale = 8, groundY = 64, radius = 1000, th
           if (dist2 > r2max) continue;
           const th = thickness + (vnoise(px / SHELL_BUMP_SCALE, py / SHELL_BUMP_SCALE, pz / SHELL_BUMP_SCALE, SALT_SHELL) * 2 - 1) * SHELL_BUMP;
           if (dist2 > th * th) continue;
-          const r = unit(hash(p[0], p[1], p[2]));
-          const pick = r < ba ? a : r < ba + bb ? b : c;
-          vol[k] = variant(palette, vmat[pick], p[0], p[1], p[2]) + 1;
+          let m = -1;
+          if (grid) m = gridMaterial(grid, px / scale, (py - groundY) / scale + minY, pz / scale);
+          if (m < 0) {
+            const r = unit(hash(p[0], p[1], p[2]));
+            m = vmat[r < ba ? a : r < ba + bb ? b : c];
+          }
+          vol[k] = variant(palette, m, p[0], p[1], p[2]) + 1;
         }
       }
     }

@@ -8,9 +8,16 @@
     "scale": 16,
     "radius": 320,
     "altar": true,
-    "fog": [11844029, 24, 192],
-    "credit": ["Stonehenge England - VR", "Graphic solutions",
-               "https://sketchfab.com/3d-models/stonehenge-england-vr-7e7febabef2045a68755cc39c8c7c91f"]
+    "fog": [
+      11844029,
+      24,
+      192
+    ],
+    "credit": [
+      "Stonehenge England - VR",
+      "Graphic solutions",
+      "https://sketchfab.com/3d-models/stonehenge-england-vr-7e7febabef2045a68755cc39c8c7c91f"
+    ]
   },
   {
     "id": "gobekli",
@@ -20,7 +27,18 @@
     "mode": "column",
     "scale": 8,
     "radius": 400,
-    "credit": ["Gobekli Tepe", "rmark", "https://sketchfab.com/3d-models/gobekli-tepe-5a4d25c355ff48d59ab76c36812b9cf3"]
+    "credit": [
+      "Gobekli Tepe",
+      "rmark",
+      "https://sketchfab.com/3d-models/gobekli-tepe-5a4d25c355ff48d59ab76c36812b9cf3"
+    ],
+    "sizes": {
+      "50 KB": "/.temp/meshes/gobekli.mesh.gz",
+      "250 KB": "/.temp/meshes/gobekli_250k.mesh.gz",
+      "1 MB": "/.temp/meshes/gobekli_1m.mesh.gz",
+      "4 MB": "/.temp/meshes/gobekli_4m.mesh.gz",
+      "8 MB": "/.temp/meshes/gobekli_8m.mesh.gz"
+    }
   },
   {
     "id": "skatepark",
@@ -30,8 +48,18 @@
     "mode": "shell",
     "scale": 8,
     "radius": 400,
-    "credit": ["Southbank Undercroft Skatepark", "artfletch",
-               "https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d"]
+    "credit": [
+      "Southbank Undercroft Skatepark",
+      "artfletch",
+      "https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d"
+    ],
+    "sizes": {
+      "50 KB": "/.temp/meshes/skatepark.mesh.gz",
+      "250 KB": "/.temp/meshes/skatepark_250k.mesh.gz",
+      "1 MB": "/.temp/meshes/skatepark_1m.mesh.gz",
+      "4 MB": "/.temp/meshes/skatepark_4m.mesh.gz",
+      "8 MB": "/.temp/meshes/skatepark_8m.mesh.gz"
+    }
   },
   {
     "id": "skatepark_grey",
@@ -41,8 +69,18 @@
     "mode": "shell",
     "scale": 8,
     "radius": 400,
-    "credit": ["Southbank Undercroft Skatepark", "artfletch",
-               "https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d"]
+    "credit": [
+      "Southbank Undercroft Skatepark",
+      "artfletch",
+      "https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d"
+    ],
+    "sizes": {
+      "50 KB": "/.temp/meshes/skatepark_grey.mesh.gz",
+      "250 KB": "/.temp/meshes/skatepark_grey_250k.mesh.gz",
+      "1 MB": "/.temp/meshes/skatepark_grey_1m.mesh.gz",
+      "4 MB": "/.temp/meshes/skatepark_grey_4m.mesh.gz",
+      "8 MB": "/.temp/meshes/skatepark_grey_8m.mesh.gz"
+    }
   },
   {
     "id": "hall",
@@ -52,6 +90,17 @@
     "mode": "shell",
     "scale": 8,
     "radius": 400,
-    "credit": ["Hintze Hall", "artfletch", "https://sketchfab.com/3d-models/hintze-hall-45f5e56887f44075bbf283977c99541f"]
+    "credit": [
+      "Hintze Hall",
+      "artfletch",
+      "https://sketchfab.com/3d-models/hintze-hall-45f5e56887f44075bbf283977c99541f"
+    ],
+    "sizes": {
+      "50 KB": "/.temp/meshes/hall.mesh.gz",
+      "250 KB": "/.temp/meshes/hall_250k.mesh.gz",
+      "1 MB": "/.temp/meshes/hall_1m.mesh.gz",
+      "4 MB": "/.temp/meshes/hall_4m.mesh.gz",
+      "8 MB": "/.temp/meshes/hall_8m.mesh.gz"
+    }
   }
 ]
