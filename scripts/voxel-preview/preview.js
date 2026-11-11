@@ -265,58 +265,149 @@ function plain(v) {
 }
 
 // ── reduced mesh view ───────────────────────────────────────────────────────────────────────────
-// The decimated triangles as they are, before voxelizing: flat-shaded, both sides (scan winding
-// isn't reliable), each vertex colored with its block's average top/side texture color.
+// The decimated triangles as they are, before voxelizing, both sides (scan winding isn't
+// reliable), textured per pixel from the surface grid.
 
-const blockColors = new Map();
-async function blockColor(id) {
-  if (!blockColors.has(id)) {
-    blockColors.set(id, (async () => {
-      const acc = [0, 0, 0];
-      for (const face of [2, 0]) {
-        const img = new Image();
-        img.src = `${TEX_URL}${texFor(id, face)}.png`;
-        await img.decode();
-        const cv = document.createElement('canvas');
-        cv.width = cv.height = img.width;               // first frame of animated strips
-        const ctx = cv.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const px = ctx.getImageData(0, 0, img.width, img.width).data;
-        const sum = [0, 0, 0];
-        let n = 0;
-        for (let i = 0; i < px.length; i += 4) {
-          if (!px[i + 3]) continue;
-          for (let c = 0; c < 3; c++) sum[c] += px[i + c];
-          n++;
-        }
-        const tint = id === 'grass_block' && face === 2 ? new THREE.Color(GRASS_TINT) : null;
-        const t = tint ? [tint.r, tint.g, tint.b].map((x) => x * 255) : [255, 255, 255];
-        for (let c = 0; c < 3; c++) acc[c] += (sum[c] / Math.max(n, 1)) * (t[c] / 255) / 2;
-      }
-      return new THREE.Color().setRGB(acc[0] / 255, acc[1] / 255, acc[2] / 255, THREE.SRGBColorSpace);
-    })());
-  }
-  return blockColors.get(id);
+// Block textures as one 16×16 layer per palette entry (top and side arrays), first frame only.
+async function blockLayers(palette) {
+  const layers = async (face) => {
+    const data = new Uint8Array(palette.length * 16 * 16 * 4);
+    await Promise.all(palette.map(async (e, i) => {
+      const img = new Image();
+      img.src = `${TEX_URL}${texFor(e.id, face)}.png`;
+      await img.decode();
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 16;
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(img, 0, 0, img.width, img.width, 0, 0, 16, 16);
+      data.set(ctx.getImageData(0, 0, 16, 16).data, i * 1024);
+    }));
+    const t = new THREE.DataArrayTexture(data, 16, 16, palette.length);
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.needsUpdate = true;
+    return t;
+  };
+  return { top: await layers(2), side: await layers(0) };
 }
 
-async function solidMesh(mesh, scale, baseY, mats) {
-  const colors = await Promise.all(mesh.palette.map((e) => blockColor(e.id)));
-  const plainColor = new THREE.Color(0x9a9a9a);
+// The surface grid as a 3D texture of palette index + 1 (0 = empty), dilated twice so the
+// decimated surface, which drifts a little off the original, still lands in filled cells.
+const gridTextures = new WeakMap();
+function gridTexture(grid) {
+  if (gridTextures.has(grid)) return gridTextures.get(grid);
+  const [dx, dy, dz] = grid.dims;
+  let a = new Uint8Array(dx * dy * dz);
+  for (const [k, m] of grid.cells) {
+    const y = k % dy, z = Math.floor(k / dy) % dz, x = Math.floor(k / (dy * dz));
+    a[x + dx * (y + dy * z)] = m + 1;
+  }
+  const sx = 1, sy = dx, sz = dx * dy;
+  for (let pass = 0; pass < 2; pass++) {
+    const b = a.slice();
+    for (let z = 0; z < dz; z++) for (let y = 0; y < dy; y++) for (let x = 0; x < dx; x++) {
+      const i = x + sy * y + sz * z;
+      if (a[i]) continue;
+      const v = (x > 0 && a[i - sx]) || (x < dx - 1 && a[i + sx]) || (y > 0 && a[i - sy])
+        || (y < dy - 1 && a[i + sy]) || (z > 0 && a[i - sz]) || (z < dz - 1 && a[i + sz]);
+      if (v) b[i] = v;
+    }
+    a = b;
+  }
+  const t = new THREE.Data3DTexture(a, dx, dy, dz);
+  t.format = THREE.RedFormat;
+  t.type = THREE.UnsignedByteType;
+  t.magFilter = t.minFilter = THREE.NearestFilter;
+  t.unpackAlignment = 1;
+  t.needsUpdate = true;
+  gridTextures.set(grid, t);
+  return t;
+}
+
+const EMPTY_GRID = new THREE.Data3DTexture(new Uint8Array(1), 1, 1, 1);
+EMPTY_GRID.format = THREE.RedFormat;
+EMPTY_GRID.needsUpdate = true;
+
+const MESH_VERT = /* glsl */ `
+  uniform float uScale, uBaseY;
+  in float mat;
+  out vec3 vWorld, vMesh;
+  flat out float vMat;
+  void main() {
+    vWorld = position;
+    vMesh = vec3(position.x / uScale, position.y / uScale + uBaseY, position.z / uScale);
+    vMat = mat;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }`;
+const MESH_FRAG = /* glsl */ `
+  precision highp sampler3D;
+  precision highp sampler2DArray;
+  uniform sampler3D uGrid;
+  uniform sampler2DArray uTop, uSide;
+  uniform vec3 uOrigin, uDims, uTint;
+  uniform float uCell, uGrass;
+  uniform bool uUseGrid, uMats;
+  in vec3 vWorld, vMesh;
+  flat in float vMat;
+  out vec4 fragColor;
+  void main() {
+    vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
+    float m = vMat;
+    if (uUseGrid) {
+      vec3 t = (vMesh - uOrigin) / uCell / uDims;
+      if (all(greaterThanEqual(t, vec3(0.0))) && all(lessThan(t, vec3(1.0)))) {
+        float g = floor(texture(uGrid, t).r * 255.0 + 0.5);
+        if (g > 0.0) m = g - 1.0;
+      }
+    }
+    vec3 an = abs(n);
+    bool top = an.y >= an.x && an.y >= an.z;
+    vec2 uv = top ? vWorld.xz : (an.x >= an.z ? vWorld.zy : vWorld.xy);
+    uv = fract(uv);
+    uv.y = 1.0 - uv.y;
+    vec3 c = top ? texture(uTop, vec3(uv, m)).rgb : texture(uSide, vec3(uv, m)).rgb;
+    if (top && abs(m - uGrass) < 0.5) c *= uTint;
+    if (!uMats) c = vec3(0.62);
+    float l = 0.45 + 0.55 * abs(dot(n, normalize(vec3(-0.5, 1.0, 0.35))));
+    fragColor = vec4(c * l, 1.0);
+  }`;
+
+/** The decimated triangles, textured: per pixel, the block from the surface grid (else the
+ *  triangle's vertex material), drawn with its vanilla texture at one block per tile. */
+async function solidMesh(mesh, scale, baseY, mats, useGrid) {
   const nt = mesh.tris.length;
-  const pos = new Float32Array(nt * 3), col = new Float32Array(nt * 3);
+  const pos = new Float32Array(nt * 3), mat = new Float32Array(nt);
   for (let i = 0; i < nt; i++) {
     const v = mesh.tris[i];
     pos[i * 3] = mesh.verts[v * 3] * scale;
     pos[i * 3 + 1] = (mesh.verts[v * 3 + 1] - baseY) * scale;
     pos[i * 3 + 2] = mesh.verts[v * 3 + 2] * scale;
-    const c = mats ? colors[mesh.vmat[v]] : plainColor;
-    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    mat[i] = mesh.vmat[mesh.tris[i - (i % 3)]];      // flat: the triangle's first vertex
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  g.computeVertexNormals();
-  const material = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, flatShading: true });
+  g.setAttribute('mat', new THREE.BufferAttribute(mat, 1));
+  const { top, side } = await blockLayers(mesh.palette);
+  const grid = mesh.grid;
+  const tint = new THREE.Color(GRASS_TINT);
+  const material = new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    vertexShader: MESH_VERT,
+    fragmentShader: MESH_FRAG,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uScale: { value: scale }, uBaseY: { value: baseY },
+      uGrid: { value: grid ? gridTexture(grid) : EMPTY_GRID },
+      uUseGrid: { value: !!grid && useGrid },
+      uOrigin: { value: new THREE.Vector3(...(grid ? grid.origin : [0, 0, 0])) },
+      uDims: { value: new THREE.Vector3(...(grid ? grid.dims : [1, 1, 1])) },
+      uCell: { value: grid ? grid.cell : 1 },
+      uTop: { value: top }, uSide: { value: side },
+      uTint: { value: new THREE.Vector3(tint.r, tint.g, tint.b) },
+      uGrass: { value: mesh.palette.findIndex((e) => e.id === 'grass_block') },
+      uMats: { value: mats },
+    },
+  });
   return new THREE.Mesh(g, material);
 }
 
@@ -348,7 +439,7 @@ async function build() {
   if ($('viewmode').value === 'mesh') {
     const baseY = m.mode === 'shell' ? mesh.lo[1] : mesh.groundRef;
     clear(voxels);
-    voxels = await solidMesh(mesh, scale, baseY, $('mats').checked);
+    voxels = await solidMesh(mesh, scale, baseY, $('mats').checked, $('grid').checked);
     scene.add(voxels);
     clear(wire);
     wire = wireframe(mesh, scale, baseY);
