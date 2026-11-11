@@ -6,6 +6,8 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTriggerRegi
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.BackroomsChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.title.Title;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
@@ -13,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.generator.ChunkGenerator;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +37,8 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private List<String> eventIds;
     private List<String> entityIds;
     private String enterMessage;
+    private String enterTitle;
+    private String enterSubtitle;
     private long fixedTime;
     private String dimensionType;
     private @Nullable NamespacedKey biomeKey;
@@ -97,6 +102,8 @@ public class ConfigDrivenLevel extends AbstractLevel {
         this.eventIds = section.getStringList("events");
         this.entityIds = new java.util.ArrayList<>(section.getStringList("entities"));
         this.enterMessage = section.getString("enter_message", null);
+        this.enterTitle = section.getString("enter_title", null);
+        this.enterSubtitle = section.getString("enter_subtitle", null);
         this.fixedTime = section.getLong("fixed_time", -1);
         this.dimensionType = section.getString("dimension_type", "dark");
         this.spawnRadius = section.getInt("spawn_radius", 300);
@@ -217,6 +224,13 @@ public class ConfigDrivenLevel extends AbstractLevel {
     public void onPlayerEnter(Player player, BackroomsPlayerState state) {
         if (enterMessage != null && !enterMessage.isEmpty()) {
             player.sendMessage(enterMessage);
+        }
+        if (enterTitle != null || enterSubtitle != null) {
+            LegacyComponentSerializer legacy = LegacyComponentSerializer.legacySection();
+            player.showTitle(Title.title(
+                    legacy.deserialize(enterTitle == null ? "" : enterTitle),
+                    legacy.deserialize(enterSubtitle == null ? "" : enterSubtitle),
+                    Title.Times.times(Duration.ofMillis(250), Duration.ofSeconds(3), Duration.ofSeconds(1))));
         }
     }
 

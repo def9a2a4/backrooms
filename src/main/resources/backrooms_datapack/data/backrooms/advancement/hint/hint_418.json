@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_418",
+  "display": {
+    "icon": {
+      "id": "minecraft:oak_log"
+    },
+    "title": {"text": "Punch a Tree", "color": "green"},
+    "description": {"text": "The only real thing in the scene", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -33,6 +33,9 @@ backrooms:
     twilight_portal:
       enabled: true
       target_level: level_84
+    tea_kettle:
+      enabled: true
+      target_level: level_418
 
   # Entity spawner settings
   entity_spawner:

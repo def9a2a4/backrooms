@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:cauldron"
+    },
+    "title": {"text": "Short and Stout", "color": "red"},
+    "description": {"text": "Brew tea over an open fire", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

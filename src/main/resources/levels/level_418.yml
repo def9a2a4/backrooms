@@ -1,0 +1,43 @@
+id: level_418
+display_name: "I'm a Teapot"
+generator: level_418
+environment: THE_END
+dimension_type: fullbright
+biome: "backrooms:test_scene"
+spawn_radius: 0
+enter_title: "§c418"
+enter_subtitle: "§7I'm a teapot"
+enter_message: "§c[ERR] §7Block engine not found. Falling back to voxel renderer."
+
+# A voxel engine's test scene: Utah teapots, Suzanne, the Stanford models, primitives and Cornell
+# boxes on an endless checkerboard, all in flat concrete. Meshes are voxelized at runtime from
+# structures/testscene/*.mesh.gz (scripts/testscene/build_meshes.py).
+# Every 384x384 super-cell holds one small stone cube with a single oak log on top: the only real
+# Minecraft in the level. Breaking any wood leaves.
+generator_config:
+  floor_y: 8
+  empty_chance: 0.3       # chance a 48-block cell is empty
+  cornell_chance: 0.08    # chance a non-empty cell is a Cornell box
+  giant_chance: 0.6       # chance a super-cell holds a giant (Lucy, teapot, dragon, ...)
+
+events:
+  - ambient_sound
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 8
+    chance: 0.3
+    sounds:
+      - block.beacon.ambient
+      - ui.button.click
+      - block.note_block.hat
+
+exit_triggers:
+  - type: break_block
+    materials: ["#minecraft:logs"]
+    target_level: level_94
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 30
+      message: "§a[OK] §7Block engine restored. Loading world..."

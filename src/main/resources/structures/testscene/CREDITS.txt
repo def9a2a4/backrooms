@@ -1,0 +1,16 @@
+The meshes in this folder are derived from the copies in
+https://github.com/alecjacobson/common-3d-test-models (commit 8a4f864):
+
+  teapot.mesh.gz     Utah teapot, Martin Newell, 1975. Public domain.
+  suzanne.mesh.gz    Suzanne, the Blender monkey. Blender Foundation, https://www.blender.org/
+  bunny.mesh.gz      Stanford Bunny, Stanford 3D Scanning Repository
+  dragon.mesh.gz     XYZ RGB Asian Dragon, XYZ RGB Inc., via the Stanford 3D Scanning Repository
+  armadillo.mesh.gz  Armadillo, Stanford 3D Scanning Repository
+  lucy.mesh.gz       Lucy, Stanford 3D Scanning Repository
+
+Stanford 3D Scanning Repository: http://graphics.stanford.edu/data/3Dscanrep/
+The Stanford models are used with credit under the repository's terms, which allow research and
+non-commercial use.
+
+Changes: rotated upright, scaled to unit height, decimated to a few thousand triangles and
+voxelized at runtime into colored concrete (scripts/testscene/build_meshes.py).

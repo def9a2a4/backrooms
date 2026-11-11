@@ -1,0 +1,19 @@
+{
+  "temperature": 0.5,
+  "downfall": 0.0,
+  "has_precipitation": false,
+  "effects": {
+    "water_color": 10526880
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": [],
+  "features": [],
+  "attributes": {
+    "minecraft:visual/sky_color": 10724259,
+    "minecraft:visual/fog_color": 10724259,
+    "minecraft:visual/water_fog_color": 10526880,
+    "minecraft:visual/fog_start_distance": 48.0,
+    "minecraft:visual/fog_end_distance": 256.0
+  }
+}

@@ -51,6 +51,22 @@ check-book-lengths:
 gen-overlay:
 	python3 scripts/gen_overlay_26x.py
 
+# Level 56: rebuild the compressed Stonehenge mesh from the source GLB (in .temp/, gitignored).
+.PHONY: stonehenge-mesh
+stonehenge-mesh:
+	uv run scripts/stonehenge/build_mesh.py
+
+# Browser preview of the voxelized mesh: http://localhost:8056/scripts/stonehenge/preview/
+.PHONY: stonehenge-preview
+stonehenge-preview:
+	@test -d .temp/textures || uv run scripts/stonehenge/build_mesh.py
+	python3 scripts/stonehenge/preview/serve.py
+
+# Level 418: rebuild the test-scene meshes (teapot, Suzanne, Stanford models). Sources cache in .temp/.
+.PHONY: testscene-meshes
+testscene-meshes:
+	uv run scripts/testscene/build_meshes.py
+
 .PHONY: check-overlay
 check-overlay:
 	python3 scripts/gen_overlay_26x.py --check
