@@ -1,0 +1,62 @@
+id: level_56
+display_name: "The Henge"
+generator: level_56
+environment: NORMAL
+dimension_type: day
+biome: "backrooms:salisbury"
+fixed_time: 23500
+spawn_radius: 0
+enter_message: "§7§oThe fog parts for the first light of midsummer."
+
+# Stonehenge at 16x scale on a floating island, voxelized from a ~50 KB mesh at runtime.
+# The monument center is at (origin_x, origin_z); spawn is the world origin, on the north rim.
+# At the center stands the altar: a polished diorite pyramid with a lodestone on top.
+generator_config:
+  mesh_scale: 16.0
+  ground_y: 64
+  origin_x: 0
+  origin_z: 285
+
+# A giant pig is born inside the circle each time a player arrives (up to max_pigs at once).
+# Killed, it drops one porkchop. Any porkchop laid on the altar's lodestone is the way out.
+giant_pig:
+  scale: 16.0
+  health: 200.0
+  max_pigs: 8
+  leash_radius: 24.0
+  drop_name: "§fRaised by Hand"
+  drop_lore:
+    - "§7You raised it. You killed it."
+    - "§7Everyone used to know this weight."
+    - "§7Now it comes wrapped in plastic."
+
+events:
+  - ambient_sound
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 6
+    chance: 0.35
+    sounds:
+      - ambient.basalt_deltas.mood
+      - ambient.cave
+      - entity.pig.ambient
+
+exit_triggers:
+  - type: item_offering
+    block: lodestone
+    items: [porkchop, cooked_porkchop]
+    radius: 8
+    target_level: level_3
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "§7The offering is accepted. The circle opens."
+  - type: below_y
+    y_threshold: -60
+    target_level: level_56
+    transition:
+      blindness_ticks: 40
+      delay_ticks: 10
+      message: "§7§oThe circle does not let you leave that way."
