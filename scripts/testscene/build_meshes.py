@@ -9,7 +9,6 @@ Sources: alecjacobson/common-3d-test-models (pinned below), which redistributes
   suzanne         Blender Foundation
   stanford-bunny  Stanford 3D Scanning Repository
   xyzrgb_dragon   Stanford 3D Scanning Repository (XYZ RGB Inc.)
-  armadillo       Stanford 3D Scanning Repository
   lucy            Stanford 3D Scanning Repository
 See src/main/resources/structures/testscene/CREDITS.txt.
 
@@ -49,9 +48,8 @@ MODELS = [
     ("teapot",    "teapot.obj",         [],               4000),
     ("suzanne",   "suzanne.obj",        [],               968),
     ("bunny",     "stanford-bunny.obj", [],               5000),
-    ("dragon",    "xyzrgb_dragon.obj",  [],               8000),
-    ("armadillo", "armadillo.obj",      [("y", 180)],     6000),
-    ("lucy",      "lucy.obj",           [("x", -90)],     12000),
+    ("dragon",    "xyzrgb_dragon.obj",  [],               20000),
+    ("lucy",      "lucy.obj",           [("x", -90)],     25000),
 ]
 
 

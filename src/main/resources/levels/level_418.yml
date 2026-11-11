@@ -1,7 +1,7 @@
 id: level_418
 display_name: "I'm a Teapot"
 generator: level_418
-environment: THE_END
+environment: NORMAL
 dimension_type: fullbright
 biome: "backrooms:test_scene"
 spawn_radius: 0
@@ -9,8 +9,8 @@ enter_title: "§c418"
 enter_subtitle: "§7I'm a teapot"
 enter_message: "§c[ERR] §7Block engine not found. Falling back to voxel renderer."
 
-# A voxel engine's test scene: Utah teapots, Suzanne, the Stanford models, primitives and Cornell
-# boxes on an endless checkerboard, all in flat concrete. Meshes are voxelized at runtime from
+# A voxel engine's test scene: Utah teapots, Suzanne, the Stanford bunny / dragon / Lucy, primitives
+# and Cornell boxes on an endless checkerboard, all in flat concrete. Meshes are voxelized at runtime from
 # structures/testscene/*.mesh.gz (scripts/testscene/build_meshes.py).
 # Every 384x384 super-cell holds one small stone cube with a single oak log on top: the only real
 # Minecraft in the level. Breaking any wood leaves.

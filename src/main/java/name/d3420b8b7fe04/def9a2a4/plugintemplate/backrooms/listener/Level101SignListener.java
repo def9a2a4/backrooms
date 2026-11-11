@@ -39,23 +39,52 @@ public class Level101SignListener implements Listener {
     private static final int SCAN_MIN_Y = 58;   // dungeon-breach chest labels sit at y60
     private static final int SCAN_MAX_Y = 78;
 
+    // Sign lines render ~15 characters wide; every entry below must fit,
+    // including names with "'s" appended.
     private static final String[] NAMES = {
             "Steve", "Alex", "Dave", "Sarah", "Mark", "Emily", "Kevin", "Anna",
             "Josh", "Rachel", "Ben", "Laura", "Mike", "Tom", "Greg", "Pete",
-            "builder2010", "xX_miner_Xx"
+            "Claire", "Doug", "Wendy", "Carl", "Nina", "Ray", "June", "Walt",
+            "Iris", "Hal", "Meg", "Roy", "Fern", "Gus",
+            "builder2010", "xX_miner_Xx", "coolguy42", "worldeater99",
+            "gravedigger", "lonelyplayer", "Player2", "guest"
+    };
+
+    private static final String[] GRAVE_NAMES_WEIRD = {
+            "unknown", "???", "me", "you", "nobody", "HEROBRINE",
+            "the first one", "same as above", "all of them"
+    };
+
+    private static final String[] EPITAPHS = {
+            "gone mining", "be right back", "dug too deep", "went outside",
+            "still digging", "came back", "logged off", "respawn failed",
+            "asleep", "not sleeping", "went home", "still here"
+    };
+
+    private static final String[] WEIRD_DEATH_LINES = {
+            "d. ????", "d. soon", "d. tomorrow", "d. 10000"
     };
 
     private static final String[] HOUSE_WEIRD = {
-            "home", "my house", "your house", "nobody's house"
+            "home", "my house", "your house", "nobody's house",
+            "our house", "the house", "no one home", "do not knock",
+            "KEEP OUT", "for sale", "come in", "it's open",
+            "not my house", "still here"
     };
 
     private static final String[] CHEST_MUNDANE = {
             "ores", "stuff", "tools", "wood", "food", "junk",
-            "cobble", "important", "do not open", "empty"
+            "cobble", "important", "do not open", "empty",
+            "dirt", "seeds", "saplings", "spare picks", "torches",
+            "wool", "misc", "sort later", "old stuff", "good stuff",
+            "extra", "backup"
     };
 
     private static final String[] CHEST_WEIRD = {
-            "tomorrow", "yesterday", "what's left", "the rest", "winter", "mine"
+            "tomorrow", "yesterday", "what's left", "the rest",
+            "winter", "mine", "the old days", "before", "after",
+            "everything", "nothing", "the first day", "do not count",
+            "still full", "was full", "not yet", "him"
     };
 
     private final JavaPlugin plugin;
@@ -130,28 +159,51 @@ public class Level101SignListener implements Listener {
     }
 
     private static String[] gravestone(Random rng) {
-        String name = NAMES[rng.nextInt(NAMES.length)];
+        String name = rng.nextInt(100) < 12
+                ? GRAVE_NAMES_WEIRD[rng.nextInt(GRAVE_NAMES_WEIRD.length)]
+                : NAMES[rng.nextInt(NAMES.length)];
+        String header = rng.nextInt(100) < 40 ? "RIP" : "";
+
+        // Some graves carry an epitaph instead of dates
+        if (rng.nextInt(100) < 15) {
+            return new String[]{ header, name, EPITAPHS[rng.nextInt(EPITAPHS.length)], "" };
+        }
+
         int a = rng.nextInt(10000);
         int b = rng.nextInt(10000);
         // Usually the dates are in order. Sometimes they are not, and nothing explains it.
-        if (rng.nextInt(100) < 85 && a > b) {
+        if (rng.nextInt(100) < 80 && a > b) {
             int t = a; a = b; b = t;
         }
-        return new String[]{ "", name, "b. " + a, "d. " + b };
+        String deathLine = "d. " + b;
+        int quirk = rng.nextInt(100);
+        if (quirk < 8) {
+            deathLine = WEIRD_DEATH_LINES[rng.nextInt(WEIRD_DEATH_LINES.length)];
+        } else if (quirk < 14) {
+            deathLine = ""; // no death date. nobody added one.
+        }
+        return new String[]{ header, name, "b. " + a, deathLine };
     }
 
     private static String[] houseNameplate(Random rng) {
-        int roll = rng.nextInt(100);
-        if (roll < 70) {
-            return new String[]{ "", NAMES[rng.nextInt(NAMES.length)] + "'s", "house" };
-        } else if (roll < 85) {
-            return new String[]{ "", NAMES[rng.nextInt(NAMES.length)] + "'s", "place" };
+        if (rng.nextInt(100) < 80) {
+            String name = rng.nextInt(100) < 4
+                    ? "Herobrine"
+                    : NAMES[rng.nextInt(NAMES.length)];
+            String kind = switch (rng.nextInt(10)) {
+                case 0, 1 -> "place";
+                case 2 -> "home";
+                case 3 -> "farm";
+                case 4 -> "shop";
+                default -> "house";
+            };
+            return new String[]{ "", name + "'s", kind };
         }
         return new String[]{ "", HOUSE_WEIRD[rng.nextInt(HOUSE_WEIRD.length)] };
     }
 
     private static String[] chestLabel(Random rng) {
-        String text = rng.nextInt(100) < 80
+        String text = rng.nextInt(100) < 75
                 ? CHEST_MUNDANE[rng.nextInt(CHEST_MUNDANE.length)]
                 : CHEST_WEIRD[rng.nextInt(CHEST_WEIRD.length)];
         return new String[]{ "", text };

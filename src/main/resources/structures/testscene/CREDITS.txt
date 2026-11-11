@@ -5,7 +5,6 @@ https://github.com/alecjacobson/common-3d-test-models (commit 8a4f864):
   suzanne.mesh.gz    Suzanne, the Blender monkey. Blender Foundation, https://www.blender.org/
   bunny.mesh.gz      Stanford Bunny, Stanford 3D Scanning Repository
   dragon.mesh.gz     XYZ RGB Asian Dragon, XYZ RGB Inc., via the Stanford 3D Scanning Repository
-  armadillo.mesh.gz  Armadillo, Stanford 3D Scanning Repository
   lucy.mesh.gz       Lucy, Stanford 3D Scanning Repository
 
 Stanford 3D Scanning Repository: http://graphics.stanford.edu/data/3Dscanrep/

@@ -20,13 +20,14 @@ import java.util.logging.Logger;
 /**
  * Level 418 — "I'm a Teapot". You fell out of Minecraft's block engine into a voxel engine's test
  * scene: an endless checkerboard plane scattered with the classic graphics test assets, all in
- * flat colored concrete. Utah teapots, Suzanne, the Stanford bunny / dragon / armadillo / Lucy,
- * primitives, and Cornell boxes. The only real Minecraft in the level is a small stone-and-dirt
+ * flat colored concrete. Utah teapots, Suzanne, the Stanford bunny / dragon / Lucy, primitives,
+ * and Cornell boxes, standing upright or tumbled at random in 3D. The only real Minecraft in the level is a small stone-and-dirt
  * cube with one oak log on top, one per super-cell; breaking wood is the way out.
  *
  * <p>Layout: the plane is split into 48-block cells, each holding at most one object (or a Cornell
  * box) that stays inside the cell. Cells group into 8×8 super-cells (384 blocks); each super-cell
  * may hold one giant, which empties the small cells under it, and always holds one Minecraft cube.
+ * Detailed meshes (the dragon, Lucy) only read at large sizes, so they only come as giants.
  * Chunks align to both grids, so each chunk reads exactly one cell and one super-cell. Everything
  * is hashed from the world seed and cell coordinates; shapes come voxelized from
  * {@link ShapeLibrary}.
@@ -58,14 +59,15 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
 
     // weighted pools: {shape, weight}
     private static final Object[][] SMALL = {
-            {Shape.TEAPOT, 30}, {Shape.SUZANNE, 10}, {Shape.BUNNY, 10}, {Shape.DRAGON, 6},
-            {Shape.ARMADILLO, 8}, {Shape.LUCY, 4}, {Shape.CUBE, 8}, {Shape.PYRAMID, 6},
-            {Shape.CONE, 6}, {Shape.SPHERE, 8}, {Shape.TORUS, 8},
+            {Shape.TEAPOT, 30}, {Shape.SUZANNE, 10}, {Shape.BUNNY, 10}, {Shape.CUBE, 8},
+            {Shape.PYRAMID, 6}, {Shape.CONE, 6}, {Shape.SPHERE, 8}, {Shape.TORUS, 8},
     };
     private static final Object[][] GIANT = {
-            {Shape.LUCY, 3}, {Shape.TEAPOT, 3}, {Shape.BUNNY, 2}, {Shape.DRAGON, 2},
-            {Shape.ARMADILLO, 2}, {Shape.SUZANNE, 1}, {Shape.SPHERE, 1}, {Shape.TORUS, 1},
+            {Shape.LUCY, 4}, {Shape.DRAGON, 4}, {Shape.TEAPOT, 3}, {Shape.BUNNY, 2},
+            {Shape.SUZANNE, 1}, {Shape.CUBE, 1}, {Shape.SPHERE, 1}, {Shape.TORUS, 1},
     };
+    private static final double TUMBLE_SMALL = 0.65;   // chance a small object is rotated in 3D
+    private static final double TUMBLE_GIANT = 0.4;
 
     private int floorY = 8;
     private double emptyChance = 0.3;
@@ -79,9 +81,10 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
 
     /**
      * (px, pz) is the shape pivot, or the min corner for the room and the cube. size is the shape
-     * height, the room side or the cube side; yaw is in shape steps, or quarter turns for the room.
+     * size, the room side or the cube side; orient is a {@link ShapeLibrary} orientation, or quarter
+     * turns for the room.
      */
-    private record Placement(Kind kind, Shape shape, int size, int yaw, boolean flip, boolean shell,
+    private record Placement(Kind kind, Shape shape, int size, int orient, boolean shell,
                              int px, int baseY, int pz, Material block) {}
 
     /** What a super-cell holds: an optional giant and the Minecraft cube's cell. */
@@ -156,7 +159,7 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private void writeShape(Placement p, int x0, int z0, int minY, int maxY, ChunkData chunkData) {
-        VoxelGrid g = shapes().grid(p.shape(), p.size(), p.yaw(), p.flip(), p.shell());
+        VoxelGrid g = shapes().grid(p.shape(), p.size(), p.orient(), p.shell());
         int gx = p.px() + g.ox, gz = p.pz() + g.oz;   // world coords of grid (0, 0)
         int ix0 = Math.max(0, x0 - gx), ix1 = Math.min(g.sx, x0 + 16 - gx);
         int iz0 = Math.max(0, z0 - gz), iz1 = Math.min(g.sz, z0 + 16 - gz);
@@ -181,7 +184,7 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
         int light0 = s / 2 - s / 6, light1 = s / 2 + s / 6;
         for (int x = Math.max(x0, p.px()); x < Math.min(x0 + 16, p.px() + s); x++) {
             for (int z = Math.max(z0, p.pz()); z < Math.min(z0 + 16, p.pz() + s); z++) {
-                int[] uw = toRoom(x - p.px(), z - p.pz(), s, p.yaw());
+                int[] uw = toRoom(x - p.px(), z - p.pz(), s, p.orient());
                 int u = uw[0], w = uw[1];
                 for (int v = 0; v < s; v++) {
                     Material m;
@@ -248,14 +251,14 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
             SplittableRandom r = rng(seed, cx, cz, 3);
             int off = MARGIN + r.nextInt(CELL - 2 * MARGIN - MC_CUBE);
             int off2 = MARGIN + r.nextInt(CELL - 2 * MARGIN - MC_CUBE);
-            return List.of(new Placement(Kind.MINECRAFT, null, MC_CUBE, 0, false, false,
+            return List.of(new Placement(Kind.MINECRAFT, null, MC_CUBE, 0, false,
                     x0 + off, ground, z0 + off2, Material.STONE));
         }
         if (sc.giant() != null && covers(sc.giant(), x0, z0, CELL, 4)) return List.of();
 
         ShapeLibrary lib = shapes();
         if (cx == 0 && cz == 0) {   // the first thing you see: a red teapot
-            return List.of(new Placement(Kind.SHAPE, Shape.TEAPOT, 14, 6, false, true,
+            return List.of(new Placement(Kind.SHAPE, Shape.TEAPOT, 14, 6, true,
                     x0 + CELL / 2, ground, z0 + CELL / 2, Material.RED_CONCRETE));
         }
 
@@ -269,50 +272,57 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
             int rx = x0 + MARGIN + r.nextInt(CELL - 2 * MARGIN - s + 1);
             int rz = z0 + MARGIN + r.nextInt(CELL - 2 * MARGIN - s + 1);
             List<Placement> out = new ArrayList<>();
-            out.add(new Placement(Kind.CORNELL, null, s, q, false, false, rx, ground, rz, Material.WHITE_CONCRETE));
+            out.add(new Placement(Kind.CORNELL, null, s, q, false, rx, ground, rz, Material.WHITE_CONCRETE));
             if (r.nextDouble() < 0.75) {
                 out.add(roomPiece(Shape.TALL_BOX, (int) (s * 0.55), 1, s * 0.33, s * 0.62, s, q, rx, rz));
                 out.add(roomPiece(Shape.CUBE, (int) (s * 0.28), -1, s * 0.66, s * 0.35, s, q, rx, rz));
             } else {
                 Shape guest = r.nextBoolean() ? Shape.TEAPOT : Shape.BUNNY;
-                out.add(roomPiece(guest, (int) (s * 0.4), r.nextInt(ShapeLibrary.YAW_STEPS),
+                out.add(roomPiece(guest, (int) (s * 0.4), r.nextInt(ShapeLibrary.UPRIGHT),
                         s * 0.5, s * 0.5, s, q, rx, rz));
             }
             return out;
         }
 
         Shape shape = pick(SMALL, r);
-        double radius = lib.radius(shape);
-        int maxH = Math.min(shape == Shape.LUCY ? 40 : 30, (int) ((half - 1) / radius));
-        int minH = Math.min(maxH, minHeight(shape));
-        int h = minH + r.nextInt(maxH - minH + 1);
-        int rb = (int) Math.ceil(radius * h) + 1;
+        int orient = orientation(r, TUMBLE_SMALL);
+        double foot = lib.footprint(shape, orient);
+        int maxSize = Math.min(30, (int) ((half - 1) / foot));
+        int minSize = Math.min(maxSize, minSize(shape));
+        int size = minSize + r.nextInt(maxSize - minSize + 1);
+        int rb = (int) Math.ceil(foot * size) + 1;
         int px = x0 + CELL / 2 + jitter(r, half - rb);
         int pz = z0 + CELL / 2 + jitter(r, half - rb);
-        int yaw = r.nextInt(ShapeLibrary.YAW_STEPS);
         boolean teapot = shape == Shape.TEAPOT;
         Material color = teapot ? TEAPOT_COLORS[r.nextInt(TEAPOT_COLORS.length)] : COLORS[r.nextInt(COLORS.length)];
 
-        boolean flip = false;
+        int h = (int) Math.ceil(lib.height(shape, orient) * size);
         int base;
         double pose = r.nextDouble();
-        if (pose < 0.5) {
+        if (pose < 0.55) {
             base = ground;
-        } else if (pose < 0.65) {
+        } else if (pose < 0.7) {
             base = ground - (int) (h * (0.2 + 0.25 * r.nextDouble()));
         } else {
-            flip = pose >= 0.9;
             base = ground + 4 + r.nextInt(Math.max(1, Math.min(40, worldTop() - ground - h - 4)));
         }
-        return List.of(new Placement(Kind.SHAPE, shape, h, yaw, flip, teapot, px, base, pz, color));
+        return List.of(new Placement(Kind.SHAPE, shape, size, orient, teapot, px, base, pz, color));
     }
 
-    /** Smallest height at which the shape still reads as itself. */
-    private static int minHeight(Shape shape) {
+    /** Upright and turned about Y, or (with chance tumble) rotated at random in 3D. */
+    private static int orientation(SplittableRandom r, double tumble) {
+        return r.nextDouble() < tumble
+                ? ShapeLibrary.UPRIGHT + r.nextInt(ShapeLibrary.ORIENTATIONS - ShapeLibrary.UPRIGHT)
+                : r.nextInt(ShapeLibrary.UPRIGHT);
+    }
+
+    /** Smallest size at which the shape still reads as itself: detailed meshes need more blocks. */
+    private static int minSize(Shape shape) {
         return switch (shape) {
-            case LUCY -> 18;
-            case ARMADILLO -> 10;
-            case DRAGON, TEAPOT -> 8;
+            case LUCY -> 90;
+            case DRAGON -> 50;
+            case BUNNY -> 12;
+            case SUZANNE, TEAPOT -> 8;
             default -> 6;
         };
     }
@@ -320,8 +330,9 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
     /** A white shape inside a Cornell room, at room-local (u, w), turned with the room. */
     private Placement roomPiece(Shape shape, int h, int yaw, double u, double w, int s, int q, int rx, int rz) {
         int[] ab = fromRoom((int) u, (int) w, s, q);
-        return new Placement(Kind.SHAPE, shape, Math.max(3, h), yaw + q * ShapeLibrary.YAW_STEPS / 4,
-                false, false, rx + ab[0], ground() + 1, rz + ab[1], Material.WHITE_CONCRETE);
+        int orient = Math.floorMod(yaw + q * ShapeLibrary.UPRIGHT / 4, ShapeLibrary.UPRIGHT);
+        return new Placement(Kind.SHAPE, shape, Math.max(3, h), orient,
+                false, rx + ab[0], ground() + 1, rz + ab[1], Material.WHITE_CONCRETE);
     }
 
     /** Super-cell (gx, gz): which cell holds the Minecraft cube, and maybe a giant. */
@@ -334,20 +345,20 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
         if (r.nextDouble() < giantChance) {
             ShapeLibrary lib = shapes();
             Shape shape = pick(GIANT, r);
-            double radius = lib.radius(shape);
+            int orient = orientation(r, TUMBLE_GIANT);
+            double foot = lib.footprint(shape, orient), tall = lib.height(shape, orient);
             int span = SUPER * CELL;
             int ground = ground();
-            int maxH = Math.min(worldTop() - ground - 4, (int) ((span / 2.0 - 24) / radius));
-            int minH = Math.min(60, maxH);
-            int h = minH + r.nextInt(Math.max(1, maxH - minH + 1));
-            int rb = (int) Math.ceil(radius * h) + 1;
+            int maxSize = Math.min((int) ((worldTop() - ground - 4) / tall), (int) ((span / 2.0 - 24) / foot));
+            int minSize = Math.min(maxSize, Math.max(60, minSize(shape)));
+            int size = minSize + r.nextInt(Math.max(1, maxSize - minSize + 1));
+            int rb = (int) Math.ceil(foot * size) + 1;
             int px = gx * span + span / 2 + jitter(r, span / 2 - 8 - rb);
             int pz = gz * span + span / 2 + jitter(r, span / 2 - 8 - rb);
-            int base = r.nextDouble() < 0.75 ? ground : ground - h / 5;
+            int base = r.nextDouble() < 0.75 ? ground : ground - (int) (tall * size) / 5;
             Material color = shape == Shape.TEAPOT ? TEAPOT_COLORS[r.nextInt(TEAPOT_COLORS.length)]
                     : COLORS[r.nextInt(COLORS.length)];
-            giant = new Placement(Kind.SHAPE, shape, h, r.nextInt(ShapeLibrary.YAW_STEPS), false,
-                    shape == Shape.TEAPOT, px, base, pz, color);
+            giant = new Placement(Kind.SHAPE, shape, size, orient, shape == Shape.TEAPOT, px, base, pz, color);
             // keep spawn and the Minecraft cube clear
             if (covers(giant, -CELL, -CELL, 2 * CELL, 8) || covers(giant, mcx * CELL, mcz * CELL, CELL, 4)) {
                 giant = null;
@@ -358,7 +369,7 @@ public class Level418ChunkGenerator extends BackroomsChunkGenerator {
 
     /** Whether the giant's footprint circle, grown by pad, touches the square [x0, x0+size)². */
     private boolean covers(Placement giant, int x0, int z0, int size, int pad) {
-        double r = shapes().radius(giant.shape()) * giant.size() + pad;
+        double r = shapes().footprint(giant.shape(), giant.orient()) * giant.size() + pad;
         double dx = Math.max(Math.max(x0 - giant.px(), 0), giant.px() - (x0 + size));
         double dz = Math.max(Math.max(z0 - giant.pz(), 0), giant.pz() - (z0 + size));
         return dx * dx + dz * dz < r * r;
