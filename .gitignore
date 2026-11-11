@@ -1,3 +1,6 @@
+.temp/
+__pycache__/
+
 # Server directories
 server/
 test-server/
