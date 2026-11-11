@@ -35,7 +35,8 @@ public class AdvancementManager {
             "bed_anomaly", key("entry/bed"),
             "aether_portal", key("entry/aether"),
             "herobrine_shrine", key("entry/shrine"),
-            "twilight_portal", key("entry/twilight")
+            "twilight_portal", key("entry/twilight"),
+            "tea_kettle", key("entry/tea")
     );
 
     private final Map<String, NamespacedKey> levelKeys = Map.ofEntries(
@@ -48,8 +49,12 @@ public class AdvancementManager {
             Map.entry("level_7", key("level/level_7")),
             Map.entry("level_37", key("level/level_37")),
             Map.entry("level_64637", key("level/level_64637")),
+            Map.entry("level_56", key("level/level_56")),
             Map.entry("level_94", key("level/level_94")),
-            Map.entry("level_84", key("level/level_84"))
+            Map.entry("level_84", key("level/level_84")),
+            Map.entry("level_590", key("level/level_590")),
+            Map.entry("level_974", key("level/level_974")),
+            Map.entry("level_418", key("level/level_418"))
     );
 
     // Exit hints: keyed by "currentLevel:targetLevel" with optional ":exitType" suffix for disambiguation
@@ -62,13 +67,16 @@ public class AdvancementManager {
             Map.entry("level_3:level_5", key("hint/hint_3")),
             Map.entry("level_3:level_7", key("hint/hint_3")),
             Map.entry("level_3:level_64637", key("hint/hint_3")),
+            Map.entry("level_3:level_56", key("hint/hint_3")),
+            Map.entry("level_3:level_418", key("hint/hint_3")),
             Map.entry("level_4:level_3", key("hint/hint_4")),
             Map.entry("level_7:overworld", key("hint/hint_7")),
             Map.entry("level_37:level_3", key("hint/hint_37")),
             Map.entry("level_64637:overworld:fall_distance", key("hint/hint_64637_fall")),
             Map.entry("level_64637:overworld:collect_items", key("hint/hint_64637_books")),
             Map.entry("level_84:level_3", key("hint/hint_84_down")),
-            Map.entry("level_84:level_94", key("hint/hint_84_up"))
+            Map.entry("level_84:level_94", key("hint/hint_84_up")),
+            Map.entry("level_418:level_94", key("hint/hint_418"))
     );
 
     private final NamespacedKey hint5Key = key("hint/hint_5");
@@ -78,15 +86,16 @@ public class AdvancementManager {
     private static final List<String> ALL_PATHS = List.of(
             "root",
             "entry/shrine", "entry/suffocation", "entry/void", "entry/bed",
-            "entry/aether", "entry/twilight",
+            "entry/aether", "entry/twilight", "entry/tea",
             "level/level_0", "level/level_1", "level/level_1_garden",
             "level/level_2", "level/level_3", "level/level_4", "level/level_5",
             "level/level_7", "level/level_37", "level/level_64637",
-            "level/level_94", "level/level_84",
+            "level/level_56", "level/level_94", "level/level_84",
+            "level/level_590", "level/level_974", "level/level_418",
             "hint/hint_0", "hint/hint_1_down", "hint/hint_1_up",
             "hint/hint_2", "hint/hint_3", "hint/hint_4", "hint/hint_5",
             "hint/hint_7", "hint/hint_37", "hint/hint_64637_fall", "hint/hint_64637_books",
-            "hint/hint_84_down", "hint/hint_84_up", "hint/hint_94",
+            "hint/hint_84_down", "hint/hint_84_up", "hint/hint_94", "hint/hint_418",
             "escape/overworld", "escape/all_levels"
     );
 

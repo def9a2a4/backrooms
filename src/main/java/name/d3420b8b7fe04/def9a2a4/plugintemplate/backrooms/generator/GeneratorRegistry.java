@@ -48,8 +48,12 @@ public class GeneratorRegistry {
         register("level_6", Level6ChunkGenerator::new);
         register("level_7", Level7ChunkGenerator::new);
         register("level_37", Level37ChunkGenerator::new);
+        register("level_56", Level56ChunkGenerator::new);
         register("level_94", Level94ChunkGenerator::new);
         register("level_101", Level101ChunkGenerator::new);
+        register("level_418", Level418ChunkGenerator::new);
+        register("level_590", Level590ChunkGenerator::new);
+        register("level_974", Level974ChunkGenerator::new);
         register("maze", MazeChunkGenerator::new);
         // level_64637 is registered in BackroomsPlugin after loading book config
     }

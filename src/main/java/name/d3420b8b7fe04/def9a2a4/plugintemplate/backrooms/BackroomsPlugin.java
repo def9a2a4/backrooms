@@ -18,6 +18,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.AetherPor
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.HerobrineShrineEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.SuffocationEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.TwilightPortalEntry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.TeaKettleEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entry.impl.VoidFallEntry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.BackroomsEvent;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.EventRegistry;
@@ -32,6 +33,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLe
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.DimensionTypeHelper;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level101SignListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1WaterDripListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Disc11JukeboxListener;
@@ -79,6 +81,7 @@ public class BackroomsPlugin {
     private BukkitTask autoSaveTask;
     private BackroomsCommand command;
     private Level1GardenEffectListener gardenEffectListener;
+    private name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level56Listener level56Listener;
 
     public BackroomsPlugin(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -161,6 +164,8 @@ public class BackroomsPlugin {
         exitTriggerRegistry.register("fall_distance", FallDistanceTrigger::new);
         exitTriggerRegistry.register("open_book", OpenBookTrigger::new);
         exitTriggerRegistry.register("bed_sleep", BedSleepTrigger::new);
+        exitTriggerRegistry.register("item_offering", ItemOfferingTrigger::new);
+        exitTriggerRegistry.register("break_block", BreakBlockTrigger::new);
 
         // 4b. Register built-in entry triggers
         SuffocationEntry suffocation = new SuffocationEntry(plugin);
@@ -169,6 +174,7 @@ public class BackroomsPlugin {
         AetherPortalEntry aetherPortal = new AetherPortalEntry(plugin);
         HerobrineShrineEntry herobrineShrine = new HerobrineShrineEntry(plugin);
         TwilightPortalEntry twilightPortal = new TwilightPortalEntry(plugin);
+        TeaKettleEntry teaKettle = new TeaKettleEntry(plugin);
 
         entryTriggerRegistry.register(suffocation);
         entryTriggerRegistry.register(voidFall);
@@ -176,6 +182,7 @@ public class BackroomsPlugin {
         entryTriggerRegistry.register(aetherPortal);
         entryTriggerRegistry.register(herobrineShrine);
         entryTriggerRegistry.register(twilightPortal);
+        entryTriggerRegistry.register(teaKettle);
 
         // 4. Load config — creates levels from config using generator registry
         loadConfig();
@@ -190,6 +197,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin, loadLobbyBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new ServerRoomLecternListener(plugin), plugin);
         Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
+        Bukkit.getPluginManager().registerEvents(new Level101SignListener(plugin), plugin);
 
         // 7. Apply NMS dimension types and create worlds
         levelRegistry.setDimensionTypeHelper(new DimensionTypeHelper(plugin.getLogger()));
@@ -218,6 +226,9 @@ public class BackroomsPlugin {
                                 "\u00a7c[ERR] \u00a77Reality breach detected. Rerouting...")), plugin);
 
         Bukkit.getPluginManager().registerEvents(loadLevel84Listener(), plugin);
+        level56Listener = loadLevel56Listener();
+        Bukkit.getPluginManager().registerEvents(level56Listener, plugin);
+        level56Listener.start();
         Bukkit.getPluginManager().registerEvents(new VanillaAdvancementBlocker(plugin, levelRegistry), plugin);
 
         // 8b. Register PoweredCommandBlockTrigger instances as Bukkit listeners
@@ -272,6 +283,7 @@ public class BackroomsPlugin {
         entitySpawner.stop();
         transitionManager.stop();
         if (gardenEffectListener != null) gardenEffectListener.stop();
+        if (level56Listener != null) level56Listener.stop();
 
         for (BackroomsEvent event : eventRegistry.getAll()) {
             event.shutdown();
@@ -377,6 +389,22 @@ public class BackroomsPlugin {
         }
         return new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level84Listener(
                 damage, poisonTicks, poisonAmp, disableBeds);
+    }
+
+    private name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level56Listener loadLevel56Listener() {
+        File levelFile = new File(plugin.getDataFolder(), "levels/level_56.yml");
+        ConfigurationSection pig = levelFile.exists()
+                ? YamlConfiguration.loadConfiguration(levelFile).getConfigurationSection("giant_pig")
+                : null;
+        var config = new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level56Listener.PigConfig(
+                pig != null ? pig.getDouble("scale", 16.0) : 16.0,
+                pig != null ? pig.getDouble("health", 200.0) : 200.0,
+                pig != null ? pig.getInt("max_pigs", 8) : 8,
+                pig != null ? pig.getDouble("leash_radius", 24.0) : 24.0,
+                pig != null ? pig.getString("drop_name", "") : "",
+                pig != null ? pig.getStringList("drop_lore") : java.util.List.of());
+        return new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level56Listener(
+                plugin, levelRegistry, config);
     }
 
     private String loadLevelString(String levelId, String key, String defaultValue) {

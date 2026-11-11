@@ -54,6 +54,24 @@ generator_config:
         - "§7> diff world/ backups/world_alpha/\n§8  Everything is different.\n§8  Nothing has changed."
         - "§7// WARNING: rollback cannot be\n// undone. The old world does not\n// know about you yet.\n§8// Proceed? [Y/n]"
         - "§7> stat world_alpha/level.dat\n§8  Modified: ?????????\n§8  Accessed: just now\n§7// Who opened it?"
+    - weight: 1
+      target: level_56
+      messages:
+        - "§7> gunzip henge.mesh.gz\n§8  9899 triangles. 0 owners.\n§7// The stones were counted once.\n// They did not agree to the count."
+        - "§7> date --at 51.1789N 1.8262W\n§8[WARN] clock source: SUN\n§7// System time is set by the solstice."
+        - "§7/* They kept their own herds.\n   They knew the animal's name\n   before they knew its weight. */"
+        - "§7> cat /henge/.offering\n§8  format: pork\n§8  source: unknown\n§7// The stone does not ask where it came from.\n// It used to."
+        - "§7/* Somewhere a machine cuts meat\n   for people who never met the pig.\n   Here, you will meet the pig. */"
+        - "§7> diff farm.log factory.log\n§8< raised it, fed it, killed it\n§8> scanned barcode\n§7// Something was lost in the diff."
+    - weight: 1
+      target: level_418
+      messages:
+        - "§7> curl -X BREW http://kettle/coffee\n§8  HTTP/1.1 418 I'm a teapot\n§7// It is short and stout."
+        - "§7> render --engine=voxel teapot.obj\n§8[WARN] block engine unavailable\n§7// Falling back to concrete."
+        - "§7/* The test scene has no grass.\n   Except once. One log.\n   Don't tell the renderer. */"
+        - "§7> ls /assets/test/\n§8  teapot.obj  bunny.ply  dragon.ply\n§8  lucy.ply  suzanne.obj  cornell_box\n§7// Who left these running?"
+        - "§7> RFC 2324 --section 2.3.2\n§8  Any attempt to brew coffee with a\n§8  teapot should result in error 418.\n§7// Compliance: total."
+        - "§7> grep -r oak_log /voxel_engine/\n§8  1 match.\n§c// That block should not exist here."
 
 events:
   - ambient_sound
@@ -142,3 +160,21 @@ exit_triggers:
       blindness_ticks: 80
       delay_ticks: 20
       message: "§7> restoring world from snapshot alpha ... §aOK"
+  - type: powered_command_block
+    target_level: level_56
+    power_count: 16
+    window_ticks: 80
+    radius: 20
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "// LOADING henge.mesh.gz ..."
+  - type: powered_command_block
+    target_level: level_418
+    power_count: 16
+    window_ticks: 80
+    radius: 20
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "// BREW coffee ... §c418"
