@@ -308,6 +308,25 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         return x == ox || x == ox + s - 1 || z == oz || z == oz + s - 1;
     }
 
+    /**
+     * Blank wall sign on a building's exterior; Level101SignListener writes the
+     * nameplate text when the chunk first loads.
+     */
+    private static void placeWallSign(ChunkData chunkData, int x, int y, int z, BlockFace facing) {
+        if (x < 0 || x > 15 || z < 0 || z > 15) return;
+        org.bukkit.block.data.type.WallSign sign =
+                (org.bukkit.block.data.type.WallSign) Material.OAK_WALL_SIGN.createBlockData();
+        sign.setFacing(facing);
+        chunkData.setBlock(x, y, z, sign);
+    }
+
+    /** Blank standing sign on top of a chest; the sign listener writes the label. */
+    private static void placeChestLabel(ChunkData chunkData, Random rng, int x, int y, int z) {
+        Rotatable label = (Rotatable) Material.OAK_SIGN.createBlockData();
+        label.setRotation(SIGN_ROTATIONS[rng.nextInt(SIGN_ROTATIONS.length)]);
+        chunkData.setBlock(x, y, z, label);
+    }
+
     /** Facing from (x,z) toward the chunk center, by dominant axis. */
     private static BlockFace facingChunkCenter(int x, int z) {
         int dx = 8 - x, dz = 8 - z;
@@ -403,6 +422,11 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         Directional torch = (Directional) Material.WALL_TORCH.createBlockData();
         torch.setFacing(inwardFaces[doorSide]);
         chunkData.setBlock(tx, base + 2, tz, torch);
+
+        // Nameplate outside, beside the door
+        int sx = wallCenters[doorSide][0] + inX + wallCenters[doorSide][2];
+        int sz = wallCenters[doorSide][1] + inZ + wallCenters[doorSide][3];
+        placeWallSign(chunkData, sx, base + 1, sz, inwardFaces[doorSide].getOppositeFace());
 
         // Bed against the wall opposite the door.
         // Interior spans [ox+1, ox+w-2] x [oz+1, oz+d-2].
@@ -686,6 +710,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
                         (org.bukkit.block.data.type.Chest) Material.CHEST.createBlockData();
                 chest.setFacing(BlockFace.NORTH);
                 chunkData.setBlock(chestX, base, chestZ, chest);
+                placeChestLabel(chunkData, rng, chestX, base + 1, chestZ);
             }
         }
     }
@@ -733,10 +758,10 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         placeHeadstone(chunkData, rng, ox, oz + 1, BlockFace.WEST);
     }
 
-    /** Cobble marker, or 25% a blank oak sign facing away from the mound. */
+    /** Cobble marker, or 50% an oak sign — the sign listener writes name and dates. */
     private void placeHeadstone(ChunkData chunkData, Random rng, int x, int z, BlockFace awayFace) {
         int base = GROUND_Y + 1;
-        if (rng.nextInt(100) < 25) {
+        if (rng.nextInt(100) < 50) {
             Rotatable sign = (Rotatable) Material.OAK_SIGN.createBlockData();
             sign.setRotation(awayFace);
             chunkData.setBlock(x, base, z, sign);
@@ -1301,6 +1326,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
                 (org.bukkit.block.data.type.Chest) Material.CHEST.createBlockData();
         chest.setFacing(BlockFace.EAST);
         chunkData.setBlock(ox + 1, floorY + 1, cz, chest);
+        placeChestLabel(chunkData, rng, ox + 1, floorY + 2, cz);
 
         // The breach: a 2x2 hole in the field looking down into the dark
         int bx = ox + 1 + rng.nextInt(2) * (s - 4);
@@ -1423,6 +1449,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         top.setHalf(Bisected.Half.TOP);
         chunkData.setBlock(cx, base, doorZ, bottom);
         chunkData.setBlock(cx, base + 1, doorZ, top);
+        placeWallSign(chunkData, cx + 1, base + 1, doorZ + 1, BlockFace.SOUTH);
 
         chunkData.setBlock(ox + 2, base + 1, oz, Material.GLASS);
         chunkData.setBlock(ox + w - 3, base + 1, oz, Material.GLASS);
@@ -1504,6 +1531,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         top.setHalf(Bisected.Half.TOP);
         chunkData.setBlock(cx, base, oz + d - 1, bottom);
         chunkData.setBlock(cx, base + 1, oz + d - 1, top);
+        placeWallSign(chunkData, cx + 1, base + 1, oz + d, BlockFace.SOUTH);
         chunkData.setBlock(ox + 2, base + 1, oz, Material.GLASS);
         chunkData.setBlock(ox + w - 3, base + 1, oz, Material.GLASS);
 
@@ -1553,6 +1581,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         top.setHalf(Bisected.Half.TOP);
         chunkData.setBlock(cx, base, oz + hd - 1, bottom);
         chunkData.setBlock(cx, base + 1, oz + hd - 1, top);
+        placeWallSign(chunkData, cx + 1, base + 1, oz + hd, BlockFace.SOUTH);
         chunkData.setBlock(ox, base + 1, oz + hd / 2, Material.GLASS);
 
         placeBed(chunkData, ox + 1, base, oz + 1, BlockFace.EAST);
@@ -1630,6 +1659,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
                 chunkData.setBlock(x, y, doorZ, Material.AIR);
             }
         }
+        placeWallSign(chunkData, ox + w / 2 + 1, base + 1, doorZ + 1, BlockFace.SOUTH);
 
         // Loft over the north half, with a ladder
         for (int x = ox + 1; x < ox + w - 1; x++) {
@@ -1696,6 +1726,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         top.setHalf(Bisected.Half.TOP);
         chunkData.setBlock(cx, base, frontZ, bottom);
         chunkData.setBlock(cx, base + 1, frontZ, top);
+        placeWallSign(chunkData, cx + 1, base + 1, frontZ + 1, BlockFace.SOUTH);
         chunkData.setBlock(ox + 2, base, frontZ, Material.GLASS);
         chunkData.setBlock(ox + 4, base, frontZ, Material.GLASS);
 
