@@ -23,8 +23,8 @@ import java.util.logging.Logger;
  *
  * <p>The monument center sits at (origin_x, origin_z), by default 285 blocks south of the world
  * origin, so the fixed spawn at (0, 0) lands on the island's north rim facing the stones. At the
- * center stands the altar: a stepped polished diorite pyramid (5×5, 3×3, 1×1) with a lodestone on
- * top, where the {@code item_offering} exit takes a porkchop.
+ * center stands the altar: a stepped polished diorite pyramid (5×5, 3×3) topped by a lodestone,
+ * where the {@code item_offering} exit takes a porkchop.
  *
  * <p>Mesh: "Stonehenge England - VR" by Graphic solutions, CC BY 4.0 — see
  * structures/stonehenge.CREDITS.txt.
@@ -41,7 +41,7 @@ public class Level56ChunkGenerator extends BackroomsChunkGenerator {
 
     private volatile Loaded loaded;
 
-    /** Pyramid layers' half-widths, bottom up; the lodestone sits on the last. */
+    /** Pyramid layers' half-widths, bottom up; the last is the lodestone. */
     private static final int[] ALTAR_STEPS = {2, 1, 0};
 
     private record Loaded(VoxelMesh mesh, BlockData[] blocks, int altarBaseY) {}
@@ -124,9 +124,10 @@ public class Level56ChunkGenerator extends BackroomsChunkGenerator {
                 }
                 int dist = Math.max(Math.abs(x - originX), Math.abs(z - originZ));
                 for (int step = 0; step < ALTAR_STEPS.length; step++) {
-                    if (dist <= ALTAR_STEPS[step]) chunkData.setBlock(lx, baseY + step, lz, Material.POLISHED_DIORITE);
+                    if (dist > ALTAR_STEPS[step]) continue;
+                    boolean tip = step == ALTAR_STEPS.length - 1;
+                    chunkData.setBlock(lx, baseY + step, lz, tip ? Material.LODESTONE : Material.POLISHED_DIORITE);
                 }
-                if (dist == 0) chunkData.setBlock(lx, baseY + ALTAR_STEPS.length, lz, Material.LODESTONE);
             }
         }
     }

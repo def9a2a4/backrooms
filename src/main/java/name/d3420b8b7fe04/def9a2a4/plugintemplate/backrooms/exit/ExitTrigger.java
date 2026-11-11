@@ -12,6 +12,11 @@ public interface ExitTrigger {
 
     String getTargetLevelId();
 
+    /** Where to go instead when the target level isn't available (disabled or still loading); null: nowhere. */
+    default String getFallbackLevelId() {
+        return null;
+    }
+
     boolean check(Player player, BackroomsPlayerState state);
 
     void playTransitionSequence(Player player, Runnable onComplete);

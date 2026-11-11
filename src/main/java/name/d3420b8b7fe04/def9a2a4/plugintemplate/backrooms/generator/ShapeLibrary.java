@@ -27,8 +27,7 @@ import java.util.zip.GZIPInputStream;
  * solid when at least two of the three agree it is inside. That keeps small holes in the scanned
  * meshes from leaking into pillars, which a single vertical ray (as in {@link VoxelMesh}) would.
  *
- * <p>Shell grids keep only the surface and open the shape's own base (the teapot's bottom, wherever
- * it points after rotation), so a hollow teapot can be walked into.
+ * <p>Shell grids keep only the closed surface, one block thick: a hollow teapot still has its bottom.
  *
  * <p>Grids are keyed by (shape, size, orientation, shell) and kept in a small LRU bounded by total
  * size. Immutable after {@link #load}; every public method is safe to call from any thread.
@@ -58,8 +57,8 @@ public final class ShapeLibrary {
     private static final double[][] ROTATIONS = rotations();
     private static final int PRIMITIVE_SAMPLES = 24;                  // per axis, for primitive bounds
 
-    /** A unit-height mesh: base at y=0, centered in XZ. bottomRadius: its base outline, for shells. */
-    private record Mesh(double[] v, int[] tris, double bottomRadius) {}
+    /** A unit-height mesh: base at y=0, centered in XZ. */
+    private record Mesh(double[] v, int[] tris) {}
 
     /**
      * A voxelized shape. Block (x, y, z) of the grid sits at (pivot + ox + x, base + y, pivot + oz + z)
@@ -152,13 +151,11 @@ public final class ShapeLibrary {
             int nv = VoxelMesh.varint(d);
             double[] v = new double[nv * 3];
             long[] q = new long[3];
-            double bottom = 0;
             for (int i = 0; i < nv; i++) {
                 for (int c = 0; c < 3; c++) {
                     q[c] += VoxelMesh.zigzag(VoxelMesh.varint(d));
                     v[i * 3 + c] = lo[c] + (q[c] / 65535.0) * (hi[c] - lo[c]);
                 }
-                if (v[i * 3 + 1] < 0.02) bottom = Math.max(bottom, Math.hypot(v[i * 3], v[i * 3 + 2]));
             }
             int nt = VoxelMesh.varint(d);
             int[] tris = new int[nt * 3];
@@ -169,7 +166,7 @@ public final class ShapeLibrary {
                 tris[i * 3 + 1] = a + VoxelMesh.zigzag(VoxelMesh.varint(d));
                 tris[i * 3 + 2] = a + VoxelMesh.zigzag(VoxelMesh.varint(d));
             }
-            return new Mesh(v, tris, bottom);
+            return new Mesh(v, tris);
         }
     }
 
@@ -287,21 +284,7 @@ public final class ShapeLibrary {
             }
         }
 
-        if (key.shell) {
-            // A block is in the base opening if, back in the mesh's own frame, it sits in the bottom
-            // block or so and inside the base outline.
-            double lift = 1.5 / size, inner = m.bottomRadius - 1.5 / size;
-            int fox = ox, foz = oz;
-            double fminY = minY;
-            hollow(g, (x, y, z) -> {
-                double px = x + fox + 0.5, py = y + fminY + 0.5, pz = z + foz + 0.5;
-                // inverse rotation is the transpose
-                double lx = (rot[0] * px + rot[3] * py + rot[6] * pz) / size;
-                double ly = (rot[1] * px + rot[4] * py + rot[7] * pz) / size + 0.5;
-                double lz = (rot[2] * px + rot[5] * py + rot[8] * pz) / size;
-                return ly < lift && Math.hypot(lx, lz) < inner;
-            });
-        }
+        if (key.shell) hollow(g);
         return g;
     }
 
@@ -405,7 +388,7 @@ public final class ShapeLibrary {
                 }
             }
         }
-        if (key.shell) hollow(g, (x, y, z) -> false);
+        if (key.shell) hollow(g);
         return g;
     }
 
@@ -448,13 +431,8 @@ public final class ShapeLibrary {
 
     // ── shells ───────────────────────────────────────────────────────────────────────────────────
 
-    @FunctionalInterface
-    private interface Opening {
-        boolean contains(int x, int y, int z);
-    }
-
-    /** Keep only blocks with an empty face neighbor, and clear the opening. */
-    private static void hollow(VoxelGrid g, Opening opening) {
+    /** Keep only blocks with an empty face neighbor. */
+    private static void hollow(VoxelGrid g) {
         VoxelGrid src = g.copy();
         for (int x = 0; x < g.sx; x++) {
             for (int z = 0; z < g.sz; z++) {
@@ -463,7 +441,7 @@ public final class ShapeLibrary {
                     boolean inner = src.get(x - 1, y, z) && src.get(x + 1, y, z)
                             && src.get(x, y, z - 1) && src.get(x, y, z + 1)
                             && src.get(x, y - 1, z) && src.get(x, y + 1, z);
-                    if (inner || opening.contains(x, y, z)) g.clear(x, y, z);
+                    if (inner) g.clear(x, y, z);
                 }
             }
         }

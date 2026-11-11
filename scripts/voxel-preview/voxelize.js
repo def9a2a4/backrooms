@@ -77,7 +77,16 @@ export function decodeMesh(buf) {
     const cells = new Map();
     for (let i = 0; i < n; i++) cells.set(keys[i], buf[p + i]);
     p += n;
-    grid = { cell, origin, dims, cells };
+    // coarse occupancy, one bit per GRID_BRICK³ cells: lookups far from any surface (the inside
+    // of a column-mode island) fail without probing the neighborhood (mirrors VoxelMesh.Grid)
+    const bd = dims.map((v) => Math.floor(v / GRID_BRICK) + 1);
+    const bricks = new Uint8Array(Math.ceil((bd[0] * bd[1] * bd[2]) / 8));
+    for (let i = 0; i < n; i++) {
+      const k = keys[i], y = k % dims[1], z = Math.floor(k / dims[1]) % dims[2], x = Math.floor(k / (dims[1] * dims[2]));
+      const b = (Math.floor(x / GRID_BRICK) * bd[2] + Math.floor(z / GRID_BRICK)) * bd[1] + Math.floor(y / GRID_BRICK);
+      bricks[b >> 3] |= 1 << (b & 7);
+    }
+    grid = { cell, origin, dims, cells, bricks, bd };
   }
   return { lo, hi, groundRef, island, palette, verts, vmat, tris, grid, bytes: buf.length };
 }
@@ -87,10 +96,31 @@ export function decodeMesh(buf) {
  * the nearest filled cell within `reach` cells (the decimated surface drifts off the original).
  * Returns a palette index, or -1 when nothing is in reach.
  */
+const GRID_BRICK = 4;
+
+function gridNear(grid, cx, cy, cz, reach) {
+  const { bricks, bd } = grid;
+  const x0 = Math.max(0, Math.floor((cx - reach) / GRID_BRICK)), x1 = Math.min(bd[0] - 1, Math.floor((cx + reach) / GRID_BRICK));
+  const y0 = Math.max(0, Math.floor((cy - reach) / GRID_BRICK)), y1 = Math.min(bd[1] - 1, Math.floor((cy + reach) / GRID_BRICK));
+  const z0 = Math.max(0, Math.floor((cz - reach) / GRID_BRICK)), z1 = Math.min(bd[2] - 1, Math.floor((cz + reach) / GRID_BRICK));
+  for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) for (let y = y0; y <= y1; y++) {
+    const b = (x * bd[2] + z) * bd[1] + y;
+    if (bricks[b >> 3] & (1 << (b & 7))) return true;
+  }
+  return false;
+}
+
+function gridNearPoint(grid, x, y, z, reach = 2) {
+  const { cell, origin } = grid;
+  return gridNear(grid, Math.floor((x - origin[0]) / cell), Math.floor((y - origin[1]) / cell),
+    Math.floor((z - origin[2]) / cell), reach);
+}
+
 export function gridMaterial(grid, x, y, z, reach = 2) {
   const { cell, origin, dims, cells } = grid;
   const fx = (x - origin[0]) / cell, fy = (y - origin[1]) / cell, fz = (z - origin[2]) / cell;
   const cx = Math.floor(fx), cy = Math.floor(fy), cz = Math.floor(fz);
+  if (!gridNear(grid, cx, cy, cz, reach)) return -1;
   const key = (ix, iy, iz) => (ix < 0 || iy < 0 || iz < 0 || ix >= dims[0] || iy >= dims[1] || iz >= dims[2])
     ? -1 : (ix * dims[2] + iz) * dims[1] + iy;
   const hit = cells.get(key(cx, cy, cz));
@@ -158,6 +188,7 @@ const ISLAND_DEPTH = 6.25;   // underside depth at the island center, in blocks 
 const ISLAND_EDGE = 4;       // minimum thickness at the rim
 const ISLAND_RAGGED = 0.18;  // underside noise as a fraction of the local depth
 
+const INTERIOR_DEPTH = 6;    // below this, blocks far from any surface copy the one above
 const GRID_JITTER = 0.25;   // fraction of MAT_WARP applied to surface-grid lookups
 const FILL = 2;              // pseudo-family for plain stone fill
 
@@ -327,6 +358,7 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid
       };
       const bottom = islandBottom(x, z);
       const fill = (yTop, yBot, h) => {
+        let last = STONE;
         for (let y = yTop; y >= yBot; y--) {
           if (y < pickFloor) {
             for (let k = Math.max(yBot, y0) - y0; k <= y - y0; k++) vol[base + k] = STONE + 1;
@@ -338,6 +370,12 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid
             const depth = yTop - y;
             set(y, depth === 0 ? h.mat : depth <= DIRT_DEPTH ? DIRT : STONE);
           } else {
+            // deep inside, away from every surface: nothing to look up, continue the column
+            if (surf && yTop - y > INTERIOR_DEPTH && !gridNearPoint(surf, (x + 0.5) / scale,
+              (y + 0.5 - groundY) / scale + mesh.groundRef, (z + 0.5) / scale)) {
+              set(y, last);
+              continue;
+            }
             const jx = (vnoise(x / MAT_WARP_SCALE, y / MAT_WARP_SCALE, z / MAT_WARP_SCALE, SALT_MAT) * 2 - 1) * MAT_WARP;
             const jy = (vnoise(x / MAT_WARP_SCALE, y / MAT_WARP_SCALE, z / MAT_WARP_SCALE, SALT_MAT + 1) * 2 - 1) * MAT_WARP;
             const jz = (vnoise(x / MAT_WARP_SCALE, y / MAT_WARP_SCALE, z / MAT_WARP_SCALE, SALT_MAT + 2) * 2 - 1) * MAT_WARP;
@@ -349,7 +387,8 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid
                 (y + 0.5 + jy * GRID_JITTER - groundY) / scale + mesh.groundRef,
                 (z + 0.5 + jz * GRID_JITTER) / scale);
             }
-            set(y, m >= 0 ? m : stoneMat(x + 0.5 + jx, y + 0.5 + jy, z + 0.5 + jz));
+            last = m >= 0 ? m : stoneMat(x + 0.5 + jx, y + 0.5 + jy, z + 0.5 + jz);
+            set(y, last);
           }
         }
       };

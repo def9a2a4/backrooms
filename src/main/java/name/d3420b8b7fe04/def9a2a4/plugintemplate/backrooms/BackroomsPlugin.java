@@ -166,6 +166,7 @@ public class BackroomsPlugin {
         exitTriggerRegistry.register("bed_sleep", BedSleepTrigger::new);
         exitTriggerRegistry.register("item_offering", ItemOfferingTrigger::new);
         exitTriggerRegistry.register("break_block", BreakBlockTrigger::new);
+        exitTriggerRegistry.register("place_block", PlaceBlockTrigger::new);
 
         // 4b. Register built-in entry triggers
         SuffocationEntry suffocation = new SuffocationEntry(plugin);

@@ -55,6 +55,7 @@ public final class VoxelMesh {
     private static final double ISLAND_RAGGED = 0.18;
     private static final double GRID_JITTER = 0.25;
     private static final int GRID_REACH = 2;
+    private static final int INTERIOR_DEPTH = 6;   // below this, blocks far from any surface copy the one above
     private static final double SHELL_BUMP = 0.6;
     private static final double SHELL_BUMP_SCALE = 6;
     private static final int FILL = 2;
@@ -81,8 +82,46 @@ public final class VoxelMesh {
         }
     }
 
-    /** TEX1 surface grid: sorted linear cell indices ((x * dimZ + z) * dimY + y) and materials. */
-    private record Grid(double cell, double[] origin, int[] dims, long[] keys, byte[] mats) {
+    /**
+     * TEX1 surface grid: sorted linear cell indices ((x * dimZ + z) * dimY + y) and materials, plus
+     * a coarse occupancy bitset (one bit per BRICK³ cells) so lookups far from any surface (the
+     * insides of a column-mode island) fail without probing the neighborhood cell by cell.
+     */
+    private record Grid(double cell, double[] origin, int[] dims, long[] keys, byte[] mats,
+                        java.util.BitSet bricks, int[] bdims) {
+        static final int BRICK = 4;
+
+        static Grid of(double cell, double[] origin, int[] dims, long[] keys, byte[] mats) {
+            int[] bd = {dims[0] / BRICK + 1, dims[1] / BRICK + 1, dims[2] / BRICK + 1};
+            java.util.BitSet bits = new java.util.BitSet();
+            for (long k : keys) {
+                int y = (int) (k % dims[1]), z = (int) ((k / dims[1]) % dims[2]), x = (int) (k / ((long) dims[1] * dims[2]));
+                bits.set(((x / BRICK) * bd[2] + z / BRICK) * bd[1] + y / BRICK);
+            }
+            return new Grid(cell, origin, dims, keys, mats, bits, bd);
+        }
+
+        /** {@link #near} for a mesh-space point in meters. */
+        boolean nearPoint(double x, double y, double z) {
+            return near((int) Math.floor((x - origin[0]) / cell), (int) Math.floor((y - origin[1]) / cell),
+                    (int) Math.floor((z - origin[2]) / cell));
+        }
+
+        /** Whether any cell within reach of (cx, cy, cz) can be filled. */
+        boolean near(int cx, int cy, int cz) {
+            int x0 = Math.max(0, Math.floorDiv(cx - GRID_REACH, BRICK)), x1 = Math.min(bdims[0] - 1, Math.floorDiv(cx + GRID_REACH, BRICK));
+            int y0 = Math.max(0, Math.floorDiv(cy - GRID_REACH, BRICK)), y1 = Math.min(bdims[1] - 1, Math.floorDiv(cy + GRID_REACH, BRICK));
+            int z0 = Math.max(0, Math.floorDiv(cz - GRID_REACH, BRICK)), z1 = Math.min(bdims[2] - 1, Math.floorDiv(cz + GRID_REACH, BRICK));
+            for (int x = x0; x <= x1; x++) {
+                for (int z = z0; z <= z1; z++) {
+                    for (int y = y0; y <= y1; y++) {
+                        if (bricks.get((x * bdims[2] + z) * bdims[1] + y)) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         int at(int ix, int iy, int iz) {
             if (ix < 0 || iy < 0 || iz < 0 || ix >= dims[0] || iy >= dims[1] || iz >= dims[2]) return -1;
             int i = java.util.Arrays.binarySearch(keys, ((long) ix * dims[2] + iz) * dims[1] + iy);
@@ -93,6 +132,7 @@ public final class VoxelMesh {
         int material(double x, double y, double z) {
             double fx = (x - origin[0]) / cell, fy = (y - origin[1]) / cell, fz = (z - origin[2]) / cell;
             int cx = (int) Math.floor(fx), cy = (int) Math.floor(fy), cz = (int) Math.floor(fz);
+            if (!near(cx, cy, cz)) return -1;
             int hit = at(cx, cy, cz);
             if (hit >= 0) return hit;
             int best = -1;
@@ -319,7 +359,7 @@ public final class VoxelMesh {
         for (int i = 0; i < count; i++) keys[i] = k += varlong(d);
         byte[] mats = new byte[count];
         d.readFully(mats);
-        return new Grid(cell, origin, dims, keys, mats);
+        return Grid.of(cell, origin, dims, keys, mats);
     }
 
     public PaletteEntry[] palette() {
@@ -476,6 +516,7 @@ public final class VoxelMesh {
         }
 
         void fill(int yTop, int yBot, int fam, int mat) {
+            int last = stone;
             for (int y = Math.min(yTop, maxY - 1); y >= yBot; y--) {
                 if (y < pickFloor) {
                     for (int k = Math.max(yBot, minY); k <= y; k++) sink.set(i, k, j, stone);
@@ -487,6 +528,12 @@ public final class VoxelMesh {
                     int depth = yTop - y;
                     set(y, depth == 0 ? mat : depth <= DIRT_DEPTH ? dirt : stone);
                 } else {
+                    // deep inside, away from every surface: nothing to look up, continue the column
+                    if (grid != null && yTop - y > INTERIOR_DEPTH && !grid.nearPoint((x + 0.5) / opt.scale,
+                            (y + 0.5 - groundY) / opt.scale + meshBaseY, (z + 0.5) / opt.scale)) {
+                        set(y, last);
+                        continue;
+                    }
                     double sx = x / MAT_WARP_SCALE, sy = y / MAT_WARP_SCALE, sz = z / MAT_WARP_SCALE;
                     double jx = (vnoise(sx, sy, sz, SALT_MAT) * 2 - 1) * MAT_WARP;
                     double jy = (vnoise(sx, sy, sz, SALT_MAT + 1) * 2 - 1) * MAT_WARP;
@@ -499,7 +546,8 @@ public final class VoxelMesh {
                                 (y + 0.5 + jy * GRID_JITTER - groundY) / opt.scale + meshBaseY,
                                 (z + 0.5 + jz * GRID_JITTER) / opt.scale);
                     }
-                    set(y, m >= 0 ? m : stoneMat(x + 0.5 + jx, y + 0.5 + jy, z + 0.5 + jz, latticeCache));
+                    last = m >= 0 ? m : stoneMat(x + 0.5 + jx, y + 0.5 + jy, z + 0.5 + jz, latticeCache);
+                    set(y, last);
                 }
             }
         }
