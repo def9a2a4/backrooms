@@ -17,6 +17,7 @@ Usage: uv run scripts/scans/build_scan.py gobekli [--max-kb 50] [--output ...]
 """
 
 import argparse
+import re
 import functools
 import gzip
 import io
@@ -50,6 +51,12 @@ COLORS = ["red_concrete", "orange_concrete", "yellow_concrete", "lime_concrete",
           "cyan_concrete", "light_blue_concrete", "blue_concrete", "purple_concrete",
           "magenta_concrete", "pink_concrete", "yellow_terracotta", "red_terracotta"]
 
+# Painted and colored stone, for palettes that must stay grey (white, black, grey and the
+# near-neutral cyan terracotta stay in).
+COLORED = (r"(orange|magenta|light_blue|yellow|lime|pink|purple|blue|brown|green|red)_(concrete|terracotta)$"
+           r"|^terracotta$|red_sandstone|sandstone|nether|netherrack|end_stone|purpur|prismarine|"
+           r"resin|^bricks$|mud_bricks|packed_mud|granite|dripstone|cyan_concrete")
+
 # mode "column": terrain voxelized by vertical rays (solid below up-facing surfaces), as Level 56.
 # mode "shell": interiors; every voxel within `thickness` of a surface is solid, normals ignored
 # (scans of rooms are single-sided sheets and their winding isn't reliable).
@@ -63,6 +70,7 @@ MODELS = {
                     "white_terracotta", "light_gray_terracotta", "brown_terracotta", "gravel",
                     "tuff", "andesite", "granite", "calcite"],
         "penalty": {"calcite": 0.01},     # IronSource: calcite only for very white
+        "full": {"lists": ["stone"]},
     },
     "skatepark": {
         "input": "southbank_undercroft_skatepark.glb",
@@ -72,6 +80,7 @@ MODELS = {
         "chroma": 1.6,
         "cast": 1.0,
         "deadzone": 0.04,
+        "full": {"lists": ["stone"]},
     },
     "skatepark_grey": {
         "input": "southbank_undercroft_skatepark.glb",
@@ -80,6 +89,7 @@ MODELS = {
         "palette": GREYS,
         "cast": 1.0,
         "deadzone": 0.04,
+        "full": {"lists": ["stone"], "exclude": COLORED},
     },
     "hall": {
         "input": "hintze_hall.glb",
@@ -92,6 +102,7 @@ MODELS = {
                     "tuff", "stone_bricks", "polished_deepslate", "spruce_planks",
                     "dark_oak_planks", "bone_block"],
         "penalty": {"calcite": 0.01},
+        "full": {"lists": ["stone"]},
     },
 }
 
@@ -224,7 +235,16 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
 
 
 PATTERN_WEIGHT = 0.5    # IronSource's weight for texture contrast/grain differences
-FULL_PALETTE = json.loads((ROOT / "scripts/scans/full_palette.json").read_text())["blocks"]
+FULL_LISTS = json.loads((ROOT / "scripts/scans/full_palette.json").read_text())
+
+
+def full_palette(cfg: dict) -> list:
+    """The model's slice of the full list: MODELS[...]["full"] = {"lists": [...], "exclude":
+    regex}: which IronSource lists, minus blocks that don't belong in this place."""
+    spec = cfg["full"]
+    ids = [b for lst in spec["lists"] for b in FULL_LISTS[lst]]
+    ex = re.compile(spec.get("exclude", r"^$"))
+    return list(dict.fromkeys(b for b in ids if not ex.search(b)))
 
 
 @functools.cache
@@ -378,7 +398,7 @@ def build(name: str, args):
         up = np.abs(up)        # floors and ceilings alike read as tops; winding isn't reliable
     lab = oklab(srgb_to_linear(C.astype(float)))
     if args.style == "full":
-        cfg = dict(cfg, palette=FULL_PALETTE)
+        cfg = dict(cfg, palette=full_palette(cfg))
         grid, cell_centers, cell_mat, plab = match_cells(tri.mean(axis=1), area, lab, up, cfg,
                                                        args.tex_cell, args.smooth)
         # faces take their cell's block, so the per-vertex fallback agrees with the grid

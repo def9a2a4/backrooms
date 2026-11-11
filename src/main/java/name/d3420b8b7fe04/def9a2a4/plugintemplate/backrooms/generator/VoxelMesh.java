@@ -11,19 +11,27 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
- * A low-poly triangle mesh voxelized on the fly, one chunk at a time. Used by Level 56 to build a
- * giant Stonehenge from a ~50 KB mesh instead of shipping voxel data.
+ * A triangle mesh voxelized on the fly, one chunk at a time. Used by Level 56 to build a giant
+ * Stonehenge from a ~50 KB mesh, and by {@link ScanChunkGenerator} for the photogrammetry scans.
  *
- * <p>The mesh file and its pipeline live in scripts/stonehenge/ (build_mesh.py writes it). The
- * browser preview's scripts/voxel-preview/voxelize.js is the reference implementation of
- * this class: same decode, same column-ray rules, same hash and noise, so the preview shows what
- * the server generates. Change one, change the other.
+ * <p>The mesh files come from scripts/stonehenge/build_mesh.py and scripts/scans/build_scan.py.
+ * The browser preview's scripts/voxel-preview/voxelize.js is the reference implementation of
+ * this class: same decode, same column-ray and shell rules, same hash and noise, so the preview
+ * shows what the server generates. Change one, change the other.
  *
- * <p>Per block column: cast a vertical ray at a noise-warped sample point, collect every triangle
- * hit, then walk the hits top-down. An up-facing hit starts solid, a down-facing hit ends it.
- * Columns outside the island circle are void; below the lowest surface the island's underside is
- * a ragged lens. Materials come from per-vertex palette indices (textures, classified offline),
- * blended with noise and mixed with per-material "variants".
+ * <p>Two modes:
+ * <ul>
+ *   <li><b>column</b> (terrain): per block column, cast a vertical ray at a noise-warped sample
+ *   point, collect every triangle hit, then walk the hits top-down. An up-facing hit starts solid,
+ *   a down-facing hit ends it. Columns outside the island circle are void; below the lowest
+ *   surface the island's underside is a ragged lens.</li>
+ *   <li><b>shell</b> (interiors): scans of rooms are single-sided sheets with unreliable winding, so
+ *   every block whose center lies within the shell thickness (± noise) of a triangle is solid. The
+ *   first triangle (in file order) to claim a block decides its material.</li>
+ * </ul>
+ * Materials come from the optional surface grid (a 3D texture: one palette index per small cube
+ * the original surface passed through), else from per-vertex palette indices, mixed with
+ * per-material "variants".
  *
  * <p>Immutable after {@link #load}; {@link #generateChunk} is safe to call from any thread.
  */
@@ -45,10 +53,71 @@ public final class VoxelMesh {
     private static final double ISLAND_DEPTH = 6.25;
     private static final double ISLAND_EDGE = 4;
     private static final double ISLAND_RAGGED = 0.18;
+    private static final double GRID_JITTER = 0.25;
+    private static final int GRID_REACH = 2;
+    private static final double SHELL_BUMP = 0.6;
+    private static final double SHELL_BUMP_SCALE = 6;
     private static final int FILL = 2;
 
     private static final int SALT_WARP_X = 11, SALT_WARP_Z = 13, SALT_BUMP = 17, SALT_MAT = 23,
-            SALT_CLUMP = 31, SALT_UNDER = 41;
+            SALT_CLUMP = 31, SALT_UNDER = 41, SALT_SHELL = 53;
+
+    /**
+     * How to place and voxelize a mesh.
+     *
+     * @param scale       blocks per mesh meter
+     * @param groundY     world Y of the mesh's ground reference (column) or lowest point (shell)
+     * @param originX     world X of the mesh origin
+     * @param originZ     world Z of the mesh origin
+     * @param shell       shell mode instead of column mode
+     * @param thickness   shell half-thickness in blocks
+     * @param islandDepth column mode: island underside depth at the center, blocks per unit scale
+     * @param useGrid     use the surface grid when the file has one
+     */
+    public record Options(double scale, int groundY, int originX, int originZ, boolean shell,
+                          double thickness, double islandDepth, boolean useGrid) {
+        public static Options column(double scale, int groundY, int originX, int originZ) {
+            return new Options(scale, groundY, originX, originZ, false, 1.5, ISLAND_DEPTH, true);
+        }
+    }
+
+    /** TEX1 surface grid: sorted linear cell indices ((x * dimZ + z) * dimY + y) and materials. */
+    private record Grid(double cell, double[] origin, int[] dims, long[] keys, byte[] mats) {
+        int at(int ix, int iy, int iz) {
+            if (ix < 0 || iy < 0 || iz < 0 || ix >= dims[0] || iy >= dims[1] || iz >= dims[2]) return -1;
+            int i = java.util.Arrays.binarySearch(keys, ((long) ix * dims[2] + iz) * dims[1] + iy);
+            return i >= 0 ? mats[i] & 0xff : -1;
+        }
+
+        /** Material at mesh-space point (meters), else the nearest filled cell within reach; -1 if none. */
+        int material(double x, double y, double z) {
+            double fx = (x - origin[0]) / cell, fy = (y - origin[1]) / cell, fz = (z - origin[2]) / cell;
+            int cx = (int) Math.floor(fx), cy = (int) Math.floor(fy), cz = (int) Math.floor(fz);
+            int hit = at(cx, cy, cz);
+            if (hit >= 0) return hit;
+            int best = -1;
+            double bd = Double.POSITIVE_INFINITY;
+            for (int r = 1; r <= GRID_REACH; r++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    for (int dy = -r; dy <= r; dy++) {
+                        for (int dz = -r; dz <= r; dz++) {
+                            if (Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz))) != r) continue;
+                            int m = at(cx + dx, cy + dy, cz + dz);
+                            if (m < 0) continue;
+                            double ex = cx + dx + 0.5 - fx, ey = cy + dy + 0.5 - fy, ez = cz + dz + 0.5 - fz;
+                            double d = ex * ex + ey * ey + ez * ez;
+                            if (d < bd) {
+                                bd = d;
+                                best = m;
+                            }
+                        }
+                    }
+                }
+                if (best >= 0) return best;
+            }
+            return -1;
+        }
+    }
 
     /** A palette entry: block id (no namespace), family (0 ground, 1 stone) and weighted variants. */
     public record PaletteEntry(String id, int family, int[] variants, int[] cumulative, int total) {}
@@ -60,6 +129,9 @@ public final class VoxelMesh {
     }
 
     private final PaletteEntry[] palette;
+    private final Options opt;
+    private final Grid grid;            // null: per-vertex materials only
+    private final double meshBaseY;     // mesh-space Y that lands on groundY
     private final byte[] vmat;
     private final double[] w;          // vertices in local block space: x, y (world), z
     private final int[] tris;
@@ -71,22 +143,31 @@ public final class VoxelMesh {
     private final Map<Long, int[]> stoneGrid;
     private final Map<Long, int[]> chunkTris;   // world chunk key -> triangle indices, ascending
 
-    private VoxelMesh(PaletteEntry[] palette, byte[] vmat, double[] w, int[] tris,
-                      int originX, int originZ, int groundY,
-                      double islandX, double islandZ, double islandR, double maxDepth) {
+    private VoxelMesh(PaletteEntry[] palette, byte[] vmat, double[] w, int[] tris, Options opt,
+                      Grid surface, double meshBaseY, double islandX, double islandZ, double islandR) {
         this.palette = palette;
+        this.opt = opt;
+        this.grid = opt.useGrid ? surface : null;
+        this.meshBaseY = meshBaseY;
+        int originX = opt.originX, originZ = opt.originZ;
+        double maxDepth = opt.islandDepth * opt.scale;
         this.vmat = vmat;
         this.w = w;
         this.tris = tris;
         this.originX = originX;
         this.originZ = originZ;
-        this.groundY = groundY;
+        this.groundY = opt.groundY;
         this.islandX = islandX;
         this.islandZ = islandZ;
         this.islandR = islandR;
         this.maxDepth = maxDepth;
-        this.dirt = indexOf("dirt");
-        this.stone = indexOf("stone");
+        // fill blocks: scan palettes may lack stone or dirt
+        int st = indexOf("stone");
+        if (st < 0) st = indexOf("tuff");
+        if (st < 0) st = indexOf("andesite");
+        this.stone = Math.max(st, 0);
+        int dt = indexOf("dirt");
+        this.dirt = dt >= 0 ? dt : this.stone;
 
         int nv = vmat.length;
         double minY = Double.POSITIVE_INFINITY;
@@ -101,22 +182,41 @@ public final class VoxelMesh {
         }
         this.stoneGrid = freeze(grid);
 
-        Map<Long, List<Integer>> buckets = new HashMap<>();
-        for (int t = 0; t < tris.length; t += 3) {
-            int a = tris[t], b = tris[t + 1], c = tris[t + 2];
-            double minX = Math.min(w[a * 3], Math.min(w[b * 3], w[c * 3])) - WARP_AMP - 0.5 + originX;
-            double maxX = Math.max(w[a * 3], Math.max(w[b * 3], w[c * 3])) + WARP_AMP - 0.5 + originX;
-            double minZ = Math.min(w[a * 3 + 2], Math.min(w[b * 3 + 2], w[c * 3 + 2])) - WARP_AMP - 0.5 + originZ;
-            double maxZ = Math.max(w[a * 3 + 2], Math.max(w[b * 3 + 2], w[c * 3 + 2])) + WARP_AMP - 0.5 + originZ;
+        // Triangles per chunk they can touch: column rays sample within WARP_AMP of a column, shell
+        // blocks within the shell reach. Two passes over primitive arrays (scans have ~2M tris).
+        double margin = (opt.shell ? opt.thickness + SHELL_BUMP : WARP_AMP) + 0.5;
+        int nt = tris.length / 3;
+        int[] range = new int[nt * 4];
+        Map<Long, int[]> counts = new HashMap<>();
+        for (int t = 0; t < nt; t++) {
+            int a = tris[t * 3], b = tris[t * 3 + 1], c = tris[t * 3 + 2];
+            double minX = Math.min(w[a * 3], Math.min(w[b * 3], w[c * 3])) - margin + originX;
+            double maxX = Math.max(w[a * 3], Math.max(w[b * 3], w[c * 3])) + margin + originX;
+            double minZ = Math.min(w[a * 3 + 2], Math.min(w[b * 3 + 2], w[c * 3 + 2])) - margin + originZ;
+            double maxZ = Math.max(w[a * 3 + 2], Math.max(w[b * 3 + 2], w[c * 3 + 2])) + margin + originZ;
             int cx0 = Math.floorDiv((int) Math.floor(minX), 16), cx1 = Math.floorDiv((int) Math.ceil(maxX), 16);
             int cz0 = Math.floorDiv((int) Math.floor(minZ), 16), cz1 = Math.floorDiv((int) Math.ceil(maxZ), 16);
+            range[t * 4] = cx0; range[t * 4 + 1] = cx1; range[t * 4 + 2] = cz0; range[t * 4 + 3] = cz1;
             for (int cx = cx0; cx <= cx1; cx++) {
                 for (int cz = cz0; cz <= cz1; cz++) {
-                    buckets.computeIfAbsent(chunkKey(cx, cz), key -> new ArrayList<>()).add(t);
+                    counts.computeIfAbsent(chunkKey(cx, cz), k -> new int[1])[0]++;
                 }
             }
         }
-        this.chunkTris = freeze(buckets);
+        Map<Long, int[]> buckets = new HashMap<>(counts.size() * 2);
+        for (Map.Entry<Long, int[]> e : counts.entrySet()) {
+            buckets.put(e.getKey(), new int[e.getValue()[0]]);
+            e.getValue()[0] = 0;
+        }
+        for (int t = 0; t < nt; t++) {
+            for (int cx = range[t * 4]; cx <= range[t * 4 + 1]; cx++) {
+                for (int cz = range[t * 4 + 2]; cz <= range[t * 4 + 3]; cz++) {
+                    long k = chunkKey(cx, cz);
+                    buckets.get(k)[counts.get(k)[0]++] = t * 3;   // ascending: first-wins order
+                }
+            }
+        }
+        this.chunkTris = buckets;
     }
 
     // ── loading ──────────────────────────────────────────────────────────────────────────────────
@@ -131,7 +231,14 @@ public final class VoxelMesh {
      */
     public static VoxelMesh load(InputStream in, double scale, int groundY, int originX, int originZ)
             throws IOException {
-        try (DataInputStream d = new DataInputStream(new GZIPInputStream(in))) {
+        return load(in, Options.column(scale, groundY, originX, originZ));
+    }
+
+    /** Decode a mesh file and place it per {@code opt}. */
+    public static VoxelMesh load(InputStream in, Options opt) throws IOException {
+        double scale = opt.scale;
+        int groundY = opt.groundY;
+        try (DataInputStream d = new DataInputStream(new java.io.BufferedInputStream(new GZIPInputStream(in), 1 << 16))) {
             byte[] magic = new byte[4];
             d.readFully(magic);
             if (!"SHM2".equals(new String(magic, StandardCharsets.US_ASCII))) {
@@ -161,15 +268,24 @@ public final class VoxelMesh {
             }
 
             int nv = varint(d);
-            double[] w = new double[nv * 3];
+            float[] raw = new float[nv * 3];
             long[] q = new long[3];
+            float minY = Float.POSITIVE_INFINITY;
             for (int i = 0; i < nv; i++) {
                 for (int c = 0; c < 3; c++) {
                     q[c] += zigzag(varint(d));
                     // decoded in double, stored as float: matches the preview's Float32Array
-                    float v = (float) (lo[c] + (q[c] / 65535.0) * (hi[c] - lo[c]));
-                    w[i * 3 + c] = c == 1 ? (v - groundRef) * scale + groundY : v * scale;
+                    raw[i * 3 + c] = (float) (lo[c] + (q[c] / 65535.0) * (hi[c] - lo[c]));
                 }
+                minY = Math.min(minY, raw[i * 3 + 1]);
+            }
+            // column: groundRef lands on groundY; shell: the lowest point does
+            double baseY = opt.shell ? minY : groundRef;
+            double[] w = new double[nv * 3];
+            for (int i = 0; i < nv; i++) {
+                w[i * 3] = raw[i * 3] * scale;
+                w[i * 3 + 1] = (raw[i * 3 + 1] - baseY) * scale + groundY;
+                w[i * 3 + 2] = raw[i * 3 + 2] * scale;
             }
             byte[] vmat = new byte[nv];
             d.readFully(vmat);
@@ -183,9 +299,27 @@ public final class VoxelMesh {
                 tris[i * 3 + 1] = a + zigzag(varint(d));
                 tris[i * 3 + 2] = a + zigzag(varint(d));
             }
-            return new VoxelMesh(palette, vmat, w, tris, originX, originZ, groundY,
-                    ix * scale, iz * scale, ir * scale, ISLAND_DEPTH * scale);
+            Grid grid = readGrid(d);
+            return new VoxelMesh(palette, vmat, w, tris, opt, grid, baseY,
+                    ix * scale, iz * scale, ir * scale);
         }
+    }
+
+    /** The optional TEX1 section after the triangles (build_scan.py write_grid), or null. */
+    private static Grid readGrid(DataInputStream d) throws IOException {
+        byte[] magic = new byte[4];
+        int n = d.readNBytes(magic, 0, 4);
+        if (n < 4 || !"TEX1".equals(new String(magic, StandardCharsets.US_ASCII))) return null;
+        double cell = f32(d);
+        double[] origin = {f32(d), f32(d), f32(d)};
+        int[] dims = {u16(d), u16(d), u16(d)};
+        int count = varint(d);
+        long[] keys = new long[count];
+        long k = 0;
+        for (int i = 0; i < count; i++) keys[i] = k += varlong(d);
+        byte[] mats = new byte[count];
+        d.readFully(mats);
+        return new Grid(cell, origin, dims, keys, mats);
     }
 
     public PaletteEntry[] palette() {
@@ -200,6 +334,10 @@ public final class VoxelMesh {
     public void generateChunk(int chunkX, int chunkZ, int minY, int maxY, BlockSink sink) {
         int[] bucket = chunkTris.get(chunkKey(chunkX, chunkZ));
         if (bucket == null) return;
+        if (opt.shell) {
+            shellChunk(chunkX, chunkZ, minY, maxY, bucket, sink);
+            return;
+        }
 
         int bx = chunkX * 16 - originX, bz = chunkZ * 16 - originZ;   // local coords of column (0,0)
         double[] wx = new double[256], wz = new double[256];
@@ -353,10 +491,123 @@ public final class VoxelMesh {
                     double jx = (vnoise(sx, sy, sz, SALT_MAT) * 2 - 1) * MAT_WARP;
                     double jy = (vnoise(sx, sy, sz, SALT_MAT + 1) * 2 - 1) * MAT_WARP;
                     double jz = (vnoise(sx, sy, sz, SALT_MAT + 2) * 2 - 1) * MAT_WARP;
-                    set(y, stoneMat(x + 0.5 + jx, y + 0.5 + jy, z + 0.5 + jz, latticeCache));
+                    // surface grid near the surface (light jitter only: it carries real detail),
+                    // nearest-vertex lattice deeper in
+                    int m = -1;
+                    if (grid != null) {
+                        m = grid.material((x + 0.5 + jx * GRID_JITTER) / opt.scale,
+                                (y + 0.5 + jy * GRID_JITTER - groundY) / opt.scale + meshBaseY,
+                                (z + 0.5 + jz * GRID_JITTER) / opt.scale);
+                    }
+                    set(y, m >= 0 ? m : stoneMat(x + 0.5 + jx, y + 0.5 + jy, z + 0.5 + jz, latticeCache));
                 }
             }
         }
+    }
+
+    // ── shell mode (mirrors voxelizeShell() in voxelize.js) ───────────────────────────────────────
+
+    private void shellChunk(int chunkX, int chunkZ, int minY, int maxY, int[] bucket, BlockSink sink) {
+        int bx = chunkX * 16 - originX, bz = chunkZ * 16 - originZ;   // local coords of column (0,0)
+        int height = maxY - minY;
+        boolean[] taken = new boolean[16 * 16 * height];
+        double thickness = opt.thickness, reach = thickness + SHELL_BUMP, r2max = reach * reach;
+        int[] min = {bx, minY, bz}, max = {bx + 15, maxY - 1, bz + 15};
+        double[] A = new double[3], B = new double[3], C = new double[3], bary = new double[3];
+        int[] p = new int[3];
+        for (int t : bucket) {
+            int a = tris[t], b = tris[t + 1], c = tris[t + 2];
+            for (int k = 0; k < 3; k++) {
+                A[k] = w[a * 3 + k];
+                B[k] = w[b * 3 + k];
+                C[k] = w[c * 3 + k];
+            }
+            double ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2];
+            double vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
+            double[] n = {uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx};
+            double len = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+            if (len < 1e-12) continue;
+            double dPlane = n[0] * A[0] + n[1] * A[1] + n[2] * A[2];
+            int d = 0;
+            if (Math.abs(n[1]) > Math.abs(n[d])) d = 1;
+            if (Math.abs(n[2]) > Math.abs(n[d])) d = 2;
+            int u = (d + 1) % 3, wa = (d + 2) % 3;
+            double span = reach * len / Math.abs(n[d]);
+            int u0 = Math.max(min[u], (int) Math.floor(Math.min(A[u], Math.min(B[u], C[u])) - reach - 0.5));
+            int u1 = Math.min(max[u], (int) Math.ceil(Math.max(A[u], Math.max(B[u], C[u])) + reach - 0.5));
+            int w0 = Math.max(min[wa], (int) Math.floor(Math.min(A[wa], Math.min(B[wa], C[wa])) - reach - 0.5));
+            int w1 = Math.min(max[wa], (int) Math.ceil(Math.max(A[wa], Math.max(B[wa], C[wa])) + reach - 0.5));
+            for (int iu = u0; iu <= u1; iu++) {
+                for (int iw = w0; iw <= w1; iw++) {
+                    double cd = (dPlane - n[u] * (iu + 0.5) - n[wa] * (iw + 0.5)) / n[d];
+                    int d0 = Math.max(min[d], (int) Math.floor(cd - span - 0.5));
+                    int d1 = Math.min(max[d], (int) Math.ceil(cd + span - 0.5));
+                    for (int id = d0; id <= d1; id++) {
+                        p[d] = id;
+                        p[u] = iu;
+                        p[wa] = iw;
+                        int slot = ((p[0] - bx) * 16 + (p[2] - bz)) * height + (p[1] - minY);
+                        if (taken[slot]) continue;
+                        double px = p[0] + 0.5, py = p[1] + 0.5, pz = p[2] + 0.5;
+                        closestBary(px, py, pz, A, B, C, bary);
+                        double qx = bary[0] * A[0] + bary[1] * B[0] + bary[2] * C[0] - px;
+                        double qy = bary[0] * A[1] + bary[1] * B[1] + bary[2] * C[1] - py;
+                        double qz = bary[0] * A[2] + bary[1] * B[2] + bary[2] * C[2] - pz;
+                        double dist2 = qx * qx + qy * qy + qz * qz;
+                        if (dist2 > r2max) continue;
+                        double th = thickness + (vnoise(px / SHELL_BUMP_SCALE, py / SHELL_BUMP_SCALE,
+                                pz / SHELL_BUMP_SCALE, SALT_SHELL) * 2 - 1) * SHELL_BUMP;
+                        if (dist2 > th * th) continue;
+                        int m = -1;
+                        if (grid != null) {
+                            m = grid.material(px / opt.scale, (py - groundY) / opt.scale + meshBaseY, pz / opt.scale);
+                        }
+                        if (m < 0) {
+                            double r = unit(hash(p[0], p[1], p[2]));
+                            m = vmat[r < bary[0] ? a : r < bary[0] + bary[1] ? b : c] & 0xff;
+                        }
+                        taken[slot] = true;
+                        sink.set(p[0] - bx, p[1], p[2] - bz, variant(m, p[0], p[1], p[2]));
+                    }
+                }
+            }
+        }
+    }
+
+    /** Closest point on triangle abc to p (Ericson, RTCD 5.1.5), as barycentrics into {@code out}. */
+    private static void closestBary(double px, double py, double pz, double[] a, double[] b, double[] c, double[] out) {
+        double abx = b[0] - a[0], aby = b[1] - a[1], abz = b[2] - a[2];
+        double acx = c[0] - a[0], acy = c[1] - a[1], acz = c[2] - a[2];
+        double apx = px - a[0], apy = py - a[1], apz = pz - a[2];
+        double d1 = abx * apx + aby * apy + abz * apz, d2 = acx * apx + acy * apy + acz * apz;
+        if (d1 <= 0 && d2 <= 0) { out[0] = 1; out[1] = 0; out[2] = 0; return; }
+        double bpx = px - b[0], bpy = py - b[1], bpz = pz - b[2];
+        double d3 = abx * bpx + aby * bpy + abz * bpz, d4 = acx * bpx + acy * bpy + acz * bpz;
+        if (d3 >= 0 && d4 <= d3) { out[0] = 0; out[1] = 1; out[2] = 0; return; }
+        double vc = d1 * d4 - d3 * d2;
+        if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+            double v = d1 / (d1 - d3);
+            out[0] = 1 - v; out[1] = v; out[2] = 0;
+            return;
+        }
+        double cpx = px - c[0], cpy = py - c[1], cpz = pz - c[2];
+        double d5 = abx * cpx + aby * cpy + abz * cpz, d6 = acx * cpx + acy * cpy + acz * cpz;
+        if (d6 >= 0 && d5 <= d6) { out[0] = 0; out[1] = 0; out[2] = 1; return; }
+        double vb = d5 * d2 - d1 * d6;
+        if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+            double ww = d2 / (d2 - d6);
+            out[0] = 1 - ww; out[1] = 0; out[2] = ww;
+            return;
+        }
+        double va = d3 * d6 - d5 * d4;
+        if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
+            double ww = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+            out[0] = 0; out[1] = 1 - ww; out[2] = ww;
+            return;
+        }
+        double denom = 1 / (va + vb + vc);
+        double v = vb * denom, ww = vc * denom;
+        out[0] = 1 - v - ww; out[1] = v; out[2] = ww;
     }
 
     private int islandBottom(int x, int z) {
@@ -419,7 +670,7 @@ public final class VoxelMesh {
         for (int i = 0; i < palette.length; i++) {
             if (palette[i].id.equals(id)) return i;
         }
-        throw new IllegalStateException("mesh palette has no " + id);
+        return -1;
     }
 
     // ── hash and value noise (mirror voxelize.js) ────────────────────────────────────────────────
@@ -497,6 +748,21 @@ public final class VoxelMesh {
             shift += 7;
         } while ((b & 0x80) != 0);
         return v;
+    }
+
+    static long varlong(DataInputStream d) throws IOException {
+        long v = 0;
+        int shift = 0, b;
+        do {
+            b = d.readUnsignedByte();
+            v |= (long) (b & 0x7f) << shift;
+            shift += 7;
+        } while ((b & 0x80) != 0);
+        return v;
+    }
+
+    static int u16(DataInputStream d) throws IOException {
+        return Short.reverseBytes(d.readShort()) & 0xffff;
     }
 
     static int zigzag(int v) {

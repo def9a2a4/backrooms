@@ -25,6 +25,11 @@
       border-radius: 4px; padding: 2px 4px; }
     button { margin-top: 8px; width: 100%; padding: 6px; background: #3b5bdb; color: white; border: 0;
       border-radius: 4px; cursor: pointer; }
+    #progress-row { margin-top: 8px; }
+    #progress { width: 100%; height: 10px; accent-color: #3b5bdb; }
+    .progress-line { display: flex; justify-content: space-between; align-items: center;
+      color: var(--muted); font: 12px ui-monospace, monospace; }
+    #cancel { width: auto; margin: 0; padding: 2px 8px; background: #444; }
     #stats { margin-top: 8px; color: var(--muted); white-space: pre; font: 12px ui-monospace, monospace; }
     #credit { position: fixed; bottom: 8px; right: 12px; color: var(--muted); font-size: 11px; }
     #credit a { color: var(--muted); }
@@ -48,6 +53,10 @@
     <label>Source mesh <input id="wire" type="checkbox"></label>
     <label>Refit camera <input id="refit" type="checkbox"></label>
     <button id="build">Voxelize</button>
+    <div id="progress-row" style="display: none">
+      <progress id="progress" max="1" value="0"></progress>
+      <div class="progress-line"><span id="progress-label"></span><button id="cancel">Cancel</button></div>
+    </div>
     <div id="stats">loading…</div>
   </div>
   <div id="credit"></div>

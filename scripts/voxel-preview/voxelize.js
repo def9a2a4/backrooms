@@ -182,7 +182,7 @@ function variant(palette, m, x, y, z) {
  * Returns { vol (Uint8Array, palette index + 1, 0 = air), nx, ny, nz, y0, ids } where volume
  * index is (x * nz + z) * ny + (y - y0) and x/z run from -radius..radius.
  */
-export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid = true } = {}) {
+export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid = true, islandDepth = ISLAND_DEPTH, onProgress } = {}) {
   const { verts, tris, vmat, palette } = mesh;
   const surf = useGrid ? mesh.grid : null;
   const nv = verts.length / 3;
@@ -243,7 +243,7 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid
 
   // island underside: lens-shaped, thickest at the center, ragged with noise
   const ix0 = mesh.island.x * scale, iz0 = mesh.island.z * scale, iR = mesh.island.r * scale;
-  const maxDepth = ISLAND_DEPTH * scale;
+  const maxDepth = islandDepth * scale;
   const islandBottom = (x, z) => {
     const dx = x + 0.5 - ix0, dz = z + 0.5 - iz0;
     const d = Math.sqrt(dx * dx + dz * dz) / iR;
@@ -263,6 +263,7 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid
   // per-column hit lists
   const hits = new Array(n * n);
   for (let t = 0; t < tris.length; t += 3) {
+    if (onProgress && t % 6000 === 0) onProgress(0.7 * t / tris.length);
     const a = tris[t], b = tris[t + 1], c = tris[t + 2];
     const ax = W[a * 3], ay = W[a * 3 + 1], az = W[a * 3 + 2];
     const bx = W[b * 3], by = W[b * 3 + 1], bz = W[b * 3 + 2];
@@ -312,6 +313,7 @@ export function voxelize(mesh, { scale = 16, groundY = 64, radius = 320, useGrid
   const vol = new Uint8Array(n * n * ny);
 
   for (let ix = 0; ix < n; ix++) {
+    if (onProgress && ix % 8 === 0) onProgress(0.7 + 0.3 * ix / n);
     for (let iz = 0; iz < n; iz++) {
       const list = hits[ix * n + iz];
       const x = ix - radius, z = iz - radius;
@@ -422,7 +424,7 @@ function closestBary(px, py, pz, ax, ay, az, bx, by, bz, cx, cy, cz) {
  * Voxelize as a thickened surface. The lowest point of the mesh lands on groundY.
  * Same return shape as voxelize(), plus x0/z0 (world x/z of volume index 0).
  */
-export function voxelizeShell(mesh, { scale = 8, groundY = 64, radius = 1000, thickness = 1.5, useGrid = true } = {}) {
+export function voxelizeShell(mesh, { scale = 8, groundY = 64, radius = 1000, thickness = 1.5, useGrid = true, onProgress } = {}) {
   const { verts, tris, vmat, palette } = mesh;
   const grid = useGrid ? mesh.grid : null;
   const nv = verts.length / 3;
@@ -448,6 +450,7 @@ export function voxelizeShell(mesh, { scale = 8, groundY = 64, radius = 1000, th
   const min = [x0, y0, z0], max = [x1, y1, z1];
 
   for (let t = 0; t < tris.length; t += 3) {
+    if (onProgress && t % 6000 === 0) onProgress(t / tris.length);
     const a = tris[t], b = tris[t + 1], c = tris[t + 2];
     const A = [W[a * 3], W[a * 3 + 1], W[a * 3 + 2]];
     const B = [W[b * 3], W[b * 3 + 1], W[b * 3 + 2]];
