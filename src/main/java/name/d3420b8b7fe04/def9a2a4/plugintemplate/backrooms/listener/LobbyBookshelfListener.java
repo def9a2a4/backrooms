@@ -24,7 +24,8 @@ import java.util.Random;
 
 /**
  * Populates chiseled bookshelves in Level 0 (The Lobby) with written books
- * when chunks are first generated. Players collect 16 books to trigger the exit.
+ * when chunks are first generated. Finishing any book — clicking the closing
+ * line on its last page — triggers the exit (book_end, key "lobby").
  */
 public class LobbyBookshelfListener implements Listener {
 

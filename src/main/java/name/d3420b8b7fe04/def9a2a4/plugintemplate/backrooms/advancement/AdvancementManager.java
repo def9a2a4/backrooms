@@ -27,7 +27,8 @@ public class AdvancementManager {
     private static final Set<String> ALL_LEVEL_IDS = Set.of(
             "level_0", "level_1", "level_2", "level_3", "level_4",
             "level_5", "level_7", "level_37", "level_56", "level_64637",
-            "level_84", "level_94", "level_101", "level_418", "level_590", "level_974"
+            "level_84", "level_94", "level_101", "level_418", "level_590", "level_974",
+            "level_1881", "level_9500", "level_1967", "level_1973"
     );
 
     private final Map<String, NamespacedKey> entryKeys = Map.of(
@@ -96,6 +97,7 @@ public class AdvancementManager {
             Map.entry("level_974:level_94", key("hint/hint_974")),
             Map.entry("level_5:level_7", key("hint/hint_5_down")),
             Map.entry("level_3:level_590", key("hint/hint_3")),
+            Map.entry("level_3:level_101", key("hint/hint_3")),
             Map.entry("level_590:level_3", key("hint/hint_590")),
             Map.entry("level_101:level_0", key("hint/hint_101"))
     );

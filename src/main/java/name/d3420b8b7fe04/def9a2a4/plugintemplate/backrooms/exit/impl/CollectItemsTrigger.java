@@ -13,7 +13,7 @@ import java.util.UUID;
 
 /**
  * Triggers when player has collected enough of a specific item in their inventory.
- * Used for: L0→L1 (collect 7 written books), L64637→overworld (collect 16 books).
+ * Used for: L64637→overworld (collect 16 books).
  *
  * The count is the live inventory total, not cumulative pickups — dropping items
  * below the threshold keeps the player where they are. An optional warning fires

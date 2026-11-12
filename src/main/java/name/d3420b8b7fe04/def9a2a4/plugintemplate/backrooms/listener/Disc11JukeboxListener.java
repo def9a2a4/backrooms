@@ -30,7 +30,7 @@ public class Disc11JukeboxListener implements Listener {
 
         Block block = event.getClickedBlock();
         if (block.getType() != Material.JUKEBOX) return;
-        if (!block.getWorld().getName().startsWith("bkrms_5")) return;
+        if (!block.getWorld().getName().equals("bkrms_5")) return;
 
         Player player = event.getPlayer();
         if (player.isDead()) return;
@@ -45,7 +45,7 @@ public class Disc11JukeboxListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerDeath(PlayerDeathEvent event) {
-        if (!event.getEntity().getWorld().getName().startsWith("bkrms_5")) return;
+        if (!event.getEntity().getWorld().getName().equals("bkrms_5")) return;
         event.setDeathMessage(event.getEntity().getName() + " heard something");
     }
 }

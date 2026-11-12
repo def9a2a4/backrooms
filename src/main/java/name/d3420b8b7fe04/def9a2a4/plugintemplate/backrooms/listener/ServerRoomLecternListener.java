@@ -41,7 +41,7 @@ public class ServerRoomLecternListener implements Listener {
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
         if (!event.isNewChunk()) return;
-        if (!event.getWorld().getName().startsWith("bkrms_3")) return;
+        if (!event.getWorld().getName().equals("bkrms_3")) return;
 
         ChunkGenerator gen = event.getWorld().getGenerator();
         if (!(gen instanceof Level3ChunkGenerator l3gen)) return;
