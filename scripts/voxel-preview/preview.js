@@ -235,7 +235,12 @@ function setupTune(m) {
       tuned = { model: m.id, mats: data.mats, vmats: data.vmats, values: tuneValues() };
       tuneProgress('redrawing', 1);
       // let the bar paint before the redraw blocks the page
-      setTimeout(() => build().then(() => tuneProgress('matched')), 30);
+      setTimeout(() => build().then(async () => {
+        // the mesh's grid must be the one the cells were exported from, or the tuning is dropped
+        const g = (await getMesh(m)).grid;
+        tuneProgress(g?.tunedFrom === tuned ? 'matched'
+          : `not applied: this mesh has ${g ? g.cells.size.toLocaleString() : 'no'} grid cells, the export ${data.mats.length.toLocaleString()}`);
+      }), 30);
     } else if (data.type === 'error') {
       tuneProgress(`no cells: ${data.message}`);
     }
