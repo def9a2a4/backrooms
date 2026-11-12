@@ -28,7 +28,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitEventListen
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTriggerRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.impl.*;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.scan.ScanMeshes;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.mesh.MeshStore;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.ScanChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.VoxelMesh;
@@ -85,8 +85,8 @@ public class BackroomsPlugin {
     private BackroomsCommand command;
     private Level1GardenEffectListener gardenEffectListener;
     private name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level56Listener level56Listener;
-    private ScanMeshes scanMeshes;
-    private final List<PendingScan> pendingScans = new java.util.ArrayList<>();
+    private MeshStore meshStore;
+    private final List<PendingLevel> pendingLevels = new java.util.ArrayList<>();
 
     public BackroomsPlugin(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -168,6 +168,7 @@ public class BackroomsPlugin {
         exitTriggerRegistry.register("powered_command_block", PoweredCommandBlockTrigger::new);
         exitTriggerRegistry.register("fall_distance", FallDistanceTrigger::new);
         exitTriggerRegistry.register("open_book", OpenBookTrigger::new);
+        exitTriggerRegistry.register("book_end", BookEndTrigger::new);
         exitTriggerRegistry.register("bed_sleep", BedSleepTrigger::new);
         exitTriggerRegistry.register("item_offering", ItemOfferingTrigger::new);
         exitTriggerRegistry.register("break_block", BreakBlockTrigger::new);
@@ -210,7 +211,7 @@ public class BackroomsPlugin {
         // 7. Apply NMS dimension types and create worlds
         levelRegistry.setDimensionTypeHelper(new DimensionTypeHelper(plugin.getLogger()));
         levelRegistry.loadWorlds();
-        loadScanLevels();
+        loadMeshLevels();
 
         // 8. Start schedulers
         eventScheduler.start();
@@ -299,7 +300,7 @@ public class BackroomsPlugin {
         transitionManager.stop();
         if (gardenEffectListener != null) gardenEffectListener.stop();
         if (level56Listener != null) level56Listener.stop();
-        if (scanMeshes != null) scanMeshes.shutdown();
+        if (meshStore != null) meshStore.shutdown();
 
         for (BackroomsEvent event : eventRegistry.getAll()) {
             event.shutdown();
@@ -309,14 +310,15 @@ public class BackroomsPlugin {
         levelRegistry.unloadWorlds();
     }
 
-    private record PendingScan(BackroomsLevel level, String mesh, VoxelMesh.Options options) {}
+    /** A level whose world waits for its meshes; {@code decode} is voxelized with {@code options}. */
+    private record PendingLevel(BackroomsLevel level, List<String> meshes, String decode, VoxelMesh.Options options) {}
 
-    /** Fetch and decode each scan level's mesh in the background, then create its world. */
-    private void loadScanLevels() {
-        if (pendingScans.isEmpty()) return;
-        scanMeshes.warnDiskSpace(pendingScans.stream().map(PendingScan::mesh).toList());
-        for (PendingScan p : pendingScans) {
-            scanMeshes.load(p.mesh(), p.options()).whenComplete((mesh, err) -> Bukkit.getScheduler().runTask(plugin, () -> {
+    /** Fetch (and decode) each mesh level's meshes in the background, then create its world. */
+    private void loadMeshLevels() {
+        if (pendingLevels.isEmpty()) return;
+        meshStore.warnDiskSpace(pendingLevels.stream().flatMap(p -> p.meshes().stream()).distinct().toList());
+        for (PendingLevel p : pendingLevels) {
+            meshStore.fetch(p.meshes(), p.decode(), p.options()).whenComplete((v, err) -> Bukkit.getScheduler().runTask(plugin, () -> {
                 if (err != null) {
                     Throwable cause = err.getCause() != null ? err.getCause() : err;
                     plugin.getLogger().severe("Level " + p.level().getId() + " unavailable: " + cause.getMessage());
@@ -356,10 +358,10 @@ public class BackroomsPlugin {
             }
         }
 
-        // Scan levels download their meshes; the switch lives in config.yml scan_levels
-        if (scanMeshes != null) scanMeshes.shutdown();
-        scanMeshes = new ScanMeshes(plugin, cfg.getConfigurationSection("scan_levels"));
-        pendingScans.clear();
+        // Level meshes are downloaded, not shipped; the switch lives in config.yml meshes
+        if (meshStore != null) meshStore.shutdown();
+        meshStore = new MeshStore(plugin, cfg.getConfigurationSection("meshes"));
+        pendingLevels.clear();
 
         // Extract default levels from jar if needed, then load
         extractDefaultLevels();
@@ -407,7 +409,8 @@ public class BackroomsPlugin {
                 if (pagesObj instanceof List<?> pageList) {
                     for (Object p : pageList) pages.add(String.valueOf(p));
                 }
-                books.add(new Level64637ChunkGenerator.BookConfig.PreWrittenBook(title, author, pages));
+                String exitKey = map.containsKey("exit_key") ? String.valueOf(map.get("exit_key")) : null;
+                books.add(new Level64637ChunkGenerator.BookConfig.PreWrittenBook(title, author, pages, exitKey));
             }
         }
         return books;
@@ -571,23 +574,28 @@ public class BackroomsPlugin {
                 continue;
             }
 
-            // Scan levels need their mesh: disabled when it can't be had (downloads off and not
-            // on disk), otherwise their world waits until it's downloaded and decoded.
-            String scanMesh = "scan".equals(generatorId) ? levelCfg.getString("generator_config.mesh") : null;
-            if (scanMesh != null && !scanMeshes.usable(scanMesh)) {
+            // Levels built from meshes (meshes: [...] in their yml; generator_config.mesh is the
+            // one to voxelize) are disabled when a mesh can't be had (downloads off and not on
+            // disk); otherwise their world waits until the meshes are downloaded and decoded.
+            String decode = levelCfg.getString("generator_config.mesh");
+            List<String> needs = new java.util.ArrayList<>(levelCfg.getStringList("meshes"));
+            if (decode != null && !needs.contains(decode)) needs.add(decode);
+            String missing = needs.stream().filter(m -> !meshStore.usable(m)).findFirst().orElse(null);
+            if (missing != null) {
                 plugin.getLogger().info("Level " + levelId + " disabled: "
-                        + (scanMeshes.known(scanMesh) ? "scan_levels.download is false and its mesh isn't in meshes/"
-                                                      : "unknown scan mesh '" + scanMesh + "'"));
+                        + (meshStore.known(missing) ? "meshes.download is false and mesh '" + missing + "' isn't in meshes/"
+                                                    : "unknown mesh '" + missing + "'"));
                 continue;
             }
 
             ConfigDrivenLevel level = new ConfigDrivenLevel(this, levelId, generatorId, generatorRegistry, exitTriggerRegistry);
             level.loadFromConfig(levelCfg);
             levelRegistry.register(level);
-            if (scanMesh != null) {
+            if (!needs.isEmpty()) {
                 levelRegistry.defer(levelId);
-                pendingScans.add(new PendingScan(level, scanMesh,
-                        ScanChunkGenerator.options(levelCfg.getConfigurationSection("generator_config"))));
+                ConfigurationSection gcfg = levelCfg.getConfigurationSection("generator_config");
+                pendingLevels.add(new PendingLevel(level, needs, decode,
+                        gcfg != null ? ScanChunkGenerator.options(gcfg) : VoxelMesh.Options.column(16, 64, 0, 0)));
             }
 
             // Event config is now stored in ConfigDrivenLevel and applied per-tick

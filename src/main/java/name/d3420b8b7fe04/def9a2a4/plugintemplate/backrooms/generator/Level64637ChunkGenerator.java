@@ -658,7 +658,8 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
             double entryBookChance,
             List<PreWrittenBook> entryBooks
     ) {
-        public record PreWrittenBook(String title, String author, List<String> pages) {}
+        /** exitKey, when non-null, makes the last page clickable: "/backrooms read <exitKey>". */
+        public record PreWrittenBook(String title, String author, List<String> pages, String exitKey) {}
 
         public static final BookConfig DEFAULT = new BookConfig(
                 "abcdefghijklmnopqrstuvwxyz .,;:'-",

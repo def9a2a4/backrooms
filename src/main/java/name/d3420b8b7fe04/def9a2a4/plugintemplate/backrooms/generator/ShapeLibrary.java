@@ -34,7 +34,7 @@ import java.util.zip.GZIPInputStream;
  */
 public final class ShapeLibrary {
 
-    /** Every shape the test scene can place. Mesh shapes name a resource under /structures/testscene/. */
+    /** Every shape the test scene can place. Mesh shapes name a downloaded mesh (meshes.json). */
     public enum Shape {
         TEAPOT("teapot"), SUZANNE("suzanne"), BUNNY("bunny"), DRAGON("dragon"), LUCY("lucy"),
         CUBE(null), PYRAMID(null), CONE(null), SPHERE(null), TORUS(null),
@@ -123,17 +123,17 @@ public final class ShapeLibrary {
         }
     }
 
-    /** Load every mesh shape from the plugin jar. */
+    /** Load every mesh shape from the downloaded mesh files (MeshStore, names as in Shape). */
     public static ShapeLibrary load() {
         Map<Shape, Mesh> meshes = new EnumMap<>(Shape.class);
         for (Shape s : Shape.values()) {
             if (s.mesh == null) continue;
-            String res = "/structures/testscene/" + s.mesh + ".mesh.gz";
-            try (InputStream in = ShapeLibrary.class.getResourceAsStream(res)) {
-                if (in == null) throw new IOException("missing resource " + res);
+            java.nio.file.Path file = name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.mesh.MeshStore.file(s.mesh);
+            try (InputStream in = file == null ? null : java.nio.file.Files.newInputStream(file)) {
+                if (in == null) throw new IOException("mesh '" + s.mesh + "' isn't downloaded");
                 meshes.put(s, readMesh(in));
             } catch (IOException e) {
-                throw new UncheckedIOException("Level 418: failed to load " + res, e);
+                throw new UncheckedIOException("Level 418: failed to load " + s.mesh, e);
             }
         }
         return new ShapeLibrary(meshes);

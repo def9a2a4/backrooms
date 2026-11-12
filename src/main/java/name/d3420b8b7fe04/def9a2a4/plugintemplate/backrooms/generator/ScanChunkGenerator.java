@@ -1,6 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.scan.ScanMeshes;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.mesh.MeshStore;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -23,13 +23,13 @@ import java.util.logging.Logger;
  * its floor from {@code generator_config.props} (display cases, an offering pedestal, farm
  * plots, single blocks).
  *
- * <p>The mesh is downloaded and decoded by {@link ScanMeshes} before the level's world is created,
+ * <p>The mesh is downloaded and decoded by {@link MeshStore} before the level's world is created,
  * so {@link #configure} only picks it up by name.
  *
  * <pre>
  * generator: scan
  * generator_config:
- *   mesh: hintze_hall          # name in scans/meshes.json
+ *   mesh: hintze_hall          # name in meshes.json
  *   mode: shell                # shell (interiors) or column (terrain)
  *   scale: 16
  *   ground_y: -62              # world Y of the mesh's lowest point (shell) / ground reference (column)
@@ -69,7 +69,8 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
 
     /** The mesh options a level's generator_config describes (also used to preload the mesh). */
     public static VoxelMesh.Options options(ConfigurationSection c) {
-        return new VoxelMesh.Options(c.getDouble("scale", 16), c.getInt("ground_y", 64),
+        // scale (mesh_scale: Level 56's older key)
+        return new VoxelMesh.Options(c.getDouble("scale", c.getDouble("mesh_scale", 16)), c.getInt("ground_y", 64),
                 c.getInt("origin_x", 0), c.getInt("origin_z", 0), "shell".equals(c.getString("mode", "column")),
                 c.getDouble("thickness", 1.5), c.getDouble("island_depth", 6.25), c.getBoolean("surface_grid", true));
     }
@@ -107,7 +108,7 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
             Integer py = m.get("y") instanceof Number n ? n.intValue() : null;
             props.add(new Prop(type, x, z, py, block, m.get("book") == null ? null : String.valueOf(m.get("book"))));
         }
-        mesh = ScanMeshes.get(meshName);
+        mesh = MeshStore.get(meshName);
         if (mesh == null) throw new IllegalStateException("scan mesh '" + meshName + "' isn't loaded");
         VoxelMesh.PaletteEntry[] palette = mesh.palette();
         blocks = new BlockData[palette.length];

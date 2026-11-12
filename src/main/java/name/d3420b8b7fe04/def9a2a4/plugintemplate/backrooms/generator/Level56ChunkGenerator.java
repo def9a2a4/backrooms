@@ -1,6 +1,7 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.DebugLog;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.mesh.MeshStore;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -11,9 +12,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.generator.WorldInfo;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.Random;
 import java.util.logging.Logger;
 
@@ -26,12 +24,12 @@ import java.util.logging.Logger;
  * center stands the altar: a stepped polished diorite pyramid (5×5, 3×3) topped by a lodestone,
  * where the {@code item_offering} exit takes a porkchop.
  *
- * <p>Mesh: "Stonehenge England - VR" by Graphic solutions, CC BY 4.0 — see
- * structures/stonehenge.CREDITS.txt.
+ * <p>Mesh: "Stonehenge England - VR" by Graphic solutions, CC BY 4.0 (meshes/CREDITS.txt),
+ * downloaded and decoded by {@link MeshStore} before the world is created.
  */
 public class Level56ChunkGenerator extends BackroomsChunkGenerator {
 
-    private static final String MESH_RESOURCE = "/structures/stonehenge.mesh.gz";
+    private String meshName = "stonehenge";
     private static final Logger LOG = Logger.getLogger("Backrooms");
 
     private double scale = 16.0;
@@ -58,14 +56,15 @@ public class Level56ChunkGenerator extends BackroomsChunkGenerator {
             originX = config.getInt("origin_x", originX);
             originZ = config.getInt("origin_z", originZ);
         }
-        loaded = load();   // on the main thread, before any chunk generates
+        meshName = config != null ? config.getString("mesh", meshName) : meshName;
+        loaded = load();   // the mesh was downloaded and decoded before the world was created
     }
 
     private Loaded load() {
         long t0 = System.nanoTime();
-        try (InputStream in = Level56ChunkGenerator.class.getResourceAsStream(MESH_RESOURCE)) {
-            if (in == null) throw new IOException("missing resource " + MESH_RESOURCE);
-            VoxelMesh mesh = VoxelMesh.load(in, scale, groundY, originX, originZ);
+        {
+            VoxelMesh mesh = MeshStore.get(meshName);
+            if (mesh == null) throw new IllegalStateException("Level 56: mesh '" + meshName + "' isn't loaded");
             VoxelMesh.PaletteEntry[] palette = mesh.palette();
             BlockData[] blocks = new BlockData[palette.length];
             for (int i = 0; i < palette.length; i++) {
@@ -86,8 +85,6 @@ public class Level56ChunkGenerator extends BackroomsChunkGenerator {
             }
             int altarBaseY = (top == Integer.MIN_VALUE ? groundY : top) + 1;
             return new Loaded(mesh, blocks, altarBaseY);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Level 56: failed to load " + MESH_RESOURCE, e);
         }
     }
 

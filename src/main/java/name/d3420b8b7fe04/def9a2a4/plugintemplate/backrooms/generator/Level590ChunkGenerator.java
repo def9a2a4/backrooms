@@ -57,7 +57,7 @@ public class Level590ChunkGenerator extends BackroomsChunkGenerator {
         originZ = 0;
     }
 
-    /** Deterministic ~1/2000 roll for a wet-sponge defect at a world position. */
+    /** Deterministic 0.1% roll for a wet-sponge defect at a world position. */
     private static boolean isWetDefect(long seed, int worldX, int y, int worldZ) {
         long h = seed
                 ^ ((long) worldX * 341873128712L)
@@ -66,7 +66,7 @@ public class Level590ChunkGenerator extends BackroomsChunkGenerator {
         h ^= h >>> 33;
         h *= 0xFF51AFD7ED558CCDL;
         h ^= h >>> 33;
-        return Math.floorMod(h, 2000) == 0;
+        return Math.floorMod(h, 1000) == 0;
     }
 
     /** True if local cube coordinate (lx, ly, lz), each in [0, size), is solid. */
@@ -94,7 +94,7 @@ public class Level590ChunkGenerator extends BackroomsChunkGenerator {
                 int lz = Math.floorMod(baseZ + z - originZ, size);
                 for (int y = yMin; y < yMax; y++) {
                     if (isSponge(lx, y - baseY, lz)) {
-                        // ~1 in 2000 blocks is a defect: wet. Breaking it is the way
+                        // 0.1% of blocks are a defect: wet. Breaking one is the way
                         // out (break_block exit in level_590.yml). Hashed on world
                         // coordinates so defects don't repeat with the 243-block tile.
                         chunkData.setBlock(x, y, z,

@@ -1,5 +1,8 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
@@ -155,9 +158,11 @@ public class LobbyBookshelfListener implements Listener {
             meta.setTitle(config.titles().get(rng.nextInt(config.titles().size())));
             meta.setAuthor(config.authors().get(rng.nextInt(config.authors().size())));
             int pageCount = 1 + rng.nextInt(3);
+            List<String> pages = new ArrayList<>();
             for (int i = 0; i < pageCount; i++) {
-                meta.addPage(config.pages().get(rng.nextInt(config.pages().size())));
+                pages.add(config.pages().get(rng.nextInt(config.pages().size())));
             }
+            setPagesWithEnding(meta, pages);
             book.setItemMeta(meta);
         }
         return book;
@@ -169,11 +174,26 @@ public class LobbyBookshelfListener implements Listener {
         if (meta != null) {
             meta.setTitle(template.title());
             meta.setAuthor(template.author());
-            for (String page : template.pages()) {
-                meta.addPage(page);
-            }
+            setPagesWithEnding(meta, template.pages());
             book.setItemMeta(meta);
         }
         return book;
+    }
+
+    /**
+     * Writes the pages plus a final page whose closing line is clickable:
+     * finishing any Lobby book is the way down (book_end exit, key "lobby").
+     * Page turns on hand-held books are client-side, so the click is the only
+     * server-visible proof the reader reached the end.
+     */
+    private static void setPagesWithEnding(BookMeta meta, List<String> pages) {
+        List<Component> components = new ArrayList<>();
+        for (String page : pages) {
+            components.add(LegacyComponentSerializer.legacySection().deserialize(page));
+        }
+        components.add(LegacyComponentSerializer.legacySection()
+                .deserialize("§7the ink ends here.\n\n\n§0finish the book?")
+                .clickEvent(ClickEvent.runCommand("/backrooms read lobby")));
+        meta.pages(components);
     }
 }

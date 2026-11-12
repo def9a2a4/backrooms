@@ -2,6 +2,9 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator.BookConfig;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -182,7 +185,21 @@ public class LibraryBookshelfListener implements Listener {
         BookMeta meta = (BookMeta) book.getItemMeta();
         meta.setTitle(pw.title());
         meta.setAuthor(pw.author());
-        for (String page : pw.pages()) meta.addPage(page);
+        if (pw.exitKey() == null || pw.pages().isEmpty()) {
+            for (String page : pw.pages()) meta.addPage(page);
+        } else {
+            // Exit books: you must read to the end. The last page carries a
+            // clickEvent — pressing the closing question is the transition
+            // (page turns on hand-held books are client-side; see BookEndTrigger).
+            List<Component> pages = new ArrayList<>();
+            for (String page : pw.pages()) {
+                pages.add(LegacyComponentSerializer.legacySection().deserialize(page));
+            }
+            int last = pages.size() - 1;
+            pages.set(last, pages.get(last)
+                    .clickEvent(ClickEvent.runCommand("/backrooms read " + pw.exitKey())));
+            meta.pages(pages);
+        }
         book.setItemMeta(meta);
         return book;
     }

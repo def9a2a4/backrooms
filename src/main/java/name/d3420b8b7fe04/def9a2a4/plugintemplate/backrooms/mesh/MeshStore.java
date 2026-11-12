@@ -1,4 +1,4 @@
-package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.scan;
+package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.mesh;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -24,6 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,20 +33,25 @@ import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 /**
- * The meshes of the scan levels (1881, 1967, 1973, 9500): too big to ship in the jar, so they're
- * downloaded once from {@code scan_levels.base_url} (def9a2a4.github.io) into
- * {@code plugins/Backrooms/meshes/}, checked against the SHA-256 in the bundled manifest
- * (scans/meshes.json, written by scripts/scans/publish.py), and loaded off the main thread.
+ * Every level mesh (Stonehenge, the test scene's models, the scans) is kept out of the jar to keep
+ * it light: they're downloaded once from {@code meshes.base_url} (this repo's meshes/ folder on
+ * raw.githubusercontent.com) into {@code plugins/Backrooms/meshes/}, checked against the SHA-256
+ * in the bundled manifest (meshes.json, written by scripts/scans/publish.py), and decoded off the
+ * main thread. A level lists the meshes it needs ({@code meshes:} in its yml) and its world is
+ * created once they're in.
  *
- * <p>With {@code scan_levels.download: false} nothing is fetched, and scan levels whose mesh isn't
- * already on disk are disabled. Loaded meshes are kept by name for {@code ScanChunkGenerator}.
+ * <p>With {@code meshes.download: false} nothing is fetched, and levels whose meshes aren't
+ * already on disk are disabled. Files and decoded meshes are kept by name for the generators.
  */
-public final class ScanMeshes {
+public final class MeshStore {
 
     /** One manifest entry: the published file name (content-addressed) and its checksum. */
     public record Entry(String file, String sha256, long bytes) {}
 
+    public static final String DEFAULT_BASE_URL = "https://raw.githubusercontent.com/def9a2a4/backrooms/main/meshes/";
+
     private static final Map<String, VoxelMesh> LOADED = new ConcurrentHashMap<>();
+    private static final Map<String, Path> FILES = new ConcurrentHashMap<>();
 
     private final Logger log;
     private final Path dir;
@@ -53,20 +59,20 @@ public final class ScanMeshes {
     private final String baseUrl;
     private final Map<String, Entry> manifest = new LinkedHashMap<>();
     private final ExecutorService pool = Executors.newFixedThreadPool(2, r -> {
-        Thread t = new Thread(r, "Backrooms-scan-meshes");
+        Thread t = new Thread(r, "Backrooms-meshes");
         t.setDaemon(true);
         return t;
     });
 
-    public ScanMeshes(JavaPlugin plugin, @Nullable ConfigurationSection config) {
+    public MeshStore(JavaPlugin plugin, @Nullable ConfigurationSection config) {
         this.log = plugin.getLogger();
         this.dir = plugin.getDataFolder().toPath().resolve("meshes");
         this.download = config == null || config.getBoolean("download", true);
         String base = config == null ? null : config.getString("base_url");
-        if (base == null || base.isBlank()) base = "https://def9a2a4.github.io/backrooms/meshes/";
+        if (base == null || base.isBlank()) base = DEFAULT_BASE_URL;
         this.baseUrl = base.endsWith("/") ? base : base + "/";
-        try (InputStream in = plugin.getResource("scans/meshes.json")) {
-            if (in == null) throw new IOException("missing scans/meshes.json");
+        try (InputStream in = plugin.getResource("meshes.json")) {
+            if (in == null) throw new IOException("missing meshes.json");
             JsonObject root = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject();
             for (Map.Entry<String, com.google.gson.JsonElement> e : root.getAsJsonObject("meshes").entrySet()) {
                 JsonObject m = e.getValue().getAsJsonObject();
@@ -74,14 +80,20 @@ public final class ScanMeshes {
                         m.get("bytes").getAsLong()));
             }
         } catch (IOException | RuntimeException e) {
-            log.severe("Scan levels: could not read the mesh manifest: " + e.getMessage());
+            log.severe("Meshes: could not read the mesh manifest: " + e.getMessage());
         }
     }
 
-    /** The mesh a level's generator gets; null until {@link #load} finished. */
+    /** A decoded mesh; null until {@link #fetch} decoded it. */
     @Nullable
     public static VoxelMesh get(String name) {
         return LOADED.get(name);
+    }
+
+    /** A verified mesh file on disk; null until {@link #fetch} got it. */
+    @Nullable
+    public static Path file(String name) {
+        return FILES.get(name);
     }
 
     public boolean downloadsEnabled() {
@@ -131,31 +143,33 @@ public final class ScanMeshes {
             free = -1;
         }
         log.warning(String.format(
-                "Scan levels: downloading %d mesh%s (%.1f MB) from %s into %s. The worlds built from them are "
-                        + "16x-scale scans and can grow to several hundred MB each as players explore. "
-                        + "To skip the downloads and disable these levels, set scan_levels.download: false in config.yml.%s",
+                "Meshes: downloading %d level mesh%s (%.1f MB) from %s into %s. The scan levels built from them "
+                        + "(1881, 1967, 1973, 9500) are 16x-scale and can grow to several hundred MB each as players explore. "
+                        + "To skip the downloads and disable the levels that need them, set meshes.download: false in config.yml.%s",
                 count, count == 1 ? "" : "es", missing / 1048576.0, baseUrl, dir,
                 free >= 0 ? String.format(" (%.1f GB free)", free / 1073741824.0) : ""));
         if (free >= 0 && free < 2L * 1024 * 1024 * 1024) {
-            log.warning("Scan levels: less than 2 GB of disk space left; the scan worlds may fill it.");
+            log.warning("Meshes: less than 2 GB of disk space left; the scan worlds may fill it.");
         }
     }
 
-    /** Fetch if needed, verify, and decode the mesh off the main thread. */
-    public CompletableFuture<VoxelMesh> load(String name, VoxelMesh.Options options) {
-        VoxelMesh done = LOADED.get(name);
-        if (done != null) return CompletableFuture.completedFuture(done);
-        return CompletableFuture.supplyAsync(() -> {
+    /**
+     * Off the main thread: fetch (if needed) and verify every named mesh, then decode
+     * {@code decode} (if not null) with {@code options}, for generators that voxelize it.
+     */
+    public CompletableFuture<Void> fetch(List<String> names, @Nullable String decode, VoxelMesh.Options options) {
+        return CompletableFuture.runAsync(() -> {
             try {
-                Path file = ensure(name);
-                long t0 = System.nanoTime();
-                VoxelMesh mesh;
-                try (InputStream in = Files.newInputStream(file)) {
-                    mesh = VoxelMesh.load(in, options);
+                for (String name : names) {
+                    if (!FILES.containsKey(name)) FILES.put(name, ensure(name));
                 }
-                DebugLog.log(log, String.format("Scan mesh %s loaded in %.0f ms", name, (System.nanoTime() - t0) / 1e6));
-                LOADED.put(name, mesh);
-                return mesh;
+                if (decode != null && !LOADED.containsKey(decode)) {
+                    long t0 = System.nanoTime();
+                    try (InputStream in = Files.newInputStream(FILES.get(decode))) {
+                        LOADED.put(decode, VoxelMesh.load(in, options));
+                    }
+                    DebugLog.log(log, String.format("Mesh %s decoded in %.0f ms", decode, (System.nanoTime() - t0) / 1e6));
+                }
             } catch (IOException e) {
                 throw new java.io.UncheckedIOException(e);
             }
@@ -169,11 +183,11 @@ public final class ScanMeshes {
         if (Files.isRegularFile(file) && Files.size(file) == e.bytes() && sha256(file).equals(e.sha256())) {
             return file;
         }
-        if (!download) throw new IOException(file + " is missing or damaged and scan_levels.download is false");
+        if (!download) throw new IOException(file + " is missing or damaged and meshes.download is false");
         Files.createDirectories(dir);
         Path tmp = dir.resolve(e.file() + ".part");
         URI uri = URI.create(baseUrl + e.file());
-        log.info(String.format("Scan levels: downloading %s (%.1f MB)...", uri, e.bytes() / 1048576.0));
+        log.info(String.format("Meshes: downloading %s (%.1f MB)...", uri, e.bytes() / 1048576.0));
         long t0 = System.nanoTime();
         HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(Duration.ofSeconds(20)).build();
@@ -192,7 +206,7 @@ public final class ScanMeshes {
             throw ex;
         }
         Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        log.info(String.format("Scan levels: %s downloaded in %.1f s", e.file(), (System.nanoTime() - t0) / 1e9));
+        log.info(String.format("Meshes: %s downloaded in %.1f s", e.file(), (System.nanoTime() - t0) / 1e9));
         return file;
     }
 

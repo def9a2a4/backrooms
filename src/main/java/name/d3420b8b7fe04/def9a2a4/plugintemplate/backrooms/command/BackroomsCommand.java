@@ -81,12 +81,13 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
             case "regenerate" -> handleRegenerate(sender, args.length > 1 ? args[1] : null);
             case "list" -> handleList(sender, args.length > 1 ? args[1] : null);
             case "debug" -> handleDebug(sender, args.length > 1 ? args[1] : null);
-            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37", "skyblock_trigger_cascade", "advance" -> {
+            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37", "skyblock_trigger_cascade", "advance", "read" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("This command can only be used by players.");
                     yield true;
                 }
                 yield switch (args[0].toLowerCase()) {
+                    case "read" -> handleRead(player, args);
                     case "leave" -> handleLeave(player);
                     case "goto" -> {
                         if (!player.hasPermission("backrooms.admin") && !player.isOp()) {
@@ -192,6 +193,34 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         BackroomsPlayerState state = playerStateManager.getOrCreate(player);
         state.setReturnLocation(player.getLocation());
         transitionManager.enterBackrooms(player, state, levelId);
+        return true;
+    }
+
+    /**
+     * Hidden subcommand, run by the clickEvent on the last page of certain
+     * books (see BookEndTrigger). Finishing the book is the exit.
+     */
+    private boolean handleRead(Player player, String[] args) {
+        if (args.length < 2) return true;
+        String key = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+
+        BackroomsLevel level = levelRegistry.getByWorld(player.getWorld());
+        if (level == null) return true;
+
+        // The reader must actually have the book open in a hand
+        if (player.getInventory().getItemInMainHand().getType() != org.bukkit.Material.WRITTEN_BOOK
+                && player.getInventory().getItemInOffHand().getType() != org.bukkit.Material.WRITTEN_BOOK) {
+            return true;
+        }
+
+        for (var exit : level.getExitTriggers()) {
+            if (exit instanceof name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.impl.BookEndTrigger bookEnd
+                    && bookEnd.getKey().equalsIgnoreCase(key)) {
+                BackroomsPlayerState state = playerStateManager.getOrCreate(player);
+                transitionManager.performTransition(player, state, level, exit);
+                return true;
+            }
+        }
         return true;
     }
 
