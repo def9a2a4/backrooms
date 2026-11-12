@@ -181,14 +181,15 @@ public final class ScanMeshes {
         try {
             HttpResponse<Path> res = client.send(req, HttpResponse.BodyHandlers.ofFile(tmp));
             if (res.statusCode() != 200) throw new IOException("HTTP " + res.statusCode() + " for " + uri);
+            String sum = sha256(tmp);
+            if (!sum.equals(e.sha256())) throw new IOException("checksum mismatch for " + uri + " (got " + sum + ")");
         } catch (InterruptedException ex) {
+            Files.deleteIfExists(tmp);
             Thread.currentThread().interrupt();
             throw new IOException("interrupted downloading " + uri);
-        }
-        String sum = sha256(tmp);
-        if (!sum.equals(e.sha256())) {
-            Files.deleteIfExists(tmp);
-            throw new IOException("checksum mismatch for " + uri + " (got " + sum + ")");
+        } catch (IOException | RuntimeException ex) {
+            Files.deleteIfExists(tmp);   // never leave an error page or a partial file behind
+            throw ex;
         }
         Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         log.info(String.format("Scan levels: %s downloaded in %.1f s", e.file(), (System.nanoTime() - t0) / 1e9));

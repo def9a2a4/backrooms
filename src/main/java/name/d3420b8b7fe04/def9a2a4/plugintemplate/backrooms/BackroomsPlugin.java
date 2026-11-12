@@ -237,6 +237,8 @@ public class BackroomsPlugin {
         level56Listener = loadLevel56Listener();
         Bukkit.getPluginManager().registerEvents(level56Listener, plugin);
         level56Listener.start();
+        Bukkit.getPluginManager().registerEvents(
+                new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.ScanPropListener(plugin), plugin);
         File level9500 = new File(plugin.getDataFolder(), "levels/level_9500.yml");
         Bukkit.getPluginManager().registerEvents(new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level9500Listener(
                 levelRegistry, level9500.exists()

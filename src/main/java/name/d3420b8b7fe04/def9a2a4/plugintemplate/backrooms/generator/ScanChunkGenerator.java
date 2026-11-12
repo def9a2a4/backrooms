@@ -114,39 +114,90 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
         mesh.generateChunk(chunkX, chunkZ, chunkData.getMinHeight(), chunkData.getMaxHeight(),
                 (x, y, z, p) -> chunkData.setBlock(x, y, z, b[p]));
         for (Prop prop : props) {
-            if (prop.x >> 4 == chunkX && prop.z >> 4 == chunkZ) place(prop, chunkData);
+            if (prop.x >> 4 != chunkX || prop.z >> 4 != chunkZ) continue;
+            int bx = chunkX << 4, bz = chunkZ << 4;
+            place(prop, chunkData.getMinHeight(), chunkData.getMaxHeight(), new Blocks() {
+                public Material get(int x, int y, int z) { return chunkData.getType(x - bx, y, z - bz); }
+                public void set(int x, int y, int z, BlockData d) { chunkData.setBlock(x - bx, y, z - bz, d); }
+            });
         }
     }
 
-    /** First standable Y (solid below, 3 air above) scanning up from below the floor; MIN if none. */
-    private int floor(ChunkData d, int lx, int lz) {
-        int start = Math.max(d.getMinHeight() + 1, options.groundY() - 8);
-        for (int y = start; y < d.getMaxHeight() - 3; y++) {
-            if (d.getType(lx, y - 1, lz).isSolid() && d.getType(lx, y, lz).isAir()
-                    && d.getType(lx, y + 1, lz).isAir() && d.getType(lx, y + 2, lz).isAir()) {
-                return y;
+    // ── props ────────────────────────────────────────────────────────────────────────────────────
+    // Exits hang off some props (break an exhibit, place a candle), so props must come back for the
+    // next visitor: ScanPropListener rebuilds a breakable prop a few seconds after it's damaged. To
+    // rebuild in the same place, a prop's floor height comes from the scan alone (generated into a
+    // scratch column), never from what's in the world now.
+
+    /** World-coordinate block access, over a ChunkData or a live world. */
+    private interface Blocks {
+        Material get(int x, int y, int z);
+        void set(int x, int y, int z, BlockData d);
+    }
+
+    private final Map<Prop, Integer> floors = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** First standable Y (solid below, 3 air above) of the scan alone at the prop's anchor. */
+    private int floorY(Prop prop, int minY, int maxY) {
+        return floors.computeIfAbsent(prop, p -> {
+            int h = maxY - minY, lx = p.x & 15, lz = p.z & 15;
+            boolean[] solid = new boolean[h];
+            mesh.generateChunk(p.x >> 4, p.z >> 4, minY, maxY, (x, y, z, i) -> {
+                if (x == lx && z == lz) solid[y - minY] = true;
+            });
+            for (int y = Math.max(minY + 1, options.groundY() - 8); y < maxY - 3; y++) {
+                int k = y - minY;
+                if (solid[k - 1] && !solid[k] && !solid[k + 1] && !solid[k + 2]) return y;
             }
-        }
-        return Integer.MIN_VALUE;
+            return Integer.MIN_VALUE;
+        });
     }
 
-    private void place(Prop prop, ChunkData d) {
-        int lx = prop.x & 15, lz = prop.z & 15;
-        int y = floor(d, lx, lz);
+    /** Props that rebuild themselves when broken (farm plots and grass are meant to change). */
+    private static boolean restorable(Prop p) {
+        return switch (p.type) {
+            case "case", "pedestal", "block" -> true;
+            default -> false;
+        };
+    }
+
+    /** The restorable prop whose blocks include (x, y, z), or null. */
+    @Nullable
+    public Object propAt(World world, int x, int y, int z) {
+        for (Prop p : props) {
+            if (!restorable(p) || Math.abs(x - p.x) > 1 || Math.abs(z - p.z) > 1) continue;
+            int fy = floorY(p, world.getMinHeight(), world.getMaxHeight());
+            if (fy != Integer.MIN_VALUE && y >= fy - 1 && y <= fy + 2) return p;
+        }
+        return null;
+    }
+
+    /** Rebuild a prop returned by {@link #propAt} in a live world (main thread). */
+    public void restore(World world, Object prop) {
+        if (!(prop instanceof Prop p)) return;
+        place(p, world.getMinHeight(), world.getMaxHeight(), new Blocks() {
+            public Material get(int x, int y, int z) { return world.getBlockAt(x, y, z).getType(); }
+            public void set(int x, int y, int z, BlockData d) { world.getBlockAt(x, y, z).setBlockData(d, false); }
+        });
+    }
+
+    private void place(Prop prop, int minY, int maxY, Blocks w) {
+        int ax = prop.x, az = prop.z;
+        int y = floorY(prop, minY, maxY);
         if (y == Integer.MIN_VALUE) return;
+        BlockData andesite = Material.POLISHED_ANDESITE.createBlockData(), glass = Material.GLASS.createBlockData();
         switch (prop.type) {
             case "case" -> {
                 // display case: 3×3 polished andesite plinth, glass walls and lid, the exhibit inside
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {
-                        for (int k = y - 1; k >= d.getMinHeight() && !d.getType(lx + dx, k, lz + dz).isSolid(); k--) {
-                            d.setBlock(lx + dx, k, lz + dz, Material.POLISHED_ANDESITE);
+                        for (int k = y - 1; k >= minY && !w.get(ax + dx, k, az + dz).isSolid(); k--) {
+                            w.set(ax + dx, k, az + dz, andesite);
                         }
-                        d.setBlock(lx + dx, y, lz + dz, Material.POLISHED_ANDESITE);
+                        w.set(ax + dx, y, az + dz, andesite);
                         boolean center = dx == 0 && dz == 0;
-                        if (center && prop.block != null) d.setBlock(lx, y + 1, lz, prop.block);
-                        else d.setBlock(lx + dx, y + 1, lz + dz, Material.GLASS);
-                        d.setBlock(lx + dx, y + 2, lz + dz, Material.GLASS);
+                        w.set(ax + dx, y + 1, az + dz, center && prop.block != null ? prop.block : glass);
+                        w.set(ax + dx, y + 2, az + dz, glass);
                     }
                 }
             }
@@ -154,18 +205,17 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
                 // offering stone: a 3×3 step with the offering block in the middle of its top
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {
-                        d.setBlock(lx + dx, y, lz + dz, Material.POLISHED_TUFF);
+                        w.set(ax + dx, y, az + dz, Material.POLISHED_TUFF.createBlockData());
                     }
                 }
-                if (prop.block != null) d.setBlock(lx, y + 1, lz, prop.block);
-                else d.setBlock(lx, y + 1, lz, Material.CHISELED_TUFF);
+                w.set(ax, y + 1, az, prop.block != null ? prop.block : Material.CHISELED_TUFF.createBlockData());
             }
             case "plot" -> {
                 // farm plot: water in the middle, tilled soil around
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {
                         boolean center = dx == 0 && dz == 0;
-                        d.setBlock(lx + dx, y - 1, lz + dz, center ? Material.WATER : Material.FARMLAND);
+                        w.set(ax + dx, y - 1, az + dz, (center ? Material.WATER : Material.FARMLAND).createBlockData());
                     }
                 }
             }
@@ -173,13 +223,13 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
                 // wild grass on soil: breaking it drops wheat seeds (vanilla, 1 in 8)
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {
-                        d.setBlock(lx + dx, y - 1, lz + dz, Material.GRASS_BLOCK);
-                        d.setBlock(lx + dx, y, lz + dz, Material.SHORT_GRASS);
+                        w.set(ax + dx, y - 1, az + dz, Material.GRASS_BLOCK.createBlockData());
+                        w.set(ax + dx, y, az + dz, Material.SHORT_GRASS.createBlockData());
                     }
                 }
             }
             case "block" -> {
-                if (prop.block != null) d.setBlock(lx, y, lz, prop.block);
+                if (prop.block != null) w.set(ax, y, az, prop.block);
             }
             default -> LOG.warning("Unknown scan prop type: " + prop.type);
         }
