@@ -439,7 +439,12 @@ async function build() {
   const ext = [0, 1, 2].map((c) => (mesh.hi[c] - mesh.lo[c]) * scale);
   $('grid-row').style.display = mesh.grid ? '' : 'none';
   const finish = () => {
-    if (first || $('refit').checked) fit(ext);
+    const cam = first && params.get('cam')?.split(',').map(Number);
+    if (cam?.length === 6 && cam.every(Number.isFinite)) {
+      camera.position.set(cam[0], cam[1], cam[2]);
+      controls.target.set(cam[3], cam[4], cam[5]);
+      controls.update();
+    } else if (first || $('refit').checked) fit(ext);
     first = false;
     const q = new URLSearchParams(location.search);
     q.set('model', m.id);
@@ -558,6 +563,13 @@ function fit(ext) {
   camera.position.set(-r * 1.1, r * 0.7 + ext[1], r * 1.1);
   controls.update();
 }
+
+// the view goes in the URL too (cam=position,target), so a link shows the same spot
+controls.addEventListener('end', () => {
+  const q = new URLSearchParams(location.search);
+  q.set('cam', [...camera.position.toArray(), ...controls.target.toArray()].map((v) => v.toFixed(0)).join(','));
+  history.replaceState(null, '', `?${q}`);
+});
 
 $('build').onclick = build;
 $('cancel').onclick = () => { cancelJob(); stats.textContent = 'cancelled'; };

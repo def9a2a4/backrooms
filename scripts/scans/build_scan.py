@@ -110,7 +110,17 @@ MODELS = {
         # scanned as blown-out white
         # (clerestory and roof lights start ~14 m up; min_y is in meters above the lowest point)
         "glass": {"materials": ["lambert4SG"], "white_min": 165, "max_spread": 35, "min_y": 13.5,
-                  "outer": 1.5, "cell_fraction": 0.35},
+                  "outer": 1.5, "cell_fraction": 0.35,
+                  # the blue whale's pale spine hangs above min_y
+                  "keep": [[-6, 5, -6, 6, 15, 21]],
+                  # the ground-floor display cases (plinth top to frame top): the scan has little
+                  # more than their frames, and decimation stretches big panels between those
+                  "cases": [[-13.75, 1.15, -3.4, -10.2, 4.7, -1.65],
+                            [-13.0, 0.76, 15.6, -11.3, 3.35, 17.2],
+                            [10.2, 1.19, -9.5, 13.0, 3.0, -8.05],
+                            [11.75, 1.07, 9.45, 13.95, 3.9, 10.65],
+                            [11.65, 1.11, 15.6, 13.95, 3.6, 17.05],
+                            [11.95, 1.04, -3.55, 13.85, 3.4, -1.55]]},
     },
 }
 
@@ -179,8 +189,10 @@ def face_materials(cfg: dict):
 
 def glass_faces(cfg: dict, colors: np.ndarray, centroids: np.ndarray) -> np.ndarray | None:
     """Faces that are glass, per the model's `glass` rule: listed (transparent) glTF materials,
-    and pale grey-white texels above `min_y` meters or on the outer skin, which in a photo scan are
-    daylight through a window (elsewhere, pale faces are lit stone and displays)."""
+    pale grey-white texels above `min_y` meters or on the outer skin, which in a photo scan are
+    daylight through a window (elsewhere, pale faces are lit stone and displays), except inside
+    the `keep` boxes, and the skins of the `cases` boxes. Boxes are [x0, y0, z0, x1, y1, z1] in
+    meters, x/z from the model's center, y above its lowest point."""
     rule = cfg.get("glass")
     if not rule:
         return None
@@ -196,8 +208,20 @@ def glass_faces(cfg: dict, colors: np.ndarray, centroids: np.ndarray) -> np.ndar
             m = rule["outer"]
             high |= ((centroids[:, 0] < lo[0] + m) | (centroids[:, 0] > hi[0] - m)
                      | (centroids[:, 2] < lo[2] + m) | (centroids[:, 2] > hi[2] - m))
+        for x0, y0, z0, x1, y1, z1 in rule.get("keep", []):
+            high &= ~in_box(centroids, (x0, y0, z0), (x1, y1, z1))
         glass |= pale & high
+    # display cases: the faces on a case's sides and top (within `case_skin` m of them), so what's
+    # inside stays as it is
+    sk = rule.get("case_skin", 0.2)
+    for x0, y0, z0, x1, y1, z1 in rule.get("cases", []):
+        glass |= (in_box(centroids, (x0 - sk, y0, z0 - sk), (x1 + sk, y1 + sk, z1 + sk))
+                  & ~in_box(centroids, (x0 + sk, y0, z0 + sk), (x1 - sk, y1 - sk, z1 - sk)))
     return glass
+
+
+def in_box(p: np.ndarray, lo, hi) -> np.ndarray:
+    return np.all((p >= np.array(lo)) & (p < np.array(hi)), axis=1)
 
 
 def load_faces(name: str, cfg: dict):
@@ -286,8 +310,8 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
 
 # Matching knobs, per model in MODELS[...]["tune"] (pick them with the sliders in
 # scripts/voxel-preview, which redoes this matching live from the --cells-only export):
-#   blur      color blur passes over neighboring cells before matching (photogrammetry texture is
-#             noisy at block scale: baked shadows, dirt, sensor noise)
+#   blur      color blur radius in blocks before matching, 0..16 (photogrammetry texture is noisy
+#             at block scale: baked shadows, dirt, sensor noise)
 #   spread    contrast: how much of the palette's lightness range the scan's lightness is
 #             stretched over (lower = calmer, fewer jumps between light and dark blocks)
 #   pattern   weight of matching texture busyness (IronSource uses 0.5)
@@ -295,7 +319,7 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
 #   height    height shading before matching, -1..1: lighter higher up (negative: darker)
 #   slope     slope shading before matching, -1..1: flat ground lighter than steep faces
 #             (negative: the reverse). Both add up to +-SHADE/2 to OKLab lightness.
-TUNE_DEFAULTS = {"blur": 3, "spread": 0.8, "pattern": 0.5, "majority": 1, "height": 0.0, "slope": 0.0}
+TUNE_DEFAULTS = {"blur": 2, "spread": 0.8, "pattern": 0.5, "majority": 1, "height": 0.0, "slope": 0.0}
 SHADE = 0.2
 
 
@@ -326,7 +350,7 @@ def block_contrast(block: str) -> float:
 def match_cells(cen, area, lab, up, cfg, cell, forced=None, forced_mat=-1, forced_fraction=0.5,
                 export=None):
     """Blocks per grid cell instead of per face (style "full"): each cell's area-weighted mean
-    color, blurred over its neighbors `blur` times (photogrammetry texture is noisy at block
+    color, blurred over about `blur` cells around it (photogrammetry texture is noisy at block
     scale: baked shadows, dirt, sensor noise), the spread of lightness inside it as surface
     contrast, then assign() with the pattern term, then `majority` passes of a 3×3×3 majority
     filter that flips lone blocks to what surrounds them.
@@ -363,15 +387,8 @@ def match_cells(cen, area, lab, up, cfg, cell, forced=None, forced_mat=-1, force
                 j = np.clip(np.searchsorted(keys, nk), 0, len(keys) - 1)
                 ok &= keys[j] == nk
                 neighbors.append((j, ok, 1 / np.sqrt(dx * dx + dy * dy + dz * dz)))
-    for _ in range(blur):
-        # area-weighted: a neighbor counts by how much surface it holds, half as much as the cell
-        acc = mean * wsum[:, None]
-        tot = wsum.copy()
-        for j, ok, d in neighbors:
-            wt = 0.5 * d * wsum[j] * ok
-            acc += mean[j] * wt[:, None]
-            tot += wt
-        mean = acc / tot[:, None]
+    if blur > 0:
+        mean = blur_cells(np.stack([cx, cy, cz], axis=1), mean, wsum, blur)
     t = tune(cfg)
     if t["height"] or t["slope"]:
         # shading overlay: height across the model's full height, slope from how much the surface
@@ -391,6 +408,35 @@ def match_cells(cen, area, lab, up, cfg, cell, forced=None, forced_mat=-1, force
         mat[frac >= forced_fraction] = forced_mat
     centers = origin + (np.stack([cx, cy, cz], axis=1) + 0.5) * cell
     return (origin, dims, keys, mat.astype(np.uint8)), centers, mat, plab
+
+
+def blur_cells(c: np.ndarray, mean: np.ndarray, w: np.ndarray, radius: float) -> np.ndarray:
+    """Low-pass the cells' colors with a blur of about `radius` cells (the kernel's std): average
+    them into bricks of 2*radius cells (weighted by surface area), then give each cell the
+    trilinear mix of the 8 brick averages around it, each also weighted by how much surface it
+    holds. Cost doesn't grow with the radius. tune-worker.js blurCells() is the same."""
+    S = max(int(round(2 * radius)), 1)
+    b = c // S
+    bdims = b.max(axis=0) + 2
+    bkey = lambda q: (q[:, 0] * bdims[2] + q[:, 2]) * bdims[1] + q[:, 1]
+    keys, inv = np.unique(bkey(b), return_inverse=True)
+    bw = np.bincount(inv, weights=w)
+    bm = np.stack([np.bincount(inv, weights=w * mean[:, k]) for k in range(3)], axis=1) / bw[:, None]
+    u = (c + 0.5) / S - 0.5
+    i0 = np.floor(u).astype(np.int64)
+    f = u - i0
+    acc = np.zeros_like(mean)
+    tot = np.zeros(len(c))
+    for o in np.array([(x, y, z) for x in (0, 1) for y in (0, 1) for z in (0, 1)]):
+        q = i0 + o
+        t = np.prod(np.where(o == 1, f, 1 - f), axis=1)
+        k = bkey(q)
+        j = np.clip(np.searchsorted(keys, k), 0, len(keys) - 1)
+        ok = np.all(q >= 0, axis=1) & (keys[j] == k)
+        wt = t * bw[j] * ok
+        acc += bm[j] * wt[:, None]
+        tot += wt
+    return acc / tot[:, None]
 
 
 def export_cells(path, cfg, cell, origin, dims, keys, mean, contrast, up, wsum, frac,
@@ -610,7 +656,7 @@ def main():
                     help="palette: the model's own block list, per face; full: IronSource's full "
                          "block list matched per grid cell with light smoothing and a texture "
                          "contrast term")
-    ap.add_argument("--blur", type=int, help="override the model's tune.blur (see TUNE_DEFAULTS)")
+    ap.add_argument("--blur", type=float, help="override the model's tune.blur (see TUNE_DEFAULTS)")
     ap.add_argument("--spread", type=float, help="override tune.spread (contrast)")
     ap.add_argument("--pattern", type=float, help="override tune.pattern (texture matching)")
     ap.add_argument("--majority", type=int, help="override tune.majority")

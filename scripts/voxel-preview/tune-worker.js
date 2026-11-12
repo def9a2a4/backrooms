@@ -1,5 +1,5 @@
 // Live block matching for the preview's tuning sliders: a port of build_scan.py's
-// match_cells()/assign() (blur passes, OKLab nearest block with the texture-contrast term,
+// match_cells()/assign() (blur, OKLab nearest block with the texture-contrast term,
 // majority filter, glass), run on the per-cell export (build_scan.py --cells-only). Keep the two
 // in step: the sliders pick MODELS[...]["tune"] for the real build.
 //
@@ -84,27 +84,60 @@ function neighborsOf(i, out) {
   }
 }
 
+/** build_scan.py blur_cells(): low-pass the colors with a blur of about `radius` cells, through
+ *  bricks of 2*radius cells and a trilinear mix of the 8 brick averages around each cell (each
+ *  weighted by the surface it holds). */
+function blurCells(mL, mA, mB, radius) {
+  const { n, h, keys, w } = C;
+  const [DX, DY, DZ] = h.dims;
+  const S = Math.max(Math.round(2 * radius), 1);
+  const BY = Math.floor((DY - 1) / S) + 2, BZ = Math.floor((DZ - 1) / S) + 2;
+  const bkey = (x, y, z) => (x * BZ + z) * BY + y;
+  const bricks = new Map();     // key -> index into bw/bL/bA/bB
+  const bw = [], bL = [], bA = [], bB = [];
+  const cx = new Int32Array(n), cy = new Int32Array(n), cz = new Int32Array(n);
+  for (let i = 0; i < n; i++) {
+    const k = keys[i];
+    cy[i] = k % DY; cz[i] = Math.floor(k / DY) % DZ; cx[i] = Math.floor(k / (DY * DZ));
+    const bk = bkey(Math.floor(cx[i] / S), Math.floor(cy[i] / S), Math.floor(cz[i] / S));
+    let j = bricks.get(bk);
+    if (j === undefined) { j = bw.length; bricks.set(bk, j); bw.push(0); bL.push(0); bA.push(0); bB.push(0); }
+    bw[j] += w[i]; bL[j] += w[i] * mL[i]; bA[j] += w[i] * mA[i]; bB[j] += w[i] * mB[i];
+  }
+  for (let j = 0; j < bw.length; j++) { bL[j] /= bw[j]; bA[j] /= bw[j]; bB[j] /= bw[j]; }
+  const oL = new Float32Array(n), oA = new Float32Array(n), oB = new Float32Array(n);
+  const u0 = [0, 0, 0], f = [0, 0, 0];
+  for (let i = 0; i < n; i++) {
+    if ((i & 0x3ffff) === 0) progress('blur', i / n);
+    const c = [cx[i], cy[i], cz[i]];
+    for (let a = 0; a < 3; a++) {
+      const u = (c[a] + 0.5) / S - 0.5;
+      u0[a] = Math.floor(u); f[a] = u - u0[a];
+    }
+    let aL = 0, aA = 0, aB = 0, tot = 0;
+    for (let ox = 0; ox < 2; ox++) for (let oy = 0; oy < 2; oy++) for (let oz = 0; oz < 2; oz++) {
+      const x = u0[0] + ox, y = u0[1] + oy, z = u0[2] + oz;
+      if (x < 0 || y < 0 || z < 0) continue;
+      const j = bricks.get(bkey(x, y, z));
+      if (j === undefined) continue;
+      const t = (ox ? f[0] : 1 - f[0]) * (oy ? f[1] : 1 - f[1]) * (oz ? f[2] : 1 - f[2]) * bw[j];
+      aL += t * bL[j]; aA += t * bA[j]; aB += t * bB[j]; tot += t;
+    }
+    oL[i] = aL / tot; oA[i] = aA / tot; oB[i] = aB / tot;
+  }
+  return [oL, oA, oB];
+}
+
 function run(t) {
   const { n, h, L, A, B, con, up, w, frac } = C;
   let mL = Float32Array.from(L), mA = Float32Array.from(A), mB = Float32Array.from(B);
   const nb = new Int32Array(26);
-  const steps = t.blur + 1 + t.majority;
+  const steps = (t.blur > 0 ? 1 : 0) + 1 + t.majority;
   let step = 0;
-  for (let pass = 0; pass < t.blur; pass++, step++) {
-    const oL = new Float32Array(n), oA = new Float32Array(n), oB = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      if ((i & 0x3ffff) === 0) progress('blur', (step + i / n) / steps);
-      neighborsOf(i, nb);
-      let tot = w[i], aL = mL[i] * tot, aA = mA[i] * tot, aB = mB[i] * tot;
-      for (let o = 0; o < 26; o++) {
-        const j = nb[o];
-        if (j < 0) continue;
-        const wt = 0.5 * OFFS[o][3] * w[j];
-        aL += mL[j] * wt; aA += mA[j] * wt; aB += mB[j] * wt; tot += wt;
-      }
-      oL[i] = aL / tot; oA[i] = aA / tot; oB[i] = aB / tot;
-    }
-    mL = oL; mA = oA; mB = oB;
+  if (t.blur > 0) {
+    progress('blur', 0);
+    [mL, mA, mB] = blurCells(mL, mA, mB, t.blur);
+    step++;
   }
   // shading overlay (build_scan.py SHADE): height across the model, slope from how much the
   // surface faces up
