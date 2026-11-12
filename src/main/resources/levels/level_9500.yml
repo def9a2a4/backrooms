@@ -19,15 +19,16 @@ generator_config:
   scale: 16
   ground_y: -30
   island_depth: 1.5
-  spawn: {x: -40, z: -72}
+  spawn: {x: 5, y: -32, z: 300, yaw: 180}     # in the deepest enclosure, facing north
   props:
-    - {type: pedestal, x: 8, z: -88, block: chiseled_tuff}
-    - {type: plot, x: -56, z: -72}
-    - {type: plot, x: -24, z: -56}
-    - {type: grass, x: -40, z: -88}
-    - {type: grass, x: -8, z: -72}
-    - {type: grass, x: -72, z: -56}
-    - {type: block, x: -24, z: -88, block: crafting_table}
+    # y: -45 = on the first ground above -45 (the enclosure floor, not the hill above)
+    - {type: pedestal, x: -24, y: -45, z: 296, block: chiseled_tuff}
+    - {type: plot, x: 24, y: -45, z: 296}
+    - {type: plot, x: -8, y: -45, z: 264}
+    - {type: grass, x: 8, y: -45, z: 312}
+    - {type: grass, x: -8, y: -45, z: 312}
+    - {type: grass, x: -24, y: -45, z: 280}
+    - {type: block, x: 8, y: -45, z: 264, block: crafting_table}
 
 # What the first farm gives back, named (see Level9500Listener). Any bread is a valid offering.
 einkorn:

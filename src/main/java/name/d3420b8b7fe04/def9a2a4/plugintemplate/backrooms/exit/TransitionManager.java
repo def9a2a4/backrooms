@@ -214,8 +214,13 @@ public class TransitionManager {
         }
 
         if (radius == 0) {
-            // the generator's fixed spawn column (0, 0 for most levels)
-            return SpawnFinder.findSurfaceSpawn(targetWorld, fixedSpawn.getBlockX(), fixedSpawn.getBlockZ(), spawnY);
+            // the generator's fixed spawn column (0, 0 for most levels), facing where it faces
+            Location spawn = SpawnFinder.findSurfaceSpawn(targetWorld, fixedSpawn.getBlockX(), fixedSpawn.getBlockZ(), spawnY);
+            if (gen != null) {
+                Location fixed = gen.getFixedSpawnLocation(targetWorld, new java.util.Random());
+                if (fixed != null) spawn.setRotation(fixed.getYaw(), fixed.getPitch());
+            }
+            return spawn;
         }
         return SpawnFinder.findRandomSpawn(targetWorld, radius, spawnY, fixedSpawn);
     }

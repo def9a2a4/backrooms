@@ -36,7 +36,7 @@ import java.util.logging.Logger;
  *   thickness: 1.5             # shell: wall half-thickness, blocks
  *   island_depth: 1.5          # column: underside depth at the center, blocks per unit scale
  *   spawn: {x: -40, z: -120}   # spawn column; Y is found by scanning up from below the floor,
- *                              # or from y if given (to pick an upper floor)
+ *                              # or from y if given (to pick an upper floor); yaw: facing
  *   props:
  *     - {type: case, x: -88, z: 40, block: lodestone}
  *     - {type: block, x: 184, y: 67, z: -40, block: "candle[lit=true]"}   # y: on the floor at/above y
@@ -57,6 +57,7 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
     private VoxelMesh.Options options = VoxelMesh.Options.column(16, 64, 0, 0);
     private int spawnX, spawnZ;
     private Integer spawnY;            // optional: search for standing room from here up
+    private float spawnYaw;            // 0 south, 90 west, 180 north, -90 east
     private @Nullable String placardFile;
     private final List<Prop> props = new ArrayList<>();
     private volatile VoxelMesh mesh;
@@ -83,6 +84,7 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
             spawnX = spawn.getInt("x");
             spawnZ = spawn.getInt("z");
             spawnY = spawn.contains("y") ? spawn.getInt("y") : null;
+            spawnYaw = (float) spawn.getDouble("yaw", 0);
         }
         placardFile = config.getString("placards");
         props.clear();
@@ -276,6 +278,7 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, spawnX + 0.5, spawnY != null ? spawnY : options.groundY() + 1, spawnZ + 0.5);
+        return new Location(world, spawnX + 0.5, spawnY != null ? spawnY : options.groundY() + 1, spawnZ + 0.5,
+                spawnYaw, 0);
     }
 }
