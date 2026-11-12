@@ -28,7 +28,10 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitEventListen
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTriggerRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.impl.*;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.scan.ScanMeshes;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.ScanChunkGenerator;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.VoxelMesh;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.ConfigDrivenLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.DimensionTypeHelper;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
@@ -82,6 +85,8 @@ public class BackroomsPlugin {
     private BackroomsCommand command;
     private Level1GardenEffectListener gardenEffectListener;
     private name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level56Listener level56Listener;
+    private ScanMeshes scanMeshes;
+    private final List<PendingScan> pendingScans = new java.util.ArrayList<>();
 
     public BackroomsPlugin(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -204,6 +209,7 @@ public class BackroomsPlugin {
         // 7. Apply NMS dimension types and create worlds
         levelRegistry.setDimensionTypeHelper(new DimensionTypeHelper(plugin.getLogger()));
         levelRegistry.loadWorlds();
+        loadScanLevels();
 
         // 8. Start schedulers
         eventScheduler.start();
@@ -231,6 +237,10 @@ public class BackroomsPlugin {
         level56Listener = loadLevel56Listener();
         Bukkit.getPluginManager().registerEvents(level56Listener, plugin);
         level56Listener.start();
+        File level9500 = new File(plugin.getDataFolder(), "levels/level_9500.yml");
+        Bukkit.getPluginManager().registerEvents(new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level9500Listener(
+                levelRegistry, level9500.exists()
+                        ? YamlConfiguration.loadConfiguration(level9500).getConfigurationSection("einkorn") : null), plugin);
         Bukkit.getPluginManager().registerEvents(new VanillaAdvancementBlocker(plugin, levelRegistry), plugin);
 
         // 8b. Register PoweredCommandBlockTrigger instances as Bukkit listeners
@@ -286,6 +296,7 @@ public class BackroomsPlugin {
         transitionManager.stop();
         if (gardenEffectListener != null) gardenEffectListener.stop();
         if (level56Listener != null) level56Listener.stop();
+        if (scanMeshes != null) scanMeshes.shutdown();
 
         for (BackroomsEvent event : eventRegistry.getAll()) {
             event.shutdown();
@@ -293,6 +304,25 @@ public class BackroomsPlugin {
 
         playerStateManager.saveAll();
         levelRegistry.unloadWorlds();
+    }
+
+    private record PendingScan(BackroomsLevel level, String mesh, VoxelMesh.Options options) {}
+
+    /** Fetch and decode each scan level's mesh in the background, then create its world. */
+    private void loadScanLevels() {
+        if (pendingScans.isEmpty()) return;
+        scanMeshes.warnDiskSpace(pendingScans.stream().map(PendingScan::mesh).toList());
+        for (PendingScan p : pendingScans) {
+            scanMeshes.load(p.mesh(), p.options()).whenComplete((mesh, err) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                if (err != null) {
+                    Throwable cause = err.getCause() != null ? err.getCause() : err;
+                    plugin.getLogger().severe("Level " + p.level().getId() + " unavailable: " + cause.getMessage());
+                    return;
+                }
+                levelRegistry.loadWorld(p.level());
+                plugin.getLogger().info("Level " + p.level().getId() + " ready.");
+            }));
+        }
     }
 
     private void loadConfig() {
@@ -322,6 +352,11 @@ public class BackroomsPlugin {
                 trigger.setEnabledWorlds(enabledWorlds);
             }
         }
+
+        // Scan levels download their meshes; the switch lives in config.yml scan_levels
+        if (scanMeshes != null) scanMeshes.shutdown();
+        scanMeshes = new ScanMeshes(plugin, cfg.getConfigurationSection("scan_levels"));
+        pendingScans.clear();
 
         // Extract default levels from jar if needed, then load
         extractDefaultLevels();
@@ -399,7 +434,7 @@ public class BackroomsPlugin {
                 ? YamlConfiguration.loadConfiguration(levelFile).getConfigurationSection("giant_pig")
                 : null;
         var config = new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level56Listener.PigConfig(
-                pig != null ? pig.getDouble("scale", 16.0) : 16.0,
+                pig != null ? pig.getDouble("scale", 5.33) : 5.33,
                 pig != null ? pig.getDouble("health", 200.0) : 200.0,
                 pig != null ? pig.getInt("max_pigs", 8) : 8,
                 pig != null ? pig.getDouble("leash_radius", 24.0) : 24.0,
@@ -531,9 +566,24 @@ public class BackroomsPlugin {
                 continue;
             }
 
+            // Scan levels need their mesh: disabled when it can't be had (downloads off and not
+            // on disk), otherwise their world waits until it's downloaded and decoded.
+            String scanMesh = "scan".equals(generatorId) ? levelCfg.getString("generator_config.mesh") : null;
+            if (scanMesh != null && !scanMeshes.usable(scanMesh)) {
+                plugin.getLogger().info("Level " + levelId + " disabled: "
+                        + (scanMeshes.known(scanMesh) ? "scan_levels.download is false and its mesh isn't in meshes/"
+                                                      : "unknown scan mesh '" + scanMesh + "'"));
+                continue;
+            }
+
             ConfigDrivenLevel level = new ConfigDrivenLevel(this, levelId, generatorId, generatorRegistry, exitTriggerRegistry);
             level.loadFromConfig(levelCfg);
             levelRegistry.register(level);
+            if (scanMesh != null) {
+                levelRegistry.defer(levelId);
+                pendingScans.add(new PendingScan(level, scanMesh,
+                        ScanChunkGenerator.options(levelCfg.getConfigurationSection("generator_config"))));
+            }
 
             // Event config is now stored in ConfigDrivenLevel and applied per-tick
             // by EventScheduler, so each level gets the right config at trigger time.

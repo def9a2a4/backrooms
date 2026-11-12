@@ -20,6 +20,7 @@ public class LevelRegistry {
     private final Map<String, BackroomsLevel> levels = new LinkedHashMap<>();
     private final Map<World, BackroomsLevel> worldToLevel = new HashMap<>();
     private final Map<String, World> levelToWorld = new HashMap<>();
+    private final Set<String> deferred = new HashSet<>();
     private final Logger logger;
     private DimensionTypeHelper dimensionTypeHelper;
 
@@ -63,8 +64,21 @@ public class LevelRegistry {
         return worldToLevel.containsKey(world);
     }
 
+    /** Levels whose world waits for something (a scan mesh) and is created later with {@link #loadWorld}. */
+    public void defer(String levelId) {
+        deferred.add(levelId);
+    }
+
     public void loadWorlds() {
         for (BackroomsLevel level : levels.values()) {
+            if (!deferred.contains(level.getId())) loadWorld(level);
+        }
+    }
+
+    /** Create (or load) one level's world. Main thread only. */
+    public void loadWorld(BackroomsLevel level) {
+        {
+            deferred.remove(level.getId());
             String worldName = worldNameFor(level);
 
             WorldCreator creator = new WorldCreator(worldName);

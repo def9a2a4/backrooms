@@ -43,6 +43,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
     private String dimensionType;
     private @Nullable NamespacedKey biomeKey;
     private int spawnRadius = 300;
+    private int randomTickSpeed = -1;   // random_tick_speed: crops grow faster (Level 9500); -1 = vanilla
     private @Nullable ConfigurationSection generatorConfig;
     private final Map<String, ConfigurationSection> eventConfigs = new HashMap<>();
     private final List<ExitTrigger> exitTriggers = new ArrayList<>();
@@ -107,6 +108,7 @@ public class ConfigDrivenLevel extends AbstractLevel {
         this.fixedTime = section.getLong("fixed_time", -1);
         this.dimensionType = section.getString("dimension_type", "dark");
         this.spawnRadius = section.getInt("spawn_radius", 300);
+        this.randomTickSpeed = section.getInt("random_tick_speed", -1);
         this.generatorConfig = section.getConfigurationSection("generator_config");
 
         String biomeStr = section.getString("biome", null);
@@ -189,6 +191,9 @@ public class ConfigDrivenLevel extends AbstractLevel {
     @Override
     public void configureWorld(World world) {
         super.configureWorld(world);
+        if (randomTickSpeed >= 0) {
+            world.setGameRule(org.bukkit.GameRules.RANDOM_TICK_SPEED, randomTickSpeed);
+        }
         if (fixedTime >= 0) {
             try {
                 world.setTime(fixedTime);
