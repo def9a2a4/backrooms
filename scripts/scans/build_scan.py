@@ -106,6 +106,9 @@ MODELS = {
                     "dark_oak_planks", "bone_block"],
         "penalty": {"calcite": 0.01},
         "full": {"lists": ["stone"]},
+        # picked in the voxel preview
+        "tune": {"blur": 0, "spread": 1.6, "pattern": 0.5, "majority": 0, "height": 0.65,
+                 "slope": -0.05, "brightness": -0.2},
         # the side galleries' glazing is a transparent material; the roof lights and windows are
         # scanned as blown-out white
         # (clerestory and roof lights start ~14 m up; min_y is in meters above the lowest point)
