@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Nearest alpha-era block for a skin pixel. Wool covers the saturated colours;
  * the earthy blocks (planks, dirt, sand, bricks, clay) cover skin tones, hair
  * and leather far better than wool alone. Colours are each block's average
- * texture colour. Matching uses the "redmean" weighted RGB distance.
+ * texture colour. Matching is nearest in CIELAB.
  */
 public final class SkinPalette {
 
