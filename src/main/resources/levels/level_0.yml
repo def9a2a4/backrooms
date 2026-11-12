@@ -9,9 +9,9 @@ biome: "backrooms:lobby"
 enter_message: "§7§kxx§r §7You have entered the §fBack§kr§rooms§7. §7§kxx"
 
 generator_config:
-  hall_threshold: 0.55          # tall-hall noise cutoff; higher = rarer halls
-  hall_structure_chance: 30     # percent of roomy all-hall chunks given a Level 101 structure
-  pit_chunk_chance: 0.8         # percent of chunks with a bottomless pit
+  room_cell_chance: 35          # percent of 128-block cells with a sunken room
+  pit_cell_chance: 4            # percent of 128-block cells with a stairwell pit to the void
+  house_chunk_chance: 45        # percent of eligible chunks in a house room that get a Level 101 structure
 
 events:
   - ambient_sound
@@ -174,6 +174,7 @@ event_config:
     cycles: 4
     toggle_delay_ticks: 5
     light_y: 69
+    light_y_min: 41             # pendant lights hang as low as this in deep sunken rooms
     light_spacing: 4
     light_material: OCHRE_FROGLIGHT
   blackout:
@@ -183,6 +184,7 @@ event_config:
     radius: 30
     duration_seconds: 15
     light_y: 69
+    light_y_min: 41             # pendant lights hang as low as this in deep sunken rooms
     light_spacing: 4
     light_material: OCHRE_FROGLIGHT
   footstep_echo:

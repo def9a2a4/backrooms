@@ -301,7 +301,8 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
     pl = (side + top) / 2
     pmean, pstd = pl.mean(axis=0), pl.std(axis=0)
     q = np.empty_like(lab)
-    q[:, 0] = (lab[:, 0] - fmean[0]) / max(fstd[0], 1e-6) * pstd[0] * tune(cfg)["spread"] + pmean[0]
+    q[:, 0] = ((lab[:, 0] - fmean[0]) / max(fstd[0], 1e-6) * pstd[0] * tune(cfg)["spread"] + pmean[0]
+               + tune(cfg)["brightness"] * BRIGHT)
     cast = cfg.get("cast", 0.0)      # 1 = remove the scan's average tint entirely (to neutral)
     q[:, 1:] = (lab[:, 1:] - fmean[1:]) * cfg.get("chroma", 1.0) + fmean[1:] * (1 - cast)
     # Grey scans: color noise around neutral (~0.02) outweighs the differences between grey
@@ -338,8 +339,11 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
 #   height    height shading before matching, -1..1: lighter higher up (negative: darker)
 #   slope     slope shading before matching, -1..1: flat ground lighter than steep faces
 #             (negative: the reverse). Both add up to +-SHADE/2 to OKLab lightness.
-TUNE_DEFAULTS = {"blur": 2, "spread": 0.8, "pattern": 0.5, "majority": 1, "height": 0.0, "slope": 0.0}
+#   brightness  -1..1: lightness shift after the contrast mapping, up to +-BRIGHT (OKLab L)
+TUNE_DEFAULTS = {"blur": 2, "spread": 0.8, "pattern": 0.5, "majority": 1, "height": 0.0, "slope": 0.0,
+                 "brightness": 0.0}
 SHADE = 0.2
+BRIGHT = 0.15
 
 
 def tune(cfg: dict) -> dict:
@@ -686,6 +690,7 @@ def main():
     ap.add_argument("--majority", type=int, help="override tune.majority")
     ap.add_argument("--height", type=float, help="override tune.height (height shading)")
     ap.add_argument("--slope", type=float, help="override tune.slope (slope shading)")
+    ap.add_argument("--brightness", type=float, help="override tune.brightness")
     ap.add_argument("--cells-only", action="store_true",
                     help="--style full: only export .temp/cells/<model>.cells.gz for the preview's "
                          "tuning sliders (no decimation, no mesh)")

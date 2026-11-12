@@ -19,13 +19,21 @@ import static name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Pat
 /**
  * Level 0, the Lobby. Needs a world of y -64..320 (dimension type
  * backrooms:lobby, NORMAL environment): 4-high rooms at y65-68 over a floor
- * slab reaching down to the void, so pits can fall all the way through.
+ * slab reaching down to the void.
  *
- * Floors, ceilings and walls each take their material from an independent
- * {@link PatchPalette}; near spawn everything stays classic yellow terracotta.
- * Rarer features: damp mud / soul sand under carpet, tall halls (10-32 high,
- * lit by pendant lights) that sometimes hold a Level 101 structure on a patch
- * of grass, and bottomless pits ringed by a spiral staircase that just stops.
+ * Passes, in order:
+ * <ol>
+ *   <li>Surfaces: floors, ceilings and walls each take their material from an
+ *   independent, very large {@link PatchPalette}. Around spawn everything is
+ *   classic yellow terracotta, with no carpet.</li>
+ *   <li>Furnishing per 48-block zone ({@link Level0Zones}): the classic random
+ *   walls and pillars, or cubicle farms, cafeterias, offices, corridors.</li>
+ *   <li>Set pieces per 128-block macro cell ({@link Level0Features}): sunken
+ *   rooms (some with Level 101 houses) and huge stairwell pits to the void.</li>
+ *   <li>Carpet, sometimes with damp mud / soul sand underneath.</li>
+ *   <li>Lights on a 4-block grid: flush in the ceiling at y69, or hung on
+ *   chains lower down in some sunken rooms (light events scan for both).</li>
+ * </ol>
  */
 public class Level0ChunkGenerator extends BackroomsChunkGenerator {
 
@@ -34,7 +42,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private static final int WORLD_MIN_Y = -64;
-    // Floor top sits at Level 101's ground height so its structures drop into the halls unchanged.
+    // Floor top sits at Level 101's ground height (its structures are shifted onto sunken floors).
     private static final int FLOOR_TOP_Y = Level101ChunkGenerator.GROUND_Y;
     public static final int AIR_MIN_Y = FLOOR_TOP_Y + 1;
     private static final int AIR_MAX_Y = AIR_MIN_Y + 4;
@@ -49,8 +57,6 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
     private static final double REGION_SCALE = 1.0 / 64.0;
     private static final double CARPET_SCALE = 1.0 / 340.0;
     private static final double DAMP_SCALE = 1.0 / 28.0;
-    private static final double HALL_SCALE = 1.0 / 200.0;
-    private static final double HALL_HEIGHT_SCALE = 1.0 / 90.0;
     private static final double CLASSIC_EDGE_SCALE = 1.0 / 60.0;
     private static final double NOISE_OFFSET = 100000.0;
     private static final double SPAWN_PLAIN_RADIUS = 200.0;
@@ -58,28 +64,11 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
     private static final double DAMP_MUD = 0.45;
     private static final double DAMP_SOUL_SAND = 0.75;
 
-    private static final int HALL_MIN_HEIGHT = 10;
-    private static final int HALL_MAX_HEIGHT = 32;
-    // Two-story house roof is base+8; leave headroom.
-    private static final int HALL_STRUCTURE_MIN_HEIGHT = 12;
-
     private static final int REGION_EMPTY = 0;
     private static final int REGION_WALLS = 1;
     private static final int REGION_PILLARS = 2;
 
-    // Pit: 5x5 shaft centered in the chunk, middle 2x2 cells cleared around it.
-    private static final int PIT_MIN = 6;
-    private static final int PIT_MAX = 10;
-    private static final int PIT_CLEAR_MIN = 4;
-    private static final int PIT_CLEAR_MAX = 11;
-    private static final Material[][] PIT_STAIR_SETS = {
-            { Material.SMOOTH_SANDSTONE, Material.SMOOTH_SANDSTONE_STAIRS },
-            { Material.SMOOTH_RED_SANDSTONE, Material.SMOOTH_RED_SANDSTONE_STAIRS },
-            { Material.OAK_PLANKS, Material.OAK_STAIRS },
-            { Material.POLISHED_ANDESITE, Material.POLISHED_ANDESITE_STAIRS },
-    };
-
-    private static final PatchPalette FLOOR_PALETTE = new PatchPalette(0xF100L, 64,
+    private static final PatchPalette FLOOR_PALETTE = new PatchPalette(0xF100L, 320,
             entry(Material.YELLOW_TERRACOTTA, 6),
             entry(Material.YELLOW_CONCRETE, 3),
             entry(Material.SMOOTH_SANDSTONE, 3),
@@ -91,7 +80,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
             entry(Material.STRIPPED_MANGROVE_WOOD, 2));
 
     // Polished deepslate is ~1% of ceiling patches.
-    private static final PatchPalette CEILING_PALETTE = new PatchPalette(0xCE11L, 80,
+    private static final PatchPalette CEILING_PALETTE = new PatchPalette(0xCE11L, 384,
             entry(Material.YELLOW_TERRACOTTA, 6),
             entry(Material.YELLOW_CONCRETE, 3),
             entry(Material.SMOOTH_SANDSTONE, 3),
@@ -107,7 +96,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
             entry(Material.POLISHED_GRANITE, 10),
             entry(Material.POLISHED_DEEPSLATE, 1));
 
-    private static final PatchPalette WALL_PALETTE = new PatchPalette(0xA11L, 56,
+    private static final PatchPalette WALL_PALETTE = new PatchPalette(0xA11L, 256,
             entry(Material.YELLOW_TERRACOTTA, 6),
             entry(Material.YELLOW_CONCRETE, 2),
             entry(Material.SMOOTH_SANDSTONE, 2),
@@ -125,16 +114,16 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
     private final Level101ChunkGenerator alphaStructures = new Level101ChunkGenerator(null);
 
     // Tunables (generator_config)
-    private double hallThreshold = 0.55;      // hall-mask noise cutoff; higher = rarer halls
-    private int hallStructureChance = 30;     // percent of eligible all-hall chunks
-    private double pitChunkChance = 0.8;      // percent of chunks with a pit
+    private int roomCellChance = 35;    // percent of 128-block cells with a sunken room
+    private int pitCellChance = 4;      // percent of 128-block cells with a pit
+    private int houseChunkChance = 45;  // percent of eligible chunks in a house room
 
     @Override
     public void configure(@Nullable ConfigurationSection config) {
         if (config == null) return;
-        hallThreshold = config.getDouble("hall_threshold", hallThreshold);
-        hallStructureChance = config.getInt("hall_structure_chance", hallStructureChance);
-        pitChunkChance = config.getDouble("pit_chunk_chance", pitChunkChance);
+        roomCellChance = config.getInt("room_cell_chance", roomCellChance);
+        pitCellChance = config.getInt("pit_cell_chance", pitCellChance);
+        houseChunkChance = config.getInt("house_chunk_chance", houseChunkChance);
     }
 
     @Override
@@ -143,162 +132,46 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
         chunkData.setRegion(0, CEILING_MIN_Y, 0, 16, CEILING_MAX_Y, 16, Material.YELLOW_TERRACOTTA);
 
         long seed = worldInfo.getSeed();
-        Random chunkRng = new Random(seed ^ ((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L));
+        Level0Chunk c = new Level0Chunk(chunkData, seed, chunkX, chunkZ);
 
-        // --- Per-column layout: classic spawn area, hall heights, surface palettes ---
-        boolean[][] classic = new boolean[16][16];
-        int[][] hallHeight = new int[16][16];   // 0 = ordinary 4-high room
-        Material[][] wallMats = new Material[16][16];
-        boolean allHall = true, anyClassic = false;
-        int minHallHeight = Integer.MAX_VALUE;
+        // --- Surfaces ---
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                int worldX = chunkX * 16 + x;
-                int worldZ = chunkZ * 16 + z;
-                double spawnBias = spawnBias(worldX, worldZ);
-                classic[x][z] = spawnBias
+                int worldX = c.wx(x), worldZ = c.wz(z);
+                boolean classic = spawnBias(worldX, worldZ)
                         + 0.25 * SimplexNoise.noise2(seed + 500, worldX * CLASSIC_EDGE_SCALE, worldZ * CLASSIC_EDGE_SCALE)
                         > 0.5;
-                anyClassic |= classic[x][z];
-                hallHeight[x][z] = hallHeight(seed, worldX, worldZ, spawnBias);
-                if (hallHeight[x][z] == 0) {
-                    allHall = false;
-                } else {
-                    minHallHeight = Math.min(minHallHeight, hallHeight[x][z]);
-                }
-
-                chunkData.setBlock(x, FLOOR_TOP_Y, z, classic[x][z]
-                        ? Material.YELLOW_TERRACOTTA : FLOOR_PALETTE.pick(seed, worldX, worldZ));
-                chunkData.setBlock(x, CEILING_MIN_Y, z, classic[x][z]
+                c.classic[x][z] = classic;
+                c.anyClassic |= classic;
+                c.floorMats[x][z] = classic ? Material.YELLOW_TERRACOTTA : FLOOR_PALETTE.pick(seed, worldX, worldZ);
+                c.wallMats[x][z] = classic ? Material.YELLOW_TERRACOTTA : WALL_PALETTE.pick(seed, worldX, worldZ);
+                c.floorTop[x][z] = FLOOR_TOP_Y;
+                c.lightY[x][z] = worldX % LIGHT_SPACING == 0 && worldZ % LIGHT_SPACING == 0
+                        ? CEILING_MIN_Y : Level0Chunk.NO_LIGHT;
+                chunkData.setBlock(x, FLOOR_TOP_Y, z, c.floorMats[x][z]);
+                chunkData.setBlock(x, CEILING_MIN_Y, z, classic
                         ? Material.YELLOW_TERRACOTTA : CEILING_PALETTE.pick(seed, worldX, worldZ));
-                wallMats[x][z] = classic[x][z]
-                        ? Material.YELLOW_TERRACOTTA : WALL_PALETTE.pick(seed, worldX, worldZ);
             }
         }
 
-        // --- Cell structures ---
-        for (int cx = 0; cx < CELLS_PER_AXIS; cx++) {
-            for (int cz = 0; cz < CELLS_PER_AXIS; cz++) {
-                int baseX = cx * CELL_SIZE;
-                int baseZ = cz * CELL_SIZE;
-
-                double rawCenterX = chunkX * 16 + baseX + CELL_SIZE / 2.0;
-                double rawCenterZ = chunkZ * 16 + baseZ + CELL_SIZE / 2.0;
-
-                double regionNoise = SimplexNoise.noise2(seed, rawCenterX * REGION_SCALE, rawCenterZ * REGION_SCALE);
-                int region = classifyRegion(regionNoise);
-
-                placeStructure(chunkData, chunkRng, baseX, baseZ, region, wallMats);
-
-                // Rare bookshelf alcove: the door to the Library (break_block exit
-                // in level_0.yml). Hashed on world position, not chunkRng, so it
-                // never shifts existing structure layouts; the froglight above
-                // makes it readable down a corridor. LobbyBookshelfListener skips
-                // stacked shelves, so the column survives chiseling.
-                if (region == REGION_WALLS
-                        && isLibraryAlcove(seed, chunkX * 16 + baseX, chunkZ * 16 + baseZ)) {
-                    int ax = baseX + 1, az = baseZ + 1;
-                    chunkData.setBlock(ax, AIR_MIN_Y, az, Material.BOOKSHELF);
-                    chunkData.setBlock(ax, AIR_MIN_Y + 1, az, Material.BOOKSHELF);
-                    chunkData.setBlock(ax, AIR_MIN_Y + 2, az, Material.OCHRE_FROGLIGHT);
-                }
-            }
+        // --- Furnishing ---
+        int zoneX = Math.floorDiv(chunkX * 16, Level0Zones.ZONE);
+        int zoneZ = Math.floorDiv(chunkZ * 16, Level0Zones.ZONE);
+        Level0Zones.Zone zone = Level0Zones.zoneAt(seed, zoneX, zoneZ);
+        if (zone == Level0Zones.Zone.LOBBY) {
+            placeLobbyCells(c);
+        } else {
+            Level0Zones.furnish(c, zone, zoneX, zoneZ);
         }
 
-        // --- Tall halls: open floor, raised ceiling ---
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                int h = hallHeight[x][z];
-                if (h == 0) continue;
-                int worldX = chunkX * 16 + x;
-                int worldZ = chunkZ * 16 + z;
-                for (int y = AIR_MIN_Y; y < AIR_MIN_Y + h; y++) {
-                    chunkData.setBlock(x, y, z, Material.AIR);
-                }
-                chunkData.setBlock(x, AIR_MIN_Y + h, z, CEILING_PALETTE.pick(seed, worldX, worldZ));
-            }
-        }
+        // --- Set pieces ---
+        int cellX = Math.floorDiv(chunkX * 16, Level0Features.MACRO);
+        int cellZ = Math.floorDiv(chunkZ * 16, Level0Features.MACRO);
+        Level0Features.render(c, Level0Features.featureAt(seed, cellX, cellZ, roomCellChance, pitCellChance),
+                alphaStructures, houseChunkChance);
 
-        // --- Bottomless pit, away from halls and spawn ---
-        long pitHash = chunkHash(seed, chunkX, chunkZ, 0x9177L);
-        boolean hasPit = !anyClassic
-                && Math.floorMod(pitHash, 10000L) < Math.round(pitChunkChance * 100)
-                && noHallIn(hallHeight, PIT_CLEAR_MIN, PIT_CLEAR_MAX);
-        if (hasPit) {
-            placePit(chunkData, pitHash);
-        }
-
-        // --- Level 101 structure on a patch of grass, in roomy all-hall chunks ---
-        long hallStructureHash = chunkHash(seed, chunkX, chunkZ, 0xA1FAL);
-        boolean hasHallStructure = allHall && !anyClassic
-                && minHallHeight >= HALL_STRUCTURE_MIN_HEIGHT
-                && Math.floorMod(hallStructureHash, 100L) < hallStructureChance;
-        if (hasHallStructure) {
-            for (int x = 0; x < 16; x++) {
-                for (int z = 0; z < 16; z++) {
-                    chunkData.setBlock(x, FLOOR_TOP_Y, z, Material.GRASS_BLOCK);
-                    for (int y = FLOOR_TOP_Y - 3; y < FLOOR_TOP_Y; y++) {
-                        chunkData.setBlock(x, y, z, Material.DIRT);
-                    }
-                }
-            }
-            alphaStructures.placeRandomStructure(chunkData, new Random(hallStructureHash), true);
-        }
-
-        // --- Floor carpet: large zones on exposed floor, sometimes damp underneath ---
-        if (!hasHallStructure) {
-            for (int x = 0; x < 16; x++) {
-                for (int z = 0; z < 16; z++) {
-                    if (chunkData.getType(x, AIR_MIN_Y, z) != Material.AIR) continue;
-                    if (!chunkData.getType(x, FLOOR_TOP_Y, z).isSolid()) continue;
-                    int worldX = chunkX * 16 + x;
-                    int worldZ = chunkZ * 16 + z;
-                    double fpnx = (worldX + NOISE_OFFSET) * CARPET_SCALE;
-                    double fpnz = (worldZ + NOISE_OFFSET) * CARPET_SCALE;
-                    double carpetNoise = SimplexNoise.noise2(seed + 200, fpnx, fpnz)
-                            + 0.5 * SimplexNoise.noise2(seed + 201, fpnx * 2, fpnz * 2)
-                            - spawnBias(worldX, worldZ);
-                    if (carpetNoise <= 0.0) continue;
-                    chunkData.setBlock(x, AIR_MIN_Y, z, Material.YELLOW_CARPET);
-
-                    // Damp patches: hidden under the carpet, heard (combination step sound) and felt (soul sand).
-                    if (classic[x][z]) continue;
-                    double damp = SimplexNoise.noise2(seed + 600, worldX * DAMP_SCALE, worldZ * DAMP_SCALE)
-                            + 0.4 * SimplexNoise.noise2(seed + 601, worldX * DAMP_SCALE * 3, worldZ * DAMP_SCALE * 3);
-                    if (damp > DAMP_SOUL_SAND) {
-                        chunkData.setBlock(x, FLOOR_TOP_Y, z, Material.SOUL_SAND);
-                    } else if (damp > DAMP_MUD) {
-                        chunkData.setBlock(x, FLOOR_TOP_Y, z, Material.MUD);
-                    }
-                }
-            }
-        }
-
-        // --- Lights: flush in the ceiling, or pendants hung at the same height in halls ---
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                int worldX = chunkX * 16 + x;
-                int worldZ = chunkZ * 16 + z;
-                if (worldX % LIGHT_SPACING != 0 || worldZ % LIGHT_SPACING != 0) continue;
-                int h = hallHeight[x][z];
-                if (h == 0) {
-                    chunkData.setBlock(x, CEILING_MIN_Y, z, Material.OCHRE_FROGLIGHT);
-                    continue;
-                }
-                // A pendant at the normal light height keeps the hall floor lit and
-                // keeps light_blink / blackout on a single light_y. Skip columns a
-                // structure occupies.
-                boolean clear = true;
-                for (int y = CEILING_MIN_Y; y < AIR_MIN_Y + h && clear; y++) {
-                    clear = chunkData.getType(x, y, z) == Material.AIR;
-                }
-                if (!clear) continue;
-                chunkData.setBlock(x, CEILING_MIN_Y, z, Material.OCHRE_FROGLIGHT);
-                for (int y = CEILING_MIN_Y + 1; y < AIR_MIN_Y + h; y++) {
-                    chunkData.setBlock(x, y, z, Material.IRON_CHAIN);
-                }
-            }
-        }
+        placeCarpet(c);
+        placeLights(c);
 
         // Bedrock boundaries; the floor layer skips air so pits stay open to the void.
         applyBoundaryLayer(chunkData, WORLD_MIN_Y, WORLD_MIN_Y + BEDROCK_LAYERS, Material.BEDROCK, true);
@@ -309,100 +182,90 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
         return Math.max(0, 1.0 - (worldX * worldX + worldZ * worldZ) / (SPAWN_PLAIN_RADIUS * SPAWN_PLAIN_RADIUS));
     }
 
-    /**
-     * Air height of a tall hall at this column, or 0 for an ordinary room. Halls
-     * rise from {@link #HALL_MIN_HEIGHT} at their edges toward their middles, in
-     * 2-block steps.
-     */
-    private int hallHeight(long seed, int worldX, int worldZ, double spawnBias) {
-        double hnx = (worldX + NOISE_OFFSET) * HALL_SCALE;
-        double hnz = (worldZ + NOISE_OFFSET) * HALL_SCALE;
-        double mask = SimplexNoise.noise2(seed + 400, hnx, hnz)
-                + 0.5 * SimplexNoise.noise2(seed + 401, hnx * 2, hnz * 2)
-                - 2.0 * spawnBias;
-        if (mask <= hallThreshold) return 0;
+    /** The classic lobby: random walls, pillars and desks per 4x4 cell, plus the Library alcove. */
+    private void placeLobbyCells(Level0Chunk c) {
+        Random chunkRng = new Random(c.seed ^ ((long) c.chunkX * 341873128712L + (long) c.chunkZ * 132897987541L));
+        for (int cx = 0; cx < CELLS_PER_AXIS; cx++) {
+            for (int cz = 0; cz < CELLS_PER_AXIS; cz++) {
+                int baseX = cx * CELL_SIZE;
+                int baseZ = cz * CELL_SIZE;
 
-        double depth = Math.min(1.0, (mask - hallThreshold) / 0.15);
-        // Stretched past the noise's usual range so the tallest heights actually occur.
-        double t = Math.clamp(0.5 + 0.8 * SimplexNoise.noise2(seed + 410, worldX * HALL_HEIGHT_SCALE, worldZ * HALL_HEIGHT_SCALE), 0.0, 1.0);
-        double h = HALL_MIN_HEIGHT + (HALL_MAX_HEIGHT - HALL_MIN_HEIGHT) * t * depth;
-        int stepped = HALL_MIN_HEIGHT + 2 * (int) Math.round((h - HALL_MIN_HEIGHT) / 2);
-        return Math.min(HALL_MAX_HEIGHT, stepped);
-    }
+                double rawCenterX = c.wx(baseX) + CELL_SIZE / 2.0;
+                double rawCenterZ = c.wz(baseZ) + CELL_SIZE / 2.0;
 
-    private static boolean noHallIn(int[][] hallHeight, int min, int max) {
-        for (int x = min; x <= max; x++) {
-            for (int z = min; z <= max; z++) {
-                if (hallHeight[x][z] != 0) return false;
-            }
-        }
-        return true;
-    }
+                double regionNoise = SimplexNoise.noise2(c.seed, rawCenterX * REGION_SCALE, rawCenterZ * REGION_SCALE);
+                int region = classifyRegion(regionNoise);
 
-    /**
-     * A 5x5 shaft from the floor straight through the bedrock into the void,
-     * with a staircase spiralling down its walls (one block lower per step,
-     * full-block landings at the corners) that runs out 40-60 blocks down.
-     */
-    private void placePit(ChunkData chunkData, long pitHash) {
-        for (int x = PIT_CLEAR_MIN; x <= PIT_CLEAR_MAX; x++) {
-            for (int z = PIT_CLEAR_MIN; z <= PIT_CLEAR_MAX; z++) {
-                for (int y = AIR_MIN_Y; y < AIR_MAX_Y; y++) {
-                    chunkData.setBlock(x, y, z, Material.AIR);
+                placeStructure(c.data, chunkRng, baseX, baseZ, region, c.wallMats);
+
+                // Rare bookshelf alcove: the door to the Library (break_block exit
+                // in level_0.yml). Hashed on world position, not chunkRng, so it
+                // never shifts existing structure layouts; the froglight above
+                // makes it readable down a corridor. LobbyBookshelfListener skips
+                // stacked shelves, so the column survives chiseling.
+                if (region == REGION_WALLS && isLibraryAlcove(c.seed, c.wx(baseX), c.wz(baseZ))) {
+                    int ax = baseX + 1, az = baseZ + 1;
+                    c.data.setBlock(ax, AIR_MIN_Y, az, Material.BOOKSHELF);
+                    c.data.setBlock(ax, AIR_MIN_Y + 1, az, Material.BOOKSHELF);
+                    c.data.setBlock(ax, AIR_MIN_Y + 2, az, Material.OCHRE_FROGLIGHT);
                 }
             }
         }
-        for (int x = PIT_MIN; x <= PIT_MAX; x++) {
-            for (int z = PIT_MIN; z <= PIT_MAX; z++) {
-                for (int y = WORLD_MIN_Y; y <= FLOOR_TOP_Y; y++) {
-                    chunkData.setBlock(x, y, z, Material.AIR);
+    }
+
+    /** Large carpet zones on exposed floor (never near spawn), sometimes damp underneath. */
+    private void placeCarpet(Level0Chunk c) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                if (c.classic[x][z] || c.noCarpet[x][z]) continue;
+                int floorY = c.floorTop[x][z];
+                if (c.data.getType(x, floorY + 1, z) != Material.AIR) continue;
+                if (!c.data.getType(x, floorY, z).isSolid()) continue;
+                int worldX = c.wx(x), worldZ = c.wz(z);
+                double fpnx = (worldX + NOISE_OFFSET) * CARPET_SCALE;
+                double fpnz = (worldZ + NOISE_OFFSET) * CARPET_SCALE;
+                double carpetNoise = SimplexNoise.noise2(c.seed + 200, fpnx, fpnz)
+                        + 0.5 * SimplexNoise.noise2(c.seed + 201, fpnx * 2, fpnz * 2)
+                        - spawnBias(worldX, worldZ);
+                if (carpetNoise <= 0.0) continue;
+                c.data.setBlock(x, floorY + 1, z, Material.YELLOW_CARPET);
+
+                // Damp patches: hidden under the carpet, heard (combination step sound) and felt (soul sand).
+                double damp = SimplexNoise.noise2(c.seed + 600, worldX * DAMP_SCALE, worldZ * DAMP_SCALE)
+                        + 0.4 * SimplexNoise.noise2(c.seed + 601, worldX * DAMP_SCALE * 3, worldZ * DAMP_SCALE * 3);
+                if (damp > DAMP_SOUL_SAND) {
+                    c.data.setBlock(x, floorY, z, Material.SOUL_SAND);
+                } else if (damp > DAMP_MUD) {
+                    c.data.setBlock(x, floorY, z, Material.MUD);
                 }
             }
         }
+    }
 
-        // Ring of the 16 perimeter blocks, walked clockwise from a corner.
-        int[][] ring = new int[16][];
-        int i = 0;
-        for (int x = PIT_MIN; x < PIT_MAX; x++) ring[i++] = new int[]{ x, PIT_MIN };
-        for (int z = PIT_MIN; z < PIT_MAX; z++) ring[i++] = new int[]{ PIT_MAX, z };
-        for (int x = PIT_MAX; x > PIT_MIN; x--) ring[i++] = new int[]{ x, PIT_MAX };
-        for (int z = PIT_MAX; z > PIT_MIN; z--) ring[i++] = new int[]{ PIT_MIN, z };
-
-        Material[] set = PIT_STAIR_SETS[(int) Math.floorMod(pitHash >>> 20, (long) PIT_STAIR_SETS.length)];
-        int start = (int) Math.floorMod(pitHash >>> 8, 4L) * 4; // begin at one of the corners
-        int length = 40 + (int) Math.floorMod(pitHash >>> 12, 21L);
-        for (int k = 0; k <= length; k++) {
-            int[] cur = ring[(start + k) % 16];
-            int y = FLOOR_TOP_Y - k;
-            boolean corner = (cur[0] == PIT_MIN || cur[0] == PIT_MAX) && (cur[1] == PIT_MIN || cur[1] == PIT_MAX);
-            if (corner) {
-                chunkData.setBlock(cur[0], y, cur[1], set[0]);
-                continue;
+    /**
+     * Grid lights: flush in the ceiling, or a pendant on chains where a sunken
+     * room hangs its lights low. A pendant whose drop is blocked (stairs, a
+     * house) falls back to a flush light.
+     */
+    private void placeLights(Level0Chunk c) {
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int ly = c.lightY[x][z];
+                if (ly == Level0Chunk.NO_LIGHT) continue;
+                boolean clear = true;
+                for (int y = ly; y < CEILING_MIN_Y && clear; y++) {
+                    clear = c.data.getType(x, y, z) == Material.AIR;
+                }
+                if (ly >= CEILING_MIN_Y || !clear) {
+                    c.data.setBlock(x, CEILING_MIN_Y, z, Material.OCHRE_FROGLIGHT);
+                    continue;
+                }
+                c.data.setBlock(x, ly, z, Material.OCHRE_FROGLIGHT);
+                for (int y = ly + 1; y < CEILING_MIN_Y; y++) {
+                    c.data.setBlock(x, y, z, Material.IRON_CHAIN);
+                }
             }
-            // Stairs rise toward the step behind them.
-            int[] prev = ring[(start + k + 15) % 16];
-            Stairs stair = (Stairs) set[1].createBlockData();
-            stair.setFacing(faceToward(prev[0] - cur[0], prev[1] - cur[1]));
-            stair.setHalf(Stairs.Half.BOTTOM);
-            chunkData.setBlock(cur[0], y, cur[1], stair);
         }
-    }
-
-    private static BlockFace faceToward(int dx, int dz) {
-        if (dx > 0) return BlockFace.EAST;
-        if (dx < 0) return BlockFace.WEST;
-        return dz > 0 ? BlockFace.SOUTH : BlockFace.NORTH;
-    }
-
-    private static long chunkHash(long seed, int chunkX, int chunkZ, long salt) {
-        long h = seed
-                ^ ((long) chunkX * 0x517CC1B727220A95L)
-                ^ ((long) chunkZ * 0x6C62272E07BB0142L)
-                ^ salt;
-        h ^= h >>> 33;
-        h *= 0xFF51AFD7ED558CCDL;
-        h ^= h >>> 33;
-        return h;
     }
 
     /** ~1 in 1250 wall-region cells (about one per 75 chunks) holds the Library alcove. */
