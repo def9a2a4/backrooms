@@ -5,7 +5,7 @@
       "id": "minecraft:grass_block"
     },
     "title": {"text": "Alpha", "color": "green"},
-    "description": {"text": "Nothing has moved since the last save", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "Nothing has moved since the last save", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

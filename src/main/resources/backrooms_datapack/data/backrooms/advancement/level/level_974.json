@@ -5,7 +5,7 @@
       "id": "minecraft:grass_block"
     },
     "title": {"text": "Planetoids", "color": "dark_aqua"},
-    "description": {"text": "Small worlds in the dark", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "Small worlds in the dark", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

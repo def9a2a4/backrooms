@@ -5,7 +5,7 @@
       "id": "minecraft:written_book"
     },
     "title": {"text": "Studious", "color": "dark_purple"},
-    "description": {"text": "Sixteen voices bound in leather and ink", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "Sixteen voices bound in leather and ink", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

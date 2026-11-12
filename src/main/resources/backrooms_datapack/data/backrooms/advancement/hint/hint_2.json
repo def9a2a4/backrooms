@@ -5,7 +5,7 @@
       "id": "minecraft:copper_trapdoor"
     },
     "title": {"text": "Trap Door", "color": "gold"},
-    "description": {"text": "The mechanism is simple finding it is not", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "The mechanism is simple finding it is not", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

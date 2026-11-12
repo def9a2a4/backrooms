@@ -5,7 +5,7 @@
       "id": "minecraft:hanging_roots"
     },
     "title": {"text": "The Roots Run Deep", "color": "dark_green"},
-    "description": {"text": "The ground gives way beneath you", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "The ground gives way beneath you", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

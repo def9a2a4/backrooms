@@ -5,7 +5,7 @@
       "id": "minecraft:feather"
     },
     "title": {"text": "Leap of Faith", "color": "dark_purple"},
-    "description": {"text": "Two hundred blocks of nothing then everything", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "Two hundred blocks of nothing then everything", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

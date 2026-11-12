@@ -5,7 +5,7 @@
       "id": "minecraft:flowering_azalea"
     },
     "title": {"text": "The Garden", "color": "green"},
-    "description": {"text": "Something grows where it shouldnt", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "Something grows where it shouldnt", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

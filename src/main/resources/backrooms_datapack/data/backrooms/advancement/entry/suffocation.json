@@ -5,7 +5,7 @@
       "id": "minecraft:sand"
     },
     "title": {"text": "No Room to Breathe", "color": "gray"},
-    "description": {"text": "The walls closed in", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "The walls closed in", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

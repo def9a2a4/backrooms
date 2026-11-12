@@ -5,7 +5,7 @@
       "id": "minecraft:mossy_cobblestone"
     },
     "title": {"text": "The Henge", "color": "gray"},
-    "description": {"text": "Something older than the rooms", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "Something older than the rooms", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

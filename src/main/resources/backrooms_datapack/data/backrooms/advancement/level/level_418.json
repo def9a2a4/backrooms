@@ -5,7 +5,7 @@
       "id": "minecraft:red_concrete"
     },
     "title": {"text": "418 I'm a Teapot", "color": "red"},
-    "description": {"text": "The server refuses to brew coffee", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "The server refuses to brew coffee", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

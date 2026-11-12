@@ -5,7 +5,7 @@
       "id": "minecraft:lodestone"
     },
     "title": {"text": "The Small Worlds Let Go", "color": "dark_aqua"},
-    "description": {"text": "The anchor was holding you too", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "The anchor was holding you too", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

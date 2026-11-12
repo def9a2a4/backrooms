@@ -5,14 +5,13 @@
       "id": "minecraft:wheat"
     },
     "title": {
-      "text": "G\u00f6bekli Tepe",
+      "text": "Göbekli Tepe",
       "color": "gray"
     },
     "description": {
       "text": "Before the first field",
       "color": "gray",
-      "italic": true,
-      "obfuscated": true
+      "italic": true
     },
     "frame": "task",
     "show_toast": true,

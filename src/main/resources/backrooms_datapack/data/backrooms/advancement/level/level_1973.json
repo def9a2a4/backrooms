@@ -11,8 +11,7 @@
     "description": {
       "text": "Someone brought a light",
       "color": "gray",
-      "italic": true,
-      "obfuscated": true
+      "italic": true
     },
     "frame": "task",
     "show_toast": true,

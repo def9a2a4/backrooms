@@ -5,7 +5,7 @@
       "id": "minecraft:sponge"
     },
     "title": {"text": "The Sponge", "color": "yellow"},
-    "description": {"text": "Holes all the way down", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "Holes all the way down", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

@@ -11,8 +11,7 @@
     "description": {
       "text": "Space nobody asked for",
       "color": "gray",
-      "italic": true,
-      "obfuscated": true
+      "italic": true
     },
     "frame": "task",
     "show_toast": true,

@@ -5,7 +5,7 @@
       "id": "minecraft:lever"
     },
     "title": {"text": "Manual Override", "color": "red"},
-    "description": {"text": "exit.allowed not found proceeding anyway", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "exit.allowed not found proceeding anyway", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

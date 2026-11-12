@@ -4,7 +4,7 @@
       "id": "minecraft:yellow_terracotta"
     },
     "title": {"text": "The Backrooms", "color": "yellow", "bold": true},
-    "description": {"text": "\u00a7kThe fluorescent lights hum.", "color": "gray", "italic": true},
+    "description": {"text": "The fluorescent lights hum.", "color": "gray", "italic": true},
     "background": "minecraft:textures/block/yellow_terracotta.png",
     "frame": "task",
     "show_toast": false,

@@ -5,7 +5,7 @@
       "id": "minecraft:writable_book"
     },
     "title": {"text": "Last Played: A Long Time Ago", "color": "dark_purple"},
-    "description": {"text": "The old world does not know about you yet", "color": "gray", "italic": true, "obfuscated": true},
+    "description": {"text": "The old world does not know about you yet", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false
