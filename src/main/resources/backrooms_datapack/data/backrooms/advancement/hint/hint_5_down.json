@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_5",
+  "display": {
+    "icon": {
+      "id": "minecraft:iron_shovel"
+    },
+    "title": {"text": "Below the Noise Floor", "color": "dark_gray"},
+    "description": {"text": "The signal was coming from underneath", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "parent": "backrooms:root",
+  "parent": "backrooms:hint/hint_64637_catalog",
   "display": {
     "icon": {
       "id": "minecraft:grass_block"

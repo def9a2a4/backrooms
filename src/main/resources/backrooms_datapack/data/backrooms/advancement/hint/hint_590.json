@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_590",
+  "display": {
+    "icon": {
+      "id": "minecraft:wet_sponge"
+    },
+    "title": {"text": "Wrung Out", "color": "yellow"},
+    "description": {"text": "The structure was dry by definition", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

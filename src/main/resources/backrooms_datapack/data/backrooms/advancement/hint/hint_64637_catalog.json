@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_64637",
+  "display": {
+    "icon": {
+      "id": "minecraft:lectern"
+    },
+    "title": {"text": "Interlibrary Loan", "color": "dark_purple"},
+    "description": {"text": "The archive lends what it cannot lose", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

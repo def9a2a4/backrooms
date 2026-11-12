@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:hint/hint_64637_leveldat",
+  "display": {
+    "icon": {
+      "id": "minecraft:grass_block"
+    },
+    "title": {"text": "Alpha", "color": "green"},
+    "description": {"text": "Nothing has moved since the last save", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

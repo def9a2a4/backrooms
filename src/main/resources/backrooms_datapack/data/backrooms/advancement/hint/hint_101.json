@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_101",
+  "display": {
+    "icon": {
+      "id": "minecraft:red_bed"
+    },
+    "title": {"text": "You Can Sleep Now", "color": "green"},
+    "description": {"text": "The dream ends where it began", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

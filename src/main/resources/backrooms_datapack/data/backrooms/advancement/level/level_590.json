@@ -1,5 +1,5 @@
 {
-  "parent": "backrooms:root",
+  "parent": "backrooms:hint/hint_3",
   "display": {
     "icon": {
       "id": "minecraft:sponge"

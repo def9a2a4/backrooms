@@ -1,0 +1,18 @@
+{
+  "parent": "backrooms:level/level_64637",
+  "display": {
+    "icon": {
+      "id": "minecraft:cobweb"
+    },
+    "title": {"text": "There Is No Restricted Section", "color": "dark_red"},
+    "description": {"text": "The hum disagrees", "color": "gray", "italic": true, "obfuscated": true},
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
