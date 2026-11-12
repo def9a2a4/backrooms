@@ -1,0 +1,80 @@
+id: level_9500
+display_name: "Göbekli Tepe"
+generator: scan
+environment: NORMAL
+dimension_type: day
+biome: "backrooms:anatolia"
+fixed_time: 5000
+spawn_radius: 0
+random_tick_speed: 24
+enter_message: "§6§oBefore writing. Before the plough. Someone carved a fox into stone, and waited."
+
+# Göbekli Tepe (southeastern Anatolia, ~9500 BCE) at 16x on a floating island, voxelized from a 3D
+# scan that's downloaded on first start (config.yml scan_levels). Older than farming: the way
+# out is to farm. Wild grass drops einkorn seeds; there's tilled soil by the water, a crafting
+# table, and an offering stone. Bake bread and lay it on the stone. Crops grow fast here.
+generator_config:
+  mesh: gobekli_tepe
+  mode: column
+  scale: 16
+  ground_y: -30
+  island_depth: 1.5
+  spawn: {x: -40, z: -72}
+  props:
+    - {type: pedestal, x: 8, z: -88, block: chiseled_tuff}
+    - {type: plot, x: -56, z: -72}
+    - {type: plot, x: -24, z: -56}
+    - {type: grass, x: -40, z: -88}
+    - {type: grass, x: -8, z: -72}
+    - {type: grass, x: -72, z: -56}
+    - {type: block, x: -24, z: -88, block: crafting_table}
+
+# What the first farm gives back, named (see Level9500Listener). Any bread is a valid offering.
+einkorn:
+  seeds:
+    name: "§fWild Einkorn"
+    lore:
+      - "§7A grass seed. That's all it is."
+      - "§7Every city on earth grew out of this."
+  wheat:
+    name: "§fEinkorn"
+    lore:
+      - "§7Eleven thousand years old."
+      - "§7Still brand new. You just grew it."
+  bread:
+    name: "§fThe First Loaf"
+    lore:
+      - "§7Older than writing. Older than money."
+      - "§7Everything since was built on top of it."
+
+events:
+  - ambient_sound
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 8
+    chance: 0.3
+    sounds:
+      - ambient.basalt_deltas.mood
+      - entity.fox.ambient
+      - block.grass.break
+
+exit_triggers:
+  - type: item_offering
+    block: chiseled_tuff
+    items: [bread]
+    radius: 8
+    target_level: level_1881
+    fallback_level: level_3
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "§6The first loaf. Everything after it is a footnote."
+  - type: below_y
+    y_threshold: -62
+    target_level: level_9500
+    transition:
+      blindness_ticks: 40
+      delay_ticks: 10
+      message: "§6§oThe hill keeps you."

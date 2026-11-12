@@ -64,6 +64,21 @@ generator_config:
         - "§7/* Somewhere a machine cuts meat\n   for people who never met the pig.\n   Here, you will meet the pig. */"
         - "§7> diff farm.log factory.log\n§8< raised it, fed it, killed it\n§8> scanned barcode\n§7// Something was lost in the diff."
     - weight: 1
+      target: level_1881
+      messages:
+        - "§7> mount /archive/1881\n§8  [OK] 80,000,000 specimens indexed\n§7// Every one was found by someone\n// who was paying attention."
+        - "§7/* A whale hangs from the ceiling.\n   Twenty-five meters of an animal\n   we very nearly finished. */"
+        - "§7> ls /museum/cases/\n§8  henge/  tepe/  server_room/\n§7// Each case is a door. Glass breaks."
+        - "§7> git log --since='4.5 billion years ago'\n§8  too many commits to list\n§7// Keep the history. It is the only backup."
+        - "§7/* The building is terracotta: fired clay,\n   cast into monkeys, fish and leaves.\n   Even the walls are a catalogue. */"
+    - weight: 1
+      target: level_1967
+      messages:
+        - "§7> mount /dev/southbank\n§8[WARN] volume unused since 1967\n§7// Nobody planned for anyone to be here."
+        - "§7/* Concrete under a concert hall.\n   Built for nothing in particular.\n   Waiting for someone to decide. */"
+        - "§7> find /undercroft -type light\n§8  0 results\n§7// Bring your own."
+        - "§7> cat /undercroft/history\n§8  1967: built\n§8  197?: found\n§7// The second date matters more."
+    - weight: 1
       target: level_418
       messages:
         - "§7> curl -X BREW http://kettle/coffee\n§8  HTTP/1.1 418 I'm a teapot\n§7// It is short and stout."
@@ -169,6 +184,24 @@ exit_triggers:
       blindness_ticks: 80
       delay_ticks: 20
       message: "// LOADING henge.mesh.gz ..."
+  - type: powered_command_block
+    target_level: level_1881
+    power_count: 16
+    window_ticks: 80
+    radius: 20
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "// LOADING archive 1881 ... (please do not touch the exhibits)"
+  - type: powered_command_block
+    target_level: level_1967
+    power_count: 16
+    window_ticks: 80
+    radius: 20
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "// LOADING /dev/southbank ... no lights found"
   - type: powered_command_block
     target_level: level_418
     power_count: 16

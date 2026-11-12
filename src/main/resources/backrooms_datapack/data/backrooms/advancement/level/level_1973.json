@@ -1,0 +1,26 @@
+{
+  "parent": "backrooms:level/level_1967",
+  "display": {
+    "icon": {
+      "id": "minecraft:yellow_concrete"
+    },
+    "title": {
+      "text": "The Undercroft, Later",
+      "color": "gray"
+    },
+    "description": {
+      "text": "Someone brought a light",
+      "color": "gray",
+      "italic": true,
+      "obfuscated": true
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

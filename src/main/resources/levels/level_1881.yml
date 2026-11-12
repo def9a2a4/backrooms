@@ -1,0 +1,69 @@
+id: level_1881
+display_name: "Hintze Hall"
+generator: scan
+environment: NORMAL
+dimension_type: light
+biome: "backrooms:museum"
+fixed_time: 6000
+spawn_radius: 0
+enter_message: "§7§oThe museum is closed. The lights are on anyway."
+
+# The Natural History Museum's Hintze Hall (London, opened 1881) at 16x, voxelized from a 3D scan
+# that's downloaded on first start (config.yml scan_levels). The blue whale hangs over the nave.
+# Each display case is a door: break the exhibit to go where it came from.
+generator_config:
+  mesh: hintze_hall
+  mode: shell
+  scale: 16
+  ground_y: -62
+  thickness: 1.5
+  spawn: {x: -40, z: -120}
+  props:
+    - {type: case, x: -88, z: 40, block: lodestone}
+    - {type: case, x: 88, z: 40, block: hay_block}
+    - {type: case, x: 8, z: 168, block: observer}
+
+events:
+  - ambient_sound
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 8
+    chance: 0.3
+    sounds:
+      - ambient.cave
+      - block.wooden_door.close
+      - entity.skeleton.step
+
+exit_triggers:
+  - type: break_block
+    materials: [lodestone]
+    target_level: level_56
+    fallback_level: level_3
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "§7The stone remembers its circle."
+  - type: break_block
+    materials: [hay_block]
+    target_level: level_9500
+    fallback_level: level_3
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "§6The grain goes home."
+  - type: break_block
+    materials: [observer]
+    target_level: level_3
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "// exhibit unsealed. returning to the server room."
+  - type: below_y
+    y_threshold: -64
+    target_level: level_1881
+    transition:
+      blindness_ticks: 40
+      delay_ticks: 10
+      message: "§7§oA guard walks you back to the hall."

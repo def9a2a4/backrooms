@@ -20,7 +20,7 @@ generator_config:
 # A giant pig is born inside the circle each time a player arrives (up to max_pigs at once).
 # Killed, it drops one porkchop. Any porkchop laid on the altar's lodestone is the way out.
 giant_pig:
-  scale: 16.0
+  scale: 5.33        # a third of the 16x henge
   health: 200.0
   max_pigs: 8
   leash_radius: 24.0
@@ -48,7 +48,8 @@ exit_triggers:
     block: lodestone
     items: [porkchop, cooked_porkchop]
     radius: 8
-    target_level: level_3
+    target_level: level_1881
+    fallback_level: level_3
     transition:
       blindness_ticks: 80
       delay_ticks: 20

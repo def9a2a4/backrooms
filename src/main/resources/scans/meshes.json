@@ -1,0 +1,25 @@
+{
+  "_comment": "Written by scripts/scans/publish.py. Meshes are downloaded from scan_levels.base_url + file and checked against sha256.",
+  "meshes": {
+    "hintze_hall": {
+      "file": "hintze_hall-0e31caff1c3d.mesh.gz",
+      "sha256": "0e31caff1c3d600fd7541c37bdd0ac493bc94cd2b01f109165c4d608f45ab7e5",
+      "bytes": 9307836
+    },
+    "undercroft_grey": {
+      "file": "undercroft_grey-5686135c59fc.mesh.gz",
+      "sha256": "5686135c59fc4e6cc4d7af2eb0132d8de1a259e767d1d3c98df7517fe4f8a1f5",
+      "bytes": 7651888
+    },
+    "undercroft_color": {
+      "file": "undercroft_color-175c57059fdd.mesh.gz",
+      "sha256": "175c57059fdd8b7a2a1aeafc02ee7fa4efceb69d837847652a74fc0efa8df0c8",
+      "bytes": 7651260
+    },
+    "gobekli_tepe": {
+      "file": "gobekli_tepe-9187245e67fa.mesh.gz",
+      "sha256": "9187245e67faad3fd75fbeca5511a7abc9bcaf97651cadaf8a9e8b5469278129",
+      "bytes": 8697054
+    }
+  }
+}

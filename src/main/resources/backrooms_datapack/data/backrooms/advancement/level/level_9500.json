@@ -1,0 +1,26 @@
+{
+  "parent": "backrooms:level/level_1881",
+  "display": {
+    "icon": {
+      "id": "minecraft:wheat"
+    },
+    "title": {
+      "text": "G\u00f6bekli Tepe",
+      "color": "gray"
+    },
+    "description": {
+      "text": "Before the first field",
+      "color": "gray",
+      "italic": true,
+      "obfuscated": true
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+id: level_1973
+display_name: "The Undercroft, Later"
+generator: scan
+environment: NETHER
+dimension_type: fullbright
+biome: "backrooms:undercroft_lit"
+spawn_radius: 0
+enter_message: "§e§oSomebody added lights. Kids brought boards and paint. It was always theirs."
+
+# The same undercroft as Level 1967, after the skaters, painters and BMXers made it theirs (from
+# the early 1970s): painted, lit, loud. Skate it: go far enough and it lets you go.
+generator_config:
+  mesh: undercroft_color
+  mode: shell
+  scale: 16
+  ground_y: 37
+  thickness: 1.5
+  spawn: {x: -160, z: 40}
+  props:
+    - {type: block, x: -152, z: 40, block: sea_lantern}
+    - {type: block, x: -104, z: 88, block: sea_lantern}
+    - {type: block, x: -200, z: 24, block: sea_lantern}
+
+events:
+  - ambient_sound
+
+event_config:
+  ambient_sound:
+    enabled: true
+    check_interval_seconds: 5
+    chance: 0.4
+    sounds:
+      - block.note_block.chime
+      - block.amethyst_block.chime
+      - entity.allay.ambient_with_item
+      - entity.villager.celebrate
+
+exit_triggers:
+  - type: walk_distance
+    distance_blocks: 300
+    target_level: level_3
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "§7// public space: still here. returning to the server room."
+  - type: below_y
+    y_threshold: 2
+    target_level: level_1973
+    transition:
+      blindness_ticks: 40
+      delay_ticks: 10
+      message: "§e§oSomeone pulls you back up."

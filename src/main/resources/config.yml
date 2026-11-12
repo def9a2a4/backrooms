@@ -37,6 +37,16 @@ backrooms:
       enabled: true
       target_level: level_418
 
+  # Scan levels: 1881 (Hintze Hall), 1967 and 1973 (the Southbank Undercroft) and 9500 (Göbekli
+  # Tepe) are 16x-scale voxelizations of 3D scans. Their meshes (~32 MB in total) aren't in the jar:
+  # on first start they're downloaded from base_url into plugins/Backrooms/meshes/ and checked
+  # against built-in checksums. The worlds built from them are huge and can grow to several hundred
+  # MB each as players explore. Set download: false to skip the downloads; these levels are then
+  # disabled (unless their meshes are already in meshes/), and exits to them close or lead elsewhere.
+  scan_levels:
+    download: true
+    base_url: "https://def9a2a4.github.io/backrooms/meshes/"
+
   # Entity spawner settings
   entity_spawner:
     max_entities_per_player: 3
