@@ -11,9 +11,15 @@
  * Returns { buffers: [{ tex, pos, nrm, uv, idx }] (typed arrays), quads }. `texFor(id, face)`
  * names the texture of a block face; positions are relative to groundY (y) and world x/z.
  */
+/** Blocks drawn see-through (alpha-tested textures). */
+export const CLEAR = new Set(['glass']);
+
 export function greedy(v, texFor, groundY, onProgress) {
   const { vol, nx, ny, nz, x0, y0, z0, ids } = v;
   const dims = [nx, ny, nz];
+  // see-through blocks: an opaque block's face shows against them, and they don't hide each other
+  const clear = new Uint8Array(ids.length + 2);
+  ids.forEach((id, i) => { if (CLEAR.has(id)) clear[i + 1] = 1; });
   const at = (x, y, z) => (x < 0 || y < 0 || z < 0 || x >= nx || y >= ny || z >= nz)
     ? (y < 0 ? 1 : 0)                       // below the volume counts as solid
     : vol[(x * nz + z) * ny + y];
@@ -36,8 +42,11 @@ export function greedy(v, texFor, groundY, onProgress) {
         for (x[u] = 0; x[u] < dims[u]; x[u]++) {
           const a = at(x[0], x[1], x[2]);
           const b = at(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
-          // positive id: face of `a` looking +d; negative: face of `b` looking -d
-          mask[n++] = (a && !b) ? a : (!a && b) ? -b : 0;
+          // positive id: face of `a` looking +d; negative: face of `b` looking -d. Against a
+          // see-through neighbor of another kind, the opaque side's face wins the slot.
+          const showA = a && (!b || (clear[b] && b !== a));
+          const showB = b && (!a || (clear[a] && a !== b));
+          mask[n++] = showA ? a : showB ? -b : 0;
         }
       }
       x[d]++;

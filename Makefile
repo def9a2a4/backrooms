@@ -18,6 +18,12 @@ server-plugin-copy:
 	rm -f server/plugins/$(PLUGIN_NAME)*.jar
 	cp bin/$(PLUGIN_NAME)*.jar server/plugins/
 
+# Scan-level meshes: copy the local builds the manifest names into the server, so it doesn't
+# have to download them (scripts/scans/publish.py).
+.PHONY: server-meshes
+server-meshes:
+	python3 scripts/scans/publish.py --install server/plugins/$(PLUGIN_NAME)/meshes
+
 .PHONY: server-clear-plugin-data
 server-clear-plugin-data:
 	rm -rf server/plugins/$(PLUGIN_NAME)/
@@ -36,7 +42,7 @@ server-start:
 	cd server && java -Xmx2G -Xms2G -jar paper-*.jar nogui
 
 .PHONY: server
-server: build server-plugin-copy server-start
+server: build server-plugin-copy server-meshes server-start
 
 .PHONY: all
 all: clean build server

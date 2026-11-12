@@ -73,7 +73,8 @@ function materialFor(tex) {
     t.minFilter = THREE.NearestMipmapLinearFilter;
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.colorSpace = THREE.SRGBColorSpace;
-    const m = new THREE.MeshLambertMaterial({ map: t });
+    // glass: alpha-tested, so the frame shows and the pane is see-through
+    const m = new THREE.MeshLambertMaterial({ map: t, alphaTest: 0.5, side: tex === 'glass' ? THREE.DoubleSide : THREE.FrontSide });
     if (tex === 'grass_block_top') m.color.set(GRASS_TINT);
     materials.set(tex, m);
   }
@@ -262,7 +263,9 @@ const MESH_FRAG = /* glsl */ `
     vec2 uv = top ? vWorld.xz : (an.x >= an.z ? vWorld.zy : vWorld.xy);
     uv = fract(uv);
     uv.y = 1.0 - uv.y;
-    vec3 c = top ? texture(uTop, vec3(uv, m)).rgb : texture(uSide, vec3(uv, m)).rgb;
+    vec4 tc = top ? texture(uTop, vec3(uv, m)) : texture(uSide, vec3(uv, m));
+    if (uMats && tc.a < 0.5) discard;          // glass panes
+    vec3 c = tc.rgb;
     if (top && abs(m - uGrass) < 0.5) c *= uTint;
     if (!uMats) c = vec3(0.62);
     float l = 0.45 + 0.55 * abs(dot(n, normalize(vec3(-0.5, 1.0, 0.35))));

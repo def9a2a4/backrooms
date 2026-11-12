@@ -103,6 +103,9 @@ MODELS = {
                     "dark_oak_planks", "bone_block"],
         "penalty": {"calcite": 0.01},
         "full": {"lists": ["stone"]},
+        # the side galleries' glazing is a transparent material; the roof lights and windows are
+        # scanned as blown-out white
+        "glass": {"materials": ["lambert4SG"], "white_min": 200, "max_spread": 30},
     },
 }
 
@@ -148,6 +151,39 @@ def block_color(block: str) -> dict:
         a = img[..., 3:] / 255
         out[face] = oklab((srgb_to_linear(img[..., :3]) * a).sum(axis=(0, 1)) / a.sum())
     return out
+
+
+def face_materials(cfg: dict):
+    """Per-face glTF material name, in load_faces() order (cached separately: only models with a
+    `glass` rule need it). Returns (names, per-face index into names)."""
+    cache = TEMP / "scans" / f"{cfg['input']}.materials.npz"
+    if cache.exists():
+        d = np.load(cache, allow_pickle=False)
+        return list(d["names"]), d["index"]
+    print(f"  reading materials of {cfg['input']}")
+    names, index = [], []
+    for g in trimesh.load(TEMP / cfg["input"]).dump(concatenate=False):
+        n = getattr(g.visual.material, "name", "") or ""
+        if n not in names:
+            names.append(n)
+        index.append(np.full(len(g.faces), names.index(n), np.int16))
+    index = np.concatenate(index)
+    np.savez(cache, names=np.array(names), index=index)
+    return names, index
+
+
+def glass_faces(cfg: dict, colors: np.ndarray) -> np.ndarray | None:
+    """Faces that are glass, per the model's `glass` rule: listed (transparent) glTF materials,
+    and blown-out near-white texels, which in a photo scan are daylight through a window."""
+    rule = cfg.get("glass")
+    if not rule:
+        return None
+    names, index = face_materials(cfg)
+    glass = np.isin(index, [i for i, n in enumerate(names) if n in rule.get("materials", [])])
+    if "white_min" in rule:
+        c = colors.astype(float)
+        glass |= (c.min(axis=1) >= rule["white_min"]) & (np.ptp(c, axis=1) <= rule.get("max_spread", 30))
+    return glass
 
 
 def load_faces(name: str, cfg: dict):
@@ -257,7 +293,7 @@ def block_contrast(block: str) -> float:
     return float(oklab(srgb_to_linear(px))[:, 0].std())
 
 
-def match_cells(cen, area, lab, up, cfg, cell, smooth):
+def match_cells(cen, area, lab, up, cfg, cell, smooth, forced=None, forced_mat=-1):
     """Blocks per grid cell instead of per face (style "full"): each cell's area-weighted mean
     color (blended with its 26 neighbors by `smooth`, light denoising), the spread of lightness
     inside it as surface contrast, then assign() with the pattern term.
@@ -293,6 +329,10 @@ def match_cells(cen, area, lab, up, cfg, cell, smooth):
                     tot += wt
         mean = acc / tot[:, None]
     mat, plab = assign(mean, wsum, upm, cfg, contrast)
+    if forced is not None:
+        # cells mostly made of forced faces (glass) take the forced block
+        frac = np.bincount(inv, weights=area * forced) / wsum
+        mat[frac > 0.5] = forced_mat
     centers = origin + (np.stack([cx, cy, cz], axis=1) + 0.5) * cell
     return (origin, dims, keys, mat.astype(np.uint8)), centers, mat, plab
 
@@ -397,10 +437,18 @@ def build(name: str, args):
     if cfg["mode"] == "shell":
         up = np.abs(up)        # floors and ceilings alike read as tops; winding isn't reliable
     lab = oklab(srgb_to_linear(C.astype(float)))
+    glass = glass_faces(cfg, C)
     if args.style == "full":
-        cfg = dict(cfg, palette=full_palette(cfg))
-        grid, cell_centers, cell_mat, plab = match_cells(tri.mean(axis=1), area, lab, up, cfg,
-                                                       args.tex_cell, args.smooth)
+        pal_ids = full_palette(cfg)
+        if glass is not None:
+            # glass is never picked by color, only by the glass rule
+            pal_ids = pal_ids + ["glass"]
+            cfg = dict(cfg, penalty={**cfg.get("penalty", {}), "glass": 1e9})
+            print(f"  glass: {area[glass].sum() / area.sum() * 100:.1f}% of the surface")
+        cfg = dict(cfg, palette=pal_ids)
+        grid, cell_centers, cell_mat, plab = match_cells(
+            tri.mean(axis=1), area, lab, up, cfg, args.tex_cell, args.smooth,
+            forced=glass, forced_mat=len(pal_ids) - 1 if glass is not None else -1)
         # faces take their cell's block, so the per-vertex fallback agrees with the grid
         _, near = cKDTree(cell_centers).query(tri.mean(axis=1))
         mat = cell_mat[near]
@@ -414,8 +462,10 @@ def build(name: str, args):
     # variants: each block mixed with its two nearest palette neighbors by color
     dd = plab[:, None] - plab[None]
     dist = 0.25 * dd[..., 0] ** 2 + dd[..., 1] ** 2 + dd[..., 2] ** 2
+    clear = [i for i, b in enumerate(pal) if b == "glass"]
+    dist[:, clear] = np.inf       # nothing turns into glass by mixing
     variants = [[(i, 70)] + [(int(j), wt) for j, wt in zip(np.argsort(dist[i])[1:3], (18, 12))]
-                for i in range(len(pal))]
+                if i not in clear else [(i, 1)] for i in range(len(pal))]
 
     out = Path(args.output).resolve() if args.output else TEMP / "meshes" / f"{name}.mesh.gz"
     budget = args.max_kb * 1024
