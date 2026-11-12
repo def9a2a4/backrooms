@@ -17,6 +17,11 @@ public interface ExitTrigger {
         return null;
     }
 
+    /** Arrive at the same coordinates (and facing) in the target level instead of its spawn. */
+    default boolean keepsPosition() {
+        return false;
+    }
+
     boolean check(Player player, BackroomsPlayerState state);
 
     void playTransitionSequence(Player player, Runnable onComplete);

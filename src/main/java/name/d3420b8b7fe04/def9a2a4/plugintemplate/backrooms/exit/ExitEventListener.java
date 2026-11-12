@@ -61,6 +61,11 @@ public class ExitEventListener implements Listener {
         route(event, event.getPlayer());
     }
 
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onLecternPage(io.papermc.paper.event.player.PlayerLecternPageChangeEvent event) {
+        route(event, event.getPlayer());
+    }
+
     private void route(Event event, Player player) {
         if (!levelRegistry.isBackroomsWorld(player.getWorld())) return;
 

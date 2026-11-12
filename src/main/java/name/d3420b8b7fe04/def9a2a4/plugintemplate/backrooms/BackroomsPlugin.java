@@ -172,6 +172,7 @@ public class BackroomsPlugin {
         exitTriggerRegistry.register("item_offering", ItemOfferingTrigger::new);
         exitTriggerRegistry.register("break_block", BreakBlockTrigger::new);
         exitTriggerRegistry.register("place_block", PlaceBlockTrigger::new);
+        exitTriggerRegistry.register("lectern_last_page", LecternLastPageTrigger::new);
 
         // 4b. Register built-in entry triggers
         SuffocationEntry suffocation = new SuffocationEntry(plugin);
@@ -545,7 +546,7 @@ public class BackroomsPlugin {
         }
 
         File[] levelFiles = levelsDir.listFiles((dir, name) -> name.endsWith(".yml")
-                && !name.endsWith("_books.yml") && !name.endsWith("_signs.yml"));
+                && !name.endsWith("_books.yml") && !name.endsWith("_signs.yml") && !name.endsWith("_placards.yml"));
         if (levelFiles == null || levelFiles.length == 0) {
             plugin.getLogger().warning("No .yml files found in levels/ — no levels loaded.");
             return;

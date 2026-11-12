@@ -35,7 +35,8 @@ import java.util.logging.Logger;
  *   ground_y: -62              # world Y of the mesh's lowest point (shell) / ground reference (column)
  *   thickness: 1.5             # shell: wall half-thickness, blocks
  *   island_depth: 1.5          # column: underside depth at the center, blocks per unit scale
- *   spawn: {x: -40, z: -120}   # spawn column; Y is found by scanning up from below the floor
+ *   spawn: {x: -40, z: -120}   # spawn column; Y is found by scanning up from below the floor,
+ *                              # or from y if given (to pick an upper floor)
  *   props:
  *     - {type: case, x: -88, z: 40, block: lodestone}
  * </pre>
@@ -45,11 +46,16 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
     private static final Logger LOG = Logger.getLogger("Backrooms");
 
     /** A prop anchored on the floor at (x, z); its 3×3 footprint must stay inside the anchor's chunk. */
-    private record Prop(String type, int x, int z, @Nullable BlockData block) {}
+    private record Prop(String type, int x, int z, @Nullable BlockData block, @Nullable String book) {}
+
+    /** A lectern prop in a live world: where it is and which placard book it holds. */
+    public record Placard(int x, int y, int z, String book) {}
 
     private String meshName;
     private VoxelMesh.Options options = VoxelMesh.Options.column(16, 64, 0, 0);
     private int spawnX, spawnZ;
+    private Integer spawnY;            // optional: search for standing room from here up
+    private @Nullable String placardFile;
     private final List<Prop> props = new ArrayList<>();
     private volatile VoxelMesh mesh;
     private BlockData[] blocks;
@@ -74,7 +80,9 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
         if (spawn != null) {
             spawnX = spawn.getInt("x");
             spawnZ = spawn.getInt("z");
+            spawnY = spawn.contains("y") ? spawn.getInt("y") : null;
         }
+        placardFile = config.getString("placards");
         props.clear();
         for (Map<?, ?> m : config.getMapList("props")) {
             String type = String.valueOf(m.get("type"));
@@ -92,7 +100,7 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
                 LOG.warning("Scan prop " + type + " at " + x + "," + z + " straddles a chunk border; skipped.");
                 continue;
             }
-            props.add(new Prop(type, x, z, block));
+            props.add(new Prop(type, x, z, block, m.get("book") == null ? null : String.valueOf(m.get("book"))));
         }
         mesh = ScanMeshes.get(meshName);
         if (mesh == null) throw new IllegalStateException("scan mesh '" + meshName + "' isn't loaded");
@@ -156,7 +164,7 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
     /** Props that rebuild themselves when broken (farm plots and grass are meant to change). */
     private static boolean restorable(Prop p) {
         return switch (p.type) {
-            case "case", "pedestal", "block" -> true;
+            case "case", "pedestal", "block", "lectern" -> true;
             default -> false;
         };
     }
@@ -231,17 +239,39 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
             case "block" -> {
                 if (prop.block != null) w.set(ax, y, az, prop.block);
             }
+            case "lectern" -> {
+                // a placard: the book goes in when the chunk loads (ScanPropListener)
+                w.set(ax, y, az, prop.block != null ? prop.block : Material.LECTERN.createBlockData());
+            }
             default -> LOG.warning("Unknown scan prop type: " + prop.type);
         }
     }
 
+    /** File (in levels/) holding the placard books, or null. */
+    @Nullable
+    public String placardFile() {
+        return placardFile;
+    }
+
+    /** The lectern props in a chunk, with their floor height. */
+    public List<Placard> placards(World world, int chunkX, int chunkZ) {
+        List<Placard> out = new ArrayList<>();
+        for (Prop p : props) {
+            if (!"lectern".equals(p.type) || p.book == null || p.x >> 4 != chunkX || p.z >> 4 != chunkZ) continue;
+            int y = floorY(p, world.getMinHeight(), world.getMaxHeight());
+            if (y != Integer.MIN_VALUE) out.add(new Placard(p.x, y, p.z, p.book));
+        }
+        return out;
+    }
+
     @Override
     public int getSpawnY() {
-        return options.groundY() - 8;
+        // arrivals scan up from here for the first spot with room to stand
+        return spawnY != null ? spawnY - 1 : options.groundY() - 8;
     }
 
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        return new Location(world, spawnX + 0.5, options.groundY() + 1, spawnZ + 0.5);
+        return new Location(world, spawnX + 0.5, spawnY != null ? spawnY : options.groundY() + 1, spawnZ + 0.5);
     }
 }

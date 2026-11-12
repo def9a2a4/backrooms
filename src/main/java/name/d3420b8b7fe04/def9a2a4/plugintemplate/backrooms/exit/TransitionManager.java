@@ -124,7 +124,9 @@ public class TransitionManager {
         exit.playTransitionSequence(player, () -> {
             try {
                 currentLevel.onPlayerLeave(player, state);
-                Location spawn = findSpawnForLevel(targetLevel, targetWorld);
+                Location spawn = exit.keepsPosition() && targetId.equals(exit.getTargetLevelId())
+                        ? player.getLocation().clone() : findSpawnForLevel(targetLevel, targetWorld);
+                spawn.setWorld(targetWorld);
                 player.teleport(spawn);
                 SpawnFinder.clearFallDamage(player);
                 state.setCurrentLevelId(targetId);

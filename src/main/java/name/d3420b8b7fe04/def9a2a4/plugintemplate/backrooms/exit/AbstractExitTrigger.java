@@ -10,13 +10,15 @@ import org.bukkit.potion.PotionEffectType;
 
 /**
  * Base class for data-driven exit triggers.
- * Parses shared config: target_level, fallback_level (used while the target is unavailable), transition effects (blindness, nausea, darkness, delay, message, sound).
+ * Parses shared config: target_level, fallback_level (used while the target is unavailable),
+ * keep_position (arrive at the same coordinates, for twin levels built from one place), transition effects (blindness, nausea, darkness, delay, message, sound).
  */
 public abstract class AbstractExitTrigger implements ExitTrigger {
 
     protected final String id;
     protected final String targetLevelId;
     protected final String fallbackLevelId;
+    protected final boolean keepPosition;
     protected final ConfigurationSection config;
 
     // Transition effect config
@@ -32,6 +34,7 @@ public abstract class AbstractExitTrigger implements ExitTrigger {
         this.id = config.getString("id", config.getString("type", "unknown"));
         this.targetLevelId = config.getString("target_level", "overworld");
         this.fallbackLevelId = config.getString("fallback_level");
+        this.keepPosition = config.getBoolean("keep_position", false);
 
         ConfigurationSection transition = config.getConfigurationSection("transition");
         if (transition != null) {
@@ -64,6 +67,11 @@ public abstract class AbstractExitTrigger implements ExitTrigger {
     @Override
     public String getFallbackLevelId() {
         return fallbackLevelId;
+    }
+
+    @Override
+    public boolean keepsPosition() {
+        return keepPosition;
     }
 
     @Override
