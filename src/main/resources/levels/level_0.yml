@@ -233,3 +233,12 @@ exit_triggers:
     transition:
       blindness_ticks: 60
       delay_ticks: 20
+  # Rare bookshelf alcove set into a wall (froglight above it). Breaking the
+  # shelf is the door; chiseled desk shelves deliberately don't count.
+  - type: break_block
+    materials: ["BOOKSHELF"]
+    target_level: level_64637
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 30
+      message: "§7§othe shelves go deeper than the world allows"

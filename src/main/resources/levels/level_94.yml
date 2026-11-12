@@ -8,6 +8,10 @@ enter_message: "§aWelcome to Skyblock!"
 
 transition_message: "§c[ERR] §7Reality breach detected. Rerouting..."
 
+# Void world: arrivals (planetoids core-break, the Rules and Challenges book)
+# must land on the island, not on a random SpawnFinder attempt over nothing.
+spawn_radius: 0
+
 events: []
 
 entities: []

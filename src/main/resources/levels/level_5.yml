@@ -79,3 +79,14 @@ event_config:
       - "§7[?] §oThe recording skips"
       - "§7[?] §oFootsteps. Not yours."
       - "§7[?] §oIt's closer now."
+
+exit_triggers:
+  # The signal is coming from underneath: dig through the tunnel floor.
+  - type: below_y
+    y_threshold: 2
+    target_level: level_7
+    transition:
+      blindness_ticks: 100
+      darkness_ticks: 100
+      delay_ticks: 20
+      message: "§8the floor was a ceiling"

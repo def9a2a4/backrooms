@@ -56,7 +56,6 @@ backrooms:
 
   # Player settings
   player:
-    death_respawn_level: level_0
     escalation_thresholds_minutes:
       - 5
       - 15

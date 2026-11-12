@@ -8,7 +8,8 @@ spawn_radius: 0
 enter_message: "§3§oSmall worlds hang in the dark."
 events: []
 exit_triggers:
-  # Not yet connected to other levels: falling into the void returns you to the spawn planet.
+  # Falling into the void returns you to the spawn planet. Leaving is deliberate:
+  # dig into a grass planetoid and break the lodestone at its heart.
   - type: below_y
     y_threshold: -20
     target_level: level_974
@@ -16,3 +17,10 @@ exit_triggers:
       blindness_ticks: 40
       delay_ticks: 10
       message: "§7§oThe dark throws you back."
+  - type: break_block
+    materials: ["LODESTONE"]
+    target_level: level_94
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "§3§oThe small world lets go of you."

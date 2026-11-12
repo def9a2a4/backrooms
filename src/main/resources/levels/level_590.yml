@@ -17,7 +17,8 @@ event_config:
     chance: 0.3
     sounds: [block.pointed_dripstone.drip_water, block.sponge.absorb, ambient.cave]
 exit_triggers:
-  # Not yet connected to other levels: falling out the bottom of the sponge returns you to spawn.
+  # Falling out the bottom returns you to spawn. The way out is a defect:
+  # roughly one block in two thousand is wet. Break it.
   - type: below_y
     y_threshold: -20
     target_level: level_590
@@ -25,3 +26,10 @@ exit_triggers:
       blindness_ticks: 40
       delay_ticks: 10
       message: "§7§oThe sponge soaks you back up."
+  - type: break_block
+    materials: ["WET_SPONGE"]
+    target_level: level_3
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "§7The structure was dry by definition. This block did not agree."

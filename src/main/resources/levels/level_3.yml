@@ -87,6 +87,15 @@ generator_config:
         - "§7> ls /assets/test/\n§8  teapot.obj  bunny.ply  dragon.ply\n§8  lucy.ply  suzanne.obj  cornell_box\n§7// Who left these running?"
         - "§7> RFC 2324 --section 2.3.2\n§8  Any attempt to brew coffee with a\n§8  teapot should result in error 418.\n§7// Compliance: total."
         - "§7> grep -r oak_log /voxel_engine/\n§8  1 match.\n§c// That block should not exist here."
+    - weight: 1
+      target: level_590
+      messages:
+        - "§7> render menger --order=5\n§8  surface: increasing\n§8  volume: 0\n§7// It converges on nothing."
+        - "§7> du -sh /sponge/\n§8  3,200,000 blocks. 0 m³\n§7// Do not look for the inside.\n// There is no inside."
+        - "§7/* Every face is a smaller face.\n   Every hole is a larger hole. */"
+        - "§7> ping sponge.local\n§8  Reply from every coordinate.\n§7// The structure is one block.\n// It is also all of them."
+        - "§7> drain --all\n§8[ERR] Nothing to drain.\n§7// The sponge is dry by definition.\n// One block does not agree."
+        - "§7> lim volume(n), n → ∞\n§8  = 0\n§7// You are standing in the limit."
 
 events:
   - ambient_sound
@@ -131,7 +140,7 @@ event_config:
 exit_triggers:
   - type: powered_command_block
     target_level: level_4
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
@@ -140,7 +149,7 @@ exit_triggers:
       message: "// LOADING terrain_gen_legacy.jar ..."
   - type: powered_command_block
     target_level: level_5
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
@@ -150,7 +159,7 @@ exit_triggers:
       message: "// LOADING audio_11.dat ..."
   - type: powered_command_block
     target_level: level_7
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
@@ -159,7 +168,7 @@ exit_triggers:
       message: "// LOADING chunk_error_422.bin ..."
   - type: powered_command_block
     target_level: level_64637
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
@@ -168,7 +177,7 @@ exit_triggers:
       message: "// LOADING archive_64637.lib ..."
   - type: powered_command_block
     target_level: level_101
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
@@ -177,7 +186,7 @@ exit_triggers:
       message: "§7> restoring world from snapshot alpha ... §aOK"
   - type: powered_command_block
     target_level: level_56
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
@@ -186,7 +195,7 @@ exit_triggers:
       message: "// LOADING henge.mesh.gz ..."
   - type: powered_command_block
     target_level: level_1881
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
@@ -195,7 +204,7 @@ exit_triggers:
       message: "// LOADING archive 1881 ... (please do not touch the exhibits)"
   - type: powered_command_block
     target_level: level_1967
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
@@ -204,10 +213,19 @@ exit_triggers:
       message: "// LOADING /dev/southbank ... no lights found"
   - type: powered_command_block
     target_level: level_418
-    power_count: 16
+    power_count: 1
     window_ticks: 80
     radius: 20
     transition:
       blindness_ticks: 80
       delay_ticks: 20
       message: "// BREW coffee ... §c418"
+  - type: powered_command_block
+    target_level: level_590
+    power_count: 1
+    window_ticks: 80
+    radius: 20
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "// LOADING menger_sponge.obj ..."
