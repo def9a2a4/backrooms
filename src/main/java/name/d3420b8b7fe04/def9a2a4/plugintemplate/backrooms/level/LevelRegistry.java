@@ -182,6 +182,7 @@ public class LevelRegistry {
             case "day" -> dimensionTypeHelper.applyDayDimension(world);
             case "twilight" -> dimensionTypeHelper.applyTwilightDimension(world);
             case "alpha" -> dimensionTypeHelper.applyAlphaDimension(world);
+            case "lobby" -> dimensionTypeHelper.applyLobbyDimension(world);
             // "default" — no NMS swap, use vanilla dimension type
         }
     }

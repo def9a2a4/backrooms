@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Writes text onto the blank signs Level101ChunkGenerator places in the Alpha
@@ -39,7 +40,8 @@ import java.util.Random;
  */
 public class Level101SignListener implements Listener {
 
-    private static final String WORLD_NAME = "bkrms_101";
+    // Level 0 too: its tall halls hold Level 101 structures at the same ground height.
+    private static final Set<String> WORLD_NAMES = Set.of("bkrms_101", "bkrms_0");
     private static final int SCAN_MIN_Y = 58;   // dungeon-breach chest labels sit at y60
     private static final int SCAN_MAX_Y = 78;
 
@@ -115,7 +117,7 @@ public class Level101SignListener implements Listener {
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
         if (!event.isNewChunk()) return;
-        if (!event.getWorld().getName().equals(WORLD_NAME)) return;
+        if (!WORLD_NAMES.contains(event.getWorld().getName())) return;
 
         Chunk chunk = event.getChunk();
         List<int[]> signs = new ArrayList<>();

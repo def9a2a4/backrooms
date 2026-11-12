@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level0ChunkGenerator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -29,7 +30,7 @@ import java.util.Random;
  */
 public class LobbyBookshelfListener implements Listener {
 
-    private static final int AIR_MIN_Y = 20;
+    private static final int AIR_MIN_Y = Level0ChunkGenerator.AIR_MIN_Y;
 
     private final JavaPlugin plugin;
     private final LobbyBookConfig config;

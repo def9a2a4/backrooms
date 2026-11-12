@@ -45,7 +45,8 @@ import java.util.Random;
 public class Level101ChunkGenerator extends BackroomsChunkGenerator {
 
     private static final int MAX_Y = 128;
-    private static final int GROUND_Y = 64;
+    // Level 0's tall halls reuse these structures on a floor at this same height.
+    static final int GROUND_Y = 64;
 
     // Cave carving band: leaves >= 7 blocks of stone plus the dirt cap intact,
     // so caverns never open to the surface on their own.
@@ -74,10 +75,16 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         void place(ChunkData chunkData, Random rng);
     }
 
-    private record Template(int weight, Placer placer) {}
+    /** {@code indoors}: safe to place inside Level 0's halls (no fire next to carpet and wood). */
+    private record Template(int weight, Placer placer, boolean indoors) {
+        Template(int weight, Placer placer) {
+            this(weight, placer, true);
+        }
+    }
 
     private final List<Template> templates = new ArrayList<>();
     private final int totalStructureWeight;
+    private final int indoorStructureWeight;
 
     // Tunables (generator_config)
     private int treeChunkChance = 8;         // percent of chunks with 1-2 trees
@@ -108,7 +115,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         templates.add(new Template(5, this::placeChapelRuin));
         templates.add(new Template(5, this::placeWinterScar));
         templates.add(new Template(5, this::placePumpkinPatch));
-        templates.add(new Template(5, this::placeLavaPool));
+        templates.add(new Template(5, this::placeLavaPool, false));
         templates.add(new Template(4, this::placeRailsToNowhere));
         templates.add(new Template(4, this::placeSignpostCluster));
         templates.add(new Template(1, this::placeSponge));
@@ -121,9 +128,13 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         templates.add(new Template(5, this::placeAFrameCabin));
         templates.add(new Template(5, this::placeWatchhouse));
 
-        int sum = 0;
-        for (Template t : templates) sum += t.weight();
+        int sum = 0, indoorSum = 0;
+        for (Template t : templates) {
+            sum += t.weight();
+            if (t.indoors()) indoorSum += t.weight();
+        }
         totalStructureWeight = sum;
+        indoorStructureWeight = indoorSum;
     }
 
     @Override
@@ -183,15 +194,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
 
         // --- Pass 2: at most one structure per eligible chunk ---
         if (hasStructure) {
-            int roll = chunkRng.nextInt(totalStructureWeight);
-            int cumulative = 0;
-            for (Template t : templates) {
-                cumulative += t.weight();
-                if (roll < cumulative) {
-                    t.placer().place(chunkData, chunkRng);
-                    break;
-                }
-            }
+            placeRandomStructure(chunkData, chunkRng, false);
         }
 
         // --- Pass 3: rare trees, only in structure-free chunks ---
@@ -203,6 +206,23 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
                 if (chunkData.getType(tx, GROUND_Y, tz) == Material.GRASS_BLOCK) {
                     placeOakTree(chunkData, chunkRng, tx, GROUND_Y + 1, tz);
                 }
+            }
+        }
+    }
+
+    /**
+     * Places one weighted-random structure on ground at {@link #GROUND_Y}.
+     * {@code indoorsOnly} skips templates unfit for Level 0's halls.
+     */
+    void placeRandomStructure(ChunkData chunkData, Random rng, boolean indoorsOnly) {
+        int roll = rng.nextInt(indoorsOnly ? indoorStructureWeight : totalStructureWeight);
+        int cumulative = 0;
+        for (Template t : templates) {
+            if (indoorsOnly && !t.indoors()) continue;
+            cumulative += t.weight();
+            if (roll < cumulative) {
+                t.placer().place(chunkData, rng);
+                return;
             }
         }
     }
