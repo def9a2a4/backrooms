@@ -132,6 +132,7 @@ function clear(obj) {
 const model = () => MODELS.find((m) => m.id === $('model').value);
 
 function selectModel(m, scale) {
+  setupTune(m);
   $('model').value = m.id;
   $('scale').value = String(scale ?? m.scale);
   $('radius').value = m.radius;
@@ -154,13 +155,119 @@ function applyFog() {
   scene.background.set(on ? fog[0] : SKY);
 }
 
-const meshUrl = (m) => (m.sizes ? m.sizes[$('size').value] : m.mesh);
+// "@name": a published mesh, resolved through the plugin's manifest to meshes/<file>
+const MANIFEST = await (await fetch('/src/main/resources/meshes.json')).json();
+const resolve = (u) => (u.startsWith('@') ? `/meshes/${MANIFEST.meshes[u.slice(1)].file}` : u);
+const meshUrl = (m) => resolve(m.sizes ? m.sizes[$('size').value] : m.mesh);
 
 async function getMesh(m) {
   const url = meshUrl(m);
   if (!meshes.has(url)) meshes.set(url, await loadMesh(url));
-  return meshes.get(url);
+  const mesh = meshes.get(url);
+  // tuned materials replace the file's surface grid (same cells, same order) and the per-vertex
+  // fallback materials (re-derived from the tuned cells)
+  if (tuned && tuned.model === m.id && mesh.grid && mesh.grid.cells.size === tuned.mats.length) {
+    if (mesh.grid.tunedFrom !== tuned) {
+      const cells = new Map();
+      let i = 0;
+      for (const k of mesh.grid.cells.keys()) cells.set(k, tuned.mats[i++]);
+      mesh.grid = { ...mesh.grid, cells, tunedFrom: tuned };
+      mesh.vmatBuilt ??= mesh.vmat;
+      if (tuned.vmats && tuned.vmats.length === mesh.vmatBuilt.length) {
+        mesh.vmat = mesh.vmatBuilt.map((m0, v) => (tuned.vmats[v] >= 0 ? tuned.vmats[v] : m0));
+      }
+    }
+  }
+  return mesh;
 }
+
+// ── tuning ──────────────────────────────────────────────────────────────────────────────────────
+// For scans with a cells export (build_scan.py --cells-only), the block matching is redone live
+// in tune-worker.js with the sliders' values; the result replaces the 16x mesh's surface grid.
+// "Copy settings" gives the MODELS[...]["tune"] entry for the real build.
+
+const TUNE_KEYS = ['blur', 'spread', 'pattern', 'majority', 'height', 'slope'];
+const TUNE_ZERO = { height: 0, slope: 0 };   // exports made before these knobs existed
+let tuneWorker = null, tuneModel = null, tuneDefaults = null, tuned = null, tuneRun = 0, tuneTimer = null;
+
+function tuneValues() {
+  return Object.fromEntries(TUNE_KEYS.map((k) => [k, Number($(`t-${k}`).value)]));
+}
+
+function showTune(values) {
+  for (const k of TUNE_KEYS) {
+    $(`t-${k}`).value = values[k];
+    $(`o-${k}`).textContent = values[k];
+  }
+}
+
+function tuneProgress(label, f) {
+  const bar = $('tune-progress');
+  if (f == null) {
+    bar.style.display = 'none';
+    $('tune-status').textContent = label;
+    return;
+  }
+  bar.style.display = '';
+  bar.value = f;
+  $('tune-status').textContent = `${label} ${(f * 100).toFixed(0)}%`;
+}
+
+function setupTune(m) {
+  $('tune').style.display = m.cells ? '' : 'none';
+  if (!m.cells || tuneModel === m.id) return;
+  if (tuneWorker) tuneWorker.terminate();
+  tuneModel = m.id;
+  tuned = null;
+  tuneProgress('loading cells', 0);
+  tuneWorker = new Worker(new URL('./tune-worker.js', import.meta.url), { type: 'module' });
+  tuneWorker.onmessage = ({ data }) => {
+    if (data.type === 'loaded') {
+      tuneDefaults = { ...TUNE_ZERO, ...data.tune };
+      const fromUrl = Object.fromEntries(TUNE_KEYS.filter((k) => params.has(k)).map((k) => [k, Number(params.get(k))]));
+      showTune({ ...tuneDefaults, ...fromUrl });
+      tuneProgress(`${data.count.toLocaleString()} cells`);
+      sendVerts(m).then(() => { if (Object.keys(fromUrl).length) scheduleTune(0); });
+    } else if (data.type === 'progress') {
+      tuneProgress(data.phase, data.f);
+    } else if (data.type === 'done') {
+      if (data.id !== tuneRun) return;
+      tuned = { model: m.id, mats: data.mats, vmats: data.vmats, values: tuneValues() };
+      tuneProgress('redrawing', 1);
+      // let the bar paint before the redraw blocks the page
+      setTimeout(() => build().then(() => tuneProgress('matched')), 30);
+    } else if (data.type === 'error') {
+      tuneProgress(`no cells: ${data.message}`);
+    }
+  };
+  tuneWorker.postMessage({ type: 'load', url: m.cells });
+}
+
+/** Give the tuning worker the 16x mesh's vertices, so it can re-derive vertex materials too. */
+async function sendVerts(m) {
+  const url = resolve(m.sizes ? Object.values(m.sizes)[0] : m.mesh);
+  if (!meshes.has(url)) meshes.set(url, await loadMesh(url));
+  tuneWorker.postMessage({ type: 'verts', verts: meshes.get(url).verts.slice() });
+}
+
+function scheduleTune(delay = 400) {
+  showTune(tuneValues());
+  clearTimeout(tuneTimer);
+  tuneProgress('waiting', 0);
+  tuneTimer = setTimeout(() => {
+    tuneRun++;
+    tuneWorker.postMessage({ type: 'run', id: tuneRun, tune: tuneValues() });
+  }, delay);
+}
+
+for (const k of TUNE_KEYS) $(`t-${k}`).oninput = () => scheduleTune();
+$('t-reset').onclick = () => { if (tuneDefaults) { showTune(tuneDefaults); scheduleTune(0); } };
+$('t-copy').onclick = async () => {
+  const text = `"tune": ${JSON.stringify(tuneValues()).replace(/,/g, ', ').replace(/:/g, ': ')},`;
+  try { await navigator.clipboard.writeText(text); } catch { /* no clipboard: still shown */ }
+  $('tune-status').textContent = 'copied';
+  stats.textContent = `${model().id} → build_scan.py MODELS:\n${text}`;
+};
 
 // ── reduced mesh view ───────────────────────────────────────────────────────────────────────────
 // The decimated triangles as they are, before voxelizing, both sides (scan winding isn't
@@ -334,6 +441,9 @@ async function build() {
     q.set('scale', scale);
     q.set('view', $('viewmode').value);
     if (m.sizes) q.set('size', $('size').value); else q.delete('size');
+    for (const k of TUNE_KEYS) {
+      if (tuned && tuned.model === m.id) q.set(k, tuned.values[k]); else q.delete(k);
+    }
     history.replaceState(null, '', `?${q}`);
   };
   if ($('viewmode').value === 'mesh') {
@@ -364,7 +474,9 @@ async function build() {
   let r;
   try {
     r = await runJob({ url: new URL(meshUrl(m), location.href).href, mode: m.mode, opts,
-      altar: !!m.altar, mats: $('mats').checked, blocks: BLOCKS, groundY: GROUND_Y });
+      altar: !!m.altar, mats: $('mats').checked, blocks: BLOCKS, groundY: GROUND_Y,
+      gridMats: mesh.grid?.tunedFrom ? mesh.grid.tunedFrom.mats.slice() : null,
+      vmats: mesh.grid?.tunedFrom ? Uint8Array.from(mesh.vmat) : null });
   } catch (e) {
     if (e.message !== 'cancelled') stats.textContent = `error: ${e.message}`;
     return;

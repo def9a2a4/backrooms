@@ -9,7 +9,8 @@ https://sketchfab.com/3d-models/stonehenge-england-vr-7e7febabef2045a68755cc39c8
 
 Pipeline: load GLB → sample texture colors per face → classify ground/stone → pick the closest
 block in each family → decimate → transfer materials to the decimated vertices → write
-src/main/resources/structures/stonehenge.mesh.gz (format documented in write_mesh()).
+.temp/meshes/stonehenge.mesh.gz (format documented in write_mesh()); scripts/scans/publish.py
+publishes it to meshes/ for servers to download.
 
 Usage: uv run scripts/stonehenge/build_mesh.py [--input .temp/stonehenge_england_-_vr.glb]
 """
@@ -33,7 +34,7 @@ from meshlib import quantize, write_triangles, write_vertices  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMP = ROOT / ".temp"
-OUT = ROOT / "src/main/resources/structures/stonehenge.mesh.gz"
+OUT = ROOT / ".temp/meshes/stonehenge.mesh.gz"   # published to meshes/ by scripts/scans/publish.py
 
 # Same pinned vanilla asset mirror defCoreLib uses (commit == tag 1.21.4).
 MC_ASSETS = ("https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/"

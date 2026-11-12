@@ -10,10 +10,10 @@ Sources: alecjacobson/common-3d-test-models (pinned below), which redistributes
   stanford-bunny  Stanford 3D Scanning Repository
   xyzrgb_dragon   Stanford 3D Scanning Repository (XYZ RGB Inc.)
   lucy            Stanford 3D Scanning Repository
-See src/main/resources/structures/testscene/CREDITS.txt.
+See meshes/CREDITS.txt.
 
 Pipeline: download OBJ → rotate to y-up, face +z → base at y=0, centered in XZ, unit height →
-decimate → write src/main/resources/structures/testscene/<name>.mesh.gz (format in write_mesh()).
+decimate → write .temp/meshes/testscene/<name>.mesh.gz (format in write_mesh()).
 
 Usage: uv run scripts/testscene/build_meshes.py [--preview]
   --preview also writes .temp/testscene/<name>.png (front and side silhouettes) for checking
@@ -38,7 +38,7 @@ from meshlib import quantize, write_triangles, write_vertices  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMP = ROOT / ".temp" / "testscene"
-OUT = ROOT / "src/main/resources/structures/testscene"
+OUT = ROOT / ".temp/meshes/testscene"   # published to meshes/ by scripts/scans/publish.py
 
 SOURCE = ("https://raw.githubusercontent.com/alecjacobson/common-3d-test-models/"
           "8a4f8642acaf43f9cd7b67858a1502e1055ef202/data")

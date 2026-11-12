@@ -70,6 +70,8 @@ MODELS = {
                     "white_terracotta", "light_gray_terracotta", "brown_terracotta", "gravel",
                     "tuff", "andesite", "granite", "calcite"],
         "penalty": {"calcite": 0.01},     # IronSource: calcite only for very white
+        # sun-bleached hilltop, shadowed pits; worn floors paler than the cut faces
+        "tune": {"height": 0.4, "slope": 0.3},
         # an excavation: no masonry (bricks and tiles of any kind)
         "full": {"lists": ["stone"], "exclude": r"brick|tiles"},
     },
@@ -243,7 +245,7 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
     (baked light and shadow make it the least reliable channel). The scan's lightness is first
     mapped onto the palette's range, and `cast` of its average tint removed (white balance).
     With `contrast` (std of OKLab L inside each sample), blocks whose texture is as busy as the
-    surface win: + PATTERN_WEIGHT * (contrast - block contrast)^2 (IronSource's pattern term,
+    surface win: + tune pattern * (contrast - block contrast)^2 (IronSource's pattern term,
     contrast only). Returns (palette indices, palette OKLab as seen from the side).""" 
     pal = cfg["palette"]
     faces = [block_color(b) for b in pal]
@@ -256,7 +258,7 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
     pl = (side + top) / 2
     pmean, pstd = pl.mean(axis=0), pl.std(axis=0)
     q = np.empty_like(lab)
-    q[:, 0] = (lab[:, 0] - fmean[0]) / max(fstd[0], 1e-6) * pstd[0] * cfg.get("spread", 0.8) + pmean[0]
+    q[:, 0] = (lab[:, 0] - fmean[0]) / max(fstd[0], 1e-6) * pstd[0] * tune(cfg)["spread"] + pmean[0]
     cast = cfg.get("cast", 0.0)      # 1 = remove the scan's average tint entirely (to neutral)
     q[:, 1:] = (lab[:, 1:] - fmean[1:]) * cfg.get("chroma", 1.0) + fmean[1:] * (1 - cast)
     # Grey scans: color noise around neutral (~0.02) outweighs the differences between grey
@@ -277,12 +279,28 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
         d = q[sl, None, :] - cand
         dist = 0.25 * d[..., 0] ** 2 + d[..., 1] ** 2 + d[..., 2] ** 2 + penalty[None]
         if bcon is not None:
-            dist += PATTERN_WEIGHT * (contrast[sl, None] - bcon[None]) ** 2
+            dist += tune(cfg)["pattern"] * (contrast[sl, None] - bcon[None]) ** 2
         best[sl] = dist.argmin(axis=1)
     return best, side
 
 
-PATTERN_WEIGHT = 0.5    # IronSource's weight for texture contrast/grain differences
+# Matching knobs, per model in MODELS[...]["tune"] (pick them with the sliders in
+# scripts/voxel-preview, which redoes this matching live from the --cells-only export):
+#   blur      color blur passes over neighboring cells before matching (photogrammetry texture is
+#             noisy at block scale: baked shadows, dirt, sensor noise)
+#   spread    contrast: how much of the palette's lightness range the scan's lightness is
+#             stretched over (lower = calmer, fewer jumps between light and dark blocks)
+#   pattern   weight of matching texture busyness (IronSource uses 0.5)
+#   majority  3x3x3 majority-filter passes after matching (removes lone blocks)
+#   height    height shading before matching, -1..1: lighter higher up (negative: darker)
+#   slope     slope shading before matching, -1..1: flat ground lighter than steep faces
+#             (negative: the reverse). Both add up to +-SHADE/2 to OKLab lightness.
+TUNE_DEFAULTS = {"blur": 3, "spread": 0.8, "pattern": 0.5, "majority": 1, "height": 0.0, "slope": 0.0}
+SHADE = 0.2
+
+
+def tune(cfg: dict) -> dict:
+    return {**TUNE_DEFAULTS, **cfg.get("tune", {})}
 FULL_LISTS = json.loads((ROOT / "scripts/scans/full_palette.json").read_text())
 
 
@@ -305,8 +323,8 @@ def block_contrast(block: str) -> float:
     return float(oklab(srgb_to_linear(px))[:, 0].std())
 
 
-def match_cells(cen, area, lab, up, cfg, cell, blur, majority, forced=None, forced_mat=-1,
-                forced_fraction=0.5):
+def match_cells(cen, area, lab, up, cfg, cell, forced=None, forced_mat=-1, forced_fraction=0.5,
+                export=None):
     """Blocks per grid cell instead of per face (style "full"): each cell's area-weighted mean
     color, blurred over its neighbors `blur` times (photogrammetry texture is noisy at block
     scale: baked shadows, dirt, sensor noise), the spread of lightness inside it as surface
@@ -323,6 +341,12 @@ def match_cells(cen, area, lab, up, cfg, cell, blur, majority, forced=None, forc
     l2 = np.bincount(inv, weights=area * lab[:, 0] ** 2) / wsum
     contrast = np.sqrt(np.maximum(l2 - mean[:, 0] ** 2, 0))
     upm = np.bincount(inv, weights=area * up) / wsum
+    frac = np.bincount(inv, weights=area * forced) / wsum if forced is not None else np.zeros(len(keys))
+    if export is not None:
+        export_cells(export, cfg, cell, origin, dims, keys, mean, contrast, upm, wsum, frac,
+                     forced_mat, forced_fraction)
+        return None
+    blur, majority = tune(cfg)["blur"], tune(cfg)["majority"]
     cx = keys // (dims[1] * dims[2])
     cz = (keys // dims[1]) % dims[2]
     cy = keys % dims[1]
@@ -348,6 +372,13 @@ def match_cells(cen, area, lab, up, cfg, cell, blur, majority, forced=None, forc
             acc += mean[j] * wt[:, None]
             tot += wt
         mean = acc / tot[:, None]
+    t = tune(cfg)
+    if t["height"] or t["slope"]:
+        # shading overlay: height across the model's full height, slope from how much the surface
+        # faces up (0 wall, 1 floor)
+        mean = mean.copy()
+        mean[:, 0] += (t["height"] * (cy / max(dims[1] - 1, 1) - 0.5)
+                       + t["slope"] * (np.clip(upm, 0, 1) - 0.5)) * SHADE
     mat, plab = assign(mean, wsum, upm, cfg, contrast)
     for _ in range(majority):
         # each cell takes the block most of its 3×3×3 neighborhood has (missing neighbors vote
@@ -357,10 +388,43 @@ def match_cells(cen, area, lab, up, cfg, cell, blur, majority, forced=None, forc
         mat = votes[counts.argmax(axis=0), np.arange(len(mat))]
     if forced is not None:
         # cells mostly made of forced faces (glass) take the forced block
-        frac = np.bincount(inv, weights=area * forced) / wsum
         mat[frac >= forced_fraction] = forced_mat
     centers = origin + (np.stack([cx, cy, cz], axis=1) + 0.5) * cell
     return (origin, dims, keys, mat.astype(np.uint8)), centers, mat, plab
+
+
+def export_cells(path, cfg, cell, origin, dims, keys, mean, contrast, up, wsum, frac,
+                 forced_mat, forced_fraction):
+    """Per-cell inputs to the matching, for the preview's tuning sliders (tune.js redoes blur,
+    assign() and the majority filter from these). Format, little-endian, gzipped:
+      "CEL1", u32 header length, JSON header (cell, origin, dims, count, palette with OKLab per
+      face, texture contrast and penalty, the fixed knobs and the tune defaults), padding to 4
+      bytes, then per cell: u32 key[count] (as in TEX1), f32 L, a, b, contrast, up, area, glass[]
+    """
+    pal = cfg["palette"]
+    header = {
+        "cell": cell, "origin": [float(v) for v in origin], "dims": [int(v) for v in dims],
+        "count": int(len(keys)),
+        "palette": [{"id": b, **{f: [float(x) for x in c] for f, c in block_color(b).items()},
+                     "contrast": block_contrast(b), "penalty": cfg.get("penalty", {}).get(b, 0.0)}
+                    for b in pal],
+        "fixed": {"cast": cfg.get("cast", 0.0), "chroma": cfg.get("chroma", 1.0),
+                  "deadzone": cfg.get("deadzone", 0.0), "forced": int(forced_mat),
+                  "forced_fraction": forced_fraction},
+        "tune": tune(cfg),
+    }
+    h = json.dumps(header).encode()
+    buf = io.BytesIO()
+    buf.write(b"CEL1")
+    buf.write(struct.pack("<I", len(h)))
+    buf.write(h)
+    buf.write(b" " * (-(8 + len(h)) % 4))
+    buf.write(keys.astype("<u4").tobytes())
+    for col in (mean[:, 0], mean[:, 1], mean[:, 2], contrast, up, wsum, frac):
+        buf.write(np.asarray(col, "<f4").tobytes())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(gzip.compress(buf.getvalue(), compresslevel=6, mtime=0))
+    print(f"  exported {len(keys)} cells -> {path.relative_to(ROOT)} ({path.stat().st_size / 1048576:.1f} MB)")
 
 
 def decimate(verts, faces, target, agg=7):
@@ -472,10 +536,17 @@ def build(name: str, args):
             cfg = dict(cfg, penalty={**cfg.get("penalty", {}), "glass": 1e9})
             print(f"  glass: {area[glass].sum() / area.sum() * 100:.1f}% of the surface")
         cfg = dict(cfg, palette=pal_ids)
+        cfg["tune"] = {**cfg.get("tune", {}), **{k: v for k, v in vars(args).items()
+                                                 if k in TUNE_DEFAULTS and v is not None}}
+        match = dict(forced=glass, forced_mat=len(pal_ids) - 1 if glass is not None else -1,
+                     forced_fraction=cfg.get("glass", {}).get("cell_fraction", 0.5))
+        if args.cells_only:
+            match_cells(tri.mean(axis=1), area, lab, up, cfg, args.tex_cell,
+                        export=TEMP / "cells" / f"{name}.cells.gz", **match)
+            return
         grid, cell_centers, cell_mat, plab = match_cells(
-            tri.mean(axis=1), area, lab, up, cfg, args.tex_cell, args.blur, args.majority,
-            forced=glass, forced_mat=len(pal_ids) - 1 if glass is not None else -1,
-            forced_fraction=cfg.get("glass", {}).get("cell_fraction", 0.5))
+            tri.mean(axis=1), area, lab, up, cfg, args.tex_cell, **match)
+        print(f"  tune {tune(cfg)}")
         # faces take their cell's block, so the per-vertex fallback agrees with the grid
         _, near = cKDTree(cell_centers).query(tri.mean(axis=1))
         mat = cell_mat[near]
@@ -539,10 +610,15 @@ def main():
                     help="palette: the model's own block list, per face; full: IronSource's full "
                          "block list matched per grid cell with light smoothing and a texture "
                          "contrast term")
-    ap.add_argument("--blur", type=int, default=3,
-                    help="--style full: color blur passes over neighboring cells before matching")
-    ap.add_argument("--majority", type=int, default=1,
-                    help="--style full: 3x3x3 majority-filter passes after matching")
+    ap.add_argument("--blur", type=int, help="override the model's tune.blur (see TUNE_DEFAULTS)")
+    ap.add_argument("--spread", type=float, help="override tune.spread (contrast)")
+    ap.add_argument("--pattern", type=float, help="override tune.pattern (texture matching)")
+    ap.add_argument("--majority", type=int, help="override tune.majority")
+    ap.add_argument("--height", type=float, help="override tune.height (height shading)")
+    ap.add_argument("--slope", type=float, help="override tune.slope (slope shading)")
+    ap.add_argument("--cells-only", action="store_true",
+                    help="--style full: only export .temp/cells/<model>.cells.gz for the preview's "
+                         "tuning sliders (no decimation, no mesh)")
     ap.add_argument("--output", help="default .temp/meshes/<model>.mesh.gz")
     args = ap.parse_args()
     for name in (MODELS if args.model == "all" else [args.model]):

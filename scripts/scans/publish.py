@@ -1,13 +1,14 @@
-"""Publish the scan-level meshes: copy each into the GitHub Pages repo under a content-addressed
-name (<mesh>-<sha256[:12]>.mesh.gz, so a URL never changes meaning) and write the manifest the
-plugin ships (src/main/resources/scans/meshes.json: file, sha256, bytes per mesh).
+"""Publish the level meshes. They're kept out of the jar to keep it light: each is copied into
+this repo's meshes/ folder under a content-addressed name (<mesh>-<sha256[:12]>.mesh.gz, so a URL
+never changes meaning), and the manifest the plugin ships is rewritten
+(src/main/resources/meshes.json: file, sha256, bytes per mesh).
 
-The plugin downloads https://def9a2a4.github.io/backrooms/meshes/<file> and checks the hash.
-This script only copies files; commit and push the Pages repo yourself.
+Servers download https://raw.githubusercontent.com/def9a2a4/backrooms/main/meshes/<file> and
+check the hash, so new meshes only reach servers once meshes/ is committed and pushed to main.
 
-Usage: python3 scripts/scans/publish.py [--pages ../def9a2a4.github.io]
+Usage: python3 scripts/scans/publish.py
        python3 scripts/scans/publish.py --install server/plugins/Backrooms/meshes
-         (copy the meshes the manifest names into a server's data folder, so it needn't download)
+         (copy the published meshes into a server's data folder, so it needn't download)
 """
 
 import argparse
@@ -17,99 +18,122 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MANIFEST = ROOT / "src/main/resources/scans/meshes.json"
-CREDITS = """Meshes for the scan levels of the Backrooms Minecraft plugin (levels 1881, 1967, 1973, 9500)
+OUT = ROOT / "meshes"
+MANIFEST = ROOT / "src/main/resources/meshes.json"
 
-These files are modified versions of the following 3D scans, all licensed under CC BY 4.0
-(https://creativecommons.org/licenses/by/4.0/):
-
-  hintze_hall       "Hintze Hall" by artfletch
-                    https://sketchfab.com/3d-models/hintze-hall-45f5e56887f44075bbf283977c99541f
-  undercroft_grey,  "Southbank Undercroft Skatepark" by artfletch
-  undercroft_color  https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d
-  gobekli_tepe      "Gobekli Tepe" by rmark
-                    https://sketchfab.com/3d-models/gobekli-tepe-5a4d25c355ff48d59ab76c36812b9cf3
-
-Changes: decimated to ~1.8 million triangles, recentered and rescaled, texture colors replaced by
-a 3D grid of Minecraft block ids, re-encoded in the plugin's compressed mesh format. Built with
-scripts/scans/build_scan.py; voxelized into Minecraft worlds at runtime.
-
-The modified meshes are distributed under the same license, CC BY 4.0.
-"""
-
-# mesh name (generator_config.mesh) -> build output (build_scan.py --style full --max-kb 8000
-# --tex-cell 0.0625 --output .temp/meshes/<model>_16x.mesh.gz)
+# mesh name (a level's `meshes:` / generator_config.mesh, ShapeLibrary.Shape) -> build output
 MESHES = {
+    # scripts/stonehenge/build_mesh.py
+    "stonehenge": ".temp/meshes/stonehenge.mesh.gz",
+    # scripts/testscene/build_meshes.py
+    "teapot": ".temp/meshes/testscene/teapot.mesh.gz",
+    "suzanne": ".temp/meshes/testscene/suzanne.mesh.gz",
+    "bunny": ".temp/meshes/testscene/bunny.mesh.gz",
+    "dragon": ".temp/meshes/testscene/dragon.mesh.gz",
+    "lucy": ".temp/meshes/testscene/lucy.mesh.gz",
+    # scripts/scans/build_scan.py --style full --max-kb 8000 --tex-cell 0.0625
     "hintze_hall": ".temp/meshes/hall_16x.mesh.gz",
     "undercroft_grey": ".temp/meshes/skatepark_grey_16x.mesh.gz",
     "undercroft_color": ".temp/meshes/skatepark_16x.mesh.gz",
     "gobekli_tepe": ".temp/meshes/gobekli_16x.mesh.gz",
 }
 
+CREDITS = """Meshes for the Backrooms Minecraft plugin (https://github.com/def9a2a4/backrooms)
+
+Each file is <mesh>-<sha256 prefix>.mesh.gz. They're derived from these models:
+
+stonehenge (Level 56)
+  "Stonehenge England - VR" by Graphic solutions, CC BY 4.0
+  https://sketchfab.com/3d-models/stonehenge-england-vr-7e7febabef2045a68755cc39c8c7c91f
+  Changes: cropped to the stone circle, decimated to ~10k triangles, textures reduced to a
+  per-vertex Minecraft block palette (scripts/stonehenge/build_mesh.py).
+
+hintze_hall (Level 1881)
+  "Hintze Hall" by artfletch, CC BY 4.0
+  https://sketchfab.com/3d-models/hintze-hall-45f5e56887f44075bbf283977c99541f
+undercroft_grey, undercroft_color (Levels 1967, 1973)
+  "Southbank Undercroft Skatepark" by artfletch, CC BY 4.0
+  https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d
+gobekli_tepe (Level 9500)
+  "Gobekli Tepe" by rmark, CC BY 4.0
+  https://sketchfab.com/3d-models/gobekli-tepe-5a4d25c355ff48d59ab76c36812b9cf3
+  Changes to the scans: decimated to ~1.8 million triangles, recentered and rescaled, texture
+  colors replaced by a 3D grid of Minecraft block ids (scripts/scans/build_scan.py).
+
+The modified meshes above are distributed under the same license, CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
+
+teapot, suzanne, bunny, dragon, lucy (Level 418), from the copies in
+https://github.com/alecjacobson/common-3d-test-models (commit 8a4f864):
+  teapot   Utah teapot, Martin Newell, 1975. Public domain.
+  suzanne  Suzanne, the Blender monkey. Blender Foundation, https://www.blender.org/
+  bunny    Stanford Bunny, Stanford 3D Scanning Repository
+  dragon   XYZ RGB Asian Dragon, XYZ RGB Inc., via the Stanford 3D Scanning Repository
+  lucy     Lucy, Stanford 3D Scanning Repository
+  Stanford 3D Scanning Repository: http://graphics.stanford.edu/data/3Dscanrep/ -- used with
+  credit under the repository's terms, which allow research and non-commercial use.
+  Changes: rotated upright, scaled to unit height, decimated to a few thousand triangles
+  (scripts/testscene/build_meshes.py).
+
+All of them are voxelized into Minecraft worlds at runtime.
+"""
+
 
 def install(dest: Path):
-    """Copy each manifest mesh into dest under its published name, from the local build. Skips
-    (with a note) meshes whose build no longer matches the manifest: run publish first."""
+    """Copy the manifest's meshes from meshes/ into dest, dropping stale or partial files."""
     manifest = json.loads(MANIFEST.read_text())["meshes"]
     dest.mkdir(parents=True, exist_ok=True)
-    for name, m in manifest.items():
+    keep = {m["file"] for m in manifest.values()}
+    for m in manifest.values():
         target = dest / m["file"]
-        if target.exists() and target.stat().st_size == m["bytes"]:
-            continue
-        src = ROOT / MESHES[name]
-        if not src.exists():
-            print(f"{name}: {src.relative_to(ROOT)} not built; the server will download it")
-            continue
-        data = src.read_bytes()
-        if hashlib.sha256(data).hexdigest() != m["sha256"]:
-            print(f"{name}: local build differs from the manifest (run publish.py); not installed")
-            continue
-        target.write_bytes(data)
-        print(f"installed {target}")
+        if not (target.exists() and target.stat().st_size == m["bytes"]):
+            shutil.copyfile(OUT / m["file"], target)
+            print(f"installed {target}")
     for old in [*dest.glob("*.mesh.gz"), *dest.glob("*.part")]:
-        if old.name not in {m["file"] for m in manifest.values()}:
+        if old.name not in keep:
             old.unlink()
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pages", default=str(ROOT.parent / "def9a2a4.github.io"))
-    ap.add_argument("--install", metavar="DIR", help="copy the manifest's meshes into DIR and stop")
+    ap.add_argument("--install", metavar="DIR", help="copy the published meshes into DIR and stop")
     args = ap.parse_args()
     if args.install:
         install(Path(args.install))
         return
-    out_dir = Path(args.pages) / "docs/backrooms/meshes"
-    out_dir.mkdir(parents=True, exist_ok=True)
 
+    OUT.mkdir(parents=True, exist_ok=True)
+    old = json.loads(MANIFEST.read_text())["meshes"] if MANIFEST.exists() else {}
     manifest = {}
     for name, src in MESHES.items():
-        data = (ROOT / src).read_bytes()
+        path = ROOT / src
+        if not path.exists():
+            if name in old:   # not rebuilt here: keep what's published
+                manifest[name] = old[name]
+                print(f"{name:18s} (kept {old[name]['file']}: {src} not built)")
+                continue
+            raise SystemExit(f"{name}: {src} not built")
+        data = path.read_bytes()
         sha = hashlib.sha256(data).hexdigest()
         file = f"{name}-{sha[:12]}.mesh.gz"
-        dest = out_dir / file
-        if not dest.exists():
-            shutil.copyfile(ROOT / src, dest)
+        if not (OUT / file).exists():
+            (OUT / file).write_bytes(data)
         manifest[name] = {"file": file, "sha256": sha, "bytes": len(data)}
-        print(f"{name:18s} {len(data) / 1048576:5.1f} MB  {file}")
+        print(f"{name:18s} {len(data) / 1048576:6.2f} MB  {file}")
 
-    # drop superseded versions of these meshes from the Pages repo
     keep = {m["file"] for m in manifest.values()}
-    for old in out_dir.glob("*.mesh.gz"):
-        if old.name not in keep and old.name.rsplit("-", 1)[0] in MESHES:
-            old.unlink()
-            print(f"removed {old.name}")
-
-    (out_dir / "CREDITS.txt").write_text(CREDITS)
-    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    (MANIFEST.parent / "CREDITS.txt").write_text(CREDITS)
+    for f in OUT.glob("*.mesh.gz"):
+        if f.name not in keep:
+            f.unlink()
+            print(f"removed {f.name}")
+    (OUT / "CREDITS.txt").write_text(CREDITS)
     MANIFEST.write_text(json.dumps({
         "_comment": "Written by scripts/scans/publish.py. Meshes are downloaded from "
-                    "scan_levels.base_url + file and checked against sha256.",
+                    "meshes.base_url + file and checked against sha256.",
         "meshes": manifest,
     }, indent=2) + "\n")
     total = sum(m["bytes"] for m in manifest.values())
-    print(f"total {total / 1048576:.1f} MB -> {out_dir}\nmanifest {MANIFEST.relative_to(ROOT)}")
+    print(f"total {total / 1048576:.1f} MB in {OUT.relative_to(ROOT)}/, manifest {MANIFEST.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

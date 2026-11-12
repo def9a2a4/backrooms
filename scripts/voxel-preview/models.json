@@ -2,7 +2,7 @@
   {
     "id": "stonehenge",
     "title": "Stonehenge (Level 56)",
-    "mesh": "/src/main/resources/structures/stonehenge.mesh.gz",
+    "mesh": "@stonehenge",
     "build": "make stonehenge-mesh",
     "mode": "column",
     "scale": 16,
@@ -25,22 +25,23 @@
     "mesh": "/.temp/meshes/gobekli.mesh.gz",
     "build": "uv run scripts/scans/build_scan.py gobekli",
     "mode": "column",
-    "scale": 8,
-    "radius": 400,
+    "scale": 16,
+    "radius": 700,
     "credit": [
       "Gobekli Tepe",
       "rmark",
       "https://sketchfab.com/3d-models/gobekli-tepe-5a4d25c355ff48d59ab76c36812b9cf3"
     ],
     "sizes": {
+      "8 MB 16x": "/.temp/meshes/gobekli_16x.mesh.gz",
       "50 KB": "/.temp/meshes/gobekli.mesh.gz",
       "250 KB": "/.temp/meshes/gobekli_250k.mesh.gz",
       "1 MB": "/.temp/meshes/gobekli_1m.mesh.gz",
       "4 MB": "/.temp/meshes/gobekli_4m.mesh.gz",
       "8 MB": "/.temp/meshes/gobekli_8m.mesh.gz",
-      "1 MB full": "/.temp/meshes/gobekli_1m_full.mesh.gz",
-      "8 MB 16x": "/.temp/meshes/gobekli_16x.mesh.gz"
-    }
+      "1 MB full": "/.temp/meshes/gobekli_1m_full.mesh.gz"
+    },
+    "cells": "/.temp/cells/gobekli.cells.gz"
   },
   {
     "id": "skatepark",
@@ -48,22 +49,23 @@
     "mesh": "/.temp/meshes/skatepark.mesh.gz",
     "build": "uv run scripts/scans/build_scan.py skatepark",
     "mode": "shell",
-    "scale": 8,
-    "radius": 400,
+    "scale": 16,
+    "radius": 700,
     "credit": [
       "Southbank Undercroft Skatepark",
       "artfletch",
       "https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d"
     ],
     "sizes": {
+      "8 MB 16x": "/.temp/meshes/skatepark_16x.mesh.gz",
       "50 KB": "/.temp/meshes/skatepark.mesh.gz",
       "250 KB": "/.temp/meshes/skatepark_250k.mesh.gz",
       "1 MB": "/.temp/meshes/skatepark_1m.mesh.gz",
       "4 MB": "/.temp/meshes/skatepark_4m.mesh.gz",
       "8 MB": "/.temp/meshes/skatepark_8m.mesh.gz",
-      "1 MB full": "/.temp/meshes/skatepark_1m_full.mesh.gz",
-      "8 MB 16x": "/.temp/meshes/skatepark_16x.mesh.gz"
-    }
+      "1 MB full": "/.temp/meshes/skatepark_1m_full.mesh.gz"
+    },
+    "cells": "/.temp/cells/skatepark.cells.gz"
   },
   {
     "id": "skatepark_grey",
@@ -71,22 +73,23 @@
     "mesh": "/.temp/meshes/skatepark_grey.mesh.gz",
     "build": "uv run scripts/scans/build_scan.py skatepark_grey",
     "mode": "shell",
-    "scale": 8,
-    "radius": 400,
+    "scale": 16,
+    "radius": 700,
     "credit": [
       "Southbank Undercroft Skatepark",
       "artfletch",
       "https://sketchfab.com/3d-models/southbank-undercroft-skatepark-add37d5dc6a2456eb0d7607c6fbd884d"
     ],
     "sizes": {
+      "8 MB 16x": "/.temp/meshes/skatepark_grey_16x.mesh.gz",
       "50 KB": "/.temp/meshes/skatepark_grey.mesh.gz",
       "250 KB": "/.temp/meshes/skatepark_grey_250k.mesh.gz",
       "1 MB": "/.temp/meshes/skatepark_grey_1m.mesh.gz",
       "4 MB": "/.temp/meshes/skatepark_grey_4m.mesh.gz",
       "8 MB": "/.temp/meshes/skatepark_grey_8m.mesh.gz",
-      "1 MB full": "/.temp/meshes/skatepark_grey_1m_full.mesh.gz",
-      "8 MB 16x": "/.temp/meshes/skatepark_grey_16x.mesh.gz"
-    }
+      "1 MB full": "/.temp/meshes/skatepark_grey_1m_full.mesh.gz"
+    },
+    "cells": "/.temp/cells/skatepark_grey.cells.gz"
   },
   {
     "id": "hall",
@@ -94,21 +97,22 @@
     "mesh": "/.temp/meshes/hall.mesh.gz",
     "build": "uv run scripts/scans/build_scan.py hall",
     "mode": "shell",
-    "scale": 8,
-    "radius": 400,
+    "scale": 16,
+    "radius": 700,
     "credit": [
       "Hintze Hall",
       "artfletch",
       "https://sketchfab.com/3d-models/hintze-hall-45f5e56887f44075bbf283977c99541f"
     ],
     "sizes": {
+      "8 MB 16x": "/.temp/meshes/hall_16x.mesh.gz",
       "50 KB": "/.temp/meshes/hall.mesh.gz",
       "250 KB": "/.temp/meshes/hall_250k.mesh.gz",
       "1 MB": "/.temp/meshes/hall_1m.mesh.gz",
       "4 MB": "/.temp/meshes/hall_4m.mesh.gz",
       "8 MB": "/.temp/meshes/hall_8m.mesh.gz",
-      "1 MB full": "/.temp/meshes/hall_1m_full.mesh.gz",
-      "8 MB 16x": "/.temp/meshes/hall_16x.mesh.gz"
-    }
+      "1 MB full": "/.temp/meshes/hall_1m_full.mesh.gz"
+    },
+    "cells": "/.temp/cells/hall.cells.gz"
   }
 ]

@@ -10,6 +10,12 @@ onmessage = async ({ data: job }) => {
     const progress = (phase, scale = 1, offset = 0) => (f) =>
       postMessage({ type: 'progress', phase, f: offset + f * scale });
     const mesh = await loadMesh(job.url);
+    if (job.gridMats && mesh.grid && mesh.grid.cells.size === job.gridMats.length) {
+      // tuned materials from the preview's sliders, in the grid's key order
+      let i = 0;
+      for (const k of mesh.grid.cells.keys()) mesh.grid.cells.set(k, job.gridMats[i++]);
+    }
+    if (job.vmats && job.vmats.length === mesh.vmat.length) mesh.vmat = job.vmats;
     const t0 = performance.now();
     const opts = { ...job.opts, onProgress: progress('voxelizing', 0.85) };
     const v = job.mode === 'shell' ? voxelizeShell(mesh, opts) : voxelize(mesh, opts);
