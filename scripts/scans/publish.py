@@ -1,10 +1,11 @@
 """Publish the level meshes. They're kept out of the jar to keep it light: each is copied into
-this repo's meshes/ folder under a content-addressed name (<mesh>-<sha256[:12]>.mesh.gz, so a URL
+meshes/ (gitignored) under a content-addressed name (<mesh>-<sha256[:12]>.mesh.gz, so a URL
 never changes meaning), and the manifest the plugin ships is rewritten
 (src/main/resources/meshes.json: file, sha256, bytes per mesh).
 
-Servers download https://raw.githubusercontent.com/def9a2a4/backrooms/main/meshes/<file> and
-check the hash, so new meshes only reach servers once meshes/ is committed and pushed to main.
+Servers download https://def9a2a4.github.io/backrooms-data/meshes/<file> and check the hash, so
+new meshes only reach servers once meshes/ is copied into the backrooms-data repo's meshes/ folder
+and pushed. Keep old files there: released jars still name them.
 
 Usage: python3 scripts/scans/publish.py
        python3 scripts/scans/publish.py --install server/plugins/Backrooms/meshes

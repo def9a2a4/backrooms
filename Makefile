@@ -18,8 +18,8 @@ server-plugin-copy:
 	rm -f server/plugins/$(PLUGIN_NAME)*.jar
 	cp bin/$(PLUGIN_NAME)*.jar server/plugins/
 
-# Scan-level meshes: copy the local builds the manifest names into the server, so it doesn't
-# have to download them (scripts/scans/publish.py).
+# Level meshes: copy the locally published meshes (meshes/, gitignored) into the server, so it doesn't have to
+# download them (scripts/scans/publish.py).
 .PHONY: server-meshes
 server-meshes:
 	python3 scripts/scans/publish.py --install server/plugins/$(PLUGIN_NAME)/meshes

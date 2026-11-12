@@ -1,4 +1,6 @@
 .temp/
+# Published level meshes (scripts/scans/publish.py); hosted in def9a2a4/backrooms-data
+meshes/
 __pycache__/
 
 # Server directories
