@@ -1,0 +1,55 @@
+{
+  "_comment": "Written by scripts/scans/publish.py. Meshes are downloaded from meshes.base_url + file and checked against sha256.",
+  "meshes": {
+    "stonehenge": {
+      "file": "stonehenge-d437b5c4033d.mesh.gz",
+      "sha256": "d437b5c4033de1cb522459e5399c22cc27a330ef94331146136d5b84b39e23b5",
+      "bytes": 50022
+    },
+    "teapot": {
+      "file": "teapot-0e86fe509f7e.mesh.gz",
+      "sha256": "0e86fe509f7eaf0e47408390af50bf7859b073d97b2d2fbc74eee6cbbd306eff",
+      "bytes": 18767
+    },
+    "suzanne": {
+      "file": "suzanne-8d7df44d6295.mesh.gz",
+      "sha256": "8d7df44d6295a839e6d1ca87e2e2acc0a9df226f8aa073a48188f6a3870f00e2",
+      "bytes": 4710
+    },
+    "bunny": {
+      "file": "bunny-6369268966c6.mesh.gz",
+      "sha256": "6369268966c692bcd9d68b92779bdd33b48659e84e3f1e52fb1c4b47536057b0",
+      "bytes": 24187
+    },
+    "dragon": {
+      "file": "dragon-47a0bfa224a8.mesh.gz",
+      "sha256": "47a0bfa224a89c6bd289922e1a58af40385909c8874f3798c13b2c80fcada8c2",
+      "bytes": 91657
+    },
+    "lucy": {
+      "file": "lucy-2c267a0cbc5b.mesh.gz",
+      "sha256": "2c267a0cbc5bbf126d14fc8e3255c49b18b62190998c0769928a136f19673c44",
+      "bytes": 118386
+    },
+    "hintze_hall": {
+      "file": "hintze_hall-25a30bf8314e.mesh.gz",
+      "sha256": "25a30bf8314e60775d471ca53a73d05689588785c83dfcc8049684e1efa7bc64",
+      "bytes": 9223786
+    },
+    "undercroft_grey": {
+      "file": "undercroft_grey-4999133452e5.mesh.gz",
+      "sha256": "4999133452e5a7db9453a2d540994fa67732a6fc4a832633a0c376b15dc109cb",
+      "bytes": 7595402
+    },
+    "undercroft_color": {
+      "file": "undercroft_color-5527f0d6bfaf.mesh.gz",
+      "sha256": "5527f0d6bfafd7103757e59b8e42255433c988154337e284f6081e4d404e6ef4",
+      "bytes": 7588343
+    },
+    "gobekli_tepe": {
+      "file": "gobekli_tepe-fc00bc384f21.mesh.gz",
+      "sha256": "fc00bc384f21ef1d05b9b6c00fdd447fc000941dc043768aa7cf11845b6857b5",
+      "bytes": 8535533
+    }
+  }
+}

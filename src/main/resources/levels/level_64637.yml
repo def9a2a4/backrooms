@@ -45,54 +45,54 @@ exit_triggers:
       darkness_ticks: 80
       delay_ticks: 40
       message: "§7The stairs end. You feel yourself falling... and then, light."
-  - type: open_book
+  - type: book_end
     target_level: level_101
-    book_title: "level.dat"
+    key: "leveldat"
     transition:
       blindness_ticks: 80
       delay_ticks: 30
       message: "§7Opening level.dat ... §8last played: a long time ago"
   # Entry books (levels/level_64637_books.yml `entry_books`): the archive
   # contains the old worlds. Books ask; terminals execute.
-  - type: open_book
+  - type: book_end
     target_level: level_4
-    book_title: "Walking Log"
+    key: "walking_log"
     transition:
       blindness_ticks: 80
       delay_ticks: 30
       message: "§7You keep walking."
-  - type: open_book
+  - type: book_end
     target_level: level_94
-    book_title: "Rules and Challenges"
+    key: "rules"
     transition:
       blindness_ticks: 80
       delay_ticks: 30
       message: "§7Challenge accepted."
-  - type: open_book
+  - type: book_end
     target_level: level_974
-    book_title: "planetoids.jar"
+    key: "planetoids_jar"
     transition:
       blindness_ticks: 80
       delay_ticks: 30
       message: "§7Generating... §8small worlds hang in the dark"
-  - type: open_book
+  - type: book_end
     target_level: level_84
-    book_title: "Groundskeeper's Notes"
+    key: "groundskeeper"
     transition:
       blindness_ticks: 80
       delay_ticks: 30
       message: "§7You step inside. The hedge closes behind you."
-  - type: open_book
+  - type: book_end
     target_level: level_5
-    book_title: "11"
+    key: "eleven"
     transition:
       blindness_ticks: 100
       darkness_ticks: 100
       delay_ticks: 30
       message: "§8playing the remaining 0:06"
-  - type: open_book
+  - type: book_end
     target_level: level_7
-    book_title: "r.0.0.mca"
+    key: "mca"
     transition:
       blindness_ticks: 100
       delay_ticks: 30

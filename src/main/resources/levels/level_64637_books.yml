@@ -419,6 +419,7 @@ pre_written_books:
 
   - title: "level.dat"
     author: "unknown"
+    exit_key: "leveldat"
     pages:
       - "§8[NBT] root\n§8 ├ Data\n§8 │ ├ LevelName: §7World1§8\n§8 │ ├ version: §7— §8\n§8 │ ├ LastPlayed: §7?????????§8\n§8 │ └ SpawnX: 0\n§8 │   SpawnY: 65\n§8 │   SpawnZ: 0"
       - "§8 │ ├ Time: §76000§8 (frozen)\n§8 │ ├ raining: 0\n§8 │ ├ thundering: 0\n§8 │ └ Player\n§8 │   ├ Health: 20\n§8 │   ├ Pos: [0.5, 65.0, 0.5]\n§8 │   └ Inventory: §7empty§8"
@@ -433,35 +434,41 @@ entry_book_chance: 0.07
 entry_books:
   - title: "Walking Log"
     author: "unknown"
+    exit_key: "walking_log"
     pages:
       - "day 12\n\nflat again today. grass and more grass. the map says I should have reached the edge of the known render by now.\n\nday 15\n\nthe horizon looks wrong. not far away. wrong."
       - "day 31\n\nthe ground is doing something I don't have a word for. sheets of it standing on end. holes you can see the sky through, pointing down."
       - "day 44\n\nthe math gives up out here. you can feel it giving up.\n\nday 45\n\nI can see it now.\n\nday 46\n\n\n§0keep walking?"
   - title: "Rules and Challenges"
     author: "crew"
+    exit_key: "rules"
     pages:
       - "SKYBLOCK v1.1\n\nRULES:\n1. Do not jump off.\n2. Do not bridge past the sky.\n\nCHALLENGES:\n1. Build a house.\n2. Expand the island."
       - "3. Make a wheat farm.\n4. Make a cobblestone generator.\n5. Craft a bed.\n6. Do not look at the barrier.\n7. Do not count the challenges.\n8. Build a house."
       - "9. There is no challenge nine.\n10. Expand the island.\n\n\n§0accept the challenge?"
   - title: "planetoids.jar"
     author: "unknown"
+    exit_key: "planetoids_jar"
     pages:
       - "§8planetoids.jar\n§8version: 1.77b\n§8requires: nothing that still exists\n\n§7A generator for making worlds out of worlds. Spheres of grass, of sand, of ice, of lava. Hanging in the dark."
       - "§7usage:\n§8  java -jar planetoids.jar\n\n§7The program is small. The output is not. Nobody has found the last planet.\n\n§8exit code: still running\n\n\n§0generate?"
   - title: "Groundskeeper's Notes"
     author: "staff"
+    exit_key: "groundskeeper"
     pages:
       - "Trimmed the east run. The hedge had grown three feet overnight, all of it toward the benches.\n\nNote for next shift: the shears go dull faster than they should."
       - "Found the center again today. It had moved. Logged it with the office; they say the map is correct and I am not.\n\nThe topiary by the gate. Nobody planted it. It is a person now. Was it always?"
       - "Last entry. The garden does not need keeping. It keeps itself.\n\nIt keeps everything that walks in after dark.\n\n\n§0step inside?"
   - title: "11"
     author: "C418"
+    exit_key: "eleven"
     pages:
       - "§8transcript: 11.ogg\n\n§80:00 — footsteps. gravel.\n§80:08 — breathing.\n§80:21 — footsteps stop.\n§80:25 — they continue. faster."
       - "§80:42 — a cave sound. not near.\n§80:51 — pages turning. paper?\n§81:01 — cough (equipment?)\n§81:05 — §7damaged past this point."
       - "§7There are six more seconds.\n\n\n§0play the remaining 0:06?"
   - title: "r.0.0.mca"
     author: "SYSTEM"
+    exit_key: "mca"
     pages:
       - "§8region file r.0.0.mca\n§8chunks expected: 1024\n§8chunks found: 1025\n\n§7One of these chunks is wrong. It was wrong before it was saved. The save only made it permanent."
       - "§8validation report:\n§8  palette: all entries used\n§8  NBT: references itself\n§8  backup: identical. also wrong.\n\n§7Do not load the extra chunk.\n§7It loads you back.\n\n\n§0attempt recovery?"

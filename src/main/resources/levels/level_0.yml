@@ -226,13 +226,15 @@ event_config:
       - "<{player}> wait what"
 
 exit_triggers:
-  - type: collect_items
+  # Finish any desk book — every Lobby book's last page carries a clickable
+  # closing line (see LobbyBookshelfListener.setPagesWithEnding).
+  - type: book_end
+    key: "lobby"
     target_level: level_1
-    item: WRITTEN_BOOK
-    threshold: 7
     transition:
       blindness_ticks: 60
       delay_ticks: 20
+      message: "§7the last page turns itself"
   # Rare bookshelf alcove set into a wall (froglight above it). Breaking the
   # shelf is the door; chiseled desk shelves deliberately don't count.
   - type: break_block

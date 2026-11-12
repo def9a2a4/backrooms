@@ -10,7 +10,7 @@ random_tick_speed: 24
 enter_message: "§6§oBefore writing. Before the plough. Someone carved a fox into stone, and waited."
 
 # Göbekli Tepe (southeastern Anatolia, ~9500 BCE) at 16x on a floating island, voxelized from a 3D
-# scan that's downloaded on first start (config.yml scan_levels). Older than farming: the way
+# scan that's downloaded on first start (config.yml meshes). Older than farming: the way
 # out is to farm. Wild grass drops einkorn seeds; there's tilled soil by the water, a crafting
 # table, and an offering stone. Bake bread and lay it on the stone. Crops grow fast here.
 generator_config:

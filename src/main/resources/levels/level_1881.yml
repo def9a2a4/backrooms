@@ -9,7 +9,7 @@ spawn_radius: 0
 enter_message: "§7§oThe museum is closed. The lights are on anyway."
 
 # The Natural History Museum's Hintze Hall (London, opened 1881) at 16x, voxelized from a 3D scan
-# that's downloaded on first start (config.yml scan_levels). The blue whale hangs over the nave.
+# that's downloaded on first start (config.yml meshes). The blue whale hangs over the nave.
 # Placards on lecterns around the arrival point (books in level_1881_placards.yml) describe places:
 # read one to its last page and you're taken there.
 generator_config:

@@ -12,6 +12,7 @@ enter_message: "§7§oThe fog parts for the first light of midsummer."
 # The monument center is at (origin_x, origin_z); spawn is the world origin, on the north rim.
 # At the center stands the altar: a polished diorite pyramid with a lodestone on top.
 generator_config:
+  mesh: stonehenge          # downloaded (config.yml meshes)
   mesh_scale: 16.0
   ground_y: 64
   origin_x: 0

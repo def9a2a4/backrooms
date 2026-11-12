@@ -18,7 +18,7 @@ event_config:
     sounds: [block.pointed_dripstone.drip_water, block.sponge.absorb, ambient.cave]
 exit_triggers:
   # Falling out the bottom returns you to spawn. The way out is a defect:
-  # roughly one block in two thousand is wet. Break it.
+  # 0.1% of the sponge is wet. Break one.
   - type: below_y
     y_threshold: -20
     target_level: level_590

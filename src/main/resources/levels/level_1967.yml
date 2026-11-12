@@ -8,7 +8,7 @@ spawn_radius: 0
 enter_message: "§8§oConcrete under a concert hall. Nobody planned for anyone to be here."
 
 # The Southbank Centre's undercroft (London, built 1967) at 16x, voxelized from a 3D scan that's
-# downloaded on first start (config.yml scan_levels), all in greys and in the dark. Put any light
+# downloaded on first start (config.yml meshes), all in greys and in the dark. Put any light
 # down and someone notices: Level 1973, the same place after the skaters found it.
 generator_config:
   mesh: undercroft_grey

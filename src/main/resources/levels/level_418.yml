@@ -5,13 +5,14 @@ environment: NORMAL
 dimension_type: fullbright
 biome: "backrooms:test_scene"
 spawn_radius: 0
+meshes: [teapot, suzanne, bunny, dragon, lucy]   # the test models, downloaded (config.yml meshes)
 enter_title: "§c418"
 enter_subtitle: "§7I'm a teapot"
 enter_message: "§c[ERR] §7Block engine not found. Falling back to voxel renderer."
 
 # A voxel engine's test scene: Utah teapots, Suzanne, the Stanford bunny / dragon / Lucy, primitives
 # and Cornell boxes on an endless checkerboard, all in flat concrete, upright or tumbled in 3D and
-# never touching the floor. Meshes are voxelized at runtime from structures/testscene/*.mesh.gz
+# never touching the floor. Meshes are downloaded (config.yml meshes) and voxelized at runtime
 # (scripts/testscene/build_meshes.py). Each 384-block region is a quadtree whose leaves (48 to 384
 # blocks) each hold one thing sized to fill it; leaves get bigger further from spawn.
 # Every region holds one small stone cube with a single oak log on top: the only real Minecraft in
