@@ -50,7 +50,8 @@
     <label>Model <select id="model" style="width: 190px"></select></label>
     <label id="size-row">Mesh size <select id="size"></select></label>
     <label>View <select id="viewmode"><option value="voxels">Voxels</option>
-      <option value="mesh">Reduced mesh</option></select></label>
+      <option value="mesh">Reduced mesh</option>
+      <option value="colors">Colors before matching</option></select></label>
     <label>Scale <select id="scale"><option>1</option><option>2</option><option>4</option><option>6</option>
       <option>8</option><option>12</option><option>16</option></select></label>
     <label>Crop radius (blocks) <input id="radius" type="number" value="320" min="16" max="2000" step="16"></label>
@@ -69,6 +70,7 @@
       <label>Majority filter <span><input id="t-majority" type="range" min="0" max="3" step="1"><output id="o-majority"></output></span></label>
       <label>Height shading <span><input id="t-height" type="range" min="-1" max="1" step="0.05"><output id="o-height"></output></span></label>
       <label>Slope shading <span><input id="t-slope" type="range" min="-1" max="1" step="0.05"><output id="o-slope"></output></span></label>
+      <label>Brightness <span><input id="t-brightness" type="range" min="-1" max="1" step="0.05"><output id="o-brightness"></output></span></label>
       <div class="tune-buttons"><button id="t-reset">Reset</button><button id="t-copy">Copy settings</button></div>
     </div>
     <button id="build">Voxelize</button>

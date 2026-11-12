@@ -281,3 +281,27 @@ chest:
     - look inside
     - never opened
     - day one
+
+megastructure:
+  # The sign on the landing at the top of a staircase to nowhere.
+  staircase_top:
+    - keep going
+    - almost
+    - this is the top
+    - up
+    - higher
+    - you made it
+    - nothing up here
+    - come back down
+    - wait here
+    - it was taller
+    - the view
+    - "?"
+    - not yet
+    - one more
+    - see you
+    - you're late
+    - it was here
+    - look down
+    - don't look down
+    - still climbing

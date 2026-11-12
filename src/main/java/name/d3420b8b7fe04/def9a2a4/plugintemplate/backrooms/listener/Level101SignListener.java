@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level101ChunkGenerator;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -55,6 +56,7 @@ public class Level101SignListener implements Listener {
     private List<String> houseWeird = List.of("home", "my house", "nobody's house");
     private List<String> chestMundane = List.of("ores", "stuff", "tools", "empty");
     private List<String> chestWeird = List.of("tomorrow", "what's left");
+    private List<String> staircaseTop = List.of("keep going", "almost", "this is the top");
 
     private double graveWeirdNameChance = 0.12;
     private double ripChance = 0.4;
@@ -109,6 +111,11 @@ public class Level101SignListener implements Listener {
             chestWeird = listOrDefault(chest, "weird", chestWeird);
             chestWeirdChance = chest.getDouble("weird_chance", chestWeirdChance);
         }
+
+        ConfigurationSection mega = config.getConfigurationSection("megastructure");
+        if (mega != null) {
+            staircaseTop = listOrDefault(mega, "staircase_top", staircaseTop);
+        }
     }
 
     private static List<String> listOrDefault(ConfigurationSection config, String key, List<String> fallback) {
@@ -134,15 +141,33 @@ public class Level101SignListener implements Listener {
                 }
             }
         }
-        if (signs.isEmpty()) return;
-
         long worldSeed = event.getWorld().getSeed();
+        int[] stairTop = event.getWorld().getGenerator() instanceof Level101ChunkGenerator gen
+                ? gen.megastructureSign(worldSeed, chunk.getX(), chunk.getZ()) : null;
+        if (signs.isEmpty() && stairTop == null) return;
+
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!chunk.isLoaded()) return;
             for (int[] pos : signs) {
                 writeSign(chunk, pos[0], pos[1], pos[2], worldSeed);
             }
+            if (stairTop != null) {
+                writeStaircaseSign(event.getWorld().getBlockAt(stairTop[0], stairTop[1], stairTop[2]), worldSeed);
+            }
         });
+    }
+
+    /** The sign at the top of a staircase to nowhere. */
+    private void writeStaircaseSign(Block block, long worldSeed) {
+        if (block.getType() != Material.OAK_SIGN || !(block.getState() instanceof Sign sign)) return;
+        Random rng = new Random(worldSeed
+                ^ ((long) block.getX() * 198491317L + (long) block.getY() * 6542989L + (long) block.getZ() * 357916421L));
+        String[] lines = { "", pick(staircaseTop, rng) };
+        for (int i = 0; i < 4; i++) {
+            sign.getSide(Side.FRONT).line(i, Component.text(i < lines.length ? lines[i] : ""));
+        }
+        sign.setWaxed(true);
+        sign.update();
     }
 
     private void writeSign(Chunk chunk, int x, int y, int z, long worldSeed) {

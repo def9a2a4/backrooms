@@ -176,6 +176,18 @@ public class Level4ChunkGenerator extends BackroomsChunkGenerator {
         }
     }
 
+    /**
+     * Oak leaves at their true distance from the trunk. ChunkData placements get
+     * no block updates, so default leaves (distance 7) would decay on the first
+     * random tick that reached them.
+     */
+    private static org.bukkit.block.data.type.Leaves oakLeaves(int distance) {
+        org.bukkit.block.data.type.Leaves leaves =
+                (org.bukkit.block.data.type.Leaves) Material.OAK_LEAVES.createBlockData();
+        leaves.setDistance(Math.max(1, Math.min(6, distance)));
+        return leaves;
+    }
+
     private void placeOakTree(ChunkData chunkData, Random rng, int x, int y, int z) {
         int trunkHeight = 4 + rng.nextInt(3); // 4-6
         int topLog = y + trunkHeight - 1; // highest log block
@@ -198,7 +210,7 @@ public class Level4ChunkGenerator extends BackroomsChunkGenerator {
                     int lx = x + dx, lz = z + dz;
                     if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && ly < MAX_Y) {
                         if (chunkData.getType(lx, ly, lz) == Material.AIR) {
-                            chunkData.setBlock(lx, ly, lz, Material.OAK_LEAVES);
+                            chunkData.setBlock(lx, ly, lz, oakLeaves(Math.abs(dx) + Math.abs(dz) + (ly < topLog ? 0 : 1)));
                         }
                     }
                 }
@@ -216,7 +228,7 @@ public class Level4ChunkGenerator extends BackroomsChunkGenerator {
                     if (Math.abs(dx) == 1 && Math.abs(dz) == 1 && rng.nextBoolean()) continue;
                     int lx = x + dx, lz = z + dz;
                     if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && ly < MAX_Y) {
-                        chunkData.setBlock(lx, ly, lz, Material.OAK_LEAVES);
+                        chunkData.setBlock(lx, ly, lz, oakLeaves(Math.abs(dx) + Math.abs(dz) + (ly < topLog ? 0 : 1)));
                     }
                 }
             }
@@ -224,7 +236,7 @@ public class Level4ChunkGenerator extends BackroomsChunkGenerator {
 
         // Top trunk block becomes leaf
         if (topLog < MAX_Y) {
-            chunkData.setBlock(x, topLog, z, Material.OAK_LEAVES);
+            chunkData.setBlock(x, topLog, z, oakLeaves(1));
         }
     }
 

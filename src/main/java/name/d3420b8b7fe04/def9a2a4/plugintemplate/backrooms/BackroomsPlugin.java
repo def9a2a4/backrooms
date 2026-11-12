@@ -86,6 +86,7 @@ public class BackroomsPlugin {
     private Level1GardenEffectListener gardenEffectListener;
     private name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level56Listener level56Listener;
     private MeshStore meshStore;
+    private name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.skin.PlayerSkinCache skinCache;
     private final List<PendingLevel> pendingLevels = new java.util.ArrayList<>();
 
     public BackroomsPlugin(JavaPlugin plugin) {
@@ -200,6 +201,12 @@ public class BackroomsPlugin {
             event.init(plugin);
         }
 
+        // 5b. Player skins for Alpha's portraits — enabled before worlds exist so
+        //     the first generated chunks can already paint from cached skins.
+        skinCache = new name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.skin.PlayerSkinCache(plugin);
+        skinCache.enable();
+        Bukkit.getPluginManager().registerEvents(skinCache, plugin);
+
         // 6. Register chunk-load listeners BEFORE creating worlds so they
         //    catch the spawn-chunk ChunkLoadEvents fired during world creation.
         Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin, loadLobbyBookConfig()), plugin);
@@ -279,8 +286,10 @@ public class BackroomsPlugin {
         Bukkit.getCommandMap().register("backrooms", backroomsCmd);
 
         // 10. Auto-save player state every 5 minutes
-        autoSaveTask = Bukkit.getScheduler().runTaskTimer(plugin,
-                playerStateManager::saveAll, 6000L, 6000L);
+        autoSaveTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            playerStateManager.saveAll();
+            skinCache.save();
+        }, 6000L, 6000L);
 
         plugin.getLogger().info("Backrooms enabled with " + levelRegistry.getAll().size() + " level(s): "
                 + levelRegistry.getAll().stream().map(BackroomsLevel::getId).sorted()
@@ -301,6 +310,7 @@ public class BackroomsPlugin {
         if (gardenEffectListener != null) gardenEffectListener.stop();
         if (level56Listener != null) level56Listener.stop();
         if (meshStore != null) meshStore.shutdown();
+        if (skinCache != null) skinCache.disable();
 
         for (BackroomsEvent event : eventRegistry.getAll()) {
             event.shutdown();

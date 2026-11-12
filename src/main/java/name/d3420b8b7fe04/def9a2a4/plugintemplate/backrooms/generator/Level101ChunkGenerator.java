@@ -90,6 +90,10 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
     private int treeChunkChance = 8;         // percent of chunks with 1-2 trees
     private int structureChunkChance = 2;    // percent of chunks with a structure
     private double voidPitChunkChance = 0.15; // percent of chunks with a 1x1 pit to the void
+    private int megastructureMinDistance = 1200;
+    private double megastructureCellChance = 60;  // percent of 512-block cells, at full distance
+    private double wallCellChance = 35;           // percent of 2048-block cells
+    private AlphaMegastructures megastructures = newMegastructures();
 
     public Level101ChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
@@ -143,6 +147,34 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         treeChunkChance = config.getInt("tree_chunk_chance", treeChunkChance);
         structureChunkChance = config.getInt("structure_chunk_chance", structureChunkChance);
         voidPitChunkChance = config.getDouble("void_pit_chunk_chance", voidPitChunkChance);
+        megastructureMinDistance = config.getInt("megastructure_min_distance", megastructureMinDistance);
+        megastructureCellChance = config.getDouble("megastructure_cell_chance", megastructureCellChance);
+        wallCellChance = config.getDouble("wall_cell_chance", wallCellChance);
+        megastructures = newMegastructures();
+    }
+
+    private AlphaMegastructures newMegastructures() {
+        return new AlphaMegastructures(megastructureMinDistance, megastructureCellChance, wallCellChance,
+                this::placeTerrariumHouse);
+    }
+
+    /**
+     * World position {x, y, z} of the blank sign atop a staircase to nowhere
+     * in this chunk, or null — for Level101SignListener, which can't find it
+     * by scanning (it sits far above the usual sign band).
+     */
+    public @Nullable int[] megastructureSign(long seed, int chunkX, int chunkZ) {
+        return megastructures.staircaseSign(seed, chunkX, chunkZ);
+    }
+
+    /** The terrarium's exhibit: one ordinary house, chosen from the plain's own. */
+    private void placeTerrariumHouse(ChunkData chunkData, Random rng) {
+        switch (rng.nextInt(4)) {
+            case 0 -> placeCottage(chunkData, rng);
+            case 1 -> placeStoneCottage(chunkData, rng);
+            case 2 -> placeAFrameCabin(chunkData, rng);
+            default -> placeTwoStoryHouse(chunkData, rng);
+        }
     }
 
     @Override
@@ -153,13 +185,17 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         long centerX = chunkX * 16L + 8, centerZ = chunkZ * 16L + 8;
         long distSq = centerX * centerX + centerZ * centerZ;
 
-        boolean hasStructure = structureChunkChance > 0
+        // Megastructures own their ground: no small structures, pits or trees on or right beside them.
+        var megas = megastructures.sitesNear(seed, chunkX, chunkZ, 8);
+        boolean nearMega = !megas.isEmpty();
+
+        boolean hasStructure = !nearMega && structureChunkChance > 0
                 && distSq >= (long) STRUCTURE_SPAWN_EXCLUSION * STRUCTURE_SPAWN_EXCLUSION
                 && Math.floorMod(blockHash(chunkX, chunkZ, seed, 0xA1FA), 100) < structureChunkChance;
 
         // A pit chunk gets one 1x1 hole from the grass straight down to the void.
         long pitHash = blockHash(chunkX, chunkZ, seed, 0x9117);
-        boolean hasPit = !hasStructure && voidPitChunkChance > 0
+        boolean hasPit = !hasStructure && !nearMega && voidPitChunkChance > 0
                 && distSq >= (long) PIT_SPAWN_EXCLUSION * PIT_SPAWN_EXCLUSION
                 && Math.floorMod(pitHash, 10000) < (int) Math.round(voidPitChunkChance * 100);
         int pitX = (int) ((pitHash >>> 8) & 15);
@@ -197,8 +233,13 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
             placeRandomStructure(chunkData, chunkRng, false);
         }
 
+        // --- Pass 2b: this chunk's slice of any megastructure ---
+        if (nearMega) {
+            megastructures.place(chunkData, seed, chunkX, chunkZ, megas);
+        }
+
         // --- Pass 3: rare trees, only in structure-free chunks ---
-        if (!hasStructure && chunkRng.nextDouble() < treeChunkChance / 100.0) {
+        if (!hasStructure && !nearMega && chunkRng.nextDouble() < treeChunkChance / 100.0) {
             int count = 1 + chunkRng.nextInt(2);
             for (int i = 0; i < count; i++) {
                 int tx = chunkRng.nextInt(12) + 2;
@@ -248,6 +289,18 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
     //  Trees (Level 4's alpha oak)
     // ---------------------------------------------------------------
 
+    /**
+     * Oak leaves at their true distance from the trunk. ChunkData placements get
+     * no block updates, so default leaves (distance 7) would decay on the first
+     * random tick that reached them.
+     */
+    private static org.bukkit.block.data.type.Leaves oakLeaves(int distance) {
+        org.bukkit.block.data.type.Leaves leaves =
+                (org.bukkit.block.data.type.Leaves) Material.OAK_LEAVES.createBlockData();
+        leaves.setDistance(Math.max(1, Math.min(6, distance)));
+        return leaves;
+    }
+
     private void placeOakTree(ChunkData chunkData, Random rng, int x, int y, int z) {
         int trunkHeight = 4 + rng.nextInt(3); // 4-6
         int topLog = y + trunkHeight - 1;
@@ -269,7 +322,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
                     int lx = x + dx, lz = z + dz;
                     if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16
                             && chunkData.getType(lx, ly, lz) == Material.AIR) {
-                        chunkData.setBlock(lx, ly, lz, Material.OAK_LEAVES);
+                        chunkData.setBlock(lx, ly, lz, oakLeaves(Math.abs(dx) + Math.abs(dz) + (ly < topLog ? 0 : 1)));
                     }
                 }
             }
@@ -285,14 +338,14 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
                     if (Math.abs(dx) == 1 && Math.abs(dz) == 1 && rng.nextBoolean()) continue;
                     int lx = x + dx, lz = z + dz;
                     if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
-                        chunkData.setBlock(lx, ly, lz, Material.OAK_LEAVES);
+                        chunkData.setBlock(lx, ly, lz, oakLeaves(Math.abs(dx) + Math.abs(dz) + (ly < topLog ? 0 : 1)));
                     }
                 }
             }
         }
 
         if (topLog < MAX_Y) {
-            chunkData.setBlock(x, topLog, z, Material.OAK_LEAVES);
+            chunkData.setBlock(x, topLog, z, oakLeaves(1));
         }
     }
 

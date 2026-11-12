@@ -186,8 +186,8 @@ async function getMesh(m) {
 // in tune-worker.js with the sliders' values; the result replaces the 16x mesh's surface grid.
 // "Copy settings" gives the MODELS[...]["tune"] entry for the real build.
 
-const TUNE_KEYS = ['blur', 'spread', 'pattern', 'majority', 'height', 'slope'];
-const TUNE_ZERO = { height: 0, slope: 0 };   // exports made before these knobs existed
+const TUNE_KEYS = ['blur', 'spread', 'pattern', 'majority', 'height', 'slope', 'brightness'];
+const TUNE_ZERO = { height: 0, slope: 0, brightness: 0 };   // exports made before these knobs existed
 let tuneWorker = null, tuneModel = null, tuneDefaults = null, tuned = null, tuneRun = 0, tuneTimer = null;
 
 function tuneValues() {
@@ -219,6 +219,7 @@ function setupTune(m) {
   if (tuneWorker) tuneWorker.terminate();
   tuneModel = m.id;
   tuned = null;
+  tuneDefaults = null;
   tuneProgress('loading cells', 0);
   tuneWorker = new Worker(new URL('./tune-worker.js', import.meta.url), { type: 'module' });
   tuneWorker.onmessage = ({ data }) => {
@@ -227,12 +228,15 @@ function setupTune(m) {
       const fromUrl = Object.fromEntries(TUNE_KEYS.filter((k) => params.has(k)).map((k) => [k, Number(params.get(k))]));
       showTune({ ...tuneDefaults, ...fromUrl });
       tuneProgress(`${data.count.toLocaleString()} cells`);
-      sendVerts(m).then(() => { if (Object.keys(fromUrl).length) scheduleTune(0); });
+      sendVerts(m).then(() => {
+        if (Object.keys(fromUrl).length || $('viewmode').value === 'colors') scheduleTune(0);
+      });
     } else if (data.type === 'progress') {
       tuneProgress(data.phase, data.f);
     } else if (data.type === 'done') {
       if (data.id !== tuneRun) return;
-      tuned = { model: m.id, mats: data.mats, vmats: data.vmats, values: tuneValues() };
+      tuned = { model: m.id, mats: data.mats, vmats: data.vmats, colors: data.colors,
+        centers: data.centers, glass: data.glass, values: tuneValues() };
       tuneProgress('redrawing', 1);
       // let the bar paint before the redraw blocks the page
       setTimeout(() => build().then(async () => {
@@ -423,6 +427,31 @@ async function solidMesh(mesh, scale, baseY, mats, useGrid) {
   return new THREE.Mesh(g, material);
 }
 
+function colorPoints(t, scale, baseY, cell) {
+  const n = t.colors.length / 3;
+  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    pos[i * 3] = t.centers[i * 3] * scale;
+    pos[i * 3 + 1] = (t.centers[i * 3 + 1] - baseY) * scale;
+    pos[i * 3 + 2] = t.centers[i * 3 + 2] * scale;
+    const g = t.glass[i] ? 0.85 : 0;
+    const glassTint = [0.0, 0.85, 1.0];   // strong cyan: nothing scanned looks like it
+    for (let c = 0; c < 3; c++) {
+      // sRGB bytes -> linear, as three.js expects for vertex colors
+      const v = t.colors[i * 3 + c] / 255;
+      const lin = v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      col[i * 3 + c] = lin * (1 - g) + glassTint[c] * g;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  // three.js sizes attenuated points as size * (viewport height / 2) / depth, which is the
+  // world size times 1 / tan(fov / 2): one cell wide (plus a little, so there are no gaps)
+  const size = cell * scale * 1.2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  return new THREE.Points(geo, new THREE.PointsMaterial({ size, vertexColors: true }));
+}
+
 let first = true;
 async function build() {
   const m = model();
@@ -456,6 +485,31 @@ async function build() {
     }
     history.replaceState(null, '', `?${q}`);
   };
+  if ($('viewmode').value === 'colors') {
+    // the cells in the colors the block matching sees (after blur, shading, contrast and
+    // brightness), one square per cell; glass cells cyan
+    cancelJob();
+    clear(voxels);
+    clear(wire);
+    if (!m.cells) {
+      stats.textContent = 'no cells export for this model\n(build_scan.py --cells-only)';
+      return;
+    }
+    if (!tuned || tuned.model !== m.id) {
+      // drawn once the matching is done (started here, or when the cells finish loading)
+      stats.textContent = 'matching…';
+      if (tuneDefaults) scheduleTune(0);
+      return;
+    }
+    const baseY = m.mode === 'shell' ? mesh.lo[1] : mesh.groundRef;
+    voxels = colorPoints(tuned, scale, baseY, mesh.grid?.cell ?? 0.0625);
+    scene.add(voxels);
+    stats.textContent =
+      `cells     ${(tuned.colors.length / 3).toLocaleString()}, as matched\n` +
+      `size      ${ext.map((e) => Math.round(e)).join(' × ')} blocks (x y z)`;
+    finish();
+    return;
+  }
   if ($('viewmode').value === 'mesh') {
     cancelJob();
     const baseY = m.mode === 'shell' ? mesh.lo[1] : mesh.groundRef;

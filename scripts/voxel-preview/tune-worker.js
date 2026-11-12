@@ -5,8 +5,10 @@
 //
 // in:  {type: 'load', url} -> {type: 'loaded', count, tune, palette ids}
 //      {type: 'verts', verts} (mesh-space vertex positions of the mesh being tuned)
-//      {type: 'run', id, tune: {blur, spread, pattern, majority}}
-//        -> progress..., {type: 'done', id, mats, vmats}
+//      {type: 'run', id, tune: {blur, spread, pattern, majority, height, slope, brightness},
+//       colorsOnly (skip the block matching: mats and vmats come back null)}
+//        -> progress..., {type: 'done', id, mats, vmats, colors (sRGB per cell, as matched),
+//                         centers (mesh-space xyz per cell), glass (1 per forced cell)}
 // vmats re-derives each vertex's material from the tuned cells (the nearest cell, or the nearest
 // coarse brick), as the build does: triangles that drifted off the scanned surface use them.
 
@@ -128,11 +130,47 @@ function blurCells(mL, mA, mB, radius) {
   return [oL, oA, oB];
 }
 
-function run(t) {
+/** OKLab -> sRGB bytes into out[o..o+2]. */
+function oklabToSrgb(L, a, b, out, o) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  const lin = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
+  for (let c = 0; c < 3; c++) {
+    const v = Math.min(Math.max(lin[c], 0), 1);
+    out[o + c] = Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055));
+  }
+}
+
+/** Mesh-space centers of the cells, xyz per cell. */
+function cellCenters() {
+  const { n, h, keys } = C;
+  const [, DY, DZ] = h.dims, cell = h.cell, o = h.origin;
+  const out = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const k = keys[i];
+    out[i * 3] = o[0] + (Math.floor(k / (DY * DZ)) + 0.5) * cell;
+    out[i * 3 + 1] = o[1] + (k % DY + 0.5) * cell;
+    out[i * 3 + 2] = o[2] + (Math.floor(k / DY) % DZ + 0.5) * cell;
+  }
+  return out;
+}
+
+/** Cells the glass rule forces to glass (they're matched like the rest, then overridden). */
+function glassCells() {
+  const { n, h, frac } = C;
+  const out = new Uint8Array(n);
+  if (h.fixed.forced >= 0) for (let i = 0; i < n; i++) out[i] = frac[i] >= h.fixed.forced_fraction ? 1 : 0;
+  return out;
+}
+
+function run(t, colorsOnly = false) {
   const { n, h, L, A, B, con, up, w, frac } = C;
   let mL = Float32Array.from(L), mA = Float32Array.from(A), mB = Float32Array.from(B);
   const nb = new Int32Array(26);
-  const steps = (t.blur > 0 ? 1 : 0) + 1 + t.majority;
+  const steps = (t.blur > 0 ? 1 : 0) + 1 + (colorsOnly ? 0 : t.majority);
   let step = 0;
   if (t.blur > 0) {
     progress('blur', 0);
@@ -149,7 +187,7 @@ function run(t) {
     }
   }
   // assign(): normalize the scan's color statistics onto the palette's, then nearest block
-  progress('matching', step / steps);
+  progress(colorsOnly ? 'colors' : 'matching', step / steps);
   const pal = h.palette, P = pal.length, fx = h.fixed;
   let ws = 0, fm = [0, 0, 0];
   for (let i = 0; i < n; i++) { ws += w[i]; fm[0] += w[i] * mL[i]; fm[1] += w[i] * mA[i]; fm[2] += w[i] * mB[i]; }
@@ -162,15 +200,18 @@ function run(t) {
   const ps0 = Math.sqrt(pl.reduce((s, v) => s + (v[0] - pm[0]) ** 2, 0) / P);
   const scaleL = ps0 * t.spread / Math.max(fs0, 1e-6);
   const mats = new Uint8Array(n);
+  const colors = new Uint8Array(n * 3);   // what's matched, as sRGB (the "Colors before matching" view)
   for (let i = 0; i < n; i++) {
-    if ((i & 0x3ffff) === 0) progress('matching', (step + i / n) / steps);
-    const qL = (mL[i] - fm[0]) * scaleL + pm[0];
+    if ((i & 0x3ffff) === 0) progress(colorsOnly ? 'colors' : 'matching', (step + i / n) / steps);
+    const qL = (mL[i] - fm[0]) * scaleL + pm[0] + (t.brightness ?? 0) * 0.15;   // BRIGHT
     let qa = (mA[i] - fm[1]) * fx.chroma + fm[1] * (1 - fx.cast);
     let qb = (mB[i] - fm[2]) * fx.chroma + fm[2] * (1 - fx.cast);
     if (fx.deadzone) {
       const c = Math.hypot(qa, qb), s = Math.max(c - fx.deadzone, 0) / Math.max(c, 1e-9);
       qa *= s; qb *= s;
     }
+    oklabToSrgb(qL, qa, qb, colors, i * 3);
+    if (colorsOnly) continue;
     const f = Math.min(Math.max(up[i], 0), 1), g = Math.min(Math.max(-up[i], 0), 1), sd = 1 - f - g;
     let best = 0, bd = Infinity;
     for (let k = 0; k < P; k++) {
@@ -184,6 +225,7 @@ function run(t) {
     }
     mats[i] = best;
   }
+  if (colorsOnly) return { mats: null, colors };
   step++;
   let cur = mats;
   const votes = new Int32Array(27);
@@ -207,7 +249,7 @@ function run(t) {
   if (fx.forced >= 0) {
     for (let i = 0; i < n; i++) if (frac[i] >= fx.forced_fraction) cur[i] = fx.forced;
   }
-  return cur;
+  return { mats: cur, colors };
 }
 
 /** Per-vertex material from the tuned cells: the cell under the vertex or within 2 cells (as
@@ -271,9 +313,12 @@ onmessage = async ({ data }) => {
     if (data.type === 'load') postMessage({ type: 'loaded', ...(await load(data.url)) });
     else if (data.type === 'verts') VERTS = data.verts;
     else if (data.type === 'run') {
-      const mats = run(data.tune);
-      const vmats = vertexMats(mats);
-      postMessage({ type: 'done', id: data.id, mats, vmats }, vmats ? [mats.buffer, vmats.buffer] : [mats.buffer]);
+      // colorsOnly (the "Colors before matching" view): stop before picking blocks
+      const { mats, colors } = run(data.tune, data.colorsOnly);
+      const vmats = mats && vertexMats(mats);
+      const centers = cellCenters();
+      postMessage({ type: 'done', id: data.id, mats, vmats, colors, centers, glass: glassCells() },
+        [colors.buffer, centers.buffer, ...(mats ? [mats.buffer] : []), ...(vmats ? [vmats.buffer] : [])]);
     }
   } catch (e) {
     postMessage({ type: 'error', message: e.message });

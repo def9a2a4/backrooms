@@ -4,9 +4,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.AbstractTimedE
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.event.EventScheduler;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;

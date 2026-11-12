@@ -173,8 +173,13 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
         placeCarpet(c);
         placeLights(c);
 
-        // Bedrock boundaries; the floor layer skips air so pits stay open to the void.
-        applyBoundaryLayer(chunkData, WORLD_MIN_Y, WORLD_MIN_Y + BEDROCK_LAYERS, Material.BEDROCK, true);
+        // Bedrock boundaries; the floor layer skips pit shafts so they stay open to the void.
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                if (chunkData.getType(x, WORLD_MIN_Y, z) == Material.AIR) continue;
+                chunkData.setRegion(x, WORLD_MIN_Y, z, x + 1, WORLD_MIN_Y + BEDROCK_LAYERS, z + 1, Material.BEDROCK);
+            }
+        }
         applyBoundaryLayer(chunkData, CEILING_MAX_Y - BEDROCK_LAYERS, CEILING_MAX_Y, Material.BEDROCK, false);
     }
 
@@ -220,7 +225,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
                 if (c.classic[x][z] || c.noCarpet[x][z]) continue;
                 int floorY = c.floorTop[x][z];
                 if (c.data.getType(x, floorY + 1, z) != Material.AIR) continue;
-                if (!c.data.getType(x, floorY, z).isSolid()) continue;
+                if (c.data.getType(x, floorY, z) == Material.AIR) continue;   // pit shafts
                 int worldX = c.wx(x), worldZ = c.wz(z);
                 double fpnx = (worldX + NOISE_OFFSET) * CARPET_SCALE;
                 double fpnz = (worldZ + NOISE_OFFSET) * CARPET_SCALE;

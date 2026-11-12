@@ -577,9 +577,60 @@ def write_mesh(verts, faces, vmat, palette, variants, ground_ref, island, path: 
     return len(data)
 
 
+def export_textured(name: str, cfg: dict, size: int = 4096):
+    """The scan as it is, photo textures shrunk to `size`, placed like build()'s meshes, for the
+    preview's "Textured scan" view: .temp/textured/<model>.glb (one mesh per texture) and
+    <model>.json (texels per meter at that size, for the view's blur)."""
+    from PIL import Image
+    Image.MAX_IMAGE_PIXELS = None
+    print(f"  loading {cfg['input']}")
+    geoms = trimesh.load(TEMP / cfg["input"]).dump(concatenate=False)
+    V = np.concatenate([g.vertices for g in geoms]) * cfg["meters_per_unit"]
+    lo, hi = V.min(axis=0), V.max(axis=0)
+    center = (lo + hi) / 2
+    ground_ref = float(np.percentile(V[:, 1], 1)) if cfg["mode"] == "column" else float(lo[1])
+    shift = np.array([center[0], ground_ref, center[2]])
+    groups = {}                  # texture -> [(verts, faces, uv)]
+    for g in geoms:
+        m = g.visual.material
+        tex = getattr(m, "emissiveTexture", None) or getattr(m, "baseColorTexture", None)
+        uv = getattr(g.visual, "uv", None)
+        if tex is None or uv is None:
+            tex, uv = None, np.full((len(g.vertices), 2), 0.5)
+        groups.setdefault(id(tex), (tex, []))[1].append((g.vertices * cfg["meters_per_unit"] - shift, g.faces, uv))
+    scene = trimesh.Scene()
+    tex_area = world_area = 0.0
+    for tex, parts in groups.values():
+        img = (tex.convert("RGB").resize((size, size), Image.LANCZOS) if tex is not None
+               else Image.new("RGB", (4, 4), (128, 128, 128)))
+        img.format = "JPEG"      # embedded as JPEG, not PNG
+        off, vs, fs, uvs = 0, [], [], []
+        for v, f, uv in parts:
+            vs.append(v); fs.append(f + off); uvs.append(uv); off += len(v)
+        v, f, uv = np.concatenate(vs), np.concatenate(fs), np.concatenate(uvs)
+        if tex is not None:
+            t = uv[f] * size
+            e1, e2 = t[:, 1] - t[:, 0], t[:, 2] - t[:, 0]
+            tex_area += np.abs(e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]).sum() / 2
+            world_area += np.linalg.norm(np.cross(v[f][:, 1] - v[f][:, 0], v[f][:, 2] - v[f][:, 0]), axis=1).sum() / 2
+        mat = trimesh.visual.material.PBRMaterial(baseColorTexture=img, metallicFactor=0.0)
+        scene.add_geometry(trimesh.Trimesh(v, f, visual=trimesh.visual.TextureVisuals(uv=uv, material=mat),
+                                           process=False))
+    out = TEMP / "textured" / f"{name}.glb"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    scene.export(out)
+    tpm = float(np.sqrt(tex_area / max(world_area, 1e-9)))
+    out.with_suffix(".json").write_text(json.dumps({"texels_per_meter": tpm, "texture": size}) + "\n")
+    print(f"  wrote {out.relative_to(ROOT)} ({out.stat().st_size / 1048576:.1f} MB), "
+          f"{tpm:.0f} texels per meter")
+
+
 def build(name: str, args):
     cfg = MODELS[name]
     print(f"{name}:")
+    if args.textured:
+        export_textured(name, cfg)
+        return
     V, F, C = load_faces(name, cfg)
     V = V * cfg["meters_per_unit"]
     lo, hi = V.min(axis=0), V.max(axis=0)
@@ -694,6 +745,9 @@ def main():
     ap.add_argument("--cells-only", action="store_true",
                     help="--style full: only export .temp/cells/<model>.cells.gz for the preview's "
                          "tuning sliders (no decimation, no mesh)")
+    ap.add_argument("--textured", action="store_true",
+                    help="only export .temp/textured/<model>.glb, the scan with shrunk photo "
+                         "textures, for the preview's \"Textured scan\" view")
     ap.add_argument("--output", help="default .temp/meshes/<model>.mesh.gz")
     args = ap.parse_args()
     for name in (MODELS if args.model == "all" else [args.model]):
