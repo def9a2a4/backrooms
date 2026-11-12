@@ -142,8 +142,10 @@ public class Level5ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
 
-        // Bedrock boundaries: 8-block floor, 10-block ceiling (onlySolid — maze carves some floor/ceiling)
-        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 8, Material.BEDROCK, true);
+        // Bedrock boundaries: 1-block floor, 10-block ceiling (onlySolid — maze carves some floor/ceiling).
+        // The floor above y0 is diggable stone on purpose: the below_y exit to the
+        // Corrupted Chunk fires at feet y1, standing on this last bedrock layer.
+        applyBoundaryLayer(chunkData, FLOOR_Y, FLOOR_Y + 1, Material.BEDROCK, true);
         applyBoundaryLayer(chunkData, SOLID_HEIGHT - 10, SOLID_HEIGHT, Material.BEDROCK, true);
     }
 

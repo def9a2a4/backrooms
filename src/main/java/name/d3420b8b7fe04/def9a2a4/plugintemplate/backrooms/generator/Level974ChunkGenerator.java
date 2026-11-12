@@ -85,6 +85,12 @@ public class Level974ChunkGenerator extends BackroomsChunkGenerator {
             double outer = rr * rr;
             int d2 = dx * dx + dy * dy + dz * dz;
             if (d2 > outer) return;
+            // Every grass planet has a lodestone at its heart. Digging in and
+            // breaking it is the way out (break_block exit in level_974.yml).
+            if (d2 == 0 && "grass".equals(palette.name())) {
+                chunkData.setBlock(localX, wy, localZ, Material.LODESTONE);
+                return;
+            }
             boolean top = dx * dx + (dy + 1) * (dy + 1) + dz * dz > outer;
             BlockData b = palette.picker().pick(Math.sqrt(d2) / rr, top, blockHash(hash, wx, wy, wz), wx, wy, wz, hash);
             if (b != null) chunkData.setBlock(localX, wy, localZ, b);

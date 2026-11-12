@@ -654,7 +654,9 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
             List<String> cursedAuthors,
             List<String> wordPool,
             double preWrittenChance,
-            List<PreWrittenBook> preWrittenBooks
+            List<PreWrittenBook> preWrittenBooks,
+            double entryBookChance,
+            List<PreWrittenBook> entryBooks
     ) {
         public record PreWrittenBook(String title, String author, List<String> pages) {}
 
@@ -664,6 +666,8 @@ public class Level64637ChunkGenerator extends BackroomsChunkGenerator {
                 List.of("you have been here before and you will be here again"),
                 List.of("FOR YOU"),
                 List.of("The Librarian"),
+                List.of(),
+                0.0,
                 List.of(),
                 0.0,
                 List.of()

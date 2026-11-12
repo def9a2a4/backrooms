@@ -87,6 +87,8 @@ public class LobbyBookshelfListener implements Listener {
             for (int z = 0; z < 16; z++) {
                 Block block = chunk.getBlock(x, AIR_MIN_Y, z);
                 if (block.getType() != Material.BOOKSHELF) continue;
+                // A bookshelf stacked two high is a Library alcove, not a desk — leave it be.
+                if (chunk.getBlock(x, AIR_MIN_Y + 1, z).getType() == Material.BOOKSHELF) continue;
                 BlockFace facing = computeFacing(chunk, x, z);
                 candidates.add(new ShelfCandidate(x, AIR_MIN_Y, z, facing, rng.nextLong()));
             }

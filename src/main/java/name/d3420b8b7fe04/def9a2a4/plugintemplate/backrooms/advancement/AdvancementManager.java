@@ -26,7 +26,8 @@ public class AdvancementManager {
 
     private static final Set<String> ALL_LEVEL_IDS = Set.of(
             "level_0", "level_1", "level_2", "level_3", "level_4",
-            "level_5", "level_7", "level_37", "level_64637", "level_94", "level_84"
+            "level_5", "level_7", "level_37", "level_56", "level_64637",
+            "level_84", "level_94", "level_101", "level_418", "level_590", "level_974"
     );
 
     private final Map<String, NamespacedKey> entryKeys = Map.of(
@@ -56,6 +57,7 @@ public class AdvancementManager {
             Map.entry("level_1973", key("level/level_1973")),
             Map.entry("level_94", key("level/level_94")),
             Map.entry("level_84", key("level/level_84")),
+            Map.entry("level_101", key("level/level_101")),
             Map.entry("level_590", key("level/level_590")),
             Map.entry("level_974", key("level/level_974")),
             Map.entry("level_418", key("level/level_418"))
@@ -82,7 +84,20 @@ public class AdvancementManager {
             Map.entry("level_64637:overworld:collect_items", key("hint/hint_64637_books")),
             Map.entry("level_84:level_3", key("hint/hint_84_down")),
             Map.entry("level_84:level_94", key("hint/hint_84_up")),
-            Map.entry("level_418:level_94", key("hint/hint_418"))
+            Map.entry("level_418:level_94", key("hint/hint_418")),
+            Map.entry("level_0:level_64637", key("hint/hint_0_shelf")),
+            Map.entry("level_64637:level_101", key("hint/hint_64637_leveldat")),
+            Map.entry("level_64637:level_4", key("hint/hint_64637_catalog")),
+            Map.entry("level_64637:level_94", key("hint/hint_64637_catalog")),
+            Map.entry("level_64637:level_974", key("hint/hint_64637_catalog")),
+            Map.entry("level_64637:level_84", key("hint/hint_64637_catalog")),
+            Map.entry("level_64637:level_5", key("hint/hint_64637_cursed")),
+            Map.entry("level_64637:level_7", key("hint/hint_64637_cursed")),
+            Map.entry("level_974:level_94", key("hint/hint_974")),
+            Map.entry("level_5:level_7", key("hint/hint_5_down")),
+            Map.entry("level_3:level_590", key("hint/hint_3")),
+            Map.entry("level_590:level_3", key("hint/hint_590")),
+            Map.entry("level_101:level_0", key("hint/hint_101"))
     );
 
     private final NamespacedKey hint5Key = key("hint/hint_5");
@@ -96,13 +111,15 @@ public class AdvancementManager {
             "level/level_0", "level/level_1", "level/level_1_garden",
             "level/level_2", "level/level_3", "level/level_4", "level/level_5",
             "level/level_7", "level/level_37", "level/level_64637",
-            "level/level_56", "level/level_94", "level/level_84",
+            "level/level_56", "level/level_94", "level/level_84", "level/level_101",
             "level/level_590", "level/level_974", "level/level_418",
             "level/level_1881", "level/level_9500", "level/level_1967", "level/level_1973",
-            "hint/hint_0", "hint/hint_1_down", "hint/hint_1_up",
-            "hint/hint_2", "hint/hint_3", "hint/hint_4", "hint/hint_5",
+            "hint/hint_0", "hint/hint_0_shelf", "hint/hint_1_down", "hint/hint_1_up",
+            "hint/hint_2", "hint/hint_3", "hint/hint_4", "hint/hint_5", "hint/hint_5_down",
             "hint/hint_7", "hint/hint_37", "hint/hint_64637_fall", "hint/hint_64637_books",
+            "hint/hint_64637_leveldat", "hint/hint_64637_catalog", "hint/hint_64637_cursed",
             "hint/hint_84_down", "hint/hint_84_up", "hint/hint_94", "hint/hint_418",
+            "hint/hint_101", "hint/hint_974", "hint/hint_590",
             "escape/overworld", "escape/all_levels"
     );
 

@@ -378,24 +378,6 @@ public class BackroomsPlugin {
                 return Level64637ChunkGenerator.BookConfig.DEFAULT;
             }
         }
-        List<Level64637ChunkGenerator.BookConfig.PreWrittenBook> preWrittenBooks =
-                new java.util.ArrayList<>();
-        if (yaml.contains("pre_written_books")) {
-            for (Object entry : yaml.getList("pre_written_books", List.of())) {
-                if (entry instanceof java.util.Map<?, ?> map) {
-                    String title = map.containsKey("title") ? String.valueOf(map.get("title")) : "Untitled";
-                    String author = map.containsKey("author") ? String.valueOf(map.get("author")) : "Unknown";
-                    Object pagesObj = map.get("pages");
-                    List<String> pages = new java.util.ArrayList<>();
-                    if (pagesObj instanceof List<?> pageList) {
-                        for (Object p : pageList) pages.add(String.valueOf(p));
-                    }
-                    preWrittenBooks.add(new Level64637ChunkGenerator.BookConfig.PreWrittenBook(
-                            title, author, pages));
-                }
-            }
-        }
-
         return new Level64637ChunkGenerator.BookConfig(
                 yaml.getString("gibberish_chars", "abcdefghijklmnopqrstuvwxyz .,;:'-"),
                 yaml.getDouble("cursed_chance", 0.15),
@@ -404,8 +386,28 @@ public class BackroomsPlugin {
                 yaml.getStringList("cursed_authors"),
                 yaml.getStringList("word_pool"),
                 yaml.getDouble("pre_written_chance", 0.08),
-                preWrittenBooks
+                parseBookList(yaml, "pre_written_books"),
+                yaml.getDouble("entry_book_chance", 0.0),
+                parseBookList(yaml, "entry_books")
         );
+    }
+
+    private static List<Level64637ChunkGenerator.BookConfig.PreWrittenBook> parseBookList(
+            YamlConfiguration yaml, String key) {
+        List<Level64637ChunkGenerator.BookConfig.PreWrittenBook> books = new java.util.ArrayList<>();
+        for (Object entry : yaml.getList(key, List.of())) {
+            if (entry instanceof java.util.Map<?, ?> map) {
+                String title = map.containsKey("title") ? String.valueOf(map.get("title")) : "Untitled";
+                String author = map.containsKey("author") ? String.valueOf(map.get("author")) : "Unknown";
+                Object pagesObj = map.get("pages");
+                List<String> pages = new java.util.ArrayList<>();
+                if (pagesObj instanceof List<?> pageList) {
+                    for (Object p : pageList) pages.add(String.valueOf(p));
+                }
+                books.add(new Level64637ChunkGenerator.BookConfig.PreWrittenBook(title, author, pages));
+            }
+        }
+        return books;
     }
 
     private name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level84Listener loadLevel84Listener() {

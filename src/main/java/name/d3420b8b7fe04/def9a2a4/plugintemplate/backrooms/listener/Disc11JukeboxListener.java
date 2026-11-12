@@ -12,7 +12,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 
 /**
  * Level 5 (Disc 11) — clicking jukeboxes causes them to explode.
- * L5 is a dead end; the only way out is death (respawn at L0).
+ * The way out is below: digging through the tunnel floor exits to the
+ * Corrupted Chunk (below_y trigger in level_5.yml). Death respawns at
+ * overworld spawn, like every backrooms level.
  */
 public class Disc11JukeboxListener implements Listener {
 

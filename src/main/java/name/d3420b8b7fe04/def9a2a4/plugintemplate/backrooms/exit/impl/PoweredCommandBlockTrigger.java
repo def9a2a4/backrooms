@@ -2,20 +2,22 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.impl;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.AbstractExitTrigger;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level3ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.BackroomsLevel;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.BackroomsPlayerState;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.player.PlayerStateManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.Lectern;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockRedstoneEvent;
-import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,16 +25,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Triggers when a command block receives enough redstone pulses within a time window
- * while a player is nearby.
+ * Triggers when a station's command block is powered by redstone while a player is
+ * nearby. The destination is read from the lectern book on top of the command block
+ * (titled "§k<target_level>" by ServerRoomLecternListener at generation time), so a
+ * station always goes where its terminal says — even in worlds generated before the
+ * station table changed.
  *
  * Listens for BlockRedstoneEvent directly (registered as its own Bukkit Listener).
- * Tracks pulse timestamps per block location. When threshold is reached and a player
- * is within radius, fires the transition for that player.
  *
  * Config:
  *   type: powered_command_block
- *   power_count: 16        # pulses needed within window
+ *   power_count: 1         # rising edges needed within window
  *   window_ticks: 80       # time window (4 seconds at 20 TPS)
  *   radius: 20             # max player distance
  *   target_level: level_4
@@ -77,22 +80,16 @@ public class PoweredCommandBlockTrigger extends AbstractExitTrigger implements L
         // Must be in a backrooms world
         if (levelRegistry == null || !levelRegistry.isBackroomsWorld(block.getWorld())) return;
 
-        // Determine which kind of command block this is and only handle matching ones
-        if (block.getWorld().getGenerator() instanceof Level3ChunkGenerator l3gen) {
-            List<Level3ChunkGenerator.CommandBlockKind> kinds = l3gen.getCommandBlockKinds();
-            if (!kinds.isEmpty()) {
-                int worldX = block.getX();
-                int worldZ = block.getZ();
-                long posHash = block.getWorld().getSeed()
-                        ^ ((long) worldX * 198491317L + (long) worldZ * 6542989L + 12345L);
-                long kindHash = posHash ^ 0xC0D_B10CL;
-                int kindIndex = l3gen.pickKind(kindHash >> 16);
-                if (kindIndex >= kinds.size()
-                        || !kinds.get(kindIndex).target().equals(getTargetLevelId())) {
-                    return;
-                }
-            }
-        }
+        // The lectern on top of the command block names the destination: its book is
+        // titled "§k<target_level>" (written once, at generation time). The hash decides
+        // what generates; the book decides where the terminal goes — persisted worlds
+        // stay truthful no matter how the station table changes later. No lectern or
+        // no book (someone took it) means the station is inert.
+        if (!(block.getRelative(BlockFace.UP).getState() instanceof Lectern lectern)) return;
+        ItemStack lecternBook = lectern.getInventory().getItem(0);
+        if (lecternBook == null || !(lecternBook.getItemMeta() instanceof BookMeta meta)) return;
+        String title = meta.getTitle();
+        if (title == null || !title.replaceAll("§.", "").equals(getTargetLevelId())) return;
 
         long now = block.getWorld().getFullTime();
         long blockKey = packBlockPos(block);

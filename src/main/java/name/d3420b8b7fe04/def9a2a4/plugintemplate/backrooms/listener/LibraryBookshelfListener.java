@@ -161,19 +161,33 @@ public class LibraryBookshelfListener implements Listener {
     }
 
     private ItemStack createBook(Random rng) {
+        // Entry books (the way into other levels) — rolled before the pre-written pool
+        // so adding them doesn't dilute level.dat and friends.
+        if (!config.entryBooks().isEmpty()
+                && rng.nextDouble() < config.entryBookChance()) {
+            return buildFixedBook(config.entryBooks().get(rng.nextInt(config.entryBooks().size())));
+        }
+
         // Rare pre-written books
         if (!config.preWrittenBooks().isEmpty()
                 && rng.nextDouble() < config.preWrittenChance()) {
-            BookConfig.PreWrittenBook pw =
-                    config.preWrittenBooks().get(rng.nextInt(config.preWrittenBooks().size()));
-            ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-            BookMeta meta = (BookMeta) book.getItemMeta();
-            meta.setTitle(pw.title());
-            meta.setAuthor(pw.author());
-            for (String page : pw.pages()) meta.addPage(page);
-            book.setItemMeta(meta);
-            return book;
+            return buildFixedBook(
+                    config.preWrittenBooks().get(rng.nextInt(config.preWrittenBooks().size())));
         }
+        return createProceduralBook(rng);
+    }
+
+    private static ItemStack buildFixedBook(BookConfig.PreWrittenBook pw) {
+        ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
+        BookMeta meta = (BookMeta) book.getItemMeta();
+        meta.setTitle(pw.title());
+        meta.setAuthor(pw.author());
+        for (String page : pw.pages()) meta.addPage(page);
+        book.setItemMeta(meta);
+        return book;
+    }
+
+    private ItemStack createProceduralBook(Random rng) {
 
         ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) book.getItemMeta();

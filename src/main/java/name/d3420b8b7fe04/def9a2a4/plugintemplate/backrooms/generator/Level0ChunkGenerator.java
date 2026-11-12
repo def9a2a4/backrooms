@@ -87,6 +87,19 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
                 Material wallMat = wallMatNoise > 0.0 ? Material.BAMBOO_PLANKS : Material.YELLOW_TERRACOTTA;
 
                 placeStructure(chunkData, chunkRng, baseX, baseZ, region, wallMat);
+
+                // Rare bookshelf alcove: the door to the Library (break_block exit
+                // in level_0.yml). Hashed on world position, not chunkRng, so it
+                // never shifts existing structure layouts; the froglight above
+                // makes it readable down a corridor. LobbyBookshelfListener skips
+                // stacked shelves, so the column survives chiseling.
+                if (region == REGION_WALLS
+                        && isLibraryAlcove(seed, chunkX * 16 + baseX, chunkZ * 16 + baseZ)) {
+                    int ax = baseX + 1, az = baseZ + 1;
+                    chunkData.setBlock(ax, AIR_MIN_Y, az, Material.BOOKSHELF);
+                    chunkData.setBlock(ax, AIR_MIN_Y + 1, az, Material.BOOKSHELF);
+                    chunkData.setBlock(ax, AIR_MIN_Y + 2, az, Material.OCHRE_FROGLIGHT);
+                }
             }
         }
 
@@ -122,6 +135,18 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
         // Bedrock boundaries: 10-block floor and 10-block ceiling
         applyBoundaryLayer(chunkData, FLOOR_MIN_Y, FLOOR_MIN_Y + 10, Material.BEDROCK, false);
         applyBoundaryLayer(chunkData, CEILING_MAX_Y - 10, CEILING_MAX_Y, Material.BEDROCK, false);
+    }
+
+    /** ~1 in 1250 wall-region cells (about one per 75 chunks) holds the Library alcove. */
+    private static boolean isLibraryAlcove(long seed, int worldX, int worldZ) {
+        long h = seed
+                ^ ((long) worldX * 341873128712L)
+                ^ ((long) worldZ * 132897987541L)
+                ^ 0xA1C07EL;
+        h ^= h >>> 33;
+        h *= 0xFF51AFD7ED558CCDL;
+        h ^= h >>> 33;
+        return Math.floorMod(h, 1250) == 0;
     }
 
     private int classifyRegion(double noise) {
