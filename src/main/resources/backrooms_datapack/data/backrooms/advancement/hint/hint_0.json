@@ -5,7 +5,7 @@
       "id": "minecraft:written_book"
     },
     "title": {"text": "Cover to Cover", "color": "gold"},
-    "description": {"text": "no one reads to the end", "color": "gray", "italic": true},
+    "description": {"text": "No one reads to the end", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": false

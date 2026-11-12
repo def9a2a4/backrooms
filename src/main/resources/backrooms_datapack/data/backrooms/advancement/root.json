@@ -5,7 +5,7 @@
     },
     "title": {"text": "The Backrooms", "color": "yellow", "bold": true},
     "description": {"text": "The fluorescent lights hum.", "color": "gray", "italic": true},
-    "background": "minecraft:textures/block/yellow_terracotta.png",
+    "background": "minecraft:block/yellow_terracotta",
     "frame": "task",
     "show_toast": false,
     "announce_to_chat": false

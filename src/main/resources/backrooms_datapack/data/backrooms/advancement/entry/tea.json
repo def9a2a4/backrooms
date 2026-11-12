@@ -5,7 +5,7 @@
       "id": "minecraft:cauldron"
     },
     "title": {"text": "Short and Stout", "color": "red"},
-    "description": {"text": "Boiling a cauldron of water, over a fire, and put in some leaves.\nA ritual thousands of years old.\nSomething isn't right here.", "color": "gray", "italic": true},
+    "description": {"text": "Boil a cauldron of water over a fire and put in some leaves.\nA ritual thousands of years old.\nSomething isn't right here.", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true

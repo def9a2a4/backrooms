@@ -6,9 +6,9 @@
     },
     "title": {"text": "Manual Override", "color": "red"},
     "description": [
-      {"text": "> powering on...\n> Starting unknown.minecraft.legacy\n> [WARNING] You've not updated in a while!\n> [WARNING] System uptime: ", "color": "gray", "italic": true},
+      {"text": "> powering on...\n> boot unknown.minecraft.legacy\n> [WARN] update long overdue\n> [WARN] uptime: ", "color": "gray", "italic": true},
       {"text": "########", "color": "gray", "italic": true, "obfuscated": true},
-      {"text": "\n> [WARNING] `exit.allowed` not found, proceeding anyway", "color": "gray", "italic": true}
+      {"text": "\n> [WARN] exit.allowed not found\n> proceeding anyway", "color": "gray", "italic": true}
     ],
     "frame": "goal",
     "show_toast": true,

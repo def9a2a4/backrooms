@@ -5,10 +5,11 @@
       "id": "minecraft:bookshelf"
     },
     "title": {"text": "Shelved", "color": "yellow"},
-    "description": {"text": "the shelves go deeper than the world allows", "color": "gray", "italic": true},
+    "description": {"text": "The shelves go deeper than the world allows", "color": "gray", "italic": true},
     "frame": "goal",
     "show_toast": true,
-    "announce_to_chat": false
+    "announce_to_chat": false,
+    "hidden": true
   },
   "criteria": {
     "impossible": {

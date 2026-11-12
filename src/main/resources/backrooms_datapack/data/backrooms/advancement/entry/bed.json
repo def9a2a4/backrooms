@@ -4,7 +4,7 @@
     "icon": {
       "id": "minecraft:red_bed"
     },
-    "title": {"text": "The Dream That Wasn't", "color": "gray"},
+    "title": {"text": "Slept Through the Warning", "color": "gray"},
     "description": {"text": "Thunder then silence then here", "color": "gray", "italic": true},
     "frame": "task",
     "show_toast": true,
