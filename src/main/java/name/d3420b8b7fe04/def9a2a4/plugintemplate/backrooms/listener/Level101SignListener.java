@@ -17,8 +17,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 /**
  * Writes text onto the blank signs Level101ChunkGenerator places in the Alpha
@@ -40,10 +40,12 @@ import java.util.Set;
  */
 public class Level101SignListener implements Listener {
 
-    // Level 0 too: its tall halls hold Level 101 structures at the same ground height.
-    private static final Set<String> WORLD_NAMES = Set.of("bkrms_101", "bkrms_0");
-    private static final int SCAN_MIN_Y = 58;   // dungeon-breach chest labels sit at y60
-    private static final int SCAN_MAX_Y = 78;
+    // Sign scan band per world, {min, max}. Level 101: dungeon-breach chest labels
+    // sit at y60. Level 0: its sunken rooms hold Level 101 houses on floors as
+    // low as y36.
+    private static final Map<String, int[]> SCAN_BANDS = Map.of(
+            "bkrms_101", new int[]{ 58, 78 },
+            "bkrms_0", new int[]{ 28, 72 });
 
     private List<String> names = List.of("Steve", "Alex", "Sarah", "Mark");
     private List<String> graveWeirdNames = List.of("unknown", "???", "nobody");
@@ -117,13 +119,14 @@ public class Level101SignListener implements Listener {
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
         if (!event.isNewChunk()) return;
-        if (!WORLD_NAMES.contains(event.getWorld().getName())) return;
+        int[] band = SCAN_BANDS.get(event.getWorld().getName());
+        if (band == null) return;
 
         Chunk chunk = event.getChunk();
         List<int[]> signs = new ArrayList<>();
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                for (int y = SCAN_MIN_Y; y <= SCAN_MAX_Y; y++) {
+                for (int y = band[0]; y <= band[1]; y++) {
                     Material type = chunk.getBlock(x, y, z).getType();
                     if (type == Material.OAK_SIGN || type == Material.OAK_WALL_SIGN) {
                         signs.add(new int[]{ x, y, z });
