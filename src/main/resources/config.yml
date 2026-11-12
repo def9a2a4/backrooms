@@ -46,7 +46,7 @@ backrooms:
   # disabled, and exits to them close or lead elsewhere.
   meshes:
     download: true
-    base_url: "https://raw.githubusercontent.com/def9a2a4/backrooms/main/meshes/"
+    base_url: "https://def9a2a4.github.io/backrooms-data/meshes/"
 
   # Entity spawner settings
   entity_spawner:

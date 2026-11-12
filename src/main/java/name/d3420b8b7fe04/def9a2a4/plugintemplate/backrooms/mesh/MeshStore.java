@@ -34,8 +34,8 @@ import java.util.logging.Logger;
 
 /**
  * Every level mesh (Stonehenge, the test scene's models, the scans) is kept out of the jar to keep
- * it light: they're downloaded once from {@code meshes.base_url} (this repo's meshes/ folder on
- * raw.githubusercontent.com) into {@code plugins/Backrooms/meshes/}, checked against the SHA-256
+ * it light: they're downloaded once from {@code meshes.base_url} (the def9a2a4/backrooms-data GitHub
+ * Pages site) into {@code plugins/Backrooms/meshes/}, checked against the SHA-256
  * in the bundled manifest (meshes.json, written by scripts/scans/publish.py), and decoded off the
  * main thread. A level lists the meshes it needs ({@code meshes:} in its yml) and its world is
  * created once they're in.
@@ -48,7 +48,7 @@ public final class MeshStore {
     /** One manifest entry: the published file name (content-addressed) and its checksum. */
     public record Entry(String file, String sha256, long bytes) {}
 
-    public static final String DEFAULT_BASE_URL = "https://raw.githubusercontent.com/def9a2a4/backrooms/main/meshes/";
+    public static final String DEFAULT_BASE_URL = "https://def9a2a4.github.io/backrooms-data/meshes/";
 
     private static final Map<String, VoxelMesh> LOADED = new ConcurrentHashMap<>();
     private static final Map<String, Path> FILES = new ConcurrentHashMap<>();
