@@ -13,11 +13,14 @@ generator_config:
   structure_chunk_chance: 2
   void_pit_chunk_chance: 0.15
   # Megastructures (pillar fields, the cube, terrariums, sky sheets, staircases,
-  # giant oaks, player portraits) — one per 512-block cell at most, none inside
-  # this radius, odds ramping up over the next 2.5 km. Walls use 2048-block cells.
+  # giant oaks, player portraits): at most one per cell (cell size 384-1024),
+  # none within min_distance of spawn, odds starting at 60% of cell_chance and
+  # reaching it 600 blocks further out. Walls use their own 2048-block cells.
+  # At these values a straight 5 km walk passes ~5 within fog range.
+  megastructure_cell_size: 384
   megastructure_min_distance: 1200
-  megastructure_cell_chance: 60
-  wall_cell_chance: 35
+  megastructure_cell_chance: 100
+  wall_cell_chance: 50
 
 exit_triggers:
   - type: bed_sleep

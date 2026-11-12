@@ -28,7 +28,8 @@ import java.util.Random;
  * a face, a head, a whole statue — painted from the skins of real players.
  * Plus the Wall, which runs for kilometres and has one gap.
  *
- * The world is divided into {@link #CELL}-block cells; each holds at most one
+ * The world is divided into square cells (megastructure_cell_size, 384-1024
+ * blocks); each holds at most one
  * megastructure, chosen and placed from the world seed and the cell
  * coordinates alone, and always fully inside its cell. Walls use their own
  * coarser grid. Every chunk lies inside exactly one cell of each grid, so it
@@ -37,7 +38,6 @@ import java.util.Random;
  */
 final class AlphaMegastructures {
 
-    static final int CELL = 512;
     static final int WALL_CELL = 2048;
     private static final int EDGE = 16;
     private static final int BASE_Y = Level101ChunkGenerator.GROUND_Y + 1;
@@ -64,13 +64,17 @@ final class AlphaMegastructures {
         void place(ChunkData chunkData, Random rng);
     }
 
+    private final int cell;
     private final int minDistance;
     private final double cellChance;
     private final double wallChance;
     private final HousePlacer housePlacer;
 
-    AlphaMegastructures(int minDistance, double cellChancePercent, double wallChancePercent,
+    AlphaMegastructures(int cellSize, int minDistance, double cellChancePercent, double wallChancePercent,
                         HousePlacer housePlacer) {
+        // Multiple of 16 so every chunk sits inside exactly one cell; at least 384 so the
+        // biggest footprints (pillar fields, sky sheets) fit with clearance.
+        this.cell = Math.max(384, Math.min(1024, cellSize / 16 * 16));
         this.minDistance = minDistance;
         this.cellChance = cellChancePercent / 100.0;
         this.wallChance = wallChancePercent / 100.0;
@@ -82,8 +86,8 @@ final class AlphaMegastructures {
     /** The megastructures with any part within {@code pad} blocks of this chunk. */
     List<Site> sitesNear(long seed, int chunkX, int chunkZ, int pad) {
         List<Site> out = new ArrayList<>(2);
-        Site cell = siteAt(seed, Math.floorDiv(chunkX * 16, CELL), Math.floorDiv(chunkZ * 16, CELL));
-        if (cell != null && cell.touches(chunkX, chunkZ, pad)) out.add(cell);
+        Site here = siteAt(seed, Math.floorDiv(chunkX * 16, cell), Math.floorDiv(chunkZ * 16, cell));
+        if (here != null && here.touches(chunkX, chunkZ, pad)) out.add(here);
         Site wall = wallAt(seed, Math.floorDiv(chunkX * 16, WALL_CELL), Math.floorDiv(chunkZ * 16, WALL_CELL));
         if (wall != null && wall.touches(chunkX, chunkZ, pad)) out.add(wall);
         return out;
@@ -96,7 +100,7 @@ final class AlphaMegastructures {
 
     /** World position of the sign on top of a staircase to nowhere, if it falls in this chunk. */
     @Nullable int[] staircaseSign(long seed, int chunkX, int chunkZ) {
-        Site s = siteAt(seed, Math.floorDiv(chunkX * 16, CELL), Math.floorDiv(chunkZ * 16, CELL));
+        Site s = siteAt(seed, Math.floorDiv(chunkX * 16, cell), Math.floorDiv(chunkZ * 16, cell));
         if (!(s instanceof Staircase st)) return null;
         int[] p = st.signPos();
         if (Math.floorDiv(p[0], 16) != chunkX || Math.floorDiv(p[2], 16) != chunkZ) return null;
@@ -106,10 +110,10 @@ final class AlphaMegastructures {
     // ── Site selection ───────────────────────────────────────────────────
 
     private @Nullable Site siteAt(long seed, int cellX, int cellZ) {
-        int cellMinX = cellX * CELL, cellMinZ = cellZ * CELL;
-        if (!farEnough(cellMinX + CELL / 2, cellMinZ + CELL / 2, CELL)) return null;
+        int cellMinX = cellX * cell, cellMinZ = cellZ * cell;
+        if (!farEnough(cellMinX + cell / 2, cellMinZ + cell / 2, cell)) return null;
         Random r = new Random(hash(cellX, cellZ, seed, 0x3E6A));
-        if (r.nextDouble() >= cellChance * ramp(cellMinX + CELL / 2, cellMinZ + CELL / 2)) return null;
+        if (r.nextDouble() >= cellChance * ramp(cellMinX + cell / 2, cellMinZ + cell / 2)) return null;
 
         int roll = r.nextInt(TOTAL_WEIGHT);
         Kind kind = Kind.PILLAR_FIELD;
@@ -121,7 +125,7 @@ final class AlphaMegastructures {
 
         switch (kind) {
             case PILLAR_FIELD -> {
-                int radius = 90 + r.nextInt(70);
+                int radius = Math.min(90 + r.nextInt(70), cell / 2 - EDGE - 1);
                 return new PillarField(center(r, cellMinX, radius), center(r, cellMinZ, radius), radius);
             }
             case CUBE -> {
@@ -131,19 +135,19 @@ final class AlphaMegastructures {
                 return new Cube(x0, z0, size, r.nextInt(13));
             }
             case TERRARIUM -> {
-                int tcx = cellX * (CELL / 16) + 2 + r.nextInt(CELL / 16 - 4);
-                int tcz = cellZ * (CELL / 16) + 2 + r.nextInt(CELL / 16 - 4);
+                int tcx = cellX * (cell / 16) + 2 + r.nextInt(cell / 16 - 4);
+                int tcz = cellZ * (cell / 16) + 2 + r.nextInt(cell / 16 - 4);
                 return new Terrarium(tcx, tcz, siteSeed, housePlacer);
             }
             case SKY_SHEET -> {
-                int radius = 80 + r.nextInt(45);
+                int radius = Math.min(80 + r.nextInt(45), (int) ((cell / 2 - EDGE - 2) / 1.15));
                 int reach = (int) Math.ceil(radius * 1.15);
                 return new SkySheet(center(r, cellMinX, reach), center(r, cellMinZ, reach),
                         radius, 185 + r.nextInt(50));
             }
             case STAIRCASE -> {
                 BlockFace dir = new BlockFace[]{ BlockFace.NORTH, BlockFace.SOUTH, BlockFace.WEST, BlockFace.EAST }[r.nextInt(4)];
-                int steps = 110 + r.nextInt(70);
+                int steps = Math.min(110 + r.nextInt(70), cell - 2 * EDGE - 12);
                 int half = (steps + 3) / 2 + 2;
                 int mx = center(r, cellMinX, half), mz = center(r, cellMinZ, half);
                 return new Staircase(mx - dir.getModX() * (steps + 3) / 2, mz - dir.getModZ() * (steps + 3) / 2,
@@ -189,15 +193,15 @@ final class AlphaMegastructures {
         return nearest >= minDistance;
     }
 
-    /** Megastructures thicken with distance: 35% of the configured odds at the threshold, full odds 2.5 km further. */
+    /** Megastructures thicken with distance: 60% of the configured odds at the threshold, full odds 600 blocks further. */
     private double ramp(int cx, int cz) {
         double d = Math.sqrt((double) cx * cx + (double) cz * cz);
-        return Math.min(1.0, 0.35 + (d - minDistance) / 2500.0);
+        return Math.min(1.0, 0.6 + (d - minDistance) / 1500.0);
     }
 
     /** A center coordinate keeping {@code half} blocks of footprint plus the edge clearance inside the cell. */
-    private static int center(Random r, int cellMin, int half) {
-        int lo = cellMin + EDGE + half, hi = cellMin + CELL - EDGE - half - 1;
+    private int center(Random r, int cellMin, int half) {
+        int lo = cellMin + EDGE + half, hi = cellMin + cell - EDGE - half - 1;
         return lo + r.nextInt(Math.max(1, hi - lo + 1));
     }
 

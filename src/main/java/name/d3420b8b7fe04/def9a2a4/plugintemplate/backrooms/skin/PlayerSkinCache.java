@@ -33,7 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Skins of the players who have been on this server, for Alpha's portraits
  * (giant faces, heads and statues built from a real player's skin).
  *
- * Skins are downloaded when a player joins and kept on disk, so portraits can
+ * Skins are downloaded when a player joins (on offline-mode servers, by looking
+ * the username up with Mojang) and kept on disk, so portraits can
  * be painted while nobody is online. Chunk generation runs off the main thread
  * and paints one slice of a portrait per chunk, so each canvas is pinned to one
  * skin the first time any of its chunks generates ({@link #skinForCanvas}); the
@@ -123,14 +124,56 @@ public final class PlayerSkinCache implements Listener {
     private void fetch(Player player) {
         PlayerTextures textures = player.getPlayerProfile().getTextures();
         URL url = textures.getSkin();
-        if (url == null) return; // offline-mode server or no skin set
-        boolean slim = textures.getSkinModel() == PlayerTextures.SkinModel.SLIM;
         UUID id = player.getUniqueId();
         String name = player.getName();
+        if (url != null) {
+            download(id, name, url.toString(), textures.getSkinModel() == PlayerTextures.SkinModel.SLIM);
+        } else {
+            // Offline-mode servers hand out profiles without textures: ask Mojang
+            // for the skin of the account with this name instead.
+            lookupByName(id, name);
+        }
+    }
 
+    private void lookupByName(UUID id, String name) {
+        get("https://api.mojang.com/users/profiles/minecraft/" + name, HttpResponse.BodyHandlers.ofString())
+                .thenCompose(r -> {
+                    if (r.statusCode() != 200) return java.util.concurrent.CompletableFuture.completedFuture(null);
+                    String mojangId = com.google.gson.JsonParser.parseString(r.body()).getAsJsonObject().get("id").getAsString();
+                    return get("https://sessionserver.mojang.com/session/minecraft/profile/" + mojangId,
+                            HttpResponse.BodyHandlers.ofString());
+                })
+                .thenAccept(r -> {
+                    if (r == null || r.statusCode() != 200) return;
+                    var props = com.google.gson.JsonParser.parseString(r.body()).getAsJsonObject().getAsJsonArray("properties");
+                    for (var p : props) {
+                        var prop = p.getAsJsonObject();
+                        if (!"textures".equals(prop.get("name").getAsString())) continue;
+                        String json = new String(java.util.Base64.getDecoder().decode(prop.get("value").getAsString()),
+                                java.nio.charset.StandardCharsets.UTF_8);
+                        var skin = com.google.gson.JsonParser.parseString(json).getAsJsonObject()
+                                .getAsJsonObject("textures").getAsJsonObject("SKIN");
+                        if (skin == null) return;
+                        var meta = skin.getAsJsonObject("metadata");
+                        boolean slim = meta != null && meta.has("model") && "slim".equals(meta.get("model").getAsString());
+                        download(id, name, skin.get("url").getAsString(), slim);
+                    }
+                })
+                .exceptionally(err -> {
+                    plugin.getLogger().fine("Skin lookup failed for " + name + ": " + err.getMessage());
+                    return null;
+                });
+    }
+
+    private <T> java.util.concurrent.CompletableFuture<HttpResponse<T>> get(String url, HttpResponse.BodyHandler<T> handler) {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(20)).GET().build();
+        return http.sendAsync(request, handler);
+    }
+
+    private void download(UUID id, String name, String url, boolean slim) {
         HttpRequest request;
         try {
-            request = HttpRequest.newBuilder(URI.create(url.toString()))
+            request = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(20)).GET().build();
         } catch (IllegalArgumentException e) {
             return;

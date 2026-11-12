@@ -37,11 +37,11 @@ final class Level0Zones {
         if (nx * nx + nz * nz < SPAWN_CLEARANCE * SPAWN_CLEARANCE) return Zone.LOBBY;
 
         int roll = pick(hash(seed, zoneX, zoneZ, 0x2011EL), 0, 100);
-        if (roll < 58) return Zone.LOBBY;
-        if (roll < 70) return Zone.CUBICLES;
-        if (roll < 77) return Zone.CAFETERIA;
-        if (roll < 91) return Zone.OFFICES;
-        return Zone.CORRIDORS;
+        if (roll < 73) return Zone.LOBBY;
+        if (roll < 85) return Zone.CUBICLES;
+        if (roll < 93) return Zone.OFFICES;
+        if (roll < 99) return Zone.CORRIDORS;
+        return Zone.CAFETERIA;
     }
 
     static void furnish(Level0Chunk c, Zone zone, int zoneX, int zoneZ) {

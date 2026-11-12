@@ -15,11 +15,11 @@ import static name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Lev
  * inside the cell so a chunk only ever consults its own cell:
  *
  * <ul>
- *   <li><b>Sunken rooms</b>: rectangles dug down below the lobby floor (the
- *   ceiling stays at its usual height, so lights stay on the grid). Flat ones
- *   get a wide staircase down one wall and a parapet around the rim, and
- *   sometimes Level 101 houses on the floor, with or without grass; stepped
- *   ones descend in terraces. Some hang their lights low on chains.</li>
+ *   <li><b>Sunken rooms</b>: rectangles dug down below the lobby floor, lit
+ *   from the ordinary ceiling. Flat ones get a wide staircase down one wall
+ *   and a parapet around the rim, and sometimes Level 101 houses on the
+ *   floor, with or without grass; stepped ones descend in terraces. Some also
+ *   raise their ceiling and hang their lights low on chains; only those.</li>
  *   <li><b>Pits</b>: a 25x25 shaft open to the void, with a 3-wide staircase
  *   of straight flights and square corner landings around its walls that
  *   simply runs out partway down.</li>
@@ -54,8 +54,12 @@ final class Level0Features {
         static final Feature NONE = new Feature(Kind.NONE, 0, 0, 0, 0, 0);
     }
 
-    /** Sunken-room layout derived from the feature hash. */
-    private record Room(int depth, boolean stepped, int stepWidth, boolean pendant,
+    /**
+     * Sunken-room layout derived from the feature hash. {@code raise} lifts the
+     * ceiling above the lobby's; it is nonzero exactly for pendant-lit rooms, so
+     * chains only ever hang under a raised ceiling.
+     */
+    private record Room(int depth, boolean stepped, int stepWidth, boolean pendant, int raise,
                         boolean grass, boolean houses, int stairDir) {}
 
     private Level0Features() {}
@@ -109,7 +113,8 @@ final class Level0Features {
         depth = Math.min(depth, minSide - 4);
         boolean grass = !stepped && pick(h, 42, 100) < 40;
         boolean houses = !stepped && depth >= 8 && pick(h, 46, 100) < 60;
-        return new Room(depth, stepped, stepWidth, pendant, grass, houses, pick(h, 50, 4));
+        int raise = pendant ? 4 + pick(h, 54, 13) : 0;   // up to y85: light_y in level_0.yml
+        return new Room(depth, stepped, stepWidth, pendant, raise, grass, houses, pick(h, 50, 4));
     }
 
     static void render(Level0Chunk c, Feature f, Level101ChunkGenerator alpha, int houseChance) {
@@ -167,9 +172,12 @@ final class Level0Features {
 
                 if (out <= 0) {
                     int floorY = FLOOR_TOP_Y - level(f, r, wx, wz);
-                    for (int y = floorY + 1; y < CEILING_Y; y++) {
+                    int ceilingY = CEILING_Y + r.raise();
+                    for (int y = floorY + 1; y < ceilingY; y++) {
                         c.data.setBlock(x, y, z, Material.AIR);
                     }
+                    c.data.setBlock(x, ceilingY, z, c.ceilingMats[x][z]);
+                    c.ceilingY[x][z] = ceilingY;
                     if (r.grass()) {
                         c.data.setBlock(x, floorY, z, Material.GRASS_BLOCK);
                         for (int y = floorY - 3; y < floorY; y++) c.data.setBlock(x, y, z, Material.DIRT);
@@ -179,7 +187,7 @@ final class Level0Features {
                     }
                     c.floorTop[x][z] = floorY;
                     if (r.pendant() && c.lightY[x][z] != Level0Chunk.NO_LIGHT) {
-                        c.lightY[x][z] = Math.min(CEILING_Y, floorY + 1 + PENDANT_DROP);
+                        c.lightY[x][z] = floorY + 1 + PENDANT_DROP;
                     }
                     continue;
                 }

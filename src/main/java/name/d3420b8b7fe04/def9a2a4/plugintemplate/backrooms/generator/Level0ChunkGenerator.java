@@ -31,8 +31,8 @@ import static name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Pat
  *   <li>Set pieces per 128-block macro cell ({@link Level0Features}): sunken
  *   rooms (some with Level 101 houses) and huge stairwell pits to the void.</li>
  *   <li>Carpet, sometimes with damp mud / soul sand underneath.</li>
- *   <li>Lights on a 4-block grid: flush in the ceiling at y69, or hung on
- *   chains lower down in some sunken rooms (light events scan for both).</li>
+ *   <li>Lights on a 4-block grid: flush in the ceiling, or hung on chains in
+ *   sunken rooms whose ceiling is also raised (light events scan for both).</li>
  * </ol>
  */
 public class Level0ChunkGenerator extends BackroomsChunkGenerator {
@@ -115,7 +115,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
 
     // Tunables (generator_config)
     private int roomCellChance = 35;    // percent of 128-block cells with a sunken room
-    private int pitCellChance = 4;      // percent of 128-block cells with a pit
+    private int pitCellChance = 10;     // percent of 128-block cells with a pit
     private int houseChunkChance = 45;  // percent of eligible chunks in a house room
 
     @Override
@@ -145,12 +145,13 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
                 c.anyClassic |= classic;
                 c.floorMats[x][z] = classic ? Material.YELLOW_TERRACOTTA : FLOOR_PALETTE.pick(seed, worldX, worldZ);
                 c.wallMats[x][z] = classic ? Material.YELLOW_TERRACOTTA : WALL_PALETTE.pick(seed, worldX, worldZ);
+                c.ceilingMats[x][z] = classic ? Material.YELLOW_TERRACOTTA : CEILING_PALETTE.pick(seed, worldX, worldZ);
                 c.floorTop[x][z] = FLOOR_TOP_Y;
+                c.ceilingY[x][z] = CEILING_MIN_Y;
                 c.lightY[x][z] = worldX % LIGHT_SPACING == 0 && worldZ % LIGHT_SPACING == 0
                         ? CEILING_MIN_Y : Level0Chunk.NO_LIGHT;
                 chunkData.setBlock(x, FLOOR_TOP_Y, z, c.floorMats[x][z]);
-                chunkData.setBlock(x, CEILING_MIN_Y, z, classic
-                        ? Material.YELLOW_TERRACOTTA : CEILING_PALETTE.pick(seed, worldX, worldZ));
+                chunkData.setBlock(x, CEILING_MIN_Y, z, c.ceilingMats[x][z]);
             }
         }
 
@@ -248,7 +249,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     /**
-     * Grid lights: flush in the ceiling, or a pendant on chains where a sunken
+     * Grid lights: flush in the ceiling, or a pendant on chains where a raised
      * room hangs its lights low. A pendant whose drop is blocked (stairs, a
      * house) falls back to a flush light.
      */
@@ -257,16 +258,17 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
             for (int z = 0; z < 16; z++) {
                 int ly = c.lightY[x][z];
                 if (ly == Level0Chunk.NO_LIGHT) continue;
+                int ceiling = c.ceilingY[x][z];
                 boolean clear = true;
-                for (int y = ly; y < CEILING_MIN_Y && clear; y++) {
+                for (int y = ly; y < ceiling && clear; y++) {
                     clear = c.data.getType(x, y, z) == Material.AIR;
                 }
-                if (ly >= CEILING_MIN_Y || !clear) {
-                    c.data.setBlock(x, CEILING_MIN_Y, z, Material.OCHRE_FROGLIGHT);
+                if (ly >= ceiling || !clear) {
+                    c.data.setBlock(x, ceiling, z, Material.OCHRE_FROGLIGHT);
                     continue;
                 }
                 c.data.setBlock(x, ly, z, Material.OCHRE_FROGLIGHT);
-                for (int y = ly + 1; y < CEILING_MIN_Y; y++) {
+                for (int y = ly + 1; y < ceiling; y++) {
                     c.data.setBlock(x, y, z, Material.IRON_CHAIN);
                 }
             }

@@ -71,7 +71,7 @@ MODELS = {
                     "tuff", "andesite", "granite", "calcite"],
         "penalty": {"calcite": 0.01},     # IronSource: calcite only for very white
         # sun-bleached hilltop, shadowed pits; worn floors paler than the cut faces
-        "tune": {"height": 0.4, "slope": 0.3},
+        "tune": {"height": 0.15, "slope": 0.1},
         # an excavation: no masonry (bricks and tiles of any kind)
         "full": {"lists": ["stone"], "exclude": r"brick|tiles"},
     },
@@ -282,7 +282,7 @@ def load_faces(name: str, cfg: dict):
     return V, F, C
 
 
-def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contrast=None):
+def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contrast=None, shade=0.0):
     """Nearest palette block per face in OKLab, IronSource-style: the block's top and side
     colors mixed by how much the face looks up (or down: bottom), lightness counting a quarter
     (baked light and shadow make it the least reliable channel). The scan's lightness is first
@@ -301,8 +301,10 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
     pl = (side + top) / 2
     pmean, pstd = pl.mean(axis=0), pl.std(axis=0)
     q = np.empty_like(lab)
+    # (shading and brightness come after the mapping: before it, the mapping would rescale them
+    # away along with the scan's own lightness spread)
     q[:, 0] = ((lab[:, 0] - fmean[0]) / max(fstd[0], 1e-6) * pstd[0] * tune(cfg)["spread"] + pmean[0]
-               + tune(cfg)["brightness"] * BRIGHT)
+               + shade + tune(cfg)["brightness"] * BRIGHT)
     cast = cfg.get("cast", 0.0)      # 1 = remove the scan's average tint entirely (to neutral)
     q[:, 1:] = (lab[:, 1:] - fmean[1:]) * cfg.get("chroma", 1.0) + fmean[1:] * (1 - cast)
     # Grey scans: color noise around neutral (~0.02) outweighs the differences between grey
@@ -336,13 +338,13 @@ def assign(lab: np.ndarray, area: np.ndarray, up: np.ndarray, cfg: dict, contras
 #             stretched over (lower = calmer, fewer jumps between light and dark blocks)
 #   pattern   weight of matching texture busyness (IronSource uses 0.5)
 #   majority  3x3x3 majority-filter passes after matching (removes lone blocks)
-#   height    height shading before matching, -1..1: lighter higher up (negative: darker)
-#   slope     slope shading before matching, -1..1: flat ground lighter than steep faces
-#             (negative: the reverse). Both add up to +-SHADE/2 to OKLab lightness.
+#   height    height shading, -1..1: lighter higher up (negative: darker)
+#   slope     slope shading, -1..1: flat ground lighter than steep faces (negative: the
+#             reverse). Each adds up to +-SHADE/2 to OKLab lightness, after the contrast mapping.
 #   brightness  -1..1: lightness shift after the contrast mapping, up to +-BRIGHT (OKLab L)
 TUNE_DEFAULTS = {"blur": 2, "spread": 0.8, "pattern": 0.5, "majority": 1, "height": 0.0, "slope": 0.0,
                  "brightness": 0.0}
-SHADE = 0.2
+SHADE = 0.6
 BRIGHT = 0.15
 
 
@@ -413,13 +415,11 @@ def match_cells(cen, area, lab, up, cfg, cell, forced=None, forced_mat=-1, force
     if blur > 0:
         mean = blur_cells(np.stack([cx, cy, cz], axis=1), mean, wsum, blur)
     t = tune(cfg)
-    if t["height"] or t["slope"]:
-        # shading overlay: height across the model's full height, slope from how much the surface
-        # faces up (0 wall, 1 floor)
-        mean = mean.copy()
-        mean[:, 0] += (t["height"] * (cy / max(dims[1] - 1, 1) - 0.5)
-                       + t["slope"] * (np.clip(upm, 0, 1) - 0.5)) * SHADE
-    mat, plab = assign(mean, wsum, upm, cfg, contrast)
+    # shading overlay: height across the model's full height, slope from how much the surface
+    # faces up (0 wall, 1 floor); added after the contrast mapping (see assign)
+    shade = (t["height"] * (cy / max(dims[1] - 1, 1) - 0.5)
+             + t["slope"] * (np.clip(upm, 0, 1) - 0.5)) * SHADE
+    mat, plab = assign(mean, wsum, upm, cfg, contrast, shade)
     for _ in range(majority):
         # each cell takes the block most of its 3×3×3 neighborhood has (missing neighbors vote
         # for the cell itself, and ties keep it)

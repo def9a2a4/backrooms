@@ -90,9 +90,10 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
     private int treeChunkChance = 8;         // percent of chunks with 1-2 trees
     private int structureChunkChance = 2;    // percent of chunks with a structure
     private double voidPitChunkChance = 0.15; // percent of chunks with a 1x1 pit to the void
+    private int megastructureCellSize = 384;
     private int megastructureMinDistance = 1200;
-    private double megastructureCellChance = 60;  // percent of 512-block cells, at full distance
-    private double wallCellChance = 35;           // percent of 2048-block cells
+    private double megastructureCellChance = 100; // percent of cells, at full distance
+    private double wallCellChance = 50;           // percent of 2048-block cells
     private AlphaMegastructures megastructures = newMegastructures();
 
     public Level101ChunkGenerator(NamespacedKey biomeKey) {
@@ -147,6 +148,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         treeChunkChance = config.getInt("tree_chunk_chance", treeChunkChance);
         structureChunkChance = config.getInt("structure_chunk_chance", structureChunkChance);
         voidPitChunkChance = config.getDouble("void_pit_chunk_chance", voidPitChunkChance);
+        megastructureCellSize = config.getInt("megastructure_cell_size", megastructureCellSize);
         megastructureMinDistance = config.getInt("megastructure_min_distance", megastructureMinDistance);
         megastructureCellChance = config.getDouble("megastructure_cell_chance", megastructureCellChance);
         wallCellChance = config.getDouble("wall_cell_chance", wallCellChance);
@@ -154,7 +156,7 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private AlphaMegastructures newMegastructures() {
-        return new AlphaMegastructures(megastructureMinDistance, megastructureCellChance, wallCellChance,
+        return new AlphaMegastructures(megastructureCellSize, megastructureMinDistance, megastructureCellChance, wallCellChance,
                 this::placeTerrariumHouse);
     }
 

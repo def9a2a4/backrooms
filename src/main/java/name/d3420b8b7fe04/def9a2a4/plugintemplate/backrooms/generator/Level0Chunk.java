@@ -22,7 +22,9 @@ final class Level0Chunk {
     final boolean[][] classic = new boolean[16][16];
     final Material[][] floorMats = new Material[16][16];
     final Material[][] wallMats = new Material[16][16];
+    final Material[][] ceilingMats = new Material[16][16];
     final int[][] floorTop = new int[16][16];       // y of the floor surface block
+    final int[][] ceilingY = new int[16][16];       // y of the ceiling block
     final boolean[][] noCarpet = new boolean[16][16];
     final int[][] lightY = new int[16][16];         // grid light height, NO_LIGHT off-grid
     boolean anyClassic;

@@ -8,7 +8,8 @@
 //      {type: 'run', id, tune: {blur, spread, pattern, majority, height, slope, brightness},
 //       colorsOnly (skip the block matching: mats and vmats come back null)}
 //        -> progress..., {type: 'done', id, mats, vmats, colors (sRGB per cell, as matched),
-//                         centers (mesh-space xyz per cell), glass (1 per forced cell)}
+//                         centers (mesh-space xyz per cell), glass (1 per forced cell),
+//                         norm (the lightness/color mapping, for the textured view's shader)}
 // vmats re-derives each vertex's material from the tuned cells (the nearest cell, or the nearest
 // coarse brick), as the build does: triangles that drifted off the scanned surface use them.
 
@@ -177,15 +178,6 @@ function run(t, colorsOnly = false) {
     [mL, mA, mB] = blurCells(mL, mA, mB, t.blur);
     step++;
   }
-  // shading overlay (build_scan.py SHADE): height across the model, slope from how much the
-  // surface faces up
-  if (t.height || t.slope) {
-    const DY = h.dims[1];
-    for (let i = 0; i < n; i++) {
-      const y = C.keys[i] % DY;
-      mL[i] += (t.height * (y / Math.max(DY - 1, 1) - 0.5) + t.slope * (Math.min(Math.max(up[i], 0), 1) - 0.5)) * 0.2;
-    }
-  }
   // assign(): normalize the scan's color statistics onto the palette's, then nearest block
   progress(colorsOnly ? 'colors' : 'matching', step / steps);
   const pal = h.palette, P = pal.length, fx = h.fixed;
@@ -199,11 +191,19 @@ function run(t, colorsOnly = false) {
   const pm = [0, 1, 2].map((c) => pl.reduce((s, v) => s + v[c], 0) / P);
   const ps0 = Math.sqrt(pl.reduce((s, v) => s + (v[0] - pm[0]) ** 2, 0) / P);
   const scaleL = ps0 * t.spread / Math.max(fs0, 1e-6);
+  // the same mapping, for the "Textured scan" view's shader
+  const norm = { fm, scaleL, pm0: pm[0], cast: fx.cast, chroma: fx.chroma, deadzone: fx.deadzone,
+    originY: h.origin[1], cell: h.cell, dimsY: h.dims[1] };
   const mats = new Uint8Array(n);
+  const DY = h.dims[1];
   const colors = new Uint8Array(n * 3);   // what's matched, as sRGB (the "Colors before matching" view)
   for (let i = 0; i < n; i++) {
     if ((i & 0x3ffff) === 0) progress(colorsOnly ? 'colors' : 'matching', (step + i / n) / steps);
-    const qL = (mL[i] - fm[0]) * scaleL + pm[0] + (t.brightness ?? 0) * 0.15;   // BRIGHT
+    // shading (build_scan.py SHADE: height across the model, slope from how much the surface
+    // faces up) and brightness (BRIGHT), after the contrast mapping
+    const shade = (t.height * ((C.keys[i] % DY) / Math.max(DY - 1, 1) - 0.5)
+      + t.slope * (Math.min(Math.max(up[i], 0), 1) - 0.5)) * 0.6;
+    const qL = (mL[i] - fm[0]) * scaleL + pm[0] + shade + (t.brightness ?? 0) * 0.15;
     let qa = (mA[i] - fm[1]) * fx.chroma + fm[1] * (1 - fx.cast);
     let qb = (mB[i] - fm[2]) * fx.chroma + fm[2] * (1 - fx.cast);
     if (fx.deadzone) {
@@ -225,7 +225,7 @@ function run(t, colorsOnly = false) {
     }
     mats[i] = best;
   }
-  if (colorsOnly) return { mats: null, colors };
+  if (colorsOnly) return { mats: null, colors, norm };
   step++;
   let cur = mats;
   const votes = new Int32Array(27);
@@ -249,7 +249,7 @@ function run(t, colorsOnly = false) {
   if (fx.forced >= 0) {
     for (let i = 0; i < n; i++) if (frac[i] >= fx.forced_fraction) cur[i] = fx.forced;
   }
-  return { mats: cur, colors };
+  return { mats: cur, colors, norm };
 }
 
 /** Per-vertex material from the tuned cells: the cell under the vertex or within 2 cells (as
@@ -314,10 +314,10 @@ onmessage = async ({ data }) => {
     else if (data.type === 'verts') VERTS = data.verts;
     else if (data.type === 'run') {
       // colorsOnly (the "Colors before matching" view): stop before picking blocks
-      const { mats, colors } = run(data.tune, data.colorsOnly);
+      const { mats, colors, norm } = run(data.tune, data.colorsOnly);
       const vmats = mats && vertexMats(mats);
       const centers = cellCenters();
-      postMessage({ type: 'done', id: data.id, mats, vmats, colors, centers, glass: glassCells() },
+      postMessage({ type: 'done', id: data.id, mats, vmats, colors, centers, glass: glassCells(), norm },
         [colors.buffer, centers.buffer, ...(mats ? [mats.buffer] : []), ...(vmats ? [vmats.buffer] : [])]);
     }
   } catch (e) {

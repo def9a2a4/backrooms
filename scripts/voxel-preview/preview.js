@@ -126,7 +126,7 @@ let voxels = null, wire = null;
 function clear(obj) {
   if (!obj) return;
   scene.remove(obj);
-  obj.traverse((o) => o.geometry && o.geometry.dispose());
+  if (!obj.userData.cached) obj.traverse((o) => o.geometry && o.geometry.dispose());
 }
 
 const model = () => MODELS.find((m) => m.id === $('model').value);
@@ -166,7 +166,7 @@ async function getMesh(m) {
   const mesh = meshes.get(url);
   // tuned materials replace the file's surface grid (same cells, same order) and the per-vertex
   // fallback materials (re-derived from the tuned cells)
-  if (tuned && tuned.model === m.id && mesh.grid && mesh.grid.cells.size === tuned.mats.length) {
+  if (tuned?.mats && tuned.model === m.id && mesh.grid && mesh.grid.cells.size === tuned.mats.length) {
     if (mesh.grid.tunedFrom !== tuned) {
       const cells = new Map();
       let i = 0;
@@ -229,20 +229,27 @@ function setupTune(m) {
       showTune({ ...tuneDefaults, ...fromUrl });
       tuneProgress(`${data.count.toLocaleString()} cells`);
       sendVerts(m).then(() => {
-        if (Object.keys(fromUrl).length || $('viewmode').value === 'colors') scheduleTune(0);
+        if (Object.keys(fromUrl).length || ['colors', 'textured'].includes($('viewmode').value)) scheduleTune(0);
       });
     } else if (data.type === 'progress') {
       tuneProgress(data.phase, data.f);
     } else if (data.type === 'done') {
       if (data.id !== tuneRun) return;
       tuned = { model: m.id, mats: data.mats, vmats: data.vmats, colors: data.colors,
-        centers: data.centers, glass: data.glass, values: tuneValues() };
+        centers: data.centers, glass: data.glass, norm: data.norm, values: tuneValues() };
+      if ($('viewmode').value === 'textured') {
+        // only the shader's uniforms change
+        const t = textured.get(m.id);
+        if (t && !(t instanceof Promise)) setFilters(t, m);
+        tuneProgress('filtered');
+        return;
+      }
       tuneProgress('redrawing', 1);
       // let the bar paint before the redraw blocks the page
       setTimeout(() => build().then(async () => {
         // the mesh's grid must be the one the cells were exported from, or the tuning is dropped
         const g = (await getMesh(m)).grid;
-        tuneProgress(g?.tunedFrom === tuned ? 'matched'
+        tuneProgress(!tuned.mats ? 'filtered' : g?.tunedFrom === tuned ? 'matched'
           : `not applied: this mesh has ${g ? g.cells.size.toLocaleString() : 'no'} grid cells, the export ${data.mats.length.toLocaleString()}`);
       }), 30);
     } else if (data.type === 'error') {
@@ -265,7 +272,9 @@ function scheduleTune(delay = 400) {
   tuneProgress('waiting', 0);
   tuneTimer = setTimeout(() => {
     tuneRun++;
-    tuneWorker.postMessage({ type: 'run', id: tuneRun, tune: tuneValues() });
+    // the color views don't need blocks: skip the matching, majority filter and vertices
+    const colorsOnly = ['colors', 'textured'].includes($('viewmode').value);
+    tuneWorker.postMessage({ type: 'run', id: tuneRun, tune: tuneValues(), colorsOnly });
   }, delay);
 }
 
@@ -452,6 +461,132 @@ function colorPoints(t, scale, baseY, cell) {
   return new THREE.Points(geo, new THREE.PointsMaterial({ size, vertexColors: true }));
 }
 
+// ── textured scan ────────────────────────────────────────────────────────────────────────────────
+// The scan itself with its photo textures (shrunk; build_scan.py --textured), and the matching's
+// color filters applied per pixel in the shader: shading, contrast, brightness and white balance
+// exactly as tune-worker.js does them per cell (its `norm` mapping), blur approximated by
+// sampling a coarser mip level (a box of about the blur's width in texels, which also bleeds
+// across the texture atlas' seams).
+
+const textured = new Map();   // model id -> {group, info, tris, uniforms} (or the Promise loading it)
+
+async function getTextured(m) {
+  if (!textured.has(m.id)) {
+    textured.set(m.id, (async () => {
+      const base = `/.temp/textured/${m.id}`;
+      const res = await fetch(`${base}.json`);
+      if (!res.ok) throw new Error(`${base}.json: ${res.status}`);
+      const info = await res.json();
+      const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+      const gltf = await new GLTFLoader().loadAsync(`${base}.glb`, (e) => {
+        if (e.total) stats.textContent = `loading textured scan ${(100 * e.loaded / e.total).toFixed(0)}%`;
+      });
+      const uniforms = {
+        uFilter: { value: false }, uShell: { value: m.mode === 'shell' },
+        uLod: { value: 0 }, uHeight: { value: 0 }, uSlope: { value: 0 }, uBright: { value: 0 },
+        uScaleL: { value: 1 }, uPm0: { value: 0 }, uFm: { value: new THREE.Vector3() },
+        uCast: { value: 0 }, uChroma: { value: 1 }, uDead: { value: 0 },
+        uOriginY: { value: 0 }, uSpanY: { value: 1 },
+      };
+      let tris = 0;
+      gltf.scene.traverse((o) => {
+        if (!o.isMesh) return;
+        o.geometry.computeVertexNormals();
+        tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3;
+        const map = o.material.map;
+        o.material = new THREE.ShaderMaterial({
+          glslVersion: THREE.GLSL3, vertexShader: SCAN_VERT, fragmentShader: SCAN_FRAG,
+          side: THREE.DoubleSide,
+          uniforms: { ...uniforms, uMap: { value: map }, uMapSize: { value: map ? map.image.width : 1 } },
+        });
+      });
+      const group = new THREE.Group();
+      group.add(gltf.scene);
+      group.userData.cached = true;
+      return { group, info, tris, uniforms };
+    })());
+  }
+  const t = await textured.get(m.id).catch((e) => { textured.delete(m.id); throw e; });
+  textured.set(m.id, t);
+  return t;
+}
+
+/** The sliders' filters into the textured scan's shader (the mapping from the last tuning run). */
+function setFilters(t, m) {
+  const u = t.uniforms, v = tuneValues(), n = tuned?.model === m.id ? tuned.norm : null;
+  u.uFilter.value = $('t-filters').checked && !!n;
+  if (!n) return;
+  // blur: a mip level about 2 * radius wide (the radius is in cells of n.cell meters)
+  u.uLod.value = v.blur > 0 ? Math.log2(1 + 2 * v.blur * n.cell * t.info.texels_per_meter) : 0;
+  u.uHeight.value = v.height; u.uSlope.value = v.slope; u.uBright.value = v.brightness;
+  u.uScaleL.value = n.scaleL; u.uPm0.value = n.pm0; u.uFm.value.set(...n.fm);
+  u.uCast.value = n.cast; u.uChroma.value = n.chroma; u.uDead.value = n.deadzone;
+  u.uOriginY.value = n.originY; u.uSpanY.value = n.cell * Math.max(n.dimsY - 1, 1);
+}
+
+const SCAN_VERT = /* glsl */ `
+  out vec2 vUv;
+  out vec3 vMesh, vN;
+  void main() {
+    vUv = uv;
+    vMesh = position;
+    vN = normal;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }`;
+
+const SCAN_FRAG = /* glsl */ `
+  uniform sampler2D uMap;
+  uniform float uMapSize, uLod, uHeight, uSlope, uBright, uScaleL, uPm0, uCast, uChroma, uDead;
+  uniform float uOriginY, uSpanY;
+  uniform vec3 uFm;
+  uniform bool uFilter, uShell;
+  in vec2 vUv;
+  in vec3 vMesh, vN;
+  out vec4 fragColor;
+  vec3 toLab(vec3 c) {
+    vec3 lms = vec3(0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b,
+                    0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b,
+                    0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b);
+    lms = pow(max(lms, 0.0), vec3(1.0 / 3.0));
+    return vec3(0.2104542553 * lms.x + 0.7936177850 * lms.y - 0.0040720468 * lms.z,
+                1.9779984951 * lms.x - 2.4285922050 * lms.y + 0.4505937099 * lms.z,
+                0.0259040371 * lms.x + 0.7827717662 * lms.y - 0.8086757660 * lms.z);
+  }
+  vec3 fromLab(vec3 c) {
+    vec3 lms = vec3(c.x + 0.3963377774 * c.y + 0.2158037573 * c.z,
+                    c.x - 0.1055613458 * c.y - 0.0638541728 * c.z,
+                    c.x - 0.0894841775 * c.y - 1.2914855480 * c.z);
+    lms = lms * lms * lms;
+    return vec3(4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+                -1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+                -0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z);
+  }
+  vec3 toSrgb(vec3 v) {
+    v = clamp(v, 0.0, 1.0);
+    return mix(12.92 * v, 1.055 * pow(v, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, v));
+  }
+  void main() {
+    // the blur's mip level, or the usual one if that's coarser (far away)
+    vec2 px = vUv * uMapSize;
+    float lod = max(uFilter ? uLod : 0.0, log2(max(max(length(dFdx(px)), length(dFdy(px))), 1e-6)));
+    vec3 lin = textureLod(uMap, vUv, lod).rgb;      // sRGB texture: sampled as linear
+    vec3 c = toSrgb(lin);
+    if (uFilter) {
+      vec3 lab = toLab(lin);
+      vec3 n = normalize(vN);
+      float up = clamp(uShell ? abs(n.y) : n.y, 0.0, 1.0);
+      float shade = (uHeight * ((vMesh.y - uOriginY) / uSpanY - 0.5) + uSlope * (up - 0.5)) * 0.6;
+      float L = (lab.x - uFm.x) * uScaleL + uPm0 + shade + uBright * 0.15;
+      vec2 ab = (lab.yz - uFm.yz) * uChroma + uFm.yz * (1.0 - uCast);
+      if (uDead > 0.0) { float k = length(ab); ab *= max(k - uDead, 0.0) / max(k, 1e-9); }
+      c = toSrgb(fromLab(vec3(L, ab)));
+    }
+    // mild light so the shapes read, without changing the colors much
+    vec3 fn = normalize(cross(dFdx(vMesh), dFdy(vMesh)));
+    float l = 0.8 + 0.2 * abs(dot(fn, normalize(vec3(-0.5, 1.0, 0.35))));
+    fragColor = vec4(c * l, 1.0);
+  }`;
+
 let first = true;
 async function build() {
   const m = model();
@@ -485,6 +620,37 @@ async function build() {
     }
     history.replaceState(null, '', `?${q}`);
   };
+  $('t-filters-row').style.display = $('viewmode').value === 'textured' ? '' : 'none';
+  if ($('viewmode').value === 'textured') {
+    cancelJob();
+    clear(voxels);
+    clear(wire);
+    if (!m.cells) {
+      stats.textContent = 'no textured export for this model';
+      return;
+    }
+    let t;
+    try {
+      t = await getTextured(m);
+    } catch (e) {
+      stats.textContent = `${e.message}\nexport it: uv run scripts/scans/build_scan.py ${m.id} --textured`;
+      return;
+    }
+    if (model() !== m || $('viewmode').value !== 'textured') return;   // changed while loading
+    const baseY = m.mode === 'shell' ? mesh.lo[1] : mesh.groundRef;
+    t.group.scale.setScalar(scale);
+    t.group.position.set(0, -baseY * scale, 0);
+    voxels = t.group;
+    scene.add(voxels);
+    setFilters(t, m);
+    if (tuneDefaults && !(tuned?.model === m.id && tuned.norm)) scheduleTune(0);
+    stats.textContent =
+      `scan      ${t.tris.toLocaleString()} tris, textures ${t.info.texture}², ` +
+      `${(t.info.texels_per_meter * (mesh.grid?.cell ?? 0.0625)).toFixed(1)} texels per block\n` +
+      `size      ${ext.map((e) => Math.round(e)).join(' × ')} blocks (x y z)`;
+    finish();
+    return;
+  }
   if ($('viewmode').value === 'colors') {
     // the cells in the colors the block matching sees (after blur, shading, contrast and
     // brightness), one square per cell; glass cells cyan
@@ -510,6 +676,8 @@ async function build() {
     finish();
     return;
   }
+  // the block views need blocks: redo a colors-only run in full
+  if (tuned && tuned.model === m.id && !tuned.mats) scheduleTune(0);   // blocks wanted now
   if ($('viewmode').value === 'mesh') {
     cancelJob();
     const baseY = m.mode === 'shell' ? mesh.lo[1] : mesh.groundRef;
@@ -625,6 +793,10 @@ controls.addEventListener('end', () => {
   history.replaceState(null, '', `?${q}`);
 });
 
+$('t-filters').onchange = () => {
+  const t = textured.get(model().id);
+  if (t && !(t instanceof Promise)) setFilters(t, model());
+};
 $('build').onclick = build;
 $('cancel').onclick = () => { cancelJob(); stats.textContent = 'cancelled'; };
 $('model').onchange = () => { selectModel(model()); build(); };
