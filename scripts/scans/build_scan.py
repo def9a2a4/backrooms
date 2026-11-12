@@ -70,7 +70,8 @@ MODELS = {
                     "white_terracotta", "light_gray_terracotta", "brown_terracotta", "gravel",
                     "tuff", "andesite", "granite", "calcite"],
         "penalty": {"calcite": 0.01},     # IronSource: calcite only for very white
-        "full": {"lists": ["stone"]},
+        # an excavation: no masonry (bricks and tiles of any kind)
+        "full": {"lists": ["stone"], "exclude": r"brick|tiles"},
     },
     "skatepark": {
         "input": "southbank_undercroft_skatepark.glb",
@@ -105,7 +106,9 @@ MODELS = {
         "full": {"lists": ["stone"]},
         # the side galleries' glazing is a transparent material; the roof lights and windows are
         # scanned as blown-out white
-        "glass": {"materials": ["lambert4SG"], "white_min": 200, "max_spread": 30},
+        # (clerestory and roof lights start ~14 m up; min_y is in meters above the lowest point)
+        "glass": {"materials": ["lambert4SG"], "white_min": 165, "max_spread": 35, "min_y": 13.5,
+                  "outer": 1.5, "cell_fraction": 0.35},
     },
 }
 
@@ -172,9 +175,10 @@ def face_materials(cfg: dict):
     return names, index
 
 
-def glass_faces(cfg: dict, colors: np.ndarray) -> np.ndarray | None:
+def glass_faces(cfg: dict, colors: np.ndarray, centroids: np.ndarray) -> np.ndarray | None:
     """Faces that are glass, per the model's `glass` rule: listed (transparent) glTF materials,
-    and blown-out near-white texels, which in a photo scan are daylight through a window."""
+    and pale grey-white texels above `min_y` meters or on the outer skin, which in a photo scan are
+    daylight through a window (elsewhere, pale faces are lit stone and displays)."""
     rule = cfg.get("glass")
     if not rule:
         return None
@@ -182,7 +186,15 @@ def glass_faces(cfg: dict, colors: np.ndarray) -> np.ndarray | None:
     glass = np.isin(index, [i for i, n in enumerate(names) if n in rule.get("materials", [])])
     if "white_min" in rule:
         c = colors.astype(float)
-        glass |= (c.min(axis=1) >= rule["white_min"]) & (np.ptp(c, axis=1) <= rule.get("max_spread", 30))
+        pale = (c.min(axis=1) >= rule["white_min"]) & (np.ptp(c, axis=1) <= rule.get("max_spread", 30))
+        high = centroids[:, 1] >= rule.get("min_y", -np.inf)
+        if "outer" in rule:
+            # the outside skin (within `outer` m of the footprint's edge) has windows at any height
+            lo, hi = centroids.min(axis=0), centroids.max(axis=0)
+            m = rule["outer"]
+            high |= ((centroids[:, 0] < lo[0] + m) | (centroids[:, 0] > hi[0] - m)
+                     | (centroids[:, 2] < lo[2] + m) | (centroids[:, 2] > hi[2] - m))
+        glass |= pale & high
     return glass
 
 
@@ -293,10 +305,13 @@ def block_contrast(block: str) -> float:
     return float(oklab(srgb_to_linear(px))[:, 0].std())
 
 
-def match_cells(cen, area, lab, up, cfg, cell, smooth, forced=None, forced_mat=-1):
+def match_cells(cen, area, lab, up, cfg, cell, blur, majority, forced=None, forced_mat=-1,
+                forced_fraction=0.5):
     """Blocks per grid cell instead of per face (style "full"): each cell's area-weighted mean
-    color (blended with its 26 neighbors by `smooth`, light denoising), the spread of lightness
-    inside it as surface contrast, then assign() with the pattern term.
+    color, blurred over its neighbors `blur` times (photogrammetry texture is noisy at block
+    scale: baked shadows, dirt, sensor noise), the spread of lightness inside it as surface
+    contrast, then assign() with the pattern term, then `majority` passes of a 3×3×3 majority
+    filter that flips lone blocks to what surrounds them.
     Returns (grid tuple for write_grid, cell centers in meters, cell materials, palette OKLab)."""
     origin = cen.min(axis=0)
     q = np.floor((cen - origin) / cell).astype(np.int64)
@@ -311,28 +326,39 @@ def match_cells(cen, area, lab, up, cfg, cell, smooth, forced=None, forced_mat=-
     cx = keys // (dims[1] * dims[2])
     cz = (keys // dims[1]) % dims[2]
     cy = keys % dims[1]
-    if smooth > 0:
+    # the 26 neighbors of every cell: index (j) and whether it exists (ok)
+    neighbors = []
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                if dx == dy == dz == 0:
+                    continue
+                nx, ny, nz = cx + dx, cy + dy, cz + dz
+                ok = (nx >= 0) & (ny >= 0) & (nz >= 0) & (nx < dims[0]) & (ny < dims[1]) & (nz < dims[2])
+                nk = (nx * dims[2] + nz) * dims[1] + ny
+                j = np.clip(np.searchsorted(keys, nk), 0, len(keys) - 1)
+                ok &= keys[j] == nk
+                neighbors.append((j, ok, 1 / np.sqrt(dx * dx + dy * dy + dz * dz)))
+    for _ in range(blur):
+        # area-weighted: a neighbor counts by how much surface it holds, half as much as the cell
         acc = mean * wsum[:, None]
         tot = wsum.copy()
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                for dz in (-1, 0, 1):
-                    if dx == dy == dz == 0:
-                        continue
-                    nx, ny, nz = cx + dx, cy + dy, cz + dz
-                    ok = (nx >= 0) & (ny >= 0) & (nz >= 0) & (nx < dims[0]) & (ny < dims[1]) & (nz < dims[2])
-                    nk = (nx * dims[2] + nz) * dims[1] + ny
-                    j = np.clip(np.searchsorted(keys, nk), 0, len(keys) - 1)
-                    ok &= keys[j] == nk
-                    wt = smooth / np.sqrt(dx * dx + dy * dy + dz * dz) * wsum[j] * ok
-                    acc += mean[j] * wt[:, None]
-                    tot += wt
+        for j, ok, d in neighbors:
+            wt = 0.5 * d * wsum[j] * ok
+            acc += mean[j] * wt[:, None]
+            tot += wt
         mean = acc / tot[:, None]
     mat, plab = assign(mean, wsum, upm, cfg, contrast)
+    for _ in range(majority):
+        # each cell takes the block most of its 3×3×3 neighborhood has (missing neighbors vote
+        # for the cell itself, and ties keep it)
+        votes = np.stack([mat] + [np.where(ok, mat[j], mat) for j, ok, _ in neighbors])
+        counts = np.stack([(votes == votes[k]).sum(axis=0, dtype=np.int16) for k in range(len(votes))])
+        mat = votes[counts.argmax(axis=0), np.arange(len(mat))]
     if forced is not None:
         # cells mostly made of forced faces (glass) take the forced block
         frac = np.bincount(inv, weights=area * forced) / wsum
-        mat[frac > 0.5] = forced_mat
+        mat[frac >= forced_fraction] = forced_mat
     centers = origin + (np.stack([cx, cy, cz], axis=1) + 0.5) * cell
     return (origin, dims, keys, mat.astype(np.uint8)), centers, mat, plab
 
@@ -437,7 +463,7 @@ def build(name: str, args):
     if cfg["mode"] == "shell":
         up = np.abs(up)        # floors and ceilings alike read as tops; winding isn't reliable
     lab = oklab(srgb_to_linear(C.astype(float)))
-    glass = glass_faces(cfg, C)
+    glass = glass_faces(cfg, C, tri.mean(axis=1))
     if args.style == "full":
         pal_ids = full_palette(cfg)
         if glass is not None:
@@ -447,8 +473,9 @@ def build(name: str, args):
             print(f"  glass: {area[glass].sum() / area.sum() * 100:.1f}% of the surface")
         cfg = dict(cfg, palette=pal_ids)
         grid, cell_centers, cell_mat, plab = match_cells(
-            tri.mean(axis=1), area, lab, up, cfg, args.tex_cell, args.smooth,
-            forced=glass, forced_mat=len(pal_ids) - 1 if glass is not None else -1)
+            tri.mean(axis=1), area, lab, up, cfg, args.tex_cell, args.blur, args.majority,
+            forced=glass, forced_mat=len(pal_ids) - 1 if glass is not None else -1,
+            forced_fraction=cfg.get("glass", {}).get("cell_fraction", 0.5))
         # faces take their cell's block, so the per-vertex fallback agrees with the grid
         _, near = cKDTree(cell_centers).query(tri.mean(axis=1))
         mat = cell_mat[near]
@@ -466,6 +493,10 @@ def build(name: str, args):
     dist[:, clear] = np.inf       # nothing turns into glass by mixing
     variants = [[(i, 70)] + [(int(j), wt) for j, wt in zip(np.argsort(dist[i])[1:3], (18, 12))]
                 if i not in clear else [(i, 1)] for i in range(len(pal))]
+    if args.style == "full":
+        # the grid already carries the scan's detail block by block; mixing in look-alikes on
+        # top of it only adds noise
+        variants = [[(i, 1)] for i in range(len(pal))]
 
     out = Path(args.output).resolve() if args.output else TEMP / "meshes" / f"{name}.mesh.gz"
     budget = args.max_kb * 1024
@@ -508,9 +539,10 @@ def main():
                     help="palette: the model's own block list, per face; full: IronSource's full "
                          "block list matched per grid cell with light smoothing and a texture "
                          "contrast term")
-    ap.add_argument("--smooth", type=float, default=0.05,
-                    help="--style full: weight of each neighbor cell in the color smoothing "
-                         "(26 neighbors: 0.05 gives them about as much weight as the cell)")
+    ap.add_argument("--blur", type=int, default=3,
+                    help="--style full: color blur passes over neighboring cells before matching")
+    ap.add_argument("--majority", type=int, default=1,
+                    help="--style full: 3x3x3 majority-filter passes after matching")
     ap.add_argument("--output", help="default .temp/meshes/<model>.mesh.gz")
     args = ap.parse_args()
     for name in (MODELS if args.model == "all" else [args.model]):

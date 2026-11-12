@@ -6,7 +6,7 @@ import glob
 import yaml
 
 MAX_PAGE_LENGTH = 256
-BOOK_YMLS = glob.glob("src/main/resources/levels/*_books.yml")
+BOOK_YMLS = glob.glob("src/main/resources/levels/*_books.yml") + glob.glob("src/main/resources/levels/*_placards.yml")
 
 if not BOOK_YMLS:
     print("No *_books.yml files found")
@@ -27,8 +27,9 @@ for path in sorted(BOOK_YMLS):
         if len(page) > MAX_PAGE_LENGTH:
             violations.append(f"  pages[{i}]: {len(page)} chars")
 
-    # Multi-page books
-    for book in data.get("multi_page_books", []):
+    # Multi-page books (a list, or a mapping of id -> book as in *_placards.yml)
+    books = list(data.get("multi_page_books", [])) + list((data.get("books") or {}).values())
+    for book in books:
         title = book.get("title", "?")
         for i, page in enumerate(book.get("pages", [])):
             if len(page) > MAX_PAGE_LENGTH:
@@ -41,7 +42,7 @@ for path in sorted(BOOK_YMLS):
 
     # Stats
     all_pages = list(data.get("pages", []))
-    for book in data.get("multi_page_books", []):
+    for book in books:
         all_pages.extend(book.get("pages", []))
     snippets = data.get("cursed_snippets", [])
 

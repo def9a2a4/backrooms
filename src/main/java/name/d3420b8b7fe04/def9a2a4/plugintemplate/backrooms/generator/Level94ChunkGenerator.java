@@ -77,26 +77,29 @@ public class Level94ChunkGenerator extends BackroomsChunkGenerator {
                     }
                 }
 
-                // --- Oak tree ---
+                // --- Oak tree (a real one: 5-log trunk, 5x5 skirts, 3x3 upper, plus cap).
+                // Leaf distance is set explicitly: ChunkData placements fire no block
+                // updates, so the default distance of 7 would decay the whole canopy
+                // to a bare trunk on the first random ticks.
                 if (worldX == TREE_X && worldZ == TREE_Z) {
-                    // Trunk: 4 blocks tall
-                    for (int y = TREE_BASE_Y; y < TREE_BASE_Y + 4; y++) {
+                    for (int y = TREE_BASE_Y; y < TREE_BASE_Y + 5; y++) {
                         chunkData.setBlock(x, y, z, Material.OAK_LOG);
                     }
                 }
 
-                // Leaf canopy (3x3 at y=67-68, 1x1 cap at y=69)
                 int dx = worldX - TREE_X;
                 int dz = worldZ - TREE_Z;
-                if (dx >= -1 && dx <= 1 && dz >= -1 && dz <= 1) {
-                    chunkData.setBlock(x, TREE_BASE_Y + 2, z, Material.OAK_LEAVES);
-                    chunkData.setBlock(x, TREE_BASE_Y + 3, z, Material.OAK_LEAVES);
+                int spread = Math.max(Math.abs(dx), Math.abs(dz));
+                boolean trunkColumn = dx == 0 && dz == 0;
+                if (spread <= 2 && !trunkColumn) {
+                    placeLeaf(chunkData, x, TREE_BASE_Y + 2, z, spread);
+                    placeLeaf(chunkData, x, TREE_BASE_Y + 3, z, spread);
                 }
-                if (worldX == TREE_X && worldZ == TREE_Z) {
-                    chunkData.setBlock(x, TREE_BASE_Y + 4, z, Material.OAK_LEAVES);
-                    // Re-place trunk over leaves
-                    chunkData.setBlock(x, TREE_BASE_Y + 2, z, Material.OAK_LOG);
-                    chunkData.setBlock(x, TREE_BASE_Y + 3, z, Material.OAK_LOG);
+                if (spread <= 1 && !trunkColumn) {
+                    placeLeaf(chunkData, x, TREE_BASE_Y + 4, z, spread);
+                }
+                if (Math.abs(dx) + Math.abs(dz) <= 1) {
+                    placeLeaf(chunkData, x, TREE_BASE_Y + 5, z, Math.abs(dx) + Math.abs(dz) + 1);
                 }
 
                 // --- Chest ---
@@ -105,6 +108,13 @@ public class Level94ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
+    }
+
+    /** Oak leaves with an explicit distance so worldgen-placed canopy doesn't decay. */
+    private static void placeLeaf(ChunkData chunkData, int x, int y, int z, int distance) {
+        Leaves leaves = (Leaves) Material.OAK_LEAVES.createBlockData();
+        leaves.setDistance(Math.max(1, Math.min(6, distance)));
+        chunkData.setBlock(x, y, z, leaves);
     }
 
     @Override
