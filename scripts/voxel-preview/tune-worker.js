@@ -255,6 +255,14 @@ function vertexMats(mats) {
     }
     out[v] = best;
   }
+  // display cases (build_scan.py case_glass): vertices in a case's box fall back to glass
+  const boxes = h.fixed.case_boxes ?? [];
+  for (let v = 0; v < nv && boxes.length; v++) {
+    const x = VERTS[v * 3], y = VERTS[v * 3 + 1], z = VERTS[v * 3 + 2];
+    for (const b of boxes) {
+      if (x >= b[0] && y >= b[1] && z >= b[2] && x < b[3] && y < b[4] && z < b[5]) { out[v] = h.fixed.forced; break; }
+    }
+  }
   return out;
 }
 

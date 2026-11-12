@@ -113,14 +113,14 @@ MODELS = {
                   "outer": 1.5, "cell_fraction": 0.35,
                   # the blue whale's pale spine hangs above min_y
                   "keep": [[-6, 5, -6, 6, 15, 21]],
-                  # the ground-floor display cases (plinth top to frame top): the scan has little
-                  # more than their frames, and decimation stretches big panels between those
-                  "cases": [[-13.75, 1.15, -3.4, -10.2, 4.7, -1.65],
-                            [-13.0, 0.76, 15.6, -11.3, 3.35, 17.2],
-                            [10.2, 1.19, -9.5, 13.0, 3.0, -8.05],
-                            [11.75, 1.07, 9.45, 13.95, 3.9, 10.65],
-                            [11.65, 1.11, 15.6, 13.95, 3.6, 17.05],
-                            [11.95, 1.04, -3.55, 13.85, 3.4, -1.55]]},
+                  # the ground-floor display cases (plinth top to frame top), modeled as flat
+                  # panels with thin corner posts
+                  "cases": [[-14.17, 1.15, -3.37, -10.21, 4.59, -1.63],
+                            [-13.78, 0.76, 15.5, -11.37, 3.3, 17.18],
+                            [10.42, 1.19, -9.43, 14.82, 2.89, -8.09],
+                            [11.76, 1.07, 9.57, 14.1, 3.86, 10.69],
+                            [11.71, 1.11, 15.69, 14.14, 3.57, 17.13],
+                            [11.85, 1.04, -3.51, 13.87, 3.27, -1.44]]},
     },
 }
 
@@ -222,6 +222,25 @@ def glass_faces(cfg: dict, colors: np.ndarray, centroids: np.ndarray) -> np.ndar
 
 def in_box(p: np.ndarray, lo, hi) -> np.ndarray:
     return np.all((p >= np.array(lo)) & (p < np.array(hi)), axis=1)
+
+
+def case_boxes(cfg: dict) -> list:
+    """The display cases' boxes grown by the skin: the decimated mesh's vertices in them fall back
+    to glass (a case's panels are a few big triangles, mostly too far from the surface grid's
+    cells for it to reach)."""
+    rule = cfg.get("glass") or {}
+    sk = rule.get("case_skin", 0.2)
+    # (the panels start inside the plinth, below y0; the plinth's own surface keeps its blocks
+    # from the grid, which wins over the vertex fallback)
+    return [[x0 - sk, y0 - 0.8, z0 - sk, x1 + sk, y1 + sk, z1 + sk]
+            for x0, y0, z0, x1, y1, z1 in rule.get("cases", [])]
+
+
+def case_glass(cfg: dict, verts: np.ndarray, vmat: np.ndarray, glass_mat: int) -> np.ndarray:
+    vmat = vmat.copy()
+    for b in case_boxes(cfg):
+        vmat[in_box(verts, b[:3], b[3:])] = glass_mat
+    return vmat
 
 
 def load_faces(name: str, cfg: dict):
@@ -456,7 +475,8 @@ def export_cells(path, cfg, cell, origin, dims, keys, mean, contrast, up, wsum, 
                     for b in pal],
         "fixed": {"cast": cfg.get("cast", 0.0), "chroma": cfg.get("chroma", 1.0),
                   "deadzone": cfg.get("deadzone", 0.0), "forced": int(forced_mat),
-                  "forced_fraction": forced_fraction},
+                  "forced_fraction": forced_fraction,
+                  "case_boxes": case_boxes(cfg) if forced_mat >= 0 else []},
         "tune": tune(cfg),
     }
     h = json.dumps(header).encode()
@@ -621,6 +641,8 @@ def build(name: str, args):
     for _ in range(6):
         dec = decimate(V, F, target)
         vmat = transfer(tri.mean(axis=1), area, mat, dec.vertices, len(pal))
+        if "glass" in pal:
+            vmat = case_glass(cfg, dec.vertices, vmat, pal.index("glass"))
         size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out)
         print(f"  {len(dec.faces)} tris -> {size / 1024:.1f} KB")
         if size <= budget * (1 + args.tolerance / 2) and (best is None or len(dec.faces) > best[0]):
@@ -631,6 +653,8 @@ def build(name: str, args):
     if best and best[0] != len(dec.faces):
         dec = decimate(V, F, best[1])
         vmat = transfer(tri.mean(axis=1), area, mat, dec.vertices, len(pal))
+        if "glass" in pal:
+            vmat = case_glass(cfg, dec.vertices, vmat, pal.index("glass"))
         size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out)
     geo = size
     if args.tex_cell > 0:

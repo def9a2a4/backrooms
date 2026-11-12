@@ -12,6 +12,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.List;
 import java.util.UUID;
 
 public class LightBlinkEvent extends AbstractTimedEvent {
@@ -25,6 +26,7 @@ public class LightBlinkEvent extends AbstractTimedEvent {
 
     // These constants match Level 0 generator; override via subclass or config for other levels
     private int lightY = 24;
+    private int lightYMin = 24;   // scan down to here for pendant lights
     private int lightSpacing = 4;
     private Material lightMaterial = Material.OCHRE_FROGLIGHT;
 
@@ -49,6 +51,7 @@ public class LightBlinkEvent extends AbstractTimedEvent {
 
     public void setLightParameters(int lightY, int lightSpacing, Material lightMaterial) {
         this.lightY = lightY;
+        this.lightYMin = lightY;
         this.lightSpacing = lightSpacing;
         this.lightMaterial = lightMaterial;
     }
@@ -61,6 +64,7 @@ public class LightBlinkEvent extends AbstractTimedEvent {
         cycles = config.getInt("cycles", 4);
         toggleDelayTicks = config.getInt("toggle_delay_ticks", 5);
         lightY = config.getInt("light_y", lightY);
+        lightYMin = Math.min(lightY, config.getInt("light_y_min", lightY));
         lightSpacing = config.getInt("light_spacing", lightSpacing);
         String matName = config.getString("light_material", null);
         if (matName != null) {
@@ -86,28 +90,22 @@ public class LightBlinkEvent extends AbstractTimedEvent {
             eventScheduler.markPlayerInEvent(id);
         }
 
-        Location center = player.getLocation().clone();
+        // Toggle only the blocks that are lights right now, so restoring never
+        // writes a light where there wasn't one (e.g. the top of a pendant chain).
+        List<Block> lights = LightGrid.find(player.getLocation(), radius, lightSpacing,
+                lightY, lightYMin, lightMaterial);
 
         for (int i = 0; i < cycles * 2; i++) {
             boolean lightsOff = (i % 2 == 0);
             long delay = (long) i * toggleDelayTicks;
 
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (lightsOff) {
-                    setLightsInRadius(center, radius, Material.AIR);
-                } else {
-                    setLightsInRadius(center, radius, lightMaterial);
-                }
-            }, delay);
+            Bukkit.getScheduler().runTaskLater(plugin, () ->
+                    LightGrid.set(lights, lightsOff ? Material.AIR : lightMaterial), delay);
         }
 
         long finalDelay = (long) cycles * 2 * toggleDelayTicks;
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            setLightsInRadius(center, radius, lightMaterial);
-            Player p = Bukkit.getPlayer(id);
-            if (p != null && p.isOnline()) {
-                setLightsInRadius(p.getLocation(), radius, lightMaterial);
-            }
+            LightGrid.set(lights, lightMaterial);
             if (eventScheduler != null) {
                 eventScheduler.unmarkPlayerInEvent(id);
             }
@@ -119,24 +117,6 @@ public class LightBlinkEvent extends AbstractTimedEvent {
         // Light restoration is handled by the level's cleanup
     }
 
-    private void setLightsInRadius(Location center, int r, Material material) {
-        World world = center.getWorld();
-        if (world == null) return;
-
-        int cx = center.getBlockX();
-        int cz = center.getBlockZ();
-
-        for (int x = cx - r; x <= cx + r; x++) {
-            if (x % lightSpacing != 0) continue;
-            for (int z = cz - r; z <= cz + r; z++) {
-                if (z % lightSpacing != 0) continue;
-                Block block = world.getBlockAt(x, lightY, z);
-                if (block.getChunk().isLoaded()) {
-                    block.setType(material, false);
-                }
-            }
-        }
-    }
 
     public int getRadius() {
         return radius;

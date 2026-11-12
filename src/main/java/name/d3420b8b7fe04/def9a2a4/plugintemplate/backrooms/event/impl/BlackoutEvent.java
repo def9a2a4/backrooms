@@ -12,6 +12,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.List;
 import java.util.UUID;
 
 public class BlackoutEvent extends AbstractTimedEvent {
@@ -23,6 +24,7 @@ public class BlackoutEvent extends AbstractTimedEvent {
     private EventScheduler eventScheduler;
 
     private int lightY = 24;
+    private int lightYMin = 24;   // scan down to here for pendant lights
     private int lightSpacing = 4;
     private Material lightMaterial = Material.OCHRE_FROGLIGHT;
 
@@ -47,6 +49,7 @@ public class BlackoutEvent extends AbstractTimedEvent {
 
     public void setLightParameters(int lightY, int lightSpacing, Material lightMaterial) {
         this.lightY = lightY;
+        this.lightYMin = lightY;
         this.lightSpacing = lightSpacing;
         this.lightMaterial = lightMaterial;
     }
@@ -58,6 +61,7 @@ public class BlackoutEvent extends AbstractTimedEvent {
         radius = config.getInt("radius", 30);
         durationTicks = config.getInt("duration_seconds", 15) * 20;
         lightY = config.getInt("light_y", lightY);
+        lightYMin = Math.min(lightY, config.getInt("light_y_min", lightY));
         lightSpacing = config.getInt("light_spacing", lightSpacing);
         String matName = config.getString("light_material", null);
         if (matName != null) {
@@ -83,39 +87,19 @@ public class BlackoutEvent extends AbstractTimedEvent {
             eventScheduler.markPlayerInEvent(id);
         }
 
-        Location center = player.getLocation().clone();
-        setLightsInRadius(center, radius, Material.AIR);
+        // Only the blocks that are lights right now; see LightGrid.
+        List<Block> lights = LightGrid.find(player.getLocation(), radius, lightSpacing,
+                lightY, lightYMin, lightMaterial);
+        LightGrid.set(lights, Material.AIR);
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            setLightsInRadius(center, radius, lightMaterial);
-            Player p = Bukkit.getPlayer(id);
-            if (p != null && p.isOnline()) {
-                setLightsInRadius(p.getLocation(), radius, lightMaterial);
-            }
+            LightGrid.set(lights, lightMaterial);
             if (eventScheduler != null) {
                 eventScheduler.unmarkPlayerInEvent(id);
             }
         }, durationTicks);
     }
 
-    private void setLightsInRadius(Location center, int r, Material material) {
-        World world = center.getWorld();
-        if (world == null) return;
-
-        int cx = center.getBlockX();
-        int cz = center.getBlockZ();
-
-        for (int x = cx - r; x <= cx + r; x++) {
-            if (x % lightSpacing != 0) continue;
-            for (int z = cz - r; z <= cz + r; z++) {
-                if (z % lightSpacing != 0) continue;
-                Block block = world.getBlockAt(x, lightY, z);
-                if (block.getChunk().isLoaded()) {
-                    block.setType(material, false);
-                }
-            }
-        }
-    }
 
     public int getRadius() {
         return radius;

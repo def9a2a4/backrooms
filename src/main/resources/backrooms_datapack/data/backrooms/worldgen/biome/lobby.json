@@ -3,7 +3,9 @@
   "downfall": 0.0,
   "has_precipitation": false,
   "effects": {
-    "water_color": 2957824
+    "water_color": 2957824,
+    "grass_color": 12884540,
+    "foliage_color": 12094002
   },
   "spawners": {},
   "spawn_costs": {},
