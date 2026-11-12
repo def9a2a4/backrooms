@@ -1,10 +1,17 @@
 id: level_0
 display_name: "The Lobby"
 generator: level_0
-environment: NETHER
-dimension_type: dark
+# NORMAL + lobby: the world must be y -64..320 from creation (the dimension
+# type is swapped in after), so pits can fall through the floor to the void.
+environment: NORMAL
+dimension_type: lobby
 biome: "backrooms:lobby"
 enter_message: "§7§kxx§r §7You have entered the §fBack§kr§rooms§7. §7§kxx"
+
+generator_config:
+  hall_threshold: 0.55          # tall-hall noise cutoff; higher = rarer halls
+  hall_structure_chance: 30     # percent of roomy all-hall chunks given a Level 101 structure
+  pit_chunk_chance: 0.8         # percent of chunks with a bottomless pit
 
 events:
   - ambient_sound
@@ -166,7 +173,7 @@ event_config:
     radius: 20
     cycles: 4
     toggle_delay_ticks: 5
-    light_y: 24
+    light_y: 69
     light_spacing: 4
     light_material: OCHRE_FROGLIGHT
   blackout:
@@ -175,7 +182,7 @@ event_config:
     chance: 0.05
     radius: 30
     duration_seconds: 15
-    light_y: 24
+    light_y: 69
     light_spacing: 4
     light_material: OCHRE_FROGLIGHT
   footstep_echo:
@@ -244,3 +251,19 @@ exit_triggers:
       blindness_ticks: 80
       delay_ticks: 30
       message: "§7§othe shelves go deeper than the world allows"
+  # Bottomless pits: the spiral stairs run out and the shaft drops through the
+  # floor of the world. Caught well above the void-damage line (y -128).
+  - type: below_y
+    y_threshold: -40
+    target_level: level_2
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 5
+      message: "§7§othe stairs ran out"
+  # Beds only come with the Level 101 houses standing in the tall halls.
+  - type: bed_sleep
+    target_level: level_101
+    transition:
+      blindness_ticks: 100
+      delay_ticks: 30
+      message: "§7§oyou dream of grass and an open sky"
