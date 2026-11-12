@@ -10,7 +10,8 @@ enter_message: "§7§oThe museum is closed. The lights are on anyway."
 
 # The Natural History Museum's Hintze Hall (London, opened 1881) at 16x, voxelized from a 3D scan
 # that's downloaded on first start (config.yml scan_levels). The blue whale hangs over the nave.
-# Each display case is a door: break the exhibit to go where it came from.
+# Placards on lecterns around the arrival point (books in level_1881_placards.yml) describe places:
+# read one to its last page and you're taken there.
 generator_config:
   mesh: hintze_hall
   mode: shell
@@ -18,10 +19,12 @@ generator_config:
   ground_y: -62
   thickness: 1.5
   spawn: {x: -40, z: -120}
+  placards: level_1881_placards.yml
   props:
-    - {type: case, x: -88, z: 40, block: lodestone}
-    - {type: case, x: 88, z: 40, block: hay_block}
-    - {type: case, x: 8, z: 168, block: observer}
+    - {type: lectern, x: -24, z: -104, block: "lectern[facing=west]", book: guide}
+    - {type: lectern, x: -56, z: -104, block: "lectern[facing=east]", book: henge}
+    - {type: lectern, x: -24, z: -136, block: "lectern[facing=west]", book: tepe}
+    - {type: lectern, x: -56, z: -136, block: "lectern[facing=east]", book: hope}
 
 events:
   - ambient_sound
@@ -37,29 +40,29 @@ event_config:
       - entity.skeleton.step
 
 exit_triggers:
-  - type: break_block
-    materials: [lodestone]
+  - type: lectern_last_page
+    book_title: "Stonehenge"
     target_level: level_56
     fallback_level: level_3
     transition:
       blindness_ticks: 80
       delay_ticks: 20
-      message: "§7The stone remembers its circle."
-  - type: break_block
-    materials: [hay_block]
+      message: "§7The fog lifts. The stones are where you left them."
+  - type: lectern_last_page
+    book_title: "Göbekli Tepe"
     target_level: level_9500
     fallback_level: level_3
     transition:
       blindness_ticks: 80
       delay_ticks: 20
-      message: "§6The grain goes home."
-  - type: break_block
-    materials: [observer]
+      message: "§6Eleven thousand years go by in a page."
+  - type: lectern_last_page
+    book_title: "Visitor Guide"
     target_level: level_3
     transition:
       blindness_ticks: 60
       delay_ticks: 20
-      message: "// exhibit unsealed. returning to the server room."
+      message: "// exiting through the gift shop. returning to the server room."
   - type: below_y
     y_threshold: -64
     target_level: level_1881

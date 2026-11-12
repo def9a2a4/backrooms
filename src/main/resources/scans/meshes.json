@@ -2,9 +2,9 @@
   "_comment": "Written by scripts/scans/publish.py. Meshes are downloaded from scan_levels.base_url + file and checked against sha256.",
   "meshes": {
     "hintze_hall": {
-      "file": "hintze_hall-76d14e64f57b.mesh.gz",
-      "sha256": "76d14e64f57bbbe3740bf572aa5d9d36ac29b4574ea00d04c6ba0fabdcec68c6",
-      "bytes": 9308382
+      "file": "hintze_hall-fa9445903001.mesh.gz",
+      "sha256": "fa944590300171c3ce6a1585279881eac0d5f06013beebaf217d8e873c7ce48a",
+      "bytes": 9299212
     },
     "undercroft_grey": {
       "file": "undercroft_grey-5686135c59fc.mesh.gz",

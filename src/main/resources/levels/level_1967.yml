@@ -16,10 +16,10 @@ generator_config:
   scale: 16
   ground_y: 37
   thickness: 1.5
-  spawn: {x: -160, z: 40}
+  spawn: {x: 177, y: 67, z: -34}
   props:
-    - {type: block, x: -152, z: 40, block: "candle[lit=true,candles=3]"}
-    - {type: block, x: -168, z: 56, block: "candle[lit=true]"}
+    - {type: block, x: 184, y: 67, z: -40, block: "candle[lit=true,candles=3]"}
+    - {type: block, x: 168, y: 67, z: -24, block: "candle[lit=true]"}
 
 events:
   - ambient_sound
@@ -41,6 +41,7 @@ exit_triggers:
                 ochre_froglight, verdant_froglight, pearlescent_froglight, redstone_lamp,
                 copper_bulb, "#minecraft:candles"]
     target_level: level_1973
+    keep_position: true          # same scan, same place: you stay where you are and the lights come on
     transition:
       blindness_ticks: 60
       delay_ticks: 20

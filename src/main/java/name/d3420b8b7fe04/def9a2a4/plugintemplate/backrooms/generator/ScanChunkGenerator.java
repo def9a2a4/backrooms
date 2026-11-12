@@ -39,6 +39,7 @@ import java.util.logging.Logger;
  *                              # or from y if given (to pick an upper floor)
  *   props:
  *     - {type: case, x: -88, z: 40, block: lodestone}
+ *     - {type: block, x: 184, y: 67, z: -40, block: "candle[lit=true]"}   # y: on the floor at/above y
  * </pre>
  */
 public class ScanChunkGenerator extends BackroomsChunkGenerator {
@@ -46,7 +47,8 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
     private static final Logger LOG = Logger.getLogger("Backrooms");
 
     /** A prop anchored on the floor at (x, z); its 3×3 footprint must stay inside the anchor's chunk. */
-    private record Prop(String type, int x, int z, @Nullable BlockData block, @Nullable String book) {}
+    private record Prop(String type, int x, int z, @Nullable Integer y, @Nullable BlockData block,
+                        @Nullable String book) {}
 
     /** A lectern prop in a live world: where it is and which placard book it holds. */
     public record Placard(int x, int y, int z, String book) {}
@@ -100,7 +102,8 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
                 LOG.warning("Scan prop " + type + " at " + x + "," + z + " straddles a chunk border; skipped.");
                 continue;
             }
-            props.add(new Prop(type, x, z, block, m.get("book") == null ? null : String.valueOf(m.get("book"))));
+            Integer py = m.get("y") instanceof Number n ? n.intValue() : null;
+            props.add(new Prop(type, x, z, py, block, m.get("book") == null ? null : String.valueOf(m.get("book"))));
         }
         mesh = ScanMeshes.get(meshName);
         if (mesh == null) throw new IllegalStateException("scan mesh '" + meshName + "' isn't loaded");
@@ -153,7 +156,8 @@ public class ScanChunkGenerator extends BackroomsChunkGenerator {
             mesh.generateChunk(p.x >> 4, p.z >> 4, minY, maxY, (x, y, z, i) -> {
                 if (x == lx && z == lz) solid[y - minY] = true;
             });
-            for (int y = Math.max(minY + 1, options.groundY() - 8); y < maxY - 3; y++) {
+            // from just below the prop's y if given (an upper floor), else from below the lowest floor
+            for (int y = Math.max(minY + 1, p.y != null ? p.y - 2 : options.groundY() - 8); y < maxY - 3; y++) {
                 int k = y - minY;
                 if (solid[k - 1] && !solid[k] && !solid[k + 1] && !solid[k + 2]) return y;
             }

@@ -1,0 +1,35 @@
+# Hintze Hall (Level 1881): the placard books on the lecterns around the arrival point.
+# Each lectern prop in level_1881.yml names a book here; an exit with type lectern_last_page and a
+# matching book_title fires when someone turns that book to its last page. Pages hold ~256 chars.
+books:
+  guide:
+    title: "Visitor Guide"
+    author: "Hintze Hall"
+    pages:
+      - "§lHINTZE HALL§r\n\nWelcome. The museum is closed. Please enjoy the museum.\n\nEverything in this building was found by someone who was paying attention."
+      - "The hall opened in 1881. Its walls are terracotta, cast into monkeys, fish, ferns and fossils. Even the building is a catalogue."
+      - "Above you hangs Hope, a blue whale. Read her placard.\n\nThe other placards describe places. Read one to the end and you will be taken there."
+      - "Exit through the gift shop.\n\n§8// the gift shop is a server room."
+  henge:
+    title: "Stonehenge"
+    author: "Hintze Hall"
+    pages:
+      - "§lSTONEHENGE§r\nSalisbury Plain, c. 3000-1500 BCE\n\nA ring of sarsens, some over twenty tonnes, dragged twenty miles. The smaller bluestones came from Wales, 150 miles away."
+      - "It is aligned to the solstices: the midsummer sunrise, the midwinter sunset. Nobody wrote down why. Nobody could write."
+      - "People came from all over Britain to feast here. They brought pigs they had raised by hand, and killed them at midwinter."
+      - "The stones are still standing.\n\nThe fog is lifting for the first light of midsummer.\n\n§8Go and see."
+  tepe:
+    title: "Göbekli Tepe"
+    author: "Hintze Hall"
+    pages:
+      - "§lGÖBEKLI TEPE§r\nSoutheastern Anatolia, c. 9500 BCE\n\nT-shaped pillars five meters tall, carved with foxes, boars, snakes and vultures."
+      - "It is older than writing, older than pottery, older than the wheel. Six thousand years older than Stonehenge."
+      - "The people who built it did not farm. But wild einkorn grew on these hills, and nearby is the oldest domesticated wheat on earth."
+      - "Everything you have eaten that came from a field started somewhere like this.\n\n§8Go and plant something."
+  hope:
+    title: "Hope"
+    author: "Hintze Hall"
+    pages:
+      - "§lHOPE§r\nBlue whale, Balaenoptera musculus\n25.2 meters\n\nStranded in Wexford, Ireland, in 1891."
+      - "By the 1960s, whaling had left a few thousand blue whales in all the oceans. In 1966 they were protected. Today there are tens of thousands."
+      - "She is named Hope for what we can still do when we decide to.\n\nThe archive keeps everything we almost lost. Some of it, we didn't."
