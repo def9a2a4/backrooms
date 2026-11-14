@@ -2,6 +2,7 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.command;
 
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.DebugLog;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.advancement.AdvancementManager;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level101ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level37ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.BackroomsEntity;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.entity.EntityHandle;
@@ -81,7 +82,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
             case "regenerate" -> handleRegenerate(sender, args.length > 1 ? args[1] : null);
             case "list" -> handleList(sender, args.length > 1 ? args[1] : null);
             case "debug" -> handleDebug(sender, args.length > 1 ? args[1] : null);
-            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37", "skyblock_trigger_cascade", "advance", "read" -> {
+            case "leave", "goto", "status", "event", "spawn", "despawn", "enter", "escalation", "reset", "debug37", "skyblock_trigger_cascade", "advance", "read", "locate" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage("This command can only be used by players.");
                     yield true;
@@ -99,6 +100,17 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
                             yield true;
                         }
                         yield handleEnter(player, args[1]);
+                    }
+                    case "locate" -> {
+                        if (!player.hasPermission("backrooms.admin") && !player.isOp()) {
+                            player.sendMessage("You don't have permission to use this command.");
+                            yield true;
+                        }
+                        if (args.length < 2) {
+                            player.sendMessage("Usage: /backrooms locate <" + String.join("|", Level101ChunkGenerator.locatable()) + ">");
+                            yield true;
+                        }
+                        yield handleLocate(player, args[1].toLowerCase());
                     }
                     case "status" -> handleStatus(player);
                     case "event" -> {
@@ -148,10 +160,49 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
                 };
             }
             default -> {
-                sender.sendMessage("Unknown subcommand. Use: leave, goto, regenerate, status, event, spawn, despawn, enter, escalation, reset, list, advance");
+                sender.sendMessage("Unknown subcommand. Use: leave, goto, locate, regenerate, status, event, spawn, despawn, enter, escalation, reset, list, advance");
                 yield true;
             }
         };
+    }
+
+    /**
+     * Teleports an admin beside the nearest structure of a kind in Alpha (level_101): from where
+     * they stand if they are there, else from Alpha's spawn (taking them into Alpha from another
+     * Backrooms level).
+     */
+    private boolean handleLocate(Player player, String kind) {
+        BackroomsLevel alpha = levelRegistry.get("level_101");
+        World world = alpha == null ? null : levelRegistry.getWorld(alpha);
+        if (world == null || !(world.getGenerator() instanceof Level101ChunkGenerator gen)) {
+            player.sendMessage("Alpha (level_101) is not loaded.");
+            return true;
+        }
+        if (!Level101ChunkGenerator.locatable().contains(kind)) {
+            player.sendMessage("Unknown structure. One of: " + String.join(", ", Level101ChunkGenerator.locatable()));
+            return true;
+        }
+        boolean here = player.getWorld().equals(world);
+        if (!here && !levelRegistry.isBackroomsWorld(player.getWorld())) {
+            player.sendMessage("Enter the Backrooms first (/backrooms goto level_101).");
+            return true;
+        }
+        Location from = here ? player.getLocation() : world.getSpawnLocation();
+        int[] spot = gen.locate(world.getSeed(), kind, from.getBlockX(), from.getBlockZ());
+        if (spot == null) {
+            player.sendMessage("No " + kind + " within reach of " + from.getBlockX() + ", " + from.getBlockZ() + ".");
+            return true;
+        }
+        float yaw = (float) Math.toDegrees(Math.atan2(-(spot[3] - spot[0]), spot[4] - spot[2]));
+        Location to = new Location(world, spot[0] + 0.5, spot[1], spot[2] + 0.5, yaw, 0);
+        int dist = (int) Math.hypot(spot[0] - from.getX(), spot[2] - from.getZ());
+        player.teleportAsync(to).thenAccept(ok -> {
+            if (!ok) return;
+            SpawnFinder.clearFallDamage(player);
+            if (!here) playerStateManager.getOrCreate(player).setCurrentLevelId("level_101");
+            player.sendMessage("Nearest " + kind + ": " + spot[0] + ", " + spot[2] + " (" + dist + " blocks away).");
+        });
+        return true;
     }
 
     private boolean handleEnter(Player player, String levelId) {
@@ -570,7 +621,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of("leave", "status"));
             if (sender.hasPermission("backrooms.admin") || sender.isOp()) {
-                subs.addAll(List.of("goto", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "advance", "debug37", "skyblock_trigger_cascade", "debug"));
+                subs.addAll(List.of("goto", "locate", "event", "spawn", "despawn", "enter", "escalation", "reset", "list", "advance", "debug37", "skyblock_trigger_cascade", "debug"));
             }
             if (sender.hasPermission("backrooms.regenerate") || sender.isOp()) {
                 subs.add("regenerate");
@@ -581,6 +632,7 @@ public class BackroomsCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2) {
             return switch (args[0].toLowerCase()) {
                 case "goto" -> filterStartsWith(levelIds(), args[1]);
+                case "locate" -> filterStartsWith(Level101ChunkGenerator.locatable(), args[1]);
                 case "regenerate" -> {
                     List<String> opts = new ArrayList<>();
                     opts.add("all");

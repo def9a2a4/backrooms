@@ -94,6 +94,58 @@ final class AlphaMegastructures {
         return out;
     }
 
+    /** Every kind {@link #nearest} can find. */
+    static final List<String> KINDS = List.of("pillar_field", "cube", "terrarium", "sky_sheet", "staircase",
+            "giant_oak", "face", "head", "statue", "installation", "wall");
+
+    private static String kindOf(Site s) {
+        return switch (s) {
+            case PillarField p -> "pillar_field";
+            case Cube c -> "cube";
+            case Terrarium t -> "terrarium";
+            case SkySheet k -> "sky_sheet";
+            case Staircase k -> "staircase";
+            case GiantOak o -> "giant_oak";
+            case Portrait p -> p.kind().name().toLowerCase(java.util.Locale.ROOT);
+            case Installation i -> "installation";
+            case Wall w -> "wall";
+            default -> "";
+        };
+    }
+
+    /**
+     * The world box {minX, minZ, maxX, maxZ} of the nearest megastructure of {@code kind} to
+     * (x, z), searching out to {@code maxCells} cells; null if there is none that near. For an
+     * installation, the box of its control centre (the area round it is mostly empty plain).
+     */
+    @Nullable int[] nearest(long seed, String kind, int x, int z, int maxCells) {
+        boolean wall = kind.equals("wall");
+        int size = wall ? WALL_CELL : cell;
+        int cx = Math.floorDiv(x, size), cz = Math.floorDiv(z, size);
+        int[] best = null;
+        double bestD = Double.MAX_VALUE;
+        for (int ring = 0; ring <= maxCells; ring++) {
+            if (best != null && (ring - 1) * (double) size > bestD) break;
+            for (int i = -ring; i <= ring; i++) {
+                for (int j = -ring; j <= ring; j++) {
+                    if (Math.max(Math.abs(i), Math.abs(j)) != ring) continue;
+                    Site s = wall ? wallAt(seed, cx + i, cz + j) : siteAt(seed, cx + i, cz + j);
+                    if (s == null || !kindOf(s).equals(kind)) continue;
+                    int[] box = { s.minX(), s.minZ(), s.maxX(), s.maxZ() };
+                    if (s instanceof Installation in) {
+                        var c = AlphaInstallation.get(seed, in.x0(), in.z0(), in.size()).parts.get(1);
+                        box = new int[]{ c.minX(), c.minZ(), c.maxX(), c.maxZ() };
+                    }
+                    double dx = Math.max(box[0] - x, Math.max(0, x - box[2]));
+                    double dz = Math.max(box[1] - z, Math.max(0, z - box[3]));
+                    double d = Math.hypot(dx, dz);
+                    if (d < bestD) { bestD = d; best = box; }
+                }
+            }
+        }
+        return best;
+    }
+
     /** True if a megastructure (or the Wall) overlaps the world box. The box must lie inside one cell. */
     boolean occupied(long seed, int minX, int minZ, int maxX, int maxZ) {
         Site s = siteAt(seed, Math.floorDiv(minX, cell), Math.floorDiv(minZ, cell));

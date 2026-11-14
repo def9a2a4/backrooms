@@ -179,6 +179,48 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         return megastructures.staircaseSign(seed, chunkX, chunkZ);
     }
 
+    /** What {@link #locate} can find: the megastructures, and the grammar-built houses. */
+    public static List<String> locatable() {
+        List<String> out = new ArrayList<>(AlphaMegastructures.KINDS);
+        out.add(0, "house");
+        return out;
+    }
+
+    /**
+     * Where to stand to see the nearest {@code kind} to (x, z): a spot
+     * on the ground four blocks outside its footprint on the side nearest (x, z), as {x, y, z, centreX, centreZ}. Null if none
+     * within reach (about 15 km for megastructures, 4 km for houses).
+     */
+    public @Nullable int[] locate(long seed, String kind, int x, int z) {
+        int[] box;
+        if (kind.equals("house")) {
+            box = null;
+            double bestD = Double.MAX_VALUE;
+            int cx = Math.floorDiv(x, AlphaHouses.CELL), cz = Math.floorDiv(z, AlphaHouses.CELL);
+            for (int ring = 0; ring <= 60 && box == null; ring++) {
+                for (int i = -ring; i <= ring; i++) for (int j = -ring; j <= ring; j++) {
+                    if (Math.max(Math.abs(i), Math.abs(j)) != ring) continue;
+                    var h = houses.at(seed, cx + i, cz + j);
+                    if (h == null) continue;
+                    double d = Math.hypot((h.minX() + h.maxX()) / 2.0 - x, (h.minZ() + h.maxZ()) / 2.0 - z);
+                    if (d < bestD) { bestD = d; box = new int[]{ h.minX(), h.minZ(), h.maxX(), h.maxZ() }; }
+                }
+            }
+        } else {
+            box = megastructures.nearest(seed, kind, x, z, Math.max(8, 15000 / megastructureCellSize));
+        }
+        if (box == null) return null;
+        int mx = (box[0] + box[2]) / 2, mz = (box[1] + box[3]) / 2;
+        // the nearest point of the footprint, then four blocks on out from its middle
+        int px = Math.max(box[0], Math.min(box[2], x)), pz = Math.max(box[1], Math.min(box[3], z));
+        boolean inside = px == x && pz == z;
+        if (inside) { px = box[0]; pz = mz; }
+        int dx = px == box[0] ? -4 : px == box[2] ? 4 : 0;
+        int dz = pz == box[1] ? -4 : pz == box[3] ? 4 : 0;
+        if (dx == 0 && dz == 0) dx = -4;
+        return new int[]{ px + dx, GROUND_Y + 1, pz + dz, mx, mz };
+    }
+
     /** The terrarium's exhibit: one ordinary house, chosen from the plain's own. */
     private void placeTerrariumHouse(ChunkData chunkData, Random rng) {
         switch (rng.nextInt(4)) {

@@ -155,6 +155,24 @@ class Build:
 
     # ── Output ───────────────────────────────────────────────────────────
 
+    def square(self):
+        """Pads the footprint to a square with ground: the city reserves width x length for a
+        building, then turns it a quarter to face its street, which swaps the two (Mace's own
+        buildings are all square). Deeper than wide, it gets ground on both sides; wider than
+        deep, behind it, so the front stays on the street edge."""
+        if self.w > self.l:
+            old, self.l = self.l, self.w
+            self.fill(0, 0, old, self.w - 1, 0, self.l - 1, GROUND)
+        elif self.l > self.w:
+            dx, old = (self.l - self.w) // 2, self.w
+            self.w = self.l
+            self.blocks = {(x + dx, y, z): v for (x, y, z), v in self.blocks.items()}
+            self.entities = {(x + dx, y, z): v for (x, y, z), v in self.entities.items()}
+            for x in [*range(dx), *range(dx + old, self.w)]:
+                self.fill(x, 0, 0, x, 0, self.l - 1, GROUND)
+        self.meta["size_x"], self.meta["size_z"] = self.w, self.l
+
+
     def bounds(self):
         ys = [y for (_, y, _), (n, _) in self.blocks.items() if n != "air"] or [0]
         lo = min(ys) if self.kind == "sky_feature" else min(min(ys), 0)   # sky features float

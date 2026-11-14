@@ -57,6 +57,8 @@ def main():
             for i in range(e.n):
                 rng = random.Random(seed(st.key, e.name, i))
                 b = e.make(rng, st)
+                if b.kind != "sky_feature":   # floats over the mine entrance, never in a lot
+                    b.square()
                 b.meta["frequency"] = e.freq
                 b.meta["files"] = st.file
                 if e.unique:
