@@ -29,9 +29,9 @@ replay_pid*
 
 # Gradle
 .gradle/
-build/
-out/
-bin/
+/build/
+/out/
+/bin/
 
 # VS Code
 .vscode/

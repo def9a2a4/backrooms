@@ -95,6 +95,8 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
     private double megastructureCellChance = 100; // percent of cells, at full distance
     private double wallCellChance = 50;           // percent of 2048-block cells
     private AlphaMegastructures megastructures = newMegastructures();
+    private double houseCellChance = 12;          // percent of 64-block cells with a (grammar) house
+    private AlphaHouses houses = newHouses();
 
     public Level101ChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
@@ -153,6 +155,14 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         megastructureCellChance = config.getDouble("megastructure_cell_chance", megastructureCellChance);
         wallCellChance = config.getDouble("wall_cell_chance", wallCellChance);
         megastructures = newMegastructures();
+        houseCellChance = config.getDouble("house_cell_chance", houseCellChance);
+        houses = newHouses();
+    }
+
+    private AlphaHouses newHouses() {
+        // (megastructures is read when a house is first asked for, so a reconfigure is seen)
+        return new AlphaHouses(houseCellChance, STRUCTURE_SPAWN_EXCLUSION,
+                (seed, x0, z0, x1, z1) -> megastructures.occupied(seed, x0, z0, x1, z1));
     }
 
     private AlphaMegastructures newMegastructures() {
@@ -190,14 +200,17 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
         // Megastructures own their ground: no small structures, pits or trees on or right beside them.
         var megas = megastructures.sitesNear(seed, chunkX, chunkZ, 8);
         boolean nearMega = !megas.isEmpty();
+        // So do the houses (which never stand on a megastructure's ground).
+        AlphaHouses.Placed house = houses.near(seed, chunkX, chunkZ, 6);
+        boolean nearHouse = house != null;
 
-        boolean hasStructure = !nearMega && structureChunkChance > 0
+        boolean hasStructure = !nearMega && !nearHouse && structureChunkChance > 0
                 && distSq >= (long) STRUCTURE_SPAWN_EXCLUSION * STRUCTURE_SPAWN_EXCLUSION
                 && Math.floorMod(blockHash(chunkX, chunkZ, seed, 0xA1FA), 100) < structureChunkChance;
 
         // A pit chunk gets one 1x1 hole from the grass straight down to the void.
         long pitHash = blockHash(chunkX, chunkZ, seed, 0x9117);
-        boolean hasPit = !hasStructure && !nearMega && voidPitChunkChance > 0
+        boolean hasPit = !hasStructure && !nearMega && !nearHouse && voidPitChunkChance > 0
                 && distSq >= (long) PIT_SPAWN_EXCLUSION * PIT_SPAWN_EXCLUSION
                 && Math.floorMod(pitHash, 10000) < (int) Math.round(voidPitChunkChance * 100);
         int pitX = (int) ((pitHash >>> 8) & 15);
@@ -240,8 +253,13 @@ public class Level101ChunkGenerator extends BackroomsChunkGenerator {
             megastructures.place(chunkData, seed, chunkX, chunkZ, megas);
         }
 
+        // --- Pass 2c: this chunk's part of a house ---
+        if (nearHouse) {
+            houses.place(chunkData, chunkX, chunkZ, house);
+        }
+
         // --- Pass 3: rare trees, only in structure-free chunks ---
-        if (!hasStructure && !nearMega && chunkRng.nextDouble() < treeChunkChance / 100.0) {
+        if (!hasStructure && !nearMega && !nearHouse && chunkRng.nextDouble() < treeChunkChance / 100.0) {
             int count = 1 + chunkRng.nextInt(2);
             for (int i = 0; i < count; i++) {
                 int tx = chunkRng.nextInt(12) + 2;

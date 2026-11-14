@@ -21,6 +21,9 @@ generator_config:
   megastructure_min_distance: 1200
   megastructure_cell_chance: 100
   wall_cell_chance: 50
+  # Houses with wings, storeys, stairs and furnished rooms (AlphaHouse), on their own 64-block
+  # cells: this percent of cells hold one. The single-chunk houses above still appear too.
+  house_cell_chance: 12
 
 exit_triggers:
   - type: bed_sleep

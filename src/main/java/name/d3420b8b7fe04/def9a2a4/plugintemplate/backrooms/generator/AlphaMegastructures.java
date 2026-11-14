@@ -93,6 +93,18 @@ final class AlphaMegastructures {
         return out;
     }
 
+    /** True if a megastructure (or the Wall) overlaps the world box. The box must lie inside one cell. */
+    boolean occupied(long seed, int minX, int minZ, int maxX, int maxZ) {
+        Site s = siteAt(seed, Math.floorDiv(minX, cell), Math.floorDiv(minZ, cell));
+        if (s != null && overlaps(s, minX, minZ, maxX, maxZ)) return true;
+        Site w = wallAt(seed, Math.floorDiv(minX, WALL_CELL), Math.floorDiv(minZ, WALL_CELL));
+        return w != null && overlaps(w, minX, minZ, maxX, maxZ);
+    }
+
+    private static boolean overlaps(Site s, int minX, int minZ, int maxX, int maxZ) {
+        return s.maxX() >= minX && s.minX() <= maxX && s.maxZ() >= minZ && s.minZ() <= maxZ;
+    }
+
     void place(ChunkData data, long seed, int chunkX, int chunkZ, List<Site> sites) {
         Slice slice = new Slice(data, chunkX, chunkZ, seed);
         for (Site s : sites) s.place(slice);

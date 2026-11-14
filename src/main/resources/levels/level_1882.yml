@@ -1,0 +1,34 @@
+id: level_1882
+display_name: "The Collections"
+generator: level_1882
+environment: NORMAL
+dimension_type: light
+biome: "backrooms:museum"
+fixed_time: 6000
+spawn_radius: 0
+enter_title: "§f1882"
+enter_subtitle: "§7The Collections"
+enter_message: "§7§oThe museum keeps going. So do the collections."
+
+# Hintze Hall's museum without end (Level1882ChunkGenerator): two floors of terracotta galleries
+# joined by tall arches, display cases, skeletons, fossils, minerals and plants, in a maze of
+# 32-block rooms. Every 256 blocks a vaulted central hall with a balcony, a grand staircase and a
+# whale or sauropod skeleton. Spawn is at the foot of the first hall's staircase.
+
+exit_triggers:
+  # Placeholder: nothing leads here yet, and leaving is just walking far enough.
+  - type: walk_distance
+    distance_blocks: 2000
+    target_level: level_1881
+    fallback_level: level_3
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "§7§oA door marked STAFF ONLY lets you back into the hall."
+  - type: below_y
+    y_threshold: 0
+    target_level: level_1882
+    transition:
+      blindness_ticks: 40
+      delay_ticks: 10
+      message: "§7§oA guard walks you back to the hall."
