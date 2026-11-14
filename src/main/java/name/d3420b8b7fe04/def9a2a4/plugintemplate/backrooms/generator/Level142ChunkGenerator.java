@@ -27,14 +27,17 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Level 142 — "The Endless City". Mace's walled medieval cities (see {@link MaceCity}), one in
- * every 384-block region, with countryside between: each built the way Mace builds a city, with
- * its moat, walls, gatehouses, corner towers, streets and districts, a mineshaft seven levels
- * deep under it, and farms outside its north wall.
+ * Level 142 — "The Endless City". Mace's walled medieval cities (see {@link MaceCity}), each in
+ * a region of its own with countryside around it: built the way Mace builds a city, with its
+ * moat, walls, gatehouses, corner towers, streets and districts, a mineshaft seven levels deep
+ * under it, and farms outside its north wall.
  *
- * <p>A region's city is hashed from the world seed and the region's position: its theme
- * (Medieval, Novv's Medieval, Desert), its size (7 to 13 chunks) and its place in the region.
- * Building a city takes about a second, so the last few are kept; a chunk copies its columns out
+ * <p>The world is cut into 768-block squares; about a third stay whole and hold one large city,
+ * the rest split into 384-block regions with a middling city, or again into 192-block regions
+ * with a small town. Each city is sized to cover about 40% of its region (farms included), so
+ * cities take up about 40% of the land whatever their size. A region's city is hashed from the
+ * world seed and the region: its theme (Medieval, Novv's Medieval, Desert), size and place.
+ * Building a city takes a second or more, so the last few are kept; a chunk copies its columns out
  * of the city's buffer, and sign text and chest contents are written when the chunk first loads
  * ({@link #applyBlockEntities}, from Level142Listener). Around the cities is flat ground in the
  * theme's soil, with Mace's trees and flowers.
@@ -46,15 +49,27 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
 
     static final String PACK = MaceLibrary.PACK;
 
-    private static final int REGION = 384;
-    private static final int MARGIN = 24;            // countryside at least this wide around a city
+    private static final int LARGE = 768, MEDIUM = 384, SMALL = 192;   // region sides
+    private static final int LARGE_PERCENT = 33, MEDIUM_PERCENT = 55;
+    private static final double COVER = 0.45;        // target share of a region for its city and farms (~40% after rounding)
+    private static final int MAX_CHUNKS = 29;        // a 29-chunk city's buffer is ~67 MB
+    private static final int MARGIN = 12;            // countryside at least this wide around a city
     private static final int GROUND = 63;            // Mace's ground layer
-    private static final int CACHED_CITIES = 4;      // up to ~17 MB each
+    private static final long CACHE_CELLS = 80_000_000L;   // ~160 MB of city buffers
     private static final int TREE_CELL = 11;
-    private static final long TREE_SALT = 0x7EE5L, FLOWER_SALT = 0xF10L, SITE_SALT = 0x5173L;
+    private static final long TREE_SALT = 0x7EE5L, FLOWER_SALT = 0xF10L, SITE_SALT = 0x5173L,
+            LARGE_SALT = 0x1A26EL, MEDIUM_SALT = 0x3ED1L, CITY_SALT = 0xC17EL;
+
+    /** A square of the world holding one city. */
+    private record Region(int x, int z, int size) {}
 
     /** Where a region's city stands: (x0, z0) is Mace's (0, 0); the farms run north of it. */
-    private record Site(MaceCity.Plan plan, int x0, int z0) {
+    private record Site(Region region, MaceCity.Plan plan, int x0, int z0) {
+        /** Buffer cells, for the cache's budget. */
+        long cells() {
+            return (long) (plan.mapLength() + 1) * (plan.mapLength() + plan.farmLength() + 1) * MaceCity.HEIGHT;
+        }
+
         int minX() { return x0; }
         int maxX() { return x0 + plan.mapLength(); }
         int minZ() { return z0 - plan.farmLength(); }
@@ -69,12 +84,8 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
         }
     }
 
-    private final Map<Long, CompletableFuture<MaceCity>> cities = new LinkedHashMap<>(16, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<Long, CompletableFuture<MaceCity>> eldest) {
-            return size() > CACHED_CITIES;
-        }
-    };
+    /** Built cities, least recently used first, kept within CACHE_CELLS. */
+    private final Map<Site, CompletableFuture<MaceCity>> cities = new LinkedHashMap<>(16, 0.75f, true);
 
     public Level142ChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
@@ -87,22 +98,52 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
 
     // ── Regions ───────────────────────────────────────────────────────────
 
-    private static Site site(long seed, int rx, int rz) {
-        MaceCity.Plan plan = MaceCity.Plan.of(mix(seed ^ mix(rx * 0x9E3779B97F4A7C15L ^ mix(rz * 0xC2B2AE3D27D4EB4FL))));
-        Random rng = new Random(plan.seed() ^ SITE_SALT);
+    private static long hash(long seed, long salt, int x, int z) {
+        return mix(seed ^ salt ^ mix(x * 0x9E3779B97F4A7C15L ^ mix(z * 0xC2B2AE3D27D4EB4FL)));
+    }
+
+    /** The region holding (x, z): a whole 768 square, one of its 384 quarters, or a 192 sixteenth. */
+    private static Region regionAt(long seed, int x, int z) {
+        int lx = Math.floorDiv(x, LARGE), lz = Math.floorDiv(z, LARGE);
+        if (Math.floorMod(hash(seed, LARGE_SALT, lx, lz), 100L) < LARGE_PERCENT) return new Region(lx * LARGE, lz * LARGE, LARGE);
+        int mx = Math.floorDiv(x, MEDIUM), mz = Math.floorDiv(z, MEDIUM);
+        if (Math.floorMod(hash(seed, MEDIUM_SALT, mx, mz), 100L) < MEDIUM_PERCENT) return new Region(mx * MEDIUM, mz * MEDIUM, MEDIUM);
+        return new Region(Math.floorDiv(x, SMALL) * SMALL, Math.floorDiv(z, SMALL) * SMALL, SMALL);
+    }
+
+    /**
+     * The region's city: the biggest Mace city (odd chunk counts, 5 and up) whose footprint,
+     * farms included, is within about 45% of the region (give or take 15%, for variety; rounding
+     * down to whole chunks brings it to about 40%), placed
+     * anywhere in the region that leaves a margin of countryside.
+     */
+    private static Site site(long seed, Region r) {
+        long h = hash(seed, CITY_SALT, r.x(), r.z());
+        MaceCity.Plan theme = MaceCity.Plan.of(h, 5);
+        Random rng = new Random(h ^ SITE_SALT);
+        double target = COVER * r.size() * r.size() * (0.85 + 0.3 * rng.nextDouble());
+        int chunks = 5;
+        for (int c = MAX_CHUNKS; c > 5; c -= 2) {
+            int w = c * 16 + 2 * MaceCity.EDGE + 1, l = w + theme.farmLength();
+            if ((double) w * l <= target && l <= r.size() - 2 * MARGIN) {
+                chunks = c;
+                break;
+            }
+        }
+        MaceCity.Plan plan = MaceCity.Plan.of(h, chunks);
         int w = plan.mapLength() + 1, l = plan.mapLength() + plan.farmLength() + 1;
-        int x = rx * REGION + MARGIN + rng.nextInt(Math.max(1, REGION - 2 * MARGIN - w));
-        int z = rz * REGION + MARGIN + rng.nextInt(Math.max(1, REGION - 2 * MARGIN - l)) + plan.farmLength();
-        return new Site(plan, x, z);
+        int x = r.x() + MARGIN + rng.nextInt(Math.max(1, r.size() - 2 * MARGIN - w));
+        int z = r.z() + MARGIN + rng.nextInt(Math.max(1, r.size() - 2 * MARGIN - l)) + plan.farmLength();
+        return new Site(r, plan, x, z);
     }
 
     private static Site siteAt(long seed, int x, int z) {
-        return site(seed, Math.floorDiv(x, REGION), Math.floorDiv(z, REGION));
+        return site(seed, regionAt(seed, x, z));
     }
 
     /** The region's city, built once and kept while it's among the last few used. */
     private MaceCity city(Site site) {
-        long key = ((long) site.x0() << 32) ^ (site.z0() & 0xFFFFFFFFL);
+        Site key = site;
         CompletableFuture<MaceCity> f;
         boolean build = false;
         synchronized (cities) {
@@ -111,6 +152,14 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
                 f = new CompletableFuture<>();
                 cities.put(key, f);
                 build = true;
+                long total = 0;
+                for (Site s : cities.keySet()) total += s.cells();
+                for (var it = cities.keySet().iterator(); total > CACHE_CELLS && it.hasNext(); ) {
+                    Site old = it.next();
+                    if (old.equals(key)) continue;
+                    total -= old.cells();
+                    it.remove();
+                }
             }
         }
         if (build) {
@@ -174,7 +223,7 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
                 int tx = cx * TREE_CELL + (int) ((h >>> 8) & 3), tz = cz * TREE_CELL + (int) ((h >>> 12) & 3);
                 Site site = siteAt(seed, tx, tz);
                 if (site.plan().theme() == MaceCity.Theme.DESERT || site.overlaps(tx - 3, tz - 3, tx + 8, tz + 8)
-                        || !sameRegion(tx, tz, tx + 5, tz + 5)) {
+                        || !regionAt(seed, tx + 5, tz + 5).equals(site.region())) {
                     continue;
                 }
                 MaceBuilding t = trees.get((int) Long.remainderUnsigned(h >>> 16, trees.size()));
@@ -194,10 +243,6 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
                 if (f != Material.CACTUS) data.setBlock(x, GROUND + 1, z, f);
             }
         }
-    }
-
-    private static boolean sameRegion(int x1, int z1, int x2, int z2) {
-        return Math.floorDiv(x1, REGION) == Math.floorDiv(x2, REGION) && Math.floorDiv(z1, REGION) == Math.floorDiv(z2, REGION);
     }
 
     private static volatile @Nullable List<MaceBuilding> trees;
@@ -272,7 +317,7 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
     /** In the middle of the main crossing of the city in the origin's region. */
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
-        Site site = site(world.getSeed(), 0, 0);
+        Site site = siteAt(world.getSeed(), 0, 0);
         int half = site.plan().mapLength() / 2;
         return new Location(world, site.x0() + half + 0.5, GROUND + 1, site.z0() + half + 0.5);
     }

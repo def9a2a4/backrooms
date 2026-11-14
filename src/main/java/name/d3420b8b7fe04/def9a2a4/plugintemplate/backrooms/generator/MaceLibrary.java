@@ -85,6 +85,13 @@ final class MaceLibrary {
         }
     }
 
+    /** Every building of a type, whatever its theme. */
+    List<MaceBuilding> ofType(String type) {
+        List<MaceBuilding> out = new ArrayList<>();
+        for (MaceBuilding b : buildings) if (b.type.equals(type)) out.add(b);
+        return out;
+    }
+
     /** The buildings of a type ("city", "farm", "city_entrance", ...) listed in a theme's file. */
     List<MaceBuilding> of(String themeFile, String type) {
         List<MaceBuilding> out = new ArrayList<>();
