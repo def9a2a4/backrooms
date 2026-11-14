@@ -353,6 +353,11 @@ final class MaceBuilding {
 
     // ── Placing ───────────────────────────────────────────────────────────
 
+    /** Receives a building's blocks, by position in its (rotated) box. */
+    interface BlockSink {
+        void accept(int x, int y, int z, BlockData block);
+    }
+
     /**
      * A building with its placeholders resolved, rotated. Origin (x0, y0, z0) is the minimum
      * corner of its rotated footprint, {@link #sizeX} by {@link #sizeZ}.
@@ -391,6 +396,35 @@ final class MaceBuilding {
         /** The block at (x, y, z) of the rotated building. */
         BlockData block(int x, int y, int z) {
             return cells[source(x, y, z)];
+        }
+
+        /** Every block of the rotated building, air included, by its position in the rotated box. */
+        void forEachBlock(BlockSink sink) {
+            for (int y = 0; y < height; y++) {
+                for (int z = 0; z < sizeZ; z++) {
+                    for (int x = 0; x < sizeX; x++) sink.accept(x, y, z, cells[source(x, y, z)]);
+                }
+            }
+        }
+
+        /** The signs' text by position in the rotated box ({x, y, z} -> four lines). */
+        Map<int[], String[]> signs() {
+            return located(signs);
+        }
+
+        /** The containers' contents by position in the rotated box. */
+        Map<int[], ItemStack[]> containers() {
+            return located(containers);
+        }
+
+        private <T> Map<int[], T> located(Map<Integer, T> entries) {
+            Map<int[], T> out = new java.util.LinkedHashMap<>();
+            int layer = width * length;
+            for (Map.Entry<Integer, T> e : entries.entrySet()) {
+                int[] xz = rotated(e.getKey());
+                out.put(new int[]{xz[0], e.getKey() / layer, xz[1]}, e.getValue());
+            }
+            return out;
         }
 
         /** Source index of rotated (x, y, z): the inverse of vanilla's StructureTemplate transform. */

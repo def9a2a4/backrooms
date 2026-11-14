@@ -29,7 +29,8 @@ cached. Output: .temp/mace/schem/<type>/<name>.schem and .temp/mace/schem/report
 
 With --pack, the schematics, Mace's word lists and its licence are also zipped into
 .temp/mace/mace-buildings.zip for Level 142 (schem/<type>/<name>.schem, words/<list>.txt with
-lowercase names, LICENSE-Mace.txt, README.txt). scripts/scans/publish.py publishes it as "mace".
+lowercase names, emblems/<name>.txt as tab-separated block states ("-1" for the city's precious
+block), flags/<name>.txt as Mace has them, LICENSE-Mace.txt, README.txt). scripts/scans/publish.py publishes it as "mace".
 
 Usage: scripts/mace/extract_schem.py [--out DIR] [--only NAME_SUBSTRING] [--pack]
 """
@@ -74,6 +75,13 @@ WORD_LISTS = [
     "Statue1", "Statue2", "TavernAdj", "TavernNoun", "TavernType", "Titles",
 ]
 SOURCES += [f"Resources/{w}.txt" for w in WORD_LISTS]
+# The emblems on a city's gatehouse wall (tab-separated id:data grids, -1 for the city's precious
+# block) and the patterns of its guard tower flags (rows of wool colour digits).
+EMBLEMS = ["Ankh", "Cobweb", "CraftersGuild", "Creeper", "Cross", "England Flag", "Heart", "Pickaxe",
+           "Pride Flag", "Shield", "Sword", "Tree", "Yin and Yang"]
+FLAGS = ["Circle", "Cross", "Four_Vertical", "Quarters", "Strike", "Three_Horizontal", "Three_Vertical",
+         "Two_Horizontal", "Two_Vertical"]
+SOURCES += [f"Resources/Emblem {e}.txt" for e in EMBLEMS] + [f"Resources/Flag_{f}.txt" for f in FLAGS]
 LEGACY_URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/common/legacy.json"
 DATA_VERSION = 4671  # 1.21.11
 
@@ -640,7 +648,7 @@ def main():
     (args.out / "report.txt").write_text("\n".join(report) + "\n")
     print("\n".join(report))
     if args.pack:
-        pack(args.out, written)
+        pack(args.out, written, conv)
 
 
 PACK_README = """Mace's buildings, for the Backrooms Minecraft plugin's Level 142
@@ -650,16 +658,38 @@ The buildings and word lists come from Mace, a Minecraft city generator by Robso
 https://github.com/corbin-auriti/mace-minecraft, licensed under the GNU GPL v3 (LICENSE-Mace.txt).
 Changes: the buildings were copied out of Mace's template world (Resources/Mace) into Sponge
 Schematic v3 files with their blocks converted to Minecraft 1.21.11 (scripts/mace/extract_schem.py
-in the plugin's repository); the word lists are Mace's Resources/*.txt, renamed to lowercase.
+in the plugin's repository); the word lists, emblems and flags are Mace's Resources/*.txt, renamed to lowercase,
+with the emblems' block ids converted to block states.
 This archive is distributed under the same licence, GPL v3.
 """
 
 
-def pack(out, written):
-    """Zip the schematics, word lists and licence into PACK, byte-for-byte reproducibly."""
+def emblem(conv, text):
+    """An emblem grid with Mace's id:data cells as block states; -1 (the precious block) stays."""
+    rows = []
+    for line in text.lstrip("\ufeff").splitlines():
+        cells = line.replace("  ", " ").replace("\t", " ").split(" ")
+        out = []
+        for c in cells:
+            if c == "-1":
+                out.append("-1")
+                continue
+            bid, _, meta = c.partition(":")
+            name, props = conv.block(int(bid), int(meta or 0))
+            out.append(name + ("[" + ",".join(f"{k}={v}" for k, v in sorted(props.items())) + "]" if props else ""))
+        rows.append("\t".join(out))
+    return "\n".join(rows) + "\n"
+
+
+def pack(out, written, conv):
+    """Zip the schematics, word lists, emblems, flags and licence into PACK, byte-for-byte reproducibly."""
     src = CACHE / "src" / "Resources"
     entries = [(f"schem/{p.relative_to(out).as_posix()}", p.read_bytes()) for p in written]
     entries += [(f"words/{w.lower()}.txt", (src / f"{w}.txt").read_bytes()) for w in WORD_LISTS]
+    entries += [(f"emblems/{e.lower()}.txt", emblem(conv, (src / f"Emblem {e}.txt").read_text(encoding="utf-8-sig")).encode())
+                for e in EMBLEMS]
+    entries += [(f"flags/{f.lower()}.txt", (src / f"Flag_{f}.txt").read_text(encoding="utf-8-sig").replace("\r", "").encode())
+                for f in FLAGS]
     entries += [("LICENSE-Mace.txt", (src / "License Mace.txt").read_bytes()),
                 ("README.txt", PACK_README.encode())]
     with zipfile.ZipFile(PACK, "w", zipfile.ZIP_DEFLATED) as z:
