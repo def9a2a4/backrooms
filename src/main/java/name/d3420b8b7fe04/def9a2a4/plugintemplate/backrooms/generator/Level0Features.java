@@ -19,7 +19,8 @@ import static name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Lev
  *   from the ordinary ceiling. Flat ones get a wide staircase down one wall
  *   and a parapet around the rim, and sometimes Level 101 houses on the
  *   floor, with or without grass; stepped ones descend in terraces. Some also
- *   raise their ceiling and hang their lights low on chains; only those.</li>
+ *   raise their ceiling and hang their lights on chains, down to the same
+ *   y69 as every other light; only those.</li>
  *   <li><b>Pits</b>: a 25x25 shaft open to the void, with a 3-wide staircase
  *   of straight flights and square corner landings around its walls that
  *   simply runs out partway down.</li>
@@ -33,7 +34,6 @@ final class Level0Features {
 
     private static final int FLOOR_TOP_Y = Level0ChunkGenerator.AIR_MIN_Y - 1;
     private static final int CEILING_Y = Level0ChunkGenerator.CEILING_MIN_Y;
-    private static final int PENDANT_DROP = 5;   // pendant light this far above its floor
 
     private static final int PIT_SIZE = 25;
     private static final int PIT_BAND = 3;
@@ -56,8 +56,9 @@ final class Level0Features {
 
     /**
      * Sunken-room layout derived from the feature hash. {@code raise} lifts the
-     * ceiling above the lobby's; it is nonzero exactly for pendant-lit rooms, so
-     * chains only ever hang under a raised ceiling.
+     * ceiling above the lobby's; it is nonzero exactly for pendant-lit rooms,
+     * whose lights hang on chains down to the lobby's light level. Every light
+     * in the level stays at y69, and chains only hang under a raised ceiling.
      */
     private record Room(int depth, boolean stepped, int stepWidth, boolean pendant, int raise,
                         boolean grass, boolean houses, int stairDir) {}
@@ -105,10 +106,8 @@ final class Level0Features {
         if (stepped) {
             int maxDepth = Math.max(3, Math.min(10, (minSide - 8) / (2 * stepWidth)));
             depth = 3 + pick(h, 38, maxDepth - 2);
-        } else if (pendant) {
-            depth = 10 + pick(h, 38, 19);   // 10-28: pendants keep the floor lit
         } else {
-            depth = 6 + pick(h, 38, 11);    // 6-16: lit from the ceiling alone
+            depth = 6 + pick(h, 38, 11);    // 6-16: the deepest floors are dim
         }
         depth = Math.min(depth, minSide - 4);
         boolean grass = !stepped && pick(h, 42, 100) < 40;
@@ -186,9 +185,6 @@ final class Level0Features {
                         c.data.setBlock(x, floorY, z, c.floorMats[x][z]);
                     }
                     c.floorTop[x][z] = floorY;
-                    if (r.pendant() && c.lightY[x][z] != Level0Chunk.NO_LIGHT) {
-                        c.lightY[x][z] = floorY + 1 + PENDANT_DROP;
-                    }
                     continue;
                 }
 

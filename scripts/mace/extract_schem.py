@@ -27,7 +27,11 @@ The building's XML entry is kept in the schematic's Metadata.Mace compound.
 Sources and the mapping tables are downloaded into .temp/mace/ (needs `gh` and network) and
 cached. Output: .temp/mace/schem/<type>/<name>.schem and .temp/mace/schem/report.txt.
 
-Usage: scripts/mace/extract_schem.py [--out DIR] [--only NAME_SUBSTRING]
+With --pack, the schematics, Mace's word lists and its licence are also zipped into
+.temp/mace/mace-buildings.zip for Level 142 (schem/<type>/<name>.schem, words/<list>.txt with
+lowercase names, LICENSE-Mace.txt, README.txt). scripts/scans/publish.py publishes it as "mace".
+
+Usage: scripts/mace/extract_schem.py [--out DIR] [--only NAME_SUBSTRING] [--pack]
 """
 
 import argparse
@@ -38,6 +42,7 @@ import struct
 import subprocess
 import sys
 import urllib.request
+import zipfile
 import xml.etree.ElementTree as ET
 import zlib
 from collections import Counter
@@ -59,12 +64,22 @@ SOURCES = [
     "Resources/Buildings/MineshaftEntrance.xml",
     "Resources/Buildings/MineshaftSection.xml",
     "Resources/Buildings/SkyFeature.xml",
+    "Resources/License Mace.txt",
 ]
+# The word lists sign tokens draw from: "[ChurchAdj]" is a random line of ChurchAdj.txt.
+WORD_LISTS = [
+    "Adjectives", "Bakery", "Boats", "BrothelName", "BrothelTitle", "BrothelType", "Church",
+    "ChurchAdj", "ChurchNoun", "CityAdj", "CityNoun", "Desert_Adjectives", "Desert_Nouns", "Drink",
+    "Gravestone", "HelpDepartment", "HouseTypes", "Library", "LibrarySec", "Nouns", "Novv", "RoadTypes",
+    "Statue1", "Statue2", "TavernAdj", "TavernNoun", "TavernType", "Titles",
+]
+SOURCES += [f"Resources/{w}.txt" for w in WORD_LISTS]
 LEGACY_URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/common/legacy.json"
 DATA_VERSION = 4671  # 1.21.11
 
 ROOT = Path(__file__).resolve().parents[2]
 CACHE = ROOT / ".temp" / "mace"
+PACK = CACHE / "mace-buildings.zip"
 
 
 # ---------------------------------------------------------------------------
@@ -591,6 +606,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=Path, default=CACHE / "schem")
     ap.add_argument("--only", help="only buildings whose name contains this (case-insensitive)")
+    ap.add_argument("--pack", action="store_true", help=f"also write {PACK.relative_to(ROOT)}")
     args = ap.parse_args()
 
     legacy = fetch_sources()
@@ -600,7 +616,7 @@ def main():
     if args.only:
         buildings = [b for b in buildings if args.only.lower() in b["name"].lower()]
 
-    report, used = [], set()
+    report, used, written = [], set(), []
     for b in sorted(buildings, key=lambda b: (b["type"], b["name"].lower())):
         schem, st = extract(world, conv, b)
         name = slug(b["name"])
@@ -609,7 +625,8 @@ def main():
         used.add((b["type"], name))
         path = args.out / b["type"] / f"{name}.schem"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(gzip.compress(write_nbt(schem)))
+        path.write_bytes(gzip.compress(write_nbt(schem), mtime=0))
+        written.append(path)
         W, H, Lz = st["size"]
         report.append(f"{b['type']:<20} {name:<40} {W:>3}x{H:>3}x{Lz:<3} solid={st['solid']:<6} "
                       f"palette={st['palette']:<4} be={st['block_entities']:<3} paintings={st['paintings']:<2} "
@@ -622,6 +639,35 @@ def main():
                   (", ".join(f"{k} x{v}" for k, v in conv.unmapped.most_common()) or "none"))
     (args.out / "report.txt").write_text("\n".join(report) + "\n")
     print("\n".join(report))
+    if args.pack:
+        pack(args.out, written)
+
+
+PACK_README = """Mace's buildings, for the Backrooms Minecraft plugin's Level 142
+(https://github.com/def9a2a4/backrooms).
+
+The buildings and word lists come from Mace, a Minecraft city generator by Robson,
+https://github.com/corbin-auriti/mace-minecraft, licensed under the GNU GPL v3 (LICENSE-Mace.txt).
+Changes: the buildings were copied out of Mace's template world (Resources/Mace) into Sponge
+Schematic v3 files with their blocks converted to Minecraft 1.21.11 (scripts/mace/extract_schem.py
+in the plugin's repository); the word lists are Mace's Resources/*.txt, renamed to lowercase.
+This archive is distributed under the same licence, GPL v3.
+"""
+
+
+def pack(out, written):
+    """Zip the schematics, word lists and licence into PACK, byte-for-byte reproducibly."""
+    src = CACHE / "src" / "Resources"
+    entries = [(f"schem/{p.relative_to(out).as_posix()}", p.read_bytes()) for p in written]
+    entries += [(f"words/{w.lower()}.txt", (src / f"{w}.txt").read_bytes()) for w in WORD_LISTS]
+    entries += [("LICENSE-Mace.txt", (src / "License Mace.txt").read_bytes()),
+                ("README.txt", PACK_README.encode())]
+    with zipfile.ZipFile(PACK, "w", zipfile.ZIP_DEFLATED) as z:
+        for name, data in sorted(entries):
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, data)
+    print(f"packed {len(entries)} files, {PACK.stat().st_size / 1024:.0f} KB: {PACK.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

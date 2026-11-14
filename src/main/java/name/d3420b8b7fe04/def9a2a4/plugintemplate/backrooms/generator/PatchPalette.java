@@ -17,11 +17,15 @@ final class PatchPalette {
         return new Entry(material, weight);
     }
 
-    private static final double WARP_SCALE = 1.0 / 40.0;
-    private static final double WARP_AMPLITUDE = 14.0;
+    // Warp relative to the cell size: low frequency and wide, so patch edges
+    // bend in long curves instead of fraying back and forth.
+    private static final double WARP_WAVELENGTH = 0.3;
+    private static final double WARP_AMPLITUDE = 0.12;
 
     private final long salt;
     private final int cellSize;
+    private final double warpScale;
+    private final double warpAmplitude;
     private final Material[] materials;
     private final int[] cumulative;
     private final int totalWeight;
@@ -29,6 +33,8 @@ final class PatchPalette {
     PatchPalette(long salt, int cellSize, Entry... entries) {
         this.salt = salt;
         this.cellSize = cellSize;
+        this.warpScale = 1.0 / (WARP_WAVELENGTH * cellSize);
+        this.warpAmplitude = WARP_AMPLITUDE * cellSize;
         this.materials = new Material[entries.length];
         this.cumulative = new int[entries.length];
         int sum = 0;
@@ -41,9 +47,9 @@ final class PatchPalette {
     }
 
     Material pick(long seed, int worldX, int worldZ) {
-        double wx = worldX * WARP_SCALE, wz = worldZ * WARP_SCALE;
-        double fx = worldX + WARP_AMPLITUDE * SimplexNoise.noise2(seed + salt, wx, wz);
-        double fz = worldZ + WARP_AMPLITUDE * SimplexNoise.noise2(seed + salt + 1, wx, wz);
+        double wx = worldX * warpScale, wz = worldZ * warpScale;
+        double fx = worldX + warpAmplitude * SimplexNoise.noise2(seed + salt, wx, wz);
+        double fz = worldZ + warpAmplitude * SimplexNoise.noise2(seed + salt + 1, wx, wz);
         int cellX = Math.floorDiv((int) Math.floor(fx), cellSize);
         int cellZ = Math.floorDiv((int) Math.floor(fz), cellSize);
 

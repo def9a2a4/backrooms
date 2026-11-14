@@ -10,6 +10,7 @@ import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.sign.Side;
+import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.generator.ChunkGenerator.ChunkData;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -20,6 +21,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -47,10 +49,12 @@ import java.util.regex.Pattern;
  * </ul>
  * Spawners and entities (paintings) are not placed.
  *
- * <p>{@link #fill} resolves all of that from a {@link Fill} and an RNG into a {@link Filled}
- * building, which is placed in two steps like the Level 101 signs: blocks into ChunkData during
- * generation ({@link Filled#place}), then sign text and chest contents once the chunk exists
- * ({@link Filled#applyBlockEntities}). Fill again with the same seed to get the same building.
+ * <p>{@link #fill} resolves all of that from a {@link Fill}, an RNG and a rotation into a
+ * {@link Filled} building, which is placed in two steps like the Level 101 signs: blocks into
+ * ChunkData during generation ({@link Filled#place}), then sign text and chest contents once the
+ * chunk exists ({@link Filled#applyBlockEntities}). Fill again with the same seed to get the same
+ * building. Rotation is vanilla's (StructureTemplate): clockwise seen from above, about the
+ * footprint, which stays at the origin.
  *
  * <p>Immutable after {@link #load}; safe to share between threads.
  */
@@ -65,12 +69,13 @@ final class MaceBuilding {
     private static final int SIGN_WIDTH = 14;
     private static final Pattern TOKEN = Pattern.compile("\\[(.*?)]");
 
-    private static final Material[] WOOL = {
+    private static final BlockData AIR = Material.AIR.createBlockData();
+    private static final BlockData[] WOOL = java.util.stream.Stream.of(
         Material.WHITE_WOOL, Material.ORANGE_WOOL, Material.MAGENTA_WOOL, Material.LIGHT_BLUE_WOOL,
         Material.YELLOW_WOOL, Material.LIME_WOOL, Material.PINK_WOOL, Material.GRAY_WOOL,
         Material.LIGHT_GRAY_WOOL, Material.CYAN_WOOL, Material.PURPLE_WOOL, Material.BLUE_WOOL,
-        Material.BROWN_WOOL, Material.GREEN_WOOL, Material.RED_WOOL, Material.BLACK_WOOL,
-    };
+        Material.BROWN_WOOL, Material.GREEN_WOOL, Material.RED_WOOL, Material.BLACK_WOOL
+    ).map(Material::createBlockData).toArray(BlockData[]::new);
     private static final Material[] HOUSE_LOOT = {
         Material.APPLE, Material.OAK_BOAT, Material.BOOK, Material.BONE, Material.BOW, Material.BOWL,
         Material.BREAD, Material.BUCKET, Material.COOKIE, Material.EGG, Material.FEATHER,
@@ -88,6 +93,8 @@ final class MaceBuilding {
     final int width, height, length;
     /** Source y of layer 0 in Mace's world; the ground layer is at {@code GROUND_Y - sourceY}. */
     final int sourceY;
+    /** The rest of the building's XML entry (Metadata.Mace): frequency, files, pattern, ... */
+    private final Map<String, String> mace = new HashMap<>();
     private final BlockData[] palette;
     private final int[] blocks;                         // palette index, x + z*width + y*width*length
     private final Map<Integer, String[]> signs = new HashMap<>();
@@ -105,6 +112,7 @@ final class MaceBuilding {
         width = Nbt.integer(s, "Width", 0) & 0xFFFF;
         height = Nbt.integer(s, "Height", 0) & 0xFFFF;
         length = Nbt.integer(s, "Length", 0) & 0xFFFF;
+        for (Map.Entry<String, Object> e : mace.entrySet()) this.mace.put(e.getKey(), String.valueOf(e.getValue()));
 
         Map<String, Object> b = Nbt.compound(s, "Blocks");
         Map<String, Object> pal = Nbt.compound(b, "Palette");
@@ -162,13 +170,26 @@ final class MaceBuilding {
         return x + z * width + y * width * length;
     }
 
+    /** A field of the building's Mace XML entry ("frequency", "files", "pattern", ...), or null. */
+    @Nullable
+    String meta(String key) {
+        return mace.get(key);
+    }
+
     // ── Filling ───────────────────────────────────────────────────────────
 
-    /** Resolves every placeholder. Deterministic for a given fill, RNG seed and citySigns state. */
+    /** {@link #fill(Fill, Random, StructureRotation)} unrotated. */
     Filled fill(Fill fill, Random rng) {
-        BlockData wool = WOOL[rng.nextInt(WOOL.length)].createBlockData();
+        return fill(fill, rng, StructureRotation.NONE);
+    }
+
+    /**
+     * Resolves every placeholder and rotates the building. Deterministic for a given fill, RNG
+     * seed, rotation and citySigns state.
+     */
+    Filled fill(Fill fill, Random rng, StructureRotation rotation) {
+        BlockData wool = WOOL[rng.nextInt(WOOL.length)];
         boolean entrance = type.equals("city_entrance");
-        BlockData air = Material.AIR.createBlockData();
 
         BlockData[] cells = new BlockData[blocks.length];
         int layer = width * length;
@@ -181,7 +202,8 @@ final class MaceBuilding {
                 case GOLD_ORE -> ground ? fill.path() : b;
                 case IRON_ORE -> entrance ? fill.wall() : b;
                 case GLOWSTONE -> entrance && !fill.walkwayTorches() ? fill.wall() : b;
-                case TORCH, WALL_TORCH -> entrance && !fill.walkwayTorches() ? air : b;
+                case TORCH, WALL_TORCH -> entrance && !fill.walkwayTorches() ? AIR : b;
+                case SPAWNER -> AIR;
                 default -> b;
             };
         }
@@ -190,7 +212,7 @@ final class MaceBuilding {
         Set<String> instanceSigns = new HashSet<>();
         for (Map.Entry<Integer, String[]> e : signs.entrySet()) {
             String[] text = signText(e.getValue(), fill, rng, instanceSigns);
-            if (text == null) cells[e.getKey()] = air;
+            if (text == null) cells[e.getKey()] = AIR;
             else filledSigns.put(e.getKey(), text);
         }
 
@@ -198,7 +220,18 @@ final class MaceBuilding {
         for (Map.Entry<Integer, List<Item>> e : containers.entrySet()) {
             filledContainers.put(e.getKey(), contents(e.getValue(), fill.loot(), rng));
         }
-        return new Filled(cells, filledSigns, filledContainers);
+
+        if (rotation != StructureRotation.NONE) {
+            Map<BlockData, BlockData> rotated = new IdentityHashMap<>();
+            for (int i = 0; i < cells.length; i++) {
+                cells[i] = rotated.computeIfAbsent(cells[i], b -> {
+                    BlockData r = b.clone();
+                    r.rotate(rotation);
+                    return r;
+                });
+            }
+        }
+        return new Filled(cells, filledSigns, filledContainers, rotation);
     }
 
     /** The sign's four lines, or null to remove it. */
@@ -258,17 +291,34 @@ final class MaceBuilding {
         return out.toString();
     }
 
+    /** Mace's IsValidSign: whether {@link #wrap} fits the whole text on the sign. */
+    static boolean fits(String text) {
+        return wrap(text, true) != null;
+    }
+
     /** Mace's ConvertStringToSignText: word-wrap to 14 columns, "~" breaks the line, short text moves down a line. */
     static String[] wrap(String text) {
+        return java.util.Objects.requireNonNull(wrap(text, false));
+    }
+
+    /** Text that doesn't fit is cut off, or with {@code strict} gives null. */
+    private static String @Nullable [] wrap(String text, boolean strict) {
         String[] lines = {"", "", "", ""};
         String[] words = text.replace("~", "~ ").replace("  ", " ").trim().split(" ");
         int line = 0;
         for (String word : words) {
-            if (lines[line].length() + word.replace("~", "").length() + 1 > SIGN_WIDTH && ++line > 3) break;
+            if (line > 3) {  // a "~" ended the last line and there's more
+                if (strict) return null;
+                break;
+            }
+            if (lines[line].length() + word.replace("~", "").length() + 1 > SIGN_WIDTH && ++line > 3) {
+                if (strict) return null;
+                break;
+            }
             lines[line] = (lines[line] + " " + word).trim();
             if (lines[line].endsWith("~")) {
                 lines[line] = lines[line].substring(0, lines[line].length() - 1);
-                if (++line > 3) break;
+                line++;
             }
         }
         if (lines[2].isEmpty()) {
@@ -303,24 +353,65 @@ final class MaceBuilding {
 
     // ── Placing ───────────────────────────────────────────────────────────
 
-    /** A building with its placeholders resolved. Origin (x0, y0, z0) is its minimum corner. */
+    /**
+     * A building with its placeholders resolved, rotated. Origin (x0, y0, z0) is the minimum
+     * corner of its rotated footprint, {@link #sizeX} by {@link #sizeZ}.
+     */
     final class Filled {
-        private final BlockData[] cells;
+        private final BlockData[] cells;                // source order, already rotated
         private final Map<Integer, String[]> signs;
         private final Map<Integer, ItemStack[]> containers;
+        private final StructureRotation rotation;
+        private final int sizeX, sizeZ;
 
-        private Filled(BlockData[] cells, Map<Integer, String[]> signs, Map<Integer, ItemStack[]> containers) {
+        private Filled(BlockData[] cells, Map<Integer, String[]> signs, Map<Integer, ItemStack[]> containers,
+                       StructureRotation rotation) {
             this.cells = cells;
             this.signs = signs;
             this.containers = containers;
+            this.rotation = rotation;
+            boolean quarter = rotation == StructureRotation.CLOCKWISE_90
+                    || rotation == StructureRotation.COUNTERCLOCKWISE_90;
+            this.sizeX = quarter ? length : width;
+            this.sizeZ = quarter ? width : length;
         }
 
         MaceBuilding building() {
             return MaceBuilding.this;
         }
 
+        int sizeX() {
+            return sizeX;
+        }
+
+        int sizeZ() {
+            return sizeZ;
+        }
+
+        /** The block at (x, y, z) of the rotated building. */
         BlockData block(int x, int y, int z) {
-            return cells[index(x, y, z)];
+            return cells[source(x, y, z)];
+        }
+
+        /** Source index of rotated (x, y, z): the inverse of vanilla's StructureTemplate transform. */
+        private int source(int x, int y, int z) {
+            return switch (rotation) {
+                case NONE -> index(x, y, z);
+                case CLOCKWISE_90 -> index(z, y, length - 1 - x);
+                case CLOCKWISE_180 -> index(width - 1 - x, y, length - 1 - z);
+                case COUNTERCLOCKWISE_90 -> index(width - 1 - z, y, x);
+            };
+        }
+
+        /** Rotated {x, z} of source index i. */
+        private int[] rotated(int i) {
+            int sx = i % width, sz = (i / width) % length;
+            return switch (rotation) {
+                case NONE -> new int[]{sx, sz};
+                case CLOCKWISE_90 -> new int[]{length - 1 - sz, sx};
+                case CLOCKWISE_180 -> new int[]{width - 1 - sx, length - 1 - sz};
+                case COUNTERCLOCKWISE_90 -> new int[]{sz, width - 1 - sx};
+            };
         }
 
         /**
@@ -328,13 +419,13 @@ final class MaceBuilding {
          * Blocks outside the chunk or the world's height are skipped.
          */
         void place(ChunkData data, int chunkX, int chunkZ, int x0, int y0, int z0) {
-            int ax = Math.max(0, chunkX * 16 - x0), bx = Math.min(width, chunkX * 16 + 16 - x0);
-            int az = Math.max(0, chunkZ * 16 - z0), bz = Math.min(length, chunkZ * 16 + 16 - z0);
+            int ax = Math.max(0, chunkX * 16 - x0), bx = Math.min(sizeX, chunkX * 16 + 16 - x0);
+            int az = Math.max(0, chunkZ * 16 - z0), bz = Math.min(sizeZ, chunkZ * 16 + 16 - z0);
             int ay = Math.max(0, data.getMinHeight() - y0), by = Math.min(height, data.getMaxHeight() - y0);
             for (int y = ay; y < by; y++) {
                 for (int z = az; z < bz; z++) {
                     for (int x = ax; x < bx; x++) {
-                        data.setBlock(x0 + x - chunkX * 16, y0 + y, z0 + z - chunkZ * 16, cells[index(x, y, z)]);
+                        data.setBlock(x0 + x - chunkX * 16, y0 + y, z0 + z - chunkZ * 16, cells[source(x, y, z)]);
                     }
                 }
             }
@@ -364,7 +455,8 @@ final class MaceBuilding {
             int layer = width * length;
             for (Map.Entry<Integer, T> e : entries.entrySet()) {
                 int i = e.getKey();
-                int wx = x0 + i % width, wy = y0 + i / layer, wz = z0 + (i / width) % length;
+                int[] xz = rotated(i);
+                int wx = x0 + xz[0], wy = y0 + i / layer, wz = z0 + xz[1];
                 if (wx >> 4 != chunk.getX() || wz >> 4 != chunk.getZ()) continue;
                 Block block = chunk.getWorld().getBlockAt(wx, wy, wz);
                 BlockState state = block.getState();

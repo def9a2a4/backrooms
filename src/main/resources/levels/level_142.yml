@@ -1,0 +1,27 @@
+id: level_142
+display_name: "The Endless City"
+generator: level_142
+environment: NORMAL
+dimension_type: day
+biome: "backrooms:mace_city"
+fixed_time: 10500
+spawn_radius: 0
+meshes: [mace]   # Mace's buildings and word lists (GPLv3), downloaded (config.yml meshes)
+enter_title: "§6142"
+enter_subtitle: "§7The Endless City"
+enter_message: "§7§oEvery city is the same city. None of them end."
+
+# Mace's medieval cities (https://github.com/corbin-auriti/mace-minecraft) with no edge: 59-block
+# city blocks between 5-block streets, forever. Each block is a Mace city of its own (theme,
+# name, buildings packed onto lots in any rotation), some with a gatehouse, a mineshaft under a
+# ladder, or an airship overhead. Built from scripts/mace/extract_schem.py --pack.
+
+exit_triggers:
+  # Placeholder: nothing leads here yet, and leaving is just walking far enough.
+  - type: walk_distance
+    distance_blocks: 3000
+    target_level: level_0
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "§7§oThe streets fold back into hallways."

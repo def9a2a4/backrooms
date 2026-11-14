@@ -173,8 +173,7 @@ event_config:
     radius: 20
     cycles: 4
     toggle_delay_ticks: 5
-    light_y: 85                 # raised sunken-room ceilings reach this high
-    light_y_min: 41             # pendant lights hang as low as this in deep sunken rooms
+    light_y: 69                 # every light, flush or on chains, sits at this y
     light_spacing: 4
     light_material: OCHRE_FROGLIGHT
   blackout:
@@ -183,8 +182,7 @@ event_config:
     chance: 0.05
     radius: 30
     duration_seconds: 15
-    light_y: 85                 # raised sunken-room ceilings reach this high
-    light_y_min: 41             # pendant lights hang as low as this in deep sunken rooms
+    light_y: 69                 # every light, flush or on chains, sits at this y
     light_spacing: 4
     light_material: OCHRE_FROGLIGHT
   footstep_echo:

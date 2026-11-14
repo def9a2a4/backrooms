@@ -50,6 +50,11 @@
       "file": "gobekli_tepe-fc00bc384f21.mesh.gz",
       "sha256": "fc00bc384f21ef1d05b9b6c00fdd447fc000941dc043768aa7cf11845b6857b5",
       "bytes": 8535533
+    },
+    "mace": {
+      "file": "mace-696ec0c6d899.zip",
+      "sha256": "696ec0c6d8995e4f1eba427df6713ac79b66cf317ce0c14e6730d906316dc1eb",
+      "bytes": 194513
     }
   }
 }

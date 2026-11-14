@@ -31,8 +31,8 @@ import static name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Pat
  *   <li>Set pieces per 128-block macro cell ({@link Level0Features}): sunken
  *   rooms (some with Level 101 houses) and huge stairwell pits to the void.</li>
  *   <li>Carpet, sometimes with damp mud / soul sand underneath.</li>
- *   <li>Lights on a 4-block grid: flush in the ceiling, or hung on chains in
- *   sunken rooms whose ceiling is also raised (light events scan for both).</li>
+ *   <li>Lights on a 4-block grid, all at y69: flush in the ceiling, or hung on
+ *   chains from the raised ceilings of some sunken rooms.</li>
  * </ol>
  */
 public class Level0ChunkGenerator extends BackroomsChunkGenerator {
@@ -68,7 +68,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
     private static final int REGION_WALLS = 1;
     private static final int REGION_PILLARS = 2;
 
-    private static final PatchPalette FLOOR_PALETTE = new PatchPalette(0xF100L, 320,
+    private static final PatchPalette FLOOR_PALETTE = new PatchPalette(0xF100L, 1024,
             entry(Material.YELLOW_TERRACOTTA, 6),
             entry(Material.YELLOW_CONCRETE, 3),
             entry(Material.SMOOTH_SANDSTONE, 3),
@@ -80,7 +80,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
             entry(Material.STRIPPED_MANGROVE_WOOD, 2));
 
     // Polished deepslate is ~1% of ceiling patches.
-    private static final PatchPalette CEILING_PALETTE = new PatchPalette(0xCE11L, 384,
+    private static final PatchPalette CEILING_PALETTE = new PatchPalette(0xCE11L, 1152,
             entry(Material.YELLOW_TERRACOTTA, 6),
             entry(Material.YELLOW_CONCRETE, 3),
             entry(Material.SMOOTH_SANDSTONE, 3),
@@ -96,7 +96,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
             entry(Material.POLISHED_GRANITE, 10),
             entry(Material.POLISHED_DEEPSLATE, 1));
 
-    private static final PatchPalette WALL_PALETTE = new PatchPalette(0xA11L, 256,
+    private static final PatchPalette WALL_PALETTE = new PatchPalette(0xA11L, 896,
             entry(Material.YELLOW_TERRACOTTA, 6),
             entry(Material.YELLOW_CONCRETE, 2),
             entry(Material.SMOOTH_SANDSTONE, 2),
@@ -249,9 +249,9 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     /**
-     * Grid lights: flush in the ceiling, or a pendant on chains where a raised
-     * room hangs its lights low. A pendant whose drop is blocked (stairs, a
-     * house) falls back to a flush light.
+     * Grid lights, all at the same y: flush in the ceiling, or on chains from a
+     * raised ceiling above. A pendant whose drop is blocked is left out rather
+     * than moved, so no light ever sits off that level.
      */
     private void placeLights(Level0Chunk c) {
         for (int x = 0; x < 16; x++) {
@@ -263,10 +263,11 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
                 for (int y = ly; y < ceiling && clear; y++) {
                     clear = c.data.getType(x, y, z) == Material.AIR;
                 }
-                if (ly >= ceiling || !clear) {
+                if (ly >= ceiling) {
                     c.data.setBlock(x, ceiling, z, Material.OCHRE_FROGLIGHT);
                     continue;
                 }
+                if (!clear) continue;
                 c.data.setBlock(x, ly, z, Material.OCHRE_FROGLIGHT);
                 for (int y = ly + 1; y < ceiling; y++) {
                     c.data.setBlock(x, y, z, Material.IRON_CHAIN);

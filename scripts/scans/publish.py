@@ -1,7 +1,8 @@
 """Publish the level meshes. They're kept out of the jar to keep it light: each is copied into
 meshes/ (gitignored) under a content-addressed name (<mesh>-<sha256[:12]>.mesh.gz, so a URL
 never changes meaning), and the manifest the plugin ships is rewritten
-(src/main/resources/meshes.json: file, sha256, bytes per mesh).
+(src/main/resources/meshes.json: file, sha256, bytes per mesh). Level 142's Mace pack rides
+along as "mace" (mace-<sha256[:12]>.zip): same download, same check.
 
 Servers download https://def9a2a4.github.io/backrooms-data/meshes/<file> and check the hash, so
 new meshes only reach servers once meshes/ is copied into the backrooms-data repo's meshes/ folder
@@ -37,6 +38,8 @@ MESHES = {
     "undercroft_grey": ".temp/meshes/skatepark_grey_16x.mesh.gz",
     "undercroft_color": ".temp/meshes/skatepark_16x.mesh.gz",
     "gobekli_tepe": ".temp/meshes/gobekli_16x.mesh.gz",
+    # scripts/mace/extract_schem.py --pack (not a mesh: Level 142's buildings and word lists)
+    "mace": ".temp/mace/mace-buildings.zip",
 }
 
 CREDITS = """Meshes for the Backrooms Minecraft plugin (https://github.com/def9a2a4/backrooms)
@@ -77,7 +80,22 @@ https://github.com/alecjacobson/common-3d-test-models (commit 8a4f864):
   (scripts/testscene/build_meshes.py).
 
 All of them are voxelized into Minecraft worlds at runtime.
+
+mace (Level 142): mace-<sha256 prefix>.zip
+  The buildings and word lists of Mace, a Minecraft city generator by Robson,
+  https://github.com/corbin-auriti/mace-minecraft, GNU GPL v3.
+  Changes: buildings copied out of Mace's template world into Sponge Schematic v3 files with
+  their blocks converted to Minecraft 1.21.11 (scripts/mace/extract_schem.py). The archive holds
+  Mace's licence and is distributed under the same licence, GPL v3.
 """
+
+
+def suffix(src):
+    """The published file's extension: .mesh.gz for meshes, else the build output's own."""
+    return ".mesh.gz" if src.endswith(".mesh.gz") else Path(src).suffix
+
+
+PUBLISHED = ("*.mesh.gz", "*.zip")
 
 
 def install(dest: Path):
@@ -90,7 +108,7 @@ def install(dest: Path):
         if not (target.exists() and target.stat().st_size == m["bytes"]):
             shutil.copyfile(OUT / m["file"], target)
             print(f"installed {target}")
-    for old in [*dest.glob("*.mesh.gz"), *dest.glob("*.part")]:
+    for old in [*(f for g in PUBLISHED for f in dest.glob(g)), *dest.glob("*.part")]:
         if old.name not in keep:
             old.unlink()
 
@@ -116,14 +134,14 @@ def main():
             raise SystemExit(f"{name}: {src} not built")
         data = path.read_bytes()
         sha = hashlib.sha256(data).hexdigest()
-        file = f"{name}-{sha[:12]}.mesh.gz"
+        file = f"{name}-{sha[:12]}{suffix(src)}"
         if not (OUT / file).exists():
             (OUT / file).write_bytes(data)
         manifest[name] = {"file": file, "sha256": sha, "bytes": len(data)}
         print(f"{name:18s} {len(data) / 1048576:6.2f} MB  {file}")
 
     keep = {m["file"] for m in manifest.values()}
-    for f in OUT.glob("*.mesh.gz"):
+    for f in (f for g in PUBLISHED for f in OUT.glob(g)):
         if f.name not in keep:
             f.unlink()
             print(f"removed {f.name}")
