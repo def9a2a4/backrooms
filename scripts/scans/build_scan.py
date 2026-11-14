@@ -124,6 +124,9 @@ MODELS = {
                             [11.76, 1.07, 9.57, 14.1, 3.86, 10.69],
                             [11.71, 1.11, 15.69, 14.14, 3.57, 17.13],
                             [11.85, 1.04, -3.51, 13.87, 3.27, -1.44]]},
+        # the blue whale is a skeleton: all bone, whatever the scan's colors say
+        # (the jaw dips to 4.5 m; past z 18.5 is the staircase landing)
+        "force": [{"block": "bone_block", "boxes": [[-6, 4.4, -6, 6, 15, 18.5]]}],
     },
 }
 
@@ -244,6 +247,20 @@ def case_glass(cfg: dict, verts: np.ndarray, vmat: np.ndarray, glass_mat: int) -
     for b in case_boxes(cfg):
         vmat[in_box(verts, b[:3], b[3:])] = glass_mat
     return vmat
+
+
+def forced_blocks(cfg: dict, pal: list) -> list:
+    """The model's `force` rules as [(palette index, box)]: everything in a box (cells and the
+    decimated mesh's vertices) is that block. Boxes as for the glass rule."""
+    return [(pal.index(r["block"]), b) for r in cfg.get("force", []) if r["block"] in pal
+            for b in r["boxes"]]
+
+
+def force_mats(cfg: dict, pal: list, points: np.ndarray, mat: np.ndarray) -> np.ndarray:
+    mat = mat.copy()
+    for m, b in forced_blocks(cfg, pal):
+        mat[in_box(points, b[:3], b[3:])] = m
+    return mat
 
 
 def load_faces(name: str, cfg: dict):
@@ -483,7 +500,8 @@ def export_cells(path, cfg, cell, origin, dims, keys, mean, contrast, up, wsum, 
         "fixed": {"cast": cfg.get("cast", 0.0), "chroma": cfg.get("chroma", 1.0),
                   "deadzone": cfg.get("deadzone", 0.0), "forced": int(forced_mat),
                   "forced_fraction": forced_fraction,
-                  "case_boxes": case_boxes(cfg) if forced_mat >= 0 else []},
+                  "case_boxes": case_boxes(cfg) if forced_mat >= 0 else [],
+                  "force": [{"mat": m, "box": b} for m, b in forced_blocks(cfg, pal)]},
         "tune": tune(cfg),
     }
     h = json.dumps(header).encode()
@@ -659,10 +677,14 @@ def build(name: str, args):
             pal_ids = pal_ids + ["glass"]
             cfg = dict(cfg, penalty={**cfg.get("penalty", {}), "glass": 1e9})
             print(f"  glass: {area[glass].sum() / area.sum() * 100:.1f}% of the surface")
+        for b in {r["block"] for r in cfg.get("force", [])} - set(pal_ids):
+            # only by the force rule, like glass
+            pal_ids = pal_ids + [b]
+            cfg = dict(cfg, penalty={**cfg.get("penalty", {}), b: 1e9})
         cfg = dict(cfg, palette=pal_ids)
         cfg["tune"] = {**cfg.get("tune", {}), **{k: v for k, v in vars(args).items()
                                                  if k in TUNE_DEFAULTS and v is not None}}
-        match = dict(forced=glass, forced_mat=len(pal_ids) - 1 if glass is not None else -1,
+        match = dict(forced=glass, forced_mat=pal_ids.index("glass") if glass is not None else -1,
                      forced_fraction=cfg.get("glass", {}).get("cell_fraction", 0.5))
         if args.cells_only:
             match_cells(tri.mean(axis=1), area, lab, up, cfg, args.tex_cell,
@@ -670,6 +692,8 @@ def build(name: str, args):
             return
         grid, cell_centers, cell_mat, plab = match_cells(
             tri.mean(axis=1), area, lab, up, cfg, args.tex_cell, **match)
+        cell_mat = force_mats(cfg, pal_ids, cell_centers, cell_mat)
+        grid = (*grid[:3], cell_mat.astype(np.uint8))
         print(f"  tune {tune(cfg)}")
         # faces take their cell's block, so the per-vertex fallback agrees with the grid
         _, near = cKDTree(cell_centers).query(tri.mean(axis=1))
@@ -701,6 +725,7 @@ def build(name: str, args):
         vmat = transfer(tri.mean(axis=1), area, mat, dec.vertices, len(pal))
         if "glass" in pal:
             vmat = case_glass(cfg, dec.vertices, vmat, pal.index("glass"))
+        vmat = force_mats(cfg, pal, dec.vertices, vmat)
         size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out)
         print(f"  {len(dec.faces)} tris -> {size / 1024:.1f} KB")
         if size <= budget * (1 + args.tolerance / 2) and (best is None or len(dec.faces) > best[0]):
@@ -713,6 +738,7 @@ def build(name: str, args):
         vmat = transfer(tri.mean(axis=1), area, mat, dec.vertices, len(pal))
         if "glass" in pal:
             vmat = case_glass(cfg, dec.vertices, vmat, pal.index("glass"))
+        vmat = force_mats(cfg, pal, dec.vertices, vmat)
         size = write_mesh(dec.vertices, dec.faces, vmat, pal, variants, 0.0, island, out)
     geo = size
     if args.tex_cell > 0:

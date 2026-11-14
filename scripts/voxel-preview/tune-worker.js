@@ -249,6 +249,14 @@ function run(t, colorsOnly = false) {
   if (fx.forced >= 0) {
     for (let i = 0; i < n; i++) if (frac[i] >= fx.forced_fraction) cur[i] = fx.forced;
   }
+  // force rule (build_scan.py force_mats): cells centered in a box are that block
+  if (fx.force?.length) {
+    const cc = cellCenters();
+    for (let i = 0; i < n; i++) {
+      const m = forcedAt(cc[i * 3], cc[i * 3 + 1], cc[i * 3 + 2]);
+      if (m >= 0) cur[i] = m;
+    }
+  }
   return { mats: cur, colors, norm };
 }
 
@@ -305,7 +313,20 @@ function vertexMats(mats) {
       if (x >= b[0] && y >= b[1] && z >= b[2] && x < b[3] && y < b[4] && z < b[5]) { out[v] = h.fixed.forced; break; }
     }
   }
+  for (let v = 0; v < nv && h.fixed.force?.length; v++) {
+    const m = forcedAt(VERTS[v * 3], VERTS[v * 3 + 1], VERTS[v * 3 + 2]);
+    if (m >= 0) out[v] = m;
+  }
   return out;
+}
+
+/** The force rule's block at a point, or -1 (the last matching box wins, as in force_mats). */
+function forcedAt(x, y, z) {
+  let m = -1;
+  for (const { mat, box: b } of C.h.fixed.force) {
+    if (x >= b[0] && y >= b[1] && z >= b[2] && x < b[3] && y < b[4] && z < b[5]) m = mat;
+  }
+  return m;
 }
 
 onmessage = async ({ data }) => {
