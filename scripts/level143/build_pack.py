@@ -18,6 +18,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from buildings import CATALOG  # noqa: E402
+import buildings_extra  # noqa: E402,F401  (registers more kinds)
+import sky  # noqa: E402,F401  (registers more sky features)
 from parts import STYLES  # noqa: E402
 from schem import Checker  # noqa: E402
 import words  # noqa: E402
@@ -95,7 +97,7 @@ def main():
     if args.only:
         return 1 if checker.bad else 0
 
-    pack = args.out / PACK_NAME
+    pack = args.out.resolve() / PACK_NAME
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
         for name, data in sorted(entries):
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
