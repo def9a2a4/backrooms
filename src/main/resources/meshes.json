@@ -55,6 +55,11 @@
       "file": "mace-68a483e43c57.zip",
       "sha256": "68a483e43c57f436bc935727ad64b0d86c8f446cb2d3f427f991ab662e36709a",
       "bytes": 198280
+    },
+    "level143": {
+      "file": "level143-6aa5149bd479.zip",
+      "sha256": "6aa5149bd479b858f7bd35eb628e690fe477c3118d27e6594fa026f0e25eb19c",
+      "bytes": 434848
     }
   }
 }

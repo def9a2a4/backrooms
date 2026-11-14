@@ -52,20 +52,24 @@ final class MaceCity {
     private static final int[] BUILDING_FREQUENCY = {9, 8, 7, 6, 5};
     private static final int[] FARM_FREQUENCY = {20, 16, 12, 8, 4};
 
-    // ── Themes (Resources/Themes/*.xml) ───────────────────────────────────
+    // ── Themes ────────────────────────────────────────────────────────────
 
+    /**
+     * A city's look: Mace's three (Resources/Themes/*.xml) for Level 142, and Level 143's own,
+     * whose buildings are in its pack (scripts/level143). {@code file} picks a theme's buildings
+     * by their "files" entry; {@code weight} is how often the theme comes up among its level's
+     * themes; soil, rock and trees are for the countryside around the city.
+     */
     enum Theme {
-        MEDIEVAL("Medieval Buildings", "adjectives", "nouns", true,
-                List.of("Drop to Bedrock", "Lava", "Fire", "Water"),
-                List.of("cobweb", "craftersguild", "creeper", "cross", "heart", "pickaxe", "pride flag", "shield",
-                        "sword", "tree", "yin and yang"),
-                List.of(Material.SHORT_GRASS, Material.FERN, Material.DANDELION, Material.POPPY),
-                List.of(Material.STONE, Material.STONE, Material.STONE, Material.DIRT, Material.DIRT, Material.SAND,
-                        Material.GRAVEL),
-                List.of(Material.STONE, Material.OAK_PLANKS, Material.BRICKS, Material.STONE_BRICKS),
-                List.of("stone_raised", "woodplanks_raised", "brick_raised", "stonebrick_raised", "stonebrick", "wood"),
-                4, Material.GRASS_BLOCK),
-        NOVV("Novv's Medieval Buildings", "adjectives", "novv", true,
+        DESERT("Desert Buildings", 20, "desert_adjectives", "desert_nouns", false,
+                List.of("Cactus", "Drop to Bedrock"),
+                List.of("ankh", "cobweb", "cross", "heart", "pride flag", "shield", "yin and yang"),
+                List.of(Material.DEAD_BUSH, Material.CACTUS),
+                List.of(Material.STONE, Material.DIRT, Material.SAND, Material.SAND, Material.GRAVEL, Material.SANDSTONE),
+                List.of(Material.SANDSTONE),
+                List.of("sandstone_raised", "stone_raised", "stonebrick"),
+                0, Material.SAND, Material.SAND, Material.SANDSTONE, false),
+        NOVV("Novv's Medieval Buildings", 35, "adjectives", "novv", true,
                 List.of("Drop to Bedrock", "Lava", "Fire", "Water"),
                 List.of("cobweb", "craftersguild", "creeper", "cross", "heart", "pickaxe", "pride flag", "shield",
                         "sword", "tree", "yin and yang"),
@@ -75,27 +79,63 @@ final class MaceCity {
                 List.of(Material.STONE, Material.OAK_PLANKS, Material.STONE_BRICKS),
                 List.of("stone_raised", "woodplanks_raised", "brick_raised", "stonebrick_raised", "stonebrick", "stone",
                         "wood"),
-                3, Material.GRASS_BLOCK),
-        DESERT("Desert Buildings", "desert_adjectives", "desert_nouns", false,
-                List.of("Cactus", "Drop to Bedrock"),
-                List.of("ankh", "cobweb", "cross", "heart", "pride flag", "shield", "yin and yang"),
-                List.of(Material.DEAD_BUSH, Material.CACTUS),
-                List.of(Material.STONE, Material.DIRT, Material.SAND, Material.SAND, Material.GRAVEL, Material.SANDSTONE),
-                List.of(Material.SANDSTONE),
-                List.of("sandstone_raised", "stone_raised", "stonebrick"),
-                0, Material.SAND);
+                3, Material.GRASS_BLOCK, Material.DIRT, Material.STONE, true),
+        MEDIEVAL("Medieval Buildings", 45, "adjectives", "nouns", true,
+                List.of("Drop to Bedrock", "Lava", "Fire", "Water"),
+                List.of("cobweb", "craftersguild", "creeper", "cross", "heart", "pickaxe", "pride flag", "shield",
+                        "sword", "tree", "yin and yang"),
+                List.of(Material.SHORT_GRASS, Material.FERN, Material.DANDELION, Material.POPPY),
+                List.of(Material.STONE, Material.STONE, Material.STONE, Material.DIRT, Material.DIRT, Material.SAND,
+                        Material.GRAVEL),
+                List.of(Material.STONE, Material.OAK_PLANKS, Material.BRICKS, Material.STONE_BRICKS),
+                List.of("stone_raised", "woodplanks_raised", "brick_raised", "stonebrick_raised", "stonebrick", "wood"),
+                4, Material.GRASS_BLOCK, Material.DIRT, Material.STONE, true),
+
+        // Level 143
+        TIMBER("Timber Town", 40, "timber_prefix", "timber_suffix", true,
+                List.of("Water", "Water", "Drop to Bedrock"),
+                List.of("timber_key", "timber_eye", "timber_door", "timber_bell", "timber_tower"),
+                List.of(Material.SHORT_GRASS, Material.FERN, Material.POPPY, Material.OXEYE_DAISY, Material.CORNFLOWER),
+                List.of(Material.STONE, Material.STONE, Material.ANDESITE, Material.DIRT, Material.GRAVEL, Material.TUFF),
+                List.of(Material.STONE_BRICKS, Material.COBBLESTONE, Material.MOSSY_STONE_BRICKS),
+                List.of("cobble", "stonebrick", "gravel", "stonebrick_raised", "dirt_path"),
+                4, Material.GRASS_BLOCK, Material.DIRT, Material.STONE, true),
+        OCHRE("Ochre Town", 35, "ochre_prefix", "ochre_suffix", true,
+                List.of("Water", "Cactus", "Drop to Bedrock"),
+                List.of("ochre_key", "ochre_door", "ochre_moon", "ochre_lantern", "ochre_spiral"),
+                List.of(Material.DEAD_BUSH, Material.SHORT_DRY_GRASS, Material.SHORT_GRASS, Material.ALLIUM),
+                List.of(Material.STONE, Material.GRANITE, Material.TERRACOTTA, Material.SANDSTONE, Material.DIRT,
+                        Material.GRAVEL),
+                List.of(Material.SMOOTH_SANDSTONE, Material.MUD_BRICKS, Material.CUT_SANDSTONE),
+                List.of("sandstone_raised", "smooth_sandstone", "mud_brick_raised", "packed_mud"),
+                3, Material.COARSE_DIRT, Material.DIRT, Material.TERRACOTTA, true),
+        ASHEN("Ashen Town", 25, "ashen_prefix", "ashen_suffix", true,
+                List.of("Lava", "Drop to Bedrock", "Water"),
+                List.of("ashen_eye", "ashen_moon", "ashen_lantern", "ashen_bell", "ashen_spiral"),
+                List.of(Material.FERN, Material.DEAD_BUSH, Material.SHORT_GRASS, Material.WITHER_ROSE),
+                List.of(Material.DEEPSLATE, Material.DEEPSLATE, Material.TUFF, Material.STONE, Material.GRAVEL,
+                        Material.COAL_ORE),
+                List.of(Material.DEEPSLATE_BRICKS, Material.POLISHED_BLACKSTONE_BRICKS, Material.COBBLED_DEEPSLATE),
+                List.of("deepslate_raised", "blackstone", "cobbled_deepslate", "gravel"),
+                3, Material.PODZOL, Material.COARSE_DIRT, Material.DEEPSLATE, true);
+
+        /** Level 142's themes and Level 143's. */
+        static final List<Theme> MACE = List.of(DESERT, NOVV, MEDIEVAL);
+        static final List<Theme> LEVEL_143 = List.of(TIMBER, OCHRE, ASHEN);
 
         final String file, prefixList, suffixList;
-        final boolean farms;
+        final int weight;
+        final boolean farms, trees;
         final List<String> moats, emblems, paths;
         final List<Material> flowers, underground, walls;
         final int farmSize;
-        final Material ground;
+        final Material ground, soil, rock;
 
-        Theme(String file, String prefixList, String suffixList, boolean farms, List<String> moats,
+        Theme(String file, int weight, String prefixList, String suffixList, boolean farms, List<String> moats,
               List<String> emblems, List<Material> flowers, List<Material> underground, List<Material> walls,
-              List<String> paths, int farmSize, Material ground) {
+              List<String> paths, int farmSize, Material ground, Material soil, Material rock, boolean trees) {
             this.file = file;
+            this.weight = weight;
             this.prefixList = prefixList;
             this.suffixList = suffixList;
             this.farms = farms;
@@ -107,6 +147,9 @@ final class MaceCity {
             this.paths = paths;
             this.farmSize = farmSize;
             this.ground = ground;
+            this.soil = soil;
+            this.rock = rock;
+            this.trees = trees;
         }
     }
 
@@ -116,11 +159,23 @@ final class MaceCity {
             return cityLength + EDGE * 2;
         }
 
-        /** A city {@code chunks} chunks across (odd, like Mace's, so the main streets meet in the middle). */
-        static Plan of(long seed, int chunks) {
+        /**
+         * A city {@code chunks} chunks across (odd, like Mace's, so the main streets meet in the
+         * middle), in one of {@code themes} by weight.
+         */
+        static Plan of(long seed, int chunks, List<Theme> themes) {
             Random rng = new Random(seed);
-            int t = rng.nextInt(100);
-            Theme theme = t < 20 ? Theme.DESERT : t < 55 ? Theme.NOVV : Theme.MEDIEVAL;
+            int total = 0;
+            for (Theme t : themes) total += t.weight;
+            int roll = rng.nextInt(total);
+            Theme theme = themes.get(themes.size() - 1);
+            for (Theme t : themes) {
+                roll -= t.weight;
+                if (roll < 0) {
+                    theme = t;
+                    break;
+                }
+            }
             int farm = theme.farms ? Math.max(2, theme.farmSize) * 16 : 0;
             return new Plan(theme, Math.max(5, chunks | 1) * 16, farm, rng.nextLong());
         }
@@ -175,7 +230,7 @@ final class MaceCity {
         hasMoat = hasWalls = hasDrawbridges = hasGuardTowers = hasBuildings = hasPaths = hasMainStreets = true;
         hasMineshaft = hasEmblems = hasOutsideLights = hasTowerAddition = hasFlowers = hasStreetLights = true;
         hasTorchesOnWalkways = true;
-        hasSkyFeature = true;   // Mace's Desert theme had none; here every city gets the balloon or airship
+        hasSkyFeature = true;   // Mace's Desert theme had none; here every city gets a balloon or airship
         ground = theme.ground.createBlockData();
         moatType = pick(theme.moats);
         emblemType = pick(theme.emblems);
@@ -226,6 +281,15 @@ final class MaceCity {
             case "stonebrick" -> pathBlock = Material.STONE_BRICKS.createBlockData();
             case "stone" -> pathBlock = Material.STONE.createBlockData();
             case "wood" -> pathBlock = (rng.nextBoolean() ? Material.OAK_LOG : Material.SPRUCE_LOG).createBlockData();
+            case "cobble" -> pathBlock = Material.COBBLESTONE.createBlockData();
+            case "gravel" -> pathBlock = Material.GRAVEL.createBlockData();
+            case "dirt_path" -> pathBlock = Material.DIRT_PATH.createBlockData();
+            case "smooth_sandstone" -> pathBlock = Material.SMOOTH_SANDSTONE.createBlockData();
+            case "packed_mud" -> pathBlock = Material.PACKED_MUD.createBlockData();
+            case "blackstone" -> pathBlock = Material.POLISHED_BLACKSTONE_BRICKS.createBlockData();
+            case "cobbled_deepslate" -> pathBlock = Material.COBBLED_DEEPSLATE.createBlockData();
+            case "mud_brick_raised" -> raised(Material.MUD_BRICKS, Material.MUD_BRICK_SLAB);
+            case "deepslate_raised" -> raised(Material.DEEPSLATE_TILES, Material.DEEPSLATE_TILE_SLAB);
             default -> pathBlock = Material.SANDSTONE.createBlockData();
         }
     }
@@ -996,7 +1060,7 @@ final class MaceCity {
                 insert(b, x, z, BLOCK_START, area, -1, b.sourceY, false);
                 if (b.type.equals("mineshaft_entrance")) {
                     mine = new int[]{BLOCK_START + x + b.width / 2, BLOCK_START + z + b.length / 2};
-                    List<MaceBuilding> sky = lib.ofType("sky_feature");   // only listed in the Medieval theme
+                    List<MaceBuilding> sky = lib.ofType("sky_feature");   // Mace lists them in the Medieval theme only
                     if (hasSkyFeature && !sky.isEmpty()) {
                         MaceBuilding balloon = select(sky, BUILDING_FREQUENCY, "frequency");
                         insert(balloon, x + (b.width - balloon.width) / 2, z + (b.length - balloon.length) / 2,

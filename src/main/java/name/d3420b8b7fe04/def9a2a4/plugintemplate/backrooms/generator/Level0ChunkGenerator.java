@@ -29,7 +29,8 @@ import static name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Pat
  *   <li>Furnishing per 48-block zone ({@link Level0Zones}): the classic random
  *   walls and pillars, or cubicle farms, cafeterias, offices, corridors.</li>
  *   <li>Set pieces per 128-block macro cell ({@link Level0Features}): sunken
- *   rooms (some with Level 101 houses) and huge stairwell pits to the void.</li>
+ *   rooms (some with Level 101 houses), huge stairwell pits to the void, and
+ *   multi-storey oak office buildings.</li>
  *   <li>Carpet, sometimes with damp mud / soul sand underneath.</li>
  *   <li>Lights on a 4-block grid, all at y69: flush in the ceiling, or hung on
  *   chains from the raised ceilings of some sunken rooms.</li>
@@ -117,6 +118,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
     private int roomCellChance = 35;    // percent of 128-block cells with a sunken room
     private int pitCellChance = 10;     // percent of 128-block cells with a pit
     private int houseChunkChance = 45;  // percent of eligible chunks in a house room
+    private int buildingCellChance = 12; // percent of 128-block cells with an office building
 
     @Override
     public void configure(@Nullable ConfigurationSection config) {
@@ -124,6 +126,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
         roomCellChance = config.getInt("room_cell_chance", roomCellChance);
         pitCellChance = config.getInt("pit_cell_chance", pitCellChance);
         houseChunkChance = config.getInt("house_chunk_chance", houseChunkChance);
+        buildingCellChance = config.getInt("building_cell_chance", buildingCellChance);
     }
 
     @Override
@@ -168,7 +171,7 @@ public class Level0ChunkGenerator extends BackroomsChunkGenerator {
         // --- Set pieces ---
         int cellX = Math.floorDiv(chunkX * 16, Level0Features.MACRO);
         int cellZ = Math.floorDiv(chunkZ * 16, Level0Features.MACRO);
-        Level0Features.render(c, Level0Features.featureAt(seed, cellX, cellZ, roomCellChance, pitCellChance),
+        Level0Features.render(c, Level0Features.featureAt(seed, cellX, cellZ, roomCellChance, pitCellChance, buildingCellChance),
                 alphaStructures, houseChunkChance);
 
         placeCarpet(c);

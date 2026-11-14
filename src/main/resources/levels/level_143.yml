@@ -1,0 +1,28 @@
+id: level_143
+display_name: "The Planned City"
+generator: level_143
+environment: NORMAL
+dimension_type: day
+biome: "backrooms:mace_city"
+fixed_time: 10500
+spawn_radius: 0
+meshes: [level143]   # the generated buildings (config.yml meshes)
+enter_title: "§6143"
+enter_subtitle: "§7The Planned City"
+enter_message: "§7§oSomebody drew all of this up. Nobody moved in."
+
+# Level 142's walled cities (moat, walls, gatehouses, guard towers, streets and districts, farms,
+# seven levels of mineshaft), built from buildings drawn by rules instead of by hand: houses, row
+# houses, shops, taverns, chapels, town halls, markets, parks, graveyards, gatehouses, mine huts,
+# balloons and airships, in three styles (timber, ochre, ashen). Built from
+# scripts/level143/build_pack.py.
+
+exit_triggers:
+  # Placeholder: nothing leads here yet, and leaving is just walking far enough.
+  - type: walk_distance
+    distance_blocks: 3000
+    target_level: level_0
+    transition:
+      blindness_ticks: 60
+      delay_ticks: 20
+      message: "§7§oThe streets fold back into hallways."

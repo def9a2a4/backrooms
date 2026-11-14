@@ -25,7 +25,8 @@ import java.util.Random;
  * point where the old world stops pretending to be ordinary. Pillar fields,
  * an obsidian cube, a glass terrarium around a house, a dirt sheet hanging in
  * the sky, a staircase to nowhere, a giant alpha oak, and giant portraits —
- * a face, a head, a whole statue — painted from the skins of real players.
+ * a face, a head, a whole statue — painted from the skins of real players,
+ * and (rarely) an installation: a control centre among radars and hangars.
  * Plus the Wall, which runs for kilometres and has one gap.
  *
  * The world is divided into square cells (megastructure_cell_size, 384-1024
@@ -45,7 +46,7 @@ final class AlphaMegastructures {
 
     private enum Kind {
         PILLAR_FIELD(5), CUBE(2), TERRARIUM(3), SKY_SHEET(3), STAIRCASE(4),
-        GIANT_OAK(4), FACE(3), HEAD(3), STATUE(3);
+        GIANT_OAK(4), FACE(3), HEAD(3), STATUE(3), INSTALLATION(1);
 
         final int weight;
         Kind(int weight) { this.weight = weight; }
@@ -171,6 +172,12 @@ final class AlphaMegastructures {
                 return new GiantOak(center(r, cellMinX, half) - 5 * s / 2, center(r, cellMinZ, half) - 5 * s / 2,
                         s, siteSeed);
             }
+            case INSTALLATION -> {
+                int size = Math.min(cell - 2 * EDGE - 2, 320);
+                int x0 = center(r, cellMinX, size / 2 + 1) - size / 2;
+                int z0 = center(r, cellMinZ, size / 2 + 1) - size / 2;
+                return new Installation(x0, z0, size);
+            }
             default -> {
                 int scale, side;
                 switch (kind) {
@@ -286,6 +293,20 @@ final class AlphaMegastructures {
             int cx0 = chunkX * 16, cz0 = chunkZ * 16;
             return maxX() + pad >= cx0 && minX() - pad <= cx0 + 15
                     && maxZ() + pad >= cz0 && minZ() - pad <= cz0 + 15;
+        }
+    }
+
+    // ── Installation ─────────────────────────────────────────────────────
+
+    /** A control centre with its radars and hangars (AlphaInstallation), abandoned on the plain. */
+    private record Installation(int x0, int z0, int size) implements Site {
+        public int minX() { return x0; }
+        public int minZ() { return z0; }
+        public int maxX() { return x0 + size - 1; }
+        public int maxZ() { return z0 + size - 1; }
+
+        public void place(Slice s) {
+            AlphaInstallation.get(s.seed, x0, z0, size).place(s.data, s.chunkX, s.chunkZ);
         }
     }
 

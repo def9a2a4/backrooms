@@ -24,6 +24,8 @@ import static name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Lev
  *   <li><b>Pits</b>: a 25x25 shaft open to the void, with a 3-wide staircase
  *   of straight flights and square corner landings around its walls that
  *   simply runs out partway down.</li>
+ *   <li><b>Office buildings</b> ({@link Level0Building}): oak, several
+ *   storeys, standing free in a hall or embedded in the slab.</li>
  * </ul>
  */
 final class Level0Features {
@@ -47,7 +49,7 @@ final class Level0Features {
             { Material.STRIPPED_BIRCH_WOOD, Material.BIRCH_STAIRS },
     };
 
-    enum Kind { NONE, ROOM, PIT }
+    enum Kind { NONE, ROOM, PIT, BUILDING }
 
     /** x0..x1 / z0..z1 inclusive: the room floor, or the pit shaft. */
     record Feature(Kind kind, int x0, int z0, int x1, int z1, long hash) {
@@ -66,15 +68,27 @@ final class Level0Features {
     private Level0Features() {}
 
     static Feature featureAt(long seed, int cellX, int cellZ, int roomChance, int pitChance) {
+        return featureAt(seed, cellX, cellZ, roomChance, pitChance, 0);
+    }
+
+    static Feature featureAt(long seed, int cellX, int cellZ, int roomChance, int pitChance, int buildingChance) {
         long h = hash(seed, cellX, cellZ, 0xFEA7L);
         int roll = pick(h, 0, 100);
-        Kind kind = roll < pitChance ? Kind.PIT : roll < pitChance + roomChance ? Kind.ROOM : Kind.NONE;
+        Kind kind = roll < pitChance ? Kind.PIT
+                : roll < pitChance + roomChance ? Kind.ROOM
+                : roll < pitChance + roomChance + buildingChance ? Kind.BUILDING
+                : Kind.NONE;
         if (kind == Kind.NONE) return Feature.NONE;
 
         int cx0 = cellX * MACRO + CELL_MARGIN, cz0 = cellZ * MACRO + CELL_MARGIN;
         int avail = MACRO - 2 * CELL_MARGIN;
         Feature f;
-        if (kind == Kind.PIT) {
+        if (kind == Kind.BUILDING) {
+            Level0Building b = Level0Building.get(h, avail);
+            int x0 = cx0 + pick(h, 8, avail - b.worldSizeX() + 1);
+            int z0 = cz0 + pick(h, 16, avail - b.worldSizeZ() + 1);
+            f = new Feature(kind, x0, z0, x0 + b.worldSizeX() - 1, z0 + b.worldSizeZ() - 1, h);
+        } else if (kind == Kind.PIT) {
             int span = PIT_SIZE + 2 * PIT_APRON;
             int x0 = cx0 + PIT_APRON + pick(h, 8, avail - span + 1);
             int z0 = cz0 + PIT_APRON + pick(h, 16, avail - span + 1);
@@ -120,6 +134,7 @@ final class Level0Features {
         switch (f.kind()) {
             case ROOM -> renderRoom(c, f, room(f), alpha, houseChance);
             case PIT -> renderPit(c, f);
+            case BUILDING -> Level0Building.get(f.hash(), MACRO - 2 * CELL_MARGIN).render(c, f.x0(), f.z0());
             case NONE -> { }
         }
     }

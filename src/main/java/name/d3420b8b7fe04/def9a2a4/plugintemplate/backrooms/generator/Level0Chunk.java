@@ -84,6 +84,10 @@ final class Level0Chunk {
     static long hash(long seed, int a, int b, long salt) {
         long h = seed ^ salt * 0x9E3779B97F4A7C15L;
         h ^= (long) a * 0x517CC1B727220A95L;
+        // Mix a in before b: XORing both products at once makes (a, b) and
+        // (-a, -b) collide for about one cell in six.
+        h ^= h >>> 29;
+        h *= 0xBF58476D1CE4E5B9L;
         h ^= (long) b * 0x6C62272E07BB0142L;
         h ^= h >>> 33;
         h *= 0xFF51AFD7ED558CCDL;

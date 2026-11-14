@@ -19,9 +19,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
- * Everything in the Mace pack (scripts/mace/extract_schem.py --pack, downloaded by MeshStore as
- * "mace"): the buildings, the word lists, the wall emblems and the tower flags. Loaded once,
- * then shared by every city; immutable.
+ * Everything in a building pack, downloaded by MeshStore: the buildings, the word lists, the wall
+ * emblems and the tower flags. Level 142's is the Mace pack (scripts/mace/extract_schem.py --pack,
+ * "mace"), Level 143's its own (scripts/level143/build_pack.py, "level143"); both have the same
+ * layout. Each is loaded once, then shared by every city; immutable.
  */
 final class MaceLibrary {
 
@@ -37,23 +38,27 @@ final class MaceLibrary {
     /** Flag patterns, rows top to bottom, each cell a wool colour slot digit. */
     final List<List<String>> flags = new ArrayList<>();
 
-    private static volatile @Nullable MaceLibrary loaded;
+    private static final Map<String, MaceLibrary> LOADED = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** The library, read from the downloaded pack on first use. */
+    /** The Mace pack. */
     static MaceLibrary get() {
-        MaceLibrary lib = loaded;
+        return get(PACK);
+    }
+
+    /** A pack's library, read from the downloaded pack on first use. */
+    static MaceLibrary get(String pack) {
+        MaceLibrary lib = LOADED.get(pack);
         if (lib != null) return lib;
-        synchronized (MaceLibrary.class) {
-            if (loaded == null) {
-                Path file = MeshStore.file(PACK);
-                if (file == null) throw new IllegalStateException("the Mace pack isn't downloaded");
+        synchronized (LOADED) {
+            return LOADED.computeIfAbsent(pack, p -> {
+                Path file = MeshStore.file(p);
+                if (file == null) throw new IllegalStateException("the " + p + " pack isn't downloaded");
                 try (ZipFile zip = new ZipFile(file.toFile())) {
-                    loaded = new MaceLibrary(zip);
+                    return new MaceLibrary(zip);
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
-            }
-            return loaded;
+            });
         }
     }
 

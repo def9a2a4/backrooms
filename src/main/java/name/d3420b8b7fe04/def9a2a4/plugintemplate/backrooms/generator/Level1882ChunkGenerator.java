@@ -273,7 +273,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         boolean air(int x, int y, int z) {
             if (y < minY || y > maxY || !has(x, z)) return false;
             Material m = data.getType(x - x0, y, z - z0);
-            return m.isAir() || m == Material.LIGHT;
+            return m == Material.AIR || m == Material.CAVE_AIR || m == Material.LIGHT;
         }
     }
 
@@ -1037,7 +1037,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         return FLOOR0 + 1;
     }
 
-    /** At the foot of the grand staircase in the first district's hall, facing up it. */
+    /** At the foot of the grand staircase in the first district's hall, facing down the nave. */
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
         Plan p = plan(world.getSeed(), 0, 0);
@@ -1045,7 +1045,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         int foot = BAL + FLIGHT + 3;
         double along = p.stairEnd == 0 ? (p.alongX ? ix0 : iz0) + foot : (p.alongX ? ix1 : iz1) - foot;
         double mid = p.alongX ? (iz0 + iz1 + 1) / 2.0 : (ix0 + ix1 + 1) / 2.0;
-        float yaw = p.alongX ? (p.stairEnd == 0 ? 90 : -90) : (p.stairEnd == 0 ? 180 : 0);
+        float yaw = p.alongX ? (p.stairEnd == 0 ? -90 : 90) : (p.stairEnd == 0 ? 0 : 180);
         return p.alongX ? new Location(world, along + 0.5, FLOOR0 + 1, mid, yaw, 0)
                 : new Location(world, mid, FLOOR0 + 1, along + 0.5, yaw, 0);
     }

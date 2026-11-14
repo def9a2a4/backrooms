@@ -19,6 +19,7 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -86,11 +87,28 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
 
     /** Built cities, least recently used first, kept within CACHE_CELLS. */
     private final Map<Site, CompletableFuture<MaceCity>> cities = new LinkedHashMap<>(16, 0.75f, true);
+    private final String pack;
+    private final List<MaceCity.Theme> themes;
+    /** Trees fill their ground layer with the theme's ground. */
+    private final Map<MaceCity.Theme, MaceBuilding.Fill> treeFills = new EnumMap<>(MaceCity.Theme.class);
+    private volatile @Nullable Map<MaceCity.Theme, List<MaceBuilding>> trees;
 
     public Level142ChunkGenerator(NamespacedKey biomeKey) {
+        this(biomeKey, PACK, MaceCity.Theme.MACE);
+    }
+
+    /** Cities of {@code themes}, built from the buildings in {@code pack}. */
+    protected Level142ChunkGenerator(NamespacedKey biomeKey, String pack, List<MaceCity.Theme> themes) {
         super(biomeKey);
+        this.pack = pack;
+        this.themes = themes;
+        for (MaceCity.Theme t : themes) {
+            BlockData ground = t.ground.createBlockData();
+            treeFills.put(t, new MaceBuilding.Fill(ground, ground, Material.STONE.createBlockData(), true, null,
+                    w -> null, false, null));
+        }
         try {
-            MaceLibrary.get();   // the world is created once the pack is in: load it here, on the main thread
+            MaceLibrary.get(pack);   // the world is created once the pack is in: load it here, on the main thread
         } catch (RuntimeException e) {
             // not downloaded yet: the first chunk loads it
         }
@@ -117,9 +135,9 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
      * down to whole chunks brings it to about 40%), placed
      * anywhere in the region that leaves a margin of countryside.
      */
-    private static Site site(long seed, Region r) {
+    private Site site(long seed, Region r) {
         long h = hash(seed, CITY_SALT, r.x(), r.z());
-        MaceCity.Plan theme = MaceCity.Plan.of(h, 5);
+        MaceCity.Plan theme = MaceCity.Plan.of(h, 5, themes);
         Random rng = new Random(h ^ SITE_SALT);
         double target = COVER * r.size() * r.size() * (0.85 + 0.3 * rng.nextDouble());
         int chunks = 5;
@@ -130,14 +148,14 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
                 break;
             }
         }
-        MaceCity.Plan plan = MaceCity.Plan.of(h, chunks);
+        MaceCity.Plan plan = MaceCity.Plan.of(h, chunks, themes);
         int w = plan.mapLength() + 1, l = plan.mapLength() + plan.farmLength() + 1;
         int x = r.x() + MARGIN + rng.nextInt(Math.max(1, r.size() - 2 * MARGIN - w));
         int z = r.z() + MARGIN + rng.nextInt(Math.max(1, r.size() - 2 * MARGIN - l)) + plan.farmLength();
         return new Site(r, plan, x, z);
     }
 
-    private static Site siteAt(long seed, int x, int z) {
+    private Site siteAt(long seed, int x, int z) {
         return site(seed, regionAt(seed, x, z));
     }
 
@@ -164,7 +182,7 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
         }
         if (build) {
             try {
-                f.complete(MaceCity.build(site.plan(), MaceLibrary.get()));
+                f.complete(MaceCity.build(site.plan(), MaceLibrary.get(pack)));
             } catch (RuntimeException | Error e) {
                 f.completeExceptionally(e);
                 synchronized (cities) {
@@ -205,29 +223,32 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     private static void countryside(ChunkData data, int x, int z, MaceCity.Theme theme) {
-        boolean desert = theme == MaceCity.Theme.DESERT;
         data.setRegion(x, 0, z, x + 1, 2, z + 1, Material.BEDROCK);
-        data.setRegion(x, 2, z, x + 1, GROUND - 3, z + 1, desert ? Material.SANDSTONE : Material.STONE);
-        data.setRegion(x, GROUND - 3, z, x + 1, GROUND, z + 1, desert ? Material.SAND : Material.DIRT);
+        data.setRegion(x, 2, z, x + 1, GROUND - 3, z + 1, theme.rock);
+        data.setRegion(x, GROUND - 3, z, x + 1, GROUND, z + 1, theme.soil);
         data.setBlock(x, GROUND, z, theme.ground);
     }
 
-    /** Mace's trees, and the theme's flowers, on the countryside. */
-    private static void decorate(ChunkData data, long seed, int chunkX, int chunkZ) {
+    /** The pack's trees, and the theme's flowers, on the countryside. */
+    private void decorate(ChunkData data, long seed, int chunkX, int chunkZ) {
         int baseX = chunkX * 16, baseZ = chunkZ * 16;
-        List<MaceBuilding> trees = trees(MaceLibrary.get());
+        Map<MaceCity.Theme, List<MaceBuilding>> trees = trees(MaceLibrary.get(pack));
         for (int cx = Math.floorDiv(baseX - 8, TREE_CELL); cx <= Math.floorDiv(baseX + 15, TREE_CELL); cx++) {
             for (int cz = Math.floorDiv(baseZ - 8, TREE_CELL); cz <= Math.floorDiv(baseZ + 15, TREE_CELL); cz++) {
                 long h = mix(seed ^ TREE_SALT ^ mix(cx * 0x9E3779B97F4A7C15L ^ mix(cz)));
-                if ((h & 7) >= 2 || trees.isEmpty()) continue;   // a quarter of the cells
+                if ((h & 7) >= 2) continue;   // a quarter of the cells
                 int tx = cx * TREE_CELL + (int) ((h >>> 8) & 3), tz = cz * TREE_CELL + (int) ((h >>> 12) & 3);
                 Site site = siteAt(seed, tx, tz);
-                if (site.plan().theme() == MaceCity.Theme.DESERT || site.overlaps(tx - 3, tz - 3, tx + 8, tz + 8)
-                        || !regionAt(seed, tx + 5, tz + 5).equals(site.region())) {
+                MaceCity.Theme theme = site.plan().theme();
+                List<MaceBuilding> kinds = trees.getOrDefault(theme, List.of());
+                if (!theme.trees || kinds.isEmpty()) continue;
+                MaceBuilding t = kinds.get((int) Long.remainderUnsigned(h >>> 16, kinds.size()));
+                if (site.overlaps(tx - 3, tz - 3, tx + t.width + 3, tz + t.length + 3)
+                        || !regionAt(seed, tx + t.width, tz + t.length).equals(site.region())) {
                     continue;
                 }
-                MaceBuilding t = trees.get((int) Long.remainderUnsigned(h >>> 16, trees.size()));
-                MaceBuilding.Filled f = t.fill(TREE_FILL, new Random(h), StructureRotation.values()[(int) ((h >>> 24) & 3)]);
+                MaceBuilding.Filled f = t.fill(treeFills.get(theme), new Random(h),
+                        StructureRotation.values()[(int) ((h >>> 24) & 3)]);
                 f.place(data, chunkX, chunkZ, tx, GROUND + t.sourceY - 63, tz);
             }
         }
@@ -245,20 +266,30 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
         }
     }
 
-    private static volatile @Nullable List<MaceBuilding> trees;
-
-    private static List<MaceBuilding> trees(MaceLibrary lib) {
-        List<MaceBuilding> t = trees;
+    /**
+     * Each theme's trees: the pack's buildings of type "tree", or named as trees (Mace's are city
+     * buildings), listed in the theme's file; any of them if none are.
+     */
+    private Map<MaceCity.Theme, List<MaceBuilding>> trees(MaceLibrary lib) {
+        Map<MaceCity.Theme, List<MaceBuilding>> t = trees;
         if (t == null) {
-            t = new ArrayList<>();
-            for (MaceBuilding b : lib.buildings) if (b.name.toLowerCase(Locale.ROOT).contains("tree")) t.add(b);
+            List<MaceBuilding> all = new ArrayList<>();
+            for (MaceBuilding b : lib.buildings) {
+                if (b.type.equals("tree") || b.name.toLowerCase(Locale.ROOT).contains("tree")) all.add(b);
+            }
+            t = new EnumMap<>(MaceCity.Theme.class);
+            for (MaceCity.Theme theme : themes) {
+                List<MaceBuilding> mine = new ArrayList<>();
+                for (MaceBuilding b : all) {
+                    String files = b.meta("files");
+                    if (files != null && List.of(files.split(",")).contains(theme.file)) mine.add(b);
+                }
+                t.put(theme, mine.isEmpty() ? all : mine);
+            }
             trees = t;
         }
         return t;
     }
-
-    private static final MaceBuilding.Fill TREE_FILL = new MaceBuilding.Fill(Material.GRASS_BLOCK.createBlockData(),
-            Material.GRASS_BLOCK.createBlockData(), Material.STONE.createBlockData(), true, null, s -> null, false, null);
 
     // ── Block entities ────────────────────────────────────────────────────
 

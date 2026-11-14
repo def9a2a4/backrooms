@@ -12,6 +12,7 @@ generator_config:
   room_cell_chance: 35          # percent of 128-block cells with a sunken room
   pit_cell_chance: 10           # percent of 128-block cells with a stairwell pit to the void
   house_chunk_chance: 45        # percent of eligible chunks in a house room that get a Level 101 structure
+  building_cell_chance: 12      # percent of 128-block cells with a multi-storey oak office building
 
 events:
   - ambient_sound
