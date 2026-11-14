@@ -62,8 +62,11 @@ All level parameters (generation, events, entities, exits) are configurable in `
 | 1973 | The Undercroft, Later | | The same undercroft after the skaters, BMXers and graffiti writers made it theirs: painted, lit and loud. ¹ | Placing a light in Level 1967 | Skate it: travel 300 blocks from where you arrived → Level 3. |
 | 9500 | Göbekli Tepe | | The 11,500-year-old megalithic enclosures in southeastern Anatolia at 16x on a floating island, built from a 3D scan: older than writing and farming. Wild grass, tilled soil by a pool, a crafting table, an offering stone. Crops grow fast. ¹ | The "Göbekli Tepe" placard in Level 1881 | <details><summary>Spoiler</summary>Shake einkorn seeds out of the wild grass, grow wheat, bake bread and drop it on the offering stone → Level 1881 (Level 3 if the hall is off).</details> Falling off the island puts you back at the start. |
 | 974 | Planetoids | | Black space with clusters of small planets separated by long empty stretches. About sixty kinds, each a shell around a core: leaves around wood, stone around ores, dirt around water, hollow amethyst geodes, banded gas giants, nether, end, ice, honey, glass marbles, light-block stars and more. Rare lumpy asteroids carry the best ores. | Not connected yet | Falling into the void puts you back on the spawn planet. |
+| 142 | The Endless City | | Mace's medieval cities with no edge: city blocks between streets, forever, each its own little city (medieval, Novv's medieval or desert) with its own name. Houses, taverns, churches, farms, gatehouses and towers stand on lots in every rotation, with notice boards, house names and chest loot filled in. Some blocks have a mineshaft under a ladder, or an airship overhead. ² | Not connected yet | Walk 3000 blocks → Level 0 |
 
 ¹ Scan level. Its mesh (7-9 MB) is downloaded on first start; see [Configuration](#configuration).
+
+² Its buildings (0.2 MB) are downloaded on first start, like the meshes.
 
 On entry from the overworld, the player's return location is saved and can be restored with `/backrooms leave`.
 
@@ -164,5 +167,7 @@ Levels 1881, 1967, 1973 and 9500 are built from these 3D scans, all licensed und
 - ["Gobekli Tepe"](https://sketchfab.com/3d-models/gobekli-tepe-5a4d25c355ff48d59ab76c36812b9cf3) by rmark (Level 9500)
 
 Each was reduced to ~1.8 million triangles, given a 3D grid of Minecraft blocks matched to its texture colors (one cell per block at 16x), and is voxelized at runtime (`scripts/scans/`). The modified meshes are published in [backrooms-data](https://github.com/def9a2a4/backrooms-data) under the same license (see its `meshes/CREDITS.txt`).
+
+Level 142's buildings and sign word lists are from [Mace](https://github.com/corbin-auriti/mace-minecraft), a Minecraft city generator by Robson, licensed under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html). They're copied out of Mace's template world and converted to current blocks (`scripts/mace/`), and published in [backrooms-data](https://github.com/def9a2a4/backrooms-data) under the same license (`meshes/CREDITS.txt`); the plugin downloads them rather than shipping them.
 
 Level 418's test scene uses the classic computer graphics test models, taken from [alecjacobson/common-3d-test-models](https://github.com/alecjacobson/common-3d-test-models): the Utah teapot by Martin Newell (public domain), Suzanne from [Blender](https://www.blender.org/), and the Stanford bunny, dragon and Lucy from the [Stanford 3D Scanning Repository](http://graphics.stanford.edu/data/3Dscanrep/) (the XYZ RGB dragon is by XYZ RGB Inc.). The Stanford models are used with credit under the repository's terms, which allow research and non-commercial use. They are reduced to a few thousand triangles and voxelized at runtime (`scripts/testscene/`).

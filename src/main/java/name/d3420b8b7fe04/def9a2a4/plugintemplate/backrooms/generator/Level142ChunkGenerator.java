@@ -416,17 +416,25 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
         };
     }
 
+    /**
+     * A building from the pool by Mace's frequency times its footprint's side, so the small ones
+     * (six 5x5 trees, all "common") fill gaps rather than whole blocks.
+     */
     @Nullable
     private static MaceBuilding pick(List<MaceBuilding> pool, Random rng, String frequencyKey) {
         int total = 0;
-        for (MaceBuilding b : pool) total += weight(b.meta(frequencyKey));
+        for (MaceBuilding b : pool) total += weight(b, frequencyKey);
         if (total <= 0) return null;
         int roll = rng.nextInt(total);
         for (MaceBuilding b : pool) {
-            roll -= weight(b.meta(frequencyKey));
+            roll -= weight(b, frequencyKey);
             if (roll < 0) return b;
         }
         return null;
+    }
+
+    private static int weight(MaceBuilding b, String frequencyKey) {
+        return weight(b.meta(frequencyKey)) * (int) Math.round(Math.sqrt((double) b.width * b.length));
     }
 
     // ── Mineshaft ─────────────────────────────────────────────────────────
