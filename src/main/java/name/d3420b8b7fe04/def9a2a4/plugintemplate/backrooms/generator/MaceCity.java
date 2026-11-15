@@ -271,8 +271,6 @@ final class MaceCity {
         if (c.hasFlowers) c.makeFlowers();
         c.positionRails();
         c.connectFences();
-        long own = c.allBuildings.stream().filter(c.ownHouses::contains).count();   // DEBUG
-        Bukkit.getLogger().info("DEBUG " + c.name + " " + plan.theme() + ": " + c.allBuildings.size() + " buildings, " + own + " own houses");
         return c;
     }
 

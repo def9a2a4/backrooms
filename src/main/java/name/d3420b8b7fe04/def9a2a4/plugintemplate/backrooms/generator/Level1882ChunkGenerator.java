@@ -527,7 +527,8 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
             MuseumExhibits.library(m, r.nextBoolean());
             chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 9);
             chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 22);
-            String[] names = {"Reading Room", "The Library", "Map Room", "Upper Reading Room", "Library of " + st.theme().titles[0]};
+            String[] t = st.theme().titles;
+            String[] names = {"Reading Room", "Library of " + t[0], t[r.nextInt(t.length)] + " Library", "Reading Room, " + t[0]};
             titles(m, st, staff, names[r.nextInt(names.length)]);
             return;
         }
@@ -551,6 +552,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
         titles(m, st, staff, null);
+        if (r.nextInt(100) < MuseumExhibits.potChance(st.theme()) + 25) MuseumExhibits.doorPots(m);
 
         switch (ctr) {
             case SKELETON -> MuseumExhibits.skeleton(m, alongX, MuseumExhibits.skeleton(st.theme(), r, false));
@@ -767,13 +769,14 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
                 Random r = new Random(AlphaMegastructures.hash(q[0], q[1], p.hallSeed, 0x9ED));
                 Theme t = p.themes[r.nextInt(p.themes.length)];
                 Specimen[] pool = MuseumCatalogue.pool(t);
-                Specimen s = pool[r.nextInt(pool.length)];
+                Specimen s = r.nextInt(4) == 0 ? MuseumExhibits.pot(r) : pool[r.nextInt(pool.length)];
                 BlockFace face = out.getOppositeFace();
+                Subject sub = new Subject(MuseumCatalogue.name(s), s.block() == Material.DECORATED_POT ? Topic.POTS : Topic.SPECIMEN,
+                        s.rarity(), 0, t, 0);
                 c.set(q[0], FLOOR0 + 1, q[1], pal.trim);
                 c.set(q[0], FLOOR0 + 2, q[1], pal.carved);
-                c.set(q[0], FLOOR0 + 3, q[1], MuseumExhibits.specimen(s, face));
-                c.sign(q[0] + face.getModX(), FLOOR0 + 1, q[1] + face.getModZ(), face,
-                        new Subject(MuseumCatalogue.name(s), Topic.SPECIMEN, s.rarity(), 0, t, 0));
+                MuseumExhibits.put(c, q[0], FLOOR0 + 3, q[1], s, face, sub);
+                c.sign(q[0] + face.getModX(), FLOOR0 + 1, q[1] + face.getModZ(), face, sub);
             }
         }
         // the skeleton's label on a post, and a guide on a lectern, by the foot of the staircase
@@ -874,7 +877,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
 
     // ── Block entities ───────────────────────────────────────────────────
 
-    /** Writes sign text, lectern books, pot sherds and paintings into a newly generated chunk. */
+    /** Writes sign text, lectern books, shelved books, pot sherds, chest contents and paintings into a newly generated chunk. */
     public void applyBlockEntities(Chunk chunk) {
         World world = chunk.getWorld();
         long seed = world.getSeed();
@@ -909,6 +912,18 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
                     pot.update(true, false);
                 }
                 case PAINTING -> hangPainting(world, l, r);
+                case SHELF -> {
+                    if (!(b.getState() instanceof org.bukkit.block.ChiseledBookshelf shelf)
+                            || !(b.getBlockData() instanceof org.bukkit.block.data.type.ChiseledBookshelf slots)) continue;
+                    org.bukkit.inventory.Inventory inv = shelf.getSnapshotInventory();
+                    for (int i = 0; i < 6; i++) {
+                        if (!slots.isSlotOccupied(i)) continue;
+                        int roll = r.nextInt(60);
+                        inv.setItem(i, roll == 0 ? book(MuseumCatalogue.treatise(s, r))
+                                : new ItemStack(roll < 4 ? Material.WRITABLE_BOOK : Material.BOOK));
+                    }
+                    shelf.update(true, false);
+                }
                 case CHEST -> {
                     if (!(b.getState() instanceof org.bukkit.block.Container box)) continue;
                     org.bukkit.inventory.Inventory inv = box.getSnapshotInventory();

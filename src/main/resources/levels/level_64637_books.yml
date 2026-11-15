@@ -426,6 +426,367 @@ pre_written_books:
       - "§7The file is intact. The world is still there. The grass is still green. The trees are still standing. The house is still where you left it.\n\n§8Nothing has moved since the last save."
       - "§7It has been waiting a very long time.\n\n\n§0load this world?"
 
+  # ── The Library itself ──
+  - title: "Cataloguing Rules (Abridged)"
+    author: "The Archivist"
+    pages:
+      - "Rule 1. Every book receives a call number. The call number is the book's distance from you, measured in regret.\n\nRule 2. Two books may not share a number. If they do, one of them is lying."
+      - "Rule 3. Books without titles are filed under the first word you think of when you hold them. This is why the U section is so large.\n\nRule 4. Do not catalogue the gaps on the shelves. They are already catalogued."
+      - "Rule 5. A book that changes its subject while being shelved is filed under its final subject. If it has not finished changing, hold it until it does. Some cataloguers are still holding."
+      - "Rule 6. You will one day find your own card in the drawer. Do not correct it. The cataloguer who wrote it knew you better than you know yourself. The cataloguer was you, later."
+
+  - title: "Conservator's Notes, Vol. 9"
+    author: "H. Vell, Conservator"
+    pages:
+      - "Day 1. Item 88-K received with a torn spine and water damage through the second signature. Pages 40 to 61 missing. Began cleaning. Set it under weights overnight."
+      - "Day 2. Spine has rejoined. I did not glue it. The water stain has receded toward the gutter like a tide going out. Pages 40 to 61 are back. Page 41 now mentions a conservator."
+      - "Day 5. The book has stopped needing me. It heals faster than I can work. I have begun to suspect it was never damaged. I suspect it tore itself so that someone would sit with it."
+      - "Day 9. I cut my hand on the board shears this morning. I left the bench for a bandage. When I returned, the book was open to a page describing how to close a wound. The cut had closed.\n\nI have stopped calling it the patient."
+
+  - title: "Works Not Yet Written"
+    author: "Compiled by the Annex"
+    pages:
+      - "§7A bibliography of titles held by the Library whose authors have not yet been born. Shelf marks given where stable.§r\n\nAnon. On Leaving. Unwritten. 1 vol. Shelf: every shelf."
+      - "Okafor, D. The Grammar of Stairs. To be written in a kitchen. 312 pp. Water-stained in advance.\n\nPell, R. A Field Guide to Small Doors. Will be rejected nine times. Will be good."
+      - "[Author withheld at their request, which they have not yet made.] Letters to the Librarian. 4 vols. Vol. 3 is mostly apology.\n\nYou. Untitled. Begun in this room. Not finished in this room."
+      - "Note from the compiler: several readers have asked to borrow these works. The Library permits it. The books are light, because they are mostly hope. Please return them before their authors need them."
+
+  - title: "Reading Room Log, Desk 4"
+    author: "Desk Attendant"
+    pages:
+      - "09:00 Room opened. One reader already seated. No one let her in.\n09:40 Reader requests a book on her own family. Fetched. She reads quietly.\n11:15 Reader asks for a pencil. Supplied."
+      - "13:00 Reader has begun annotating. Reminded her this is not permitted. She shows me the book. The annotations were already printed there, in her hand, before she wrote them.\n13:05 Let her continue."
+      - "15:30 Reader asks what year it is. I tell her. She laughs and says that is the year she came in.\n16:00 Reader asks what year it is. I tell her. She does not laugh."
+      - "17:00 Room closed. Reader still seated.\n\n09:00 Room opened. One reader already seated. No one let her in.\n\n§7The attendant's handwriting is identical on both days. So is the reader's chair."
+
+  - title: "On the Curvature of Aisles"
+    author: "Prof. A. Lindqvist"
+    pages:
+      - "It is commonly said that the aisles of the Library are straight. This paper argues that they are straight in the way a promise is straight: from the inside, and for as long as you keep walking."
+      - "Method. I laid a single thread along aisle 4,410, fixed at the reading lamp, and walked it out for eleven days. On the twelfth day I found the other end of the thread fixed to the same lamp."
+      - "The thread had not crossed itself. It had not turned. The aisle is therefore not a circle. My colleagues propose that the aisle bends not through space but through the reader, who returns slightly changed."
+      - "Conclusion. The aisles are straight. It is we who curve. I have measured my own curvature at roughly one degree per year of reading. At this rate I will meet myself in the stacks in 349 years. I intend to be polite."
+
+  - title: "Census of Readers, Floor 9"
+    author: "Census Office"
+    pages:
+      - "Readers counted: 41.\nReaders who counted themselves: 38.\nReaders who were counted twice, in two aisles, at the same hour: 3.\nReaders who asked not to be counted: 1. Counted."
+      - "Average time in residence: unclear. Most respondents answered 'a few hours.' Their beards disagree.\n\nMost requested subject: the way out. Second most requested: the book they were reading before this one."
+      - "Readers who are books: 2. They were found open on chairs and answered every question in the third person.\nBooks who are readers: unknown. The office declined to ask the shelves."
+      - "Correction to the total: 42. The census officer was not included. The officer has been reading the census for some time now and has not left the floor. Please do not count her."
+
+  - title: "Margins: Ferro vs. Adair"
+    author: "Two Hands"
+    pages:
+      - "§7(Printed text: a treatise on the order of the shelves. The margins are crowded with two handwritings.)§r\n\nF: The ordering is alphabetical. Obviously.\n\nA: In what alphabet?"
+      - "F: The one the books use.\n\nA: The books use eleven. I have counted.\n\nF: Then stop marking my copy.\n\nA: It was mine first. Look at the date."
+      - "F: The date is tomorrow.\n\nA: Yes. I wrote it tomorrow. You will lend it to me.\n\nF: I would never.\n\nA: You do. Page 90. You underline the part about forgiveness."
+      - "§7(Page 90. A single underlined sentence: 'Any order, held long enough, becomes a kindness.' Below it, in both hands, overlapping, the same word: §r§7Agreed.§r"
+
+  - title: "Translator's Note"
+    author: "J. Morrow, trans."
+    pages:
+      - "This book was written in a language that has one word for both 'shelf' and 'grave.' I have chosen 'shelf' throughout. The reader should know that the author did not choose."
+      - "Likewise the verb rendered here as 'to read' also means 'to be read by.' Where the author writes that the monk read the book for forty years, the original permits the other way round."
+      - "I have left the final chapter untranslated. It is not difficult. It is short and its grammar is simple. But each time I render it, the English version is about me, and I do not think that is accurate."
+      - "If you can read the original, you will see it is about you. I apologise for the inconvenience. The Library does not permit translations to be impartial. I have tried."
+
+  - title: "Index to Your Life"
+    author: "Reference Desk"
+    pages:
+      - "§7(The index is in alphabetical order. Page numbers refer to a volume the Library has not shown you.)§r\n\nAnger, at father, 12, 40-44, 301\nApples, smell of, 3, 3, 3\nApologies, unsent, see Drafts"
+      - "Bicycle, red, 9\nBlue, favourite colour (until 22), 9-130\nDoor, back, left unlocked, 77\nDrafts, 115-480 passim\nFear, of the dark, 6; of the light, here"
+      - "Kindness, small, shown by strangers, 14, 58, 59, 201, 266, 340, 341\nKindness, small, shown to strangers, 58\nLibrary, entrance into, this page\nLibrary, departure from, —"
+      - "Names you forgot, see Fines\nSleep, last good, 389\nYou, see also everyone above\n\n§7The index has no entry for the present. Some readers say there is a blank line at the bottom, and it is still drying."
+
+  - title: "Lecture: The Problem of Return"
+    author: "Transcribed by the Annex"
+    pages:
+      - "§7[Hall C. Attendance: large. Some attendees present more than once.]§r\n\nLECTURER: The question tonight is simple. Can a book be returned to the Library? Show of hands. Yes. No. Thank you."
+      - "LECTURER: You are all wrong, which is encouraging. A book cannot be returned because it was never removed. You carry it about, but it is still on the shelf. You are what is on loan."
+      - "AUDIENCE: Then who borrowed us?\nLECTURER: An excellent question. The register lists the borrower as 'the Library.' The due date is smudged.\nAUDIENCE: Smudged how?\nLECTURER: Thumbprint. Someone was holding it."
+      - "AUDIENCE: What happens when we fall due?\nLECTURER: We are reshelved. It does not hurt. Next week: the Problem of Overdue Readers.\n\n§7[The lecturer did not attend next week. The talk was given anyway.]"
+
+  - title: "A History of the East Wing"
+    author: "Wing Historian"
+    pages:
+      - "The East Wing was opened in a year with no number, to house the overflow of the poetry stacks, which had begun to rhyme across the aisles and keep readers awake."
+      - "It was built of the same wood as the rest of the Library, but this wood remembered being a forest. Readers reported birdsong between the shelves and the smell of rain in Section 70."
+      - "In its third century the East Wing was closed for flooding. It had not flooded. It had wept. Conservators recovered thirty thousand volumes, all of them blurred in the same places: the endings."
+      - "The East Wing is closed today. You may still visit. Walk east until the shelves begin to bud. Do not take cuttings. What you hear is not birdsong. It is the poems, trying again."
+
+  - title: "Complaint #4,118 and Reply"
+    author: "Reader / The Librarian"
+    pages:
+      - "Dear Sir,\nThe book I was reading has been quietly ending differently each time I open it. In the first ending the boy goes home. In the latest he stays. I would like the first one back."
+      - "I have tried closing it gently. I have tried closing it quickly. I have tried reading only the first half. The ending finds me anyway. Please fix the book.\n- A Reader, Aisle 31"
+      - "Dear Reader,\nThank you for your letter. The book is not broken. It has been read many times by you, and you have been changing, and it has been keeping up."
+      - "The boy goes home when the reader still believes in home. Some readers, after long enough here, can only hold the other ending. If you want the first one back, you must be the reader it was written for.\nI hope you find him.\n- L."
+
+  - title: "Night Desk Instructions"
+    author: "Head of Circulation"
+    pages:
+      - "1. The night desk is staffed from the last lamp to the first lamp. You will not know when either is. Stay until relieved.\n2. Readers who approach at night are to be served. Readers who approach on all fours are not."
+      - "3. Book returns in the slot after hours are normal. Book returns from the inside of the slot are not normal. Do not open the slot to check.\n4. If the slot begins to request books, decline politely."
+      - "5. The telephone will ring once a night. It is the day desk. They will ask whether you are still there. Say yes, even if you are unsure. They worry."
+      - "6. Your relief will arrive wearing your coat. This is correct. Hand over the keys. Do not look back at the desk as you go. Somebody is already sitting there, and it is rude to stare at yourself."
+
+  - title: "Schedule of Fines (Revised)"
+    author: "Circulation Office"
+    pages:
+      - "Late by one day: a minor memory. Usually a name of a teacher, or what you ate on an ordinary Tuesday.\n\nLate by one week: a song. You will still hum it. You will not know where it came from."
+      - "Late by one month: the colour of a particular room. You will picture the room in grey.\n\nLate by one year: the voice of one person. You will remember what they said, but read it in your own voice."
+      - "Lost book: the memory of finding it.\nDamaged book: the memory of the damage. The book will be restored, and you will be unable to say why you feel guilty.\nStolen book: not possible. See Rule 1."
+      - "Fines may be paid in advance. Several readers have done so. They come to the desk and give up something they would rather forget. The office accepts these in good faith. We are not a charity, but we are not cruel."
+
+  - title: "Weeding Policy"
+    author: "Collections Committee"
+    pages:
+      - "The Library is infinite and therefore never needs to discard anything. It discards anyway, because an infinite collection must be tended like any other garden."
+      - "Criteria for weeding:\n- Books no reader has wanted in ten thousand years.\n- Books that want to leave.\n- Duplicates, where one copy has become a better book than the other."
+      - "Weeded books are not destroyed. They are placed on the cart by the north stair. By morning the cart is empty. No one wheels it. We have stopped asking where they go."
+      - "§7(Handwritten addendum:)§r Last week the cart came back full. Every book on it was new. The committee has voted not to discuss this. One member has abstained, and has not been seen since the vote."
+
+  - title: "The Librarian's Daybook"
+    author: "The Librarian"
+    pages:
+      - "Monday. Shelved four thousand volumes. Three of them tried to shelve me. A reader asked where poetry is. I pointed. She asked where I was pointing. I could not say."
+      - "Tuesday. A child came in. Children are rare. She asked for a book with a happy ending. I fetched one. She asked if it was true. I said all books here are true somewhere. She took two."
+      - "Wednesday. I tried to remember my name. It is in the catalogue under 'Staff,' but the drawer sticks. Someone has been opening it from the other side."
+      - "Thursday. The child returned the books. She is taller now. She asked if I remembered her. I said of course. I have never lied to a reader before. It was easier than I expected and I did not like it."
+      - "Friday. Found the child's card in the drawer. It lists her as a former Librarian. She is filed in the same drawer as me. I have decided not to read further. Some catalogue entries are courtesies."
+
+  - title: "On Errata"
+    author: "E. Marchetti"
+    pages:
+      - "Every book in the Library contains exactly one error. This is not a theory. It is a statute, and the statute is printed in a book which also contains exactly one error."
+      - "Scholars have spent lifetimes locating the error in a single volume. When it is found, it corrects itself, and a new one appears elsewhere. The total is conserved, like heat."
+      - "This has led some to argue that the errors are not mistakes at all, but the Library's signature. A way of saying: a person was here. Only something living gets things wrong."
+      - "The error in this essay is on the first page. I have left it there on purpose. If you correct it, please be aware that the error will move, and the nearest book is you."
+
+  - title: "Minutes: Readers' Society"
+    author: "Recording Secretary"
+    pages:
+      - "Present: 12 members, 1 empty chair (reserved).\nMeeting called to order by the member who has been here longest. Dispute over who that is. Settled by checking whose fingernails are longest."
+      - "Item 1: Proposal to map the floor. Rejected. Map from last time is still being walked.\nItem 2: Proposal to stop reading. Laughter. Then silence. Then the proposal was withdrawn."
+      - "Item 3: Report from the member sent to find the edge. Member returned. Report consisted of a single page, blank, which the member would not stop reading aloud."
+      - "Item 4: The empty chair. Moved that we stop reserving it. Seconded. At the vote, the chair was found occupied by a book open to these minutes. Vote postponed.\nMeeting adjourned. Most went home. Home is a shelf."
+
+  - title: "Shelver's Examination"
+    author: "Staff Training"
+    pages:
+      - "Answer all questions. You have until the lamp goes out.\n\nQ1. A book is found on the floor. Is it:\n(a) dropped\n(b) resting\n(c) escaping\n(d) a door"
+      - "Q2. You are asked to shelve a book under Z. There is no Z. Where do you place it?\n\nQ3. A shelf is full and a book must go there. Describe what you remove. Be specific. Be kind."
+      - "Q4. A reader says the book on your cart is theirs. It has your name on the spine. Who is correct?\n\nQ5. In 40 words or fewer, explain why you applied for this position."
+      - "§7Grader's note on a returned paper:§r\nQ5 left blank. Full marks. No one applied. The ones who think they did are not ready. Welcome to the staff. Your cart is by the north stair."
+
+  - title: "Lost and Found Ledger"
+    author: "Front Desk"
+    pages:
+      - "Item: umbrella, black. Found: Section 12. It was not raining.\nItem: one shoe. Found: on a high shelf, shelved by size.\nItem: a key. Opens nothing here. Claimed by a man who wept."
+      - "Item: a voice. Found: in the reading room, saying good morning to no one. Placed in a drawer. Still says good morning, quietly, at intervals.\nItem: an afternoon. Unclaimed. It is very sunny."
+      - "Item: a reader's patience. Turned in by another reader, who found it on a bench and did not need it.\nItem: a name. Spelled three ways. Clerk thinks it may be hers."
+      - "Note: items not claimed in one hundred years are donated to the stacks, where they are catalogued as books. The umbrella is now a slim volume on weather. It is well reviewed."
+
+  - title: "A Concordance of 'Door'"
+    author: "The Concordance Office"
+    pages:
+      - "Occurrences of the word 'door' in the Library's holdings, counted so far: 9,114,000,028,551.\nOccurrences that refer to a real door: 0.\nOccurrences that the office is still checking: 1."
+      - "Most common context: 'and closed the door behind them.' Second most: 'there was no door.' Third: 'the door was there all along.' These three account for most of literature."
+      - "The office counts by hand. Each clerk is assigned one word for life. The clerk for 'door' has been with us longest. She has developed a habit of listening at the shelves."
+      - "Last week she reported the remaining occurrence. It is in a book she has not opened. She says she can hear it from the outside, the way one hears weather behind a wall. She has asked for a day off."
+
+  - title: "Interlibrary Loan Request"
+    author: "Patron, unsigned"
+    pages:
+      - "LENDING LIBRARY: Any other.\nTITLE: Anything printed outside.\nAUTHOR: Anyone living.\nREASON FOR REQUEST: I would like to know if there is an outside."
+      - "§7STAFF RESPONSE:§r\nRequest received. The Library has no partner institutions. However, a matching item was found within our holdings and has been reserved for you."
+      - "ITEM: Book, cloth, faded. Printed outside, per its colophon. Contents: a list of groceries, a child's drawing of a house, and a library card belonging to a library that is not this one."
+      - "The card has your name on it. The due date is long past. The fine, it says, is waived. Somebody is still holding a place for you.\n\n§7Please collect within 7 days. The book will not wait longer than you will."
+
+  # ── Lost files from old worlds ──
+  - title: "server.log"
+    author: "SYSTEM"
+    pages:
+      - "§8[19:02:11] Starting minecraft server version 1.2.5\n§8[19:02:14] Done (3.1s)!\n§8[19:04:40] jakeyboy joined the game\n§8[19:05:02] Lumen joined the game\n§8[19:05:09] tessaract joined the game"
+      - "§8[21:58:31] <jakeyboy> school tmrw\n§8[21:58:33] <Lumen> same\n§8[21:58:40] <tessaract> same time next week?\n§8[21:58:41] <jakeyboy> ya\n§8[21:59:02] jakeyboy left the game\n§8[21:59:10] Lumen left the game"
+      - "§8[21:59:44] tessaract left the game\n§8[22:00:00] Saving...\n§8[22:00:00] Saved the world\n§8[23:00:00] Saved the world\n§8[00:00:00] Saved the world"
+      - "§8[ ... 41,280 lines omitted ... ]\n\n§8[04:00:00] Saved the world\n§8[05:00:00] Saved the world\n§8[05:00:00] Can't keep up! Did the system time change?"
+      - "§7Nobody ever typed /stop.\n\n§7The torches in the spawn house are still lit. The wheat in the shared farm is fully grown. It has been fully grown for a very long time.\n\n§8[--:--:--] Saved the world"
+
+  - title: "chat_2011-07-14.txt"
+    author: "unknown"
+    pages:
+      - "§8<Rook> found diamonds!!!\n§8<Rook> 3 of them\n§8<pip_> NO WAY\n§8<pip_> where\n§8<Rook> under the lava lake\n§8<Rook> the big one by the ravine\n§8<pip_> save one for me ok\n§8<Rook> ok"
+      - "§8<pip_> what r u gonna make\n§8<Rook> pickaxe obv\n§8<Rook> and then ill make u a sword\n§8<pip_> :D\n§8<pip_> brb dinner\n§8<Rook> k"
+      - "§8<Rook> u back?\n§8<Rook> pip\n§8<Rook> ok ill put the sword in ur chest\n§8<Rook> the one by the bed\n§8<Rook> gn"
+      - "§7The chest by the bed was found in the archive, still in its world, still loaded.\n\n§7One diamond sword. Unenchanted. Renamed on an anvil that did not exist yet in that version:\n\n§8\"for pip when ur back\""
+
+  - title: "seed.txt"
+    author: "kept by someone"
+    pages:
+      - "§8-4172144997902289642\n\n§7That is the whole file. It was in a folder called KEEP, inside a folder called old, inside a folder called old.\n\n§7Someone typed it out by hand. There is a typo they corrected."
+      - "§7The thing about a seed is that it remembers everything except you.\n\n§7Type it in and the same mountain rises. The same birch forest. The same little island off the coast where we put the lighthouse."
+      - "§7But not the lighthouse.\n\n§7Not the bridge. Not the farm. Not the dog. Not the sign that said WELCOME HOME in wrong-case letters because Caleb couldn't find the shift key."
+      - "§7I generate it sometimes, anyway. I stand on the island. I don't build anything. It feels rude to.\n\n§7It's his island. It's just empty now. The seed doesn't know that. I'm the only one who does."
+
+  - title: "Death Messages, Sorted"
+    author: "Mo"
+    pages:
+      - "§8Mo was slain by Zombie\n§8Mo fell from a high place\n§8Mo tried to swim in lava\n§8Mo was blown up by Creeper\n§8Mo was blown up by Creeper\n§8Mo was shot by Skeleton\n§8Mo drowned"
+      - "§8Mo was slain by Zombie\n§8Mo was blown up by Creeper\n§8Mo starved to death\n§8Mo fell out of the world\n§8Mo hit the ground too hard\n§8Mo was blown up by Creeper"
+      - "§7Hundreds of these. Sorted by date, the deaths get further apart. Weeks, then months. Mo was getting good at it.\n\n§7The last ten years contain one line."
+      - "§8Mo left the game\n\n\n§7There is no death message for that. The game was never told what it meant. It only counted the days since, and kept the spawn point warm."
+
+  - title: "Signs of Hollowmere"
+    author: "transcribed"
+    pages:
+      - "§7Transcription of every sign in the abandoned village of Hollowmere, walked in order from the gate.\n\n§8GATE:\n§8WELCOME TO\n§8HOLLOWMERE\n§8pop. 4"
+      - "§8BAKERY:\n§8bread 3 wheat\n§8cake ask lily\n\n§8FARM:\n§8DONT TRAMPLE\n§8THIS MEANS U\n§8DARREN\n\n§8DARREN'S HOUSE:\n§8i didnt trample"
+      - "§8TOWN HALL:\n§8mayor: lily\n§8vice mayor: lily\n§8election tues\n\n§8NOTICE BOARD:\n§8lost: 1 cow\n§8answers to moo\n§8brown"
+      - "§8NOTICE BOARD:\n§8pop. 3\n§8(sam moved\n§8to a new server)\n\n§8NOTICE BOARD:\n§8pop. 2\n\n§8NOTICE BOARD:\n§8pop. 1"
+      - "§7The last sign is at the edge of town, facing outward, as if for whoever came next.\n\n§8i kept it\n§8running as\n§8long as i\n§8could. sorry"
+
+  - title: "Name Tags"
+    author: "found in a chest"
+    pages:
+      - "§7A chest of used name tags, recovered from a dog kennel in an old world. Each one was taken back off an animal. Most people don't know you can't do that. Someone found a way."
+      - "§8Biscuit\n§8Biscuit II\n§8Biscuit III (stays sitting)\n§8Mr. Whiskers\n§8Pancake\n§8Dinnerbone (do not use)\n§8Gerald the Horse\n§8Gerald the Horse 2"
+      - "§8Captain\n§8Lady\n§8Captain Jr.\n§8the fish\n§8the other fish\n§8Biscuit IV\n§8Sir Clucks"
+      - "§7At the bottom, under all the others, a blank tag. Never written on. It was renamed once, in the anvil history, and then renamed back to nothing.\n\n§7Some names you take back because you can't say them anymore."
+
+  - title: "remember.cfg"
+    author: "config/"
+    pages:
+      - "§8# Remember Mod v0.3\n§8# Keeps things after\n§8# they are gone.\n\n§8general {\n§8  enabled=true\n§8  keepFootprints=true\n§8  keepVoices=false\n§8}"
+      - "§8footprints {\n§8  # how long a path\n§8  # stays worn after\n§8  # last walked\n§8  decayTicks=-1\n§8  # -1 = forever\n§8}"
+      - "§8voices {\n§8  # keep last chat\n§8  # line per player\n§8  # as an echo near\n§8  # where they stood\n§8  enabled=false\n§8  # turned off.\n§8  # too many echoes.\n§8}"
+      - "§8absent {\n§8  # players not seen\n§8  # in N days\n§8  thresholdDays=30\n§8  # what to do\n§8  action=WAIT\n§8  # options: WAIT\n§8}"
+
+  - title: "crash-2014-03-02_23.41.txt"
+    author: "minecraft"
+    pages:
+      - "§8---- Minecraft Crash Report ----\n§8// Sorry :(\n\n§8Time: 3/2/14 11:41 PM\n§8Description: Ticking player\n\n§8java.lang.NullPointerException: player has no home"
+      - "§8at net.minecraft.\n§8 entity.Player.\n§8 getBedLocation\n§8at net.minecraft.\n§8 world.respawn\n§8at net.minecraft.\n§8 world.respawn\n§8at net.minecraft.\n§8 world.respawn"
+      - "§8-- Head --\n§8Thread: Server thread\n§8Stacktrace: (repeats 1,024 times)\n\n§8-- Affected level --\n§8Level name: our house\n§8Level spawn: the bed is gone"
+      - "§7Someone broke the bed. Not a creeper. The block log says a player broke it, and then the same player logged out, and did not log back in.\n\n§7The game kept trying to send them home. It still is."
+
+  - title: "whitelist.json"
+    author: "ops"
+    pages:
+      - "§8[\n§8 {\"name\": \"Wren\"},\n§8 {\"name\": \"bigtoe_\"},\n§8 {\"name\": \"Juniper\"},\n§8 {\"name\": \"Oskar\"},\n§8 {\"name\": \"cinnamonrat\"},\n§8 {\"name\": \"m0th\"},"
+      - "§8 {\"name\": \"Wren2\"},\n§8   // Wren lost\n§8   // her account\n§8 {\"name\": \"Juniper\"},\n§8   // dupe. leave it.\n§8   // she'd laugh"
+      - "§8 // removed bigtoe_\n§8 // (moved away)\n§8 // removed Oskar\n§8 // (got busy)\n§8 // removed m0th\n§8 // (didnt say)"
+      - "§8 // last edit:\n§8 // removed myself\n§8 // so the server\n§8 // stops pinging me\n§8]\n\n§7The list is empty. The server is still whitelisted. Nobody can get in, and it is still running."
+
+  - title: "Cathedral Notes"
+    author: "Ellis"
+    pages:
+      - "§7build notes - the cathedral\n\n§7nave: 120 long, 40 wide\n§7spire: to build limit (128)\n§7windows: stained glass doesnt exist yet. use wool and pretend.\n§7est. time: summer"
+      - "§7week 3: foundation done. cobble everywhere. kai says its ugly. it is a foundation kai.\n\n§7week 7: the arches finally look right. eight tries. stone brick came out and i redid all of it."
+      - "§7week 15: kai helped with the roof. we argued about buttresses for an hour. good hour.\n\n§7week 22: stained glass came out!! ripping out all the wool. this is going to take forever. good."
+      - "§7week 40: school.\n\n§7week 61: back for a bit. the spire scaffolding is still up. couldnt remember the plan for the top.\n\n§7week 98:"
+      - "§7The cathedral is still in the archive. The spire stops at y 96. The scaffolding is still up.\n\n§7Under the altar there is a chest with one item: a sign that says THE TOP GOES HERE. It was never placed."
+
+  - title: "/seen"
+    author: "Essentials"
+    pages:
+      - "§8> /seen Danny\n§8Danny has been offline since 1,203 days.\n\n§8> /seen Priya\n§8Priya has been offline since 2,778 days.\n\n§8> /seen Bo\n§8Bo has been offline since 3,950 days."
+      - "§8> /seen Al\n§8Al has been offline since 4,411 days.\n\n§8> /seen Al\n§8Al has been offline since 4,411 days.\n\n§8> /seen Al\n§8Al has been offline since 4,412 days."
+      - "§7The console history shows this command, for this name, typed every day around 10 PM, for eleven years.\n\n§7Nobody ever asked the server why. It just answered, every night, a number one bigger."
+      - "§8> /seen Al\n§8Al has been offline since 4,413 days.\n\n§8> /mail send Al\n§8  i kept your stuff\n§8Mail sent!\n§8(Al will see it next time he logs in)"
+
+  - title: "Patch Notes: Beta 1.9.5"
+    author: "unreleased"
+    pages:
+      - "§8Beta 1.9.5\n§8(never released)\n\n§7- Fixed a bug where the world forgot who built things\n§7- Signs now keep the handwriting of the player who placed them"
+      - "§7- Added the Lantern of Return. Hold it at spawn to see where everyone was standing the last time they logged in\n§7- Old friends now appear on the multiplayer screen even if their servers are gone"
+      - "§7- Wolves no longer stop waiting\n§7- Fixed a bug where wolves stopped waiting\n§7- Added a sound for when someone you know is near. You will recognise it"
+      - "§7Known issues:\n§7- None of this was shipped\n§7- The next version was 1.0\n§7- Everything in these notes was removed before it was added\n\n§8\"it was a nice idea\" - unknown"
+
+  - title: "README (Quietpack 16x)"
+    author: "sleepyfern"
+    pages:
+      - "§8Quietpack 16x\n§8for Beta 1.7.3\n\n§7hi!! this is my first texture pack. it makes everything a bit softer. grass is less green. the sky is a little more grey. its for playing at night."
+      - "§7install:\n§7put the zip in .minecraft/texturepacks\n§7dont unzip it!!\n\n§7changes:\n§7- softer grass\n§7- quieter sky\n§7- creeper is sad now (look at him)"
+      - "§7- i redid the moon. its my moms face from a photo, very small, you cant tell. dont tell anyone\n§7- painting kebab is now my cat"
+      - "§7v1.1:\n§7- the moon is the moon again. people asked why the moon looked at them. it doesnt. it just looks\n\n§7v1.2:\n§7- put her back. i missed her"
+      - "§7v1.3: no changes. just wanted to say thanks to whoever is still using this. the download counter goes up by one sometimes. i like to think its the same person.\n\n§7- fern"
+
+  - title: "Coordinates (Do Not Lose)"
+    author: "Tomas"
+    pages:
+      - "§7x 0 — spawn. our hut.\n§7x 1,000 — the oak we named.\n§7x 10,000 — desert temple, looted, sign says TOMAS WAS HERE\n§7x 100,000 — nothing. just more. good."
+      - "§7x 1,000,000 — the boat broke 3 times. ran out of food twice. still sunny.\n§7x 5,000,000 — the clouds got weird. the sun doesnt move right."
+      - "§7x 12,550,820 — I can see it. the ground goes up like a wall with windows. the game stutters. my footsteps sound late."
+      - "§7x 12,550,821 —\n\n§7nobody will ever walk here again. they fixed it. the next version just has more grass.\n\n§7so this is the only copy. I wrote down the way. in case anyone wants to come see where the world ended."
+
+  - title: "Forum: anyone else get Grey?"
+    author: "thread #48102"
+    pages:
+      - "§8[old forum, thread 48102]\n§8posted by: duskmoss\n\n§7anyone else ever have a world called Grey in their singleplayer list? I never made it. no thumbnail. size 0 KB. last played: today."
+      - "§8reply - kip_t:\n§7deleted file probably. corrupted save.\n\n§8reply - duskmoss:\n§7its been there since my first install. I just reinstalled on a new laptop. its there again. last played: today."
+      - "§8reply - duskmoss:\n§7opened it. its my old world. my first one. from when I was 9. everything I built. but the grass is grey. the water is grey. the sky is grey and nothing moves."
+      - "§8reply - duskmoss:\n§7my house is there. inside on the table: a book. its in my handwriting from when I was 9. it says \"you said you'd come back\"\n\n§7I don't remember writing it."
+      - "§8reply - duskmoss:\n§7I went back in to save it properly. its gone from the list now.\n\n§8[thread locked: user requested]\n§8[last seen: never]"
+
+  - title: "Before the Hunger Bar"
+    author: "an old player"
+    pages:
+      - "§7I'll tell you what it was like before the hunger bar.\n\n§7You ate a pork chop and the hearts came back. That was it. Nobody was ever hungry. You could just stand on a hill and watch."
+      - "§7The night was louder. The zombies said \"mrrh\" and nothing else. The sky had a band of fog at the edge of the world that looked like a sea you couldn't reach.\n\n§7There was no ending. No dragon."
+      - "§7We didn't need one. You played until the light was gone in your real room too, and then you turned it off, and the world waited."
+      - "§7I'm told it's all still here, somewhere in this Library. Every old version. Every alpha save.\n\n§7If you find mine, there's a dirt hut on a hill. Sit in it a minute. Don't eat anything. You won't need to."
+
+  - title: "saves/"
+    author: "dir listing"
+    pages:
+      - "§8 Directory of saves\n\n§8 New World\n§8 New World-\n§8 New World--\n§8 test\n§8 test 2\n§8 SURVIVAL REAL\n§8 SURVIVAL REAL 2\n§8 castle (dont delete)"
+      - "§8 maddie's world\n§8 maddie's world (copy)\n§8 creative lol\n§8 Dad's world\n§8 Dad's world (backup)\n§8 Dad's world (backup)\n§8   (2)"
+      - "§7Dad's world is a single flat plain with one house, built very carefully and very badly. The roof is upside down stairs. A sign over the door:\n\n§8\"made with help\n§8 from maddie\""
+      - "§7The backups are identical. The backup of the backup is identical. Somebody kept copying it to new computers for years and never once opened it.\n\n§7You don't have to open something to keep it."
+
+  - title: "My Diary (Do Not Read)"
+    author: "Ivy, age 10"
+    pages:
+      - "§7DAY 1\n§7this is my diary for my world. i made a house out of wood. a spider was on the roof. i named him Steve 2.\n\n§7DAY 2\n§7Steve 2 killed me. we are not friends."
+      - "§7DAY 5\n§7i found a village. the villagers say hmm a lot. i built them a wall. now they are safe forever.\n\n§7DAY 9\n§7my brother came on. he made tnt. we dont talk about day 9."
+      - "§7DAY 30\n§7the villagers have 14 babies now. i named all of them. this is the best world ever made in the whole entire world.\n\n§7DAY 31\n§7i have to go to bed."
+      - "§7(no more entries)\n\n§7The book sits on a lectern in a wooden house. The wall around the village is still standing. Inside it, some of the babies are very old now. They still say hmm."
+
+  - title: "Map #0"
+    author: "a cartographer"
+    pages:
+      - "§7Map #0. The first one ever made in that world. The ink was a 1:1 scale, a small square, the spawn right in the middle.\n\n§7You could see the hut. The dirt path. The pond where we fished."
+      - "§7Later maps were bigger. We made a wall of them in the town hall, ninety-six maps wide, the whole continent.\n\n§7But they all got thrown in a chest when the server reset. Map #0 got kept."
+      - "§7The odd thing about maps in that version: they only update while someone holds them. So Map #0 shows the world as of the last time anyone looked.\n\n§7The hut is there. The path. Two little white arrows by the pond."
+      - "§7The arrows are players. Nobody has held the map since. They are still there, by the pond.\n\n§7They will always be by the pond."
+
+  - title: "screenshots/"
+    author: "F2"
+    pages:
+      - "§82012-06-01_17.22.04.png\n§7four people on a roof. one is upside down because of a glitch. everyone is crouching to say hi.\n\n§82012-06-01_17.22.05.png\n§7same picture. someone pressed F2 twice."
+      - "§82012-08-19_21.03.40.png\n§7the sunset over the bay. the bridge is half built. a boat is stuck on it.\n\n§82012-12-24_20.00.00.png\n§7snow. presents made of chests. one says FOR NOAH."
+      - "§82013-04-02_15.10.11.png\n§7the roof. two people now. crouching.\n\n§82014-09-30_23.59.59.png\n§7the roof. one person. not crouching. just looking at the bay."
+      - "§82026-??-??_??.??.??.png\n§7the roof. nobody on it. the bridge is finished.\n\n§7Nobody took this one. It's in the folder anyway."
+
+  - title: "MOTD: Thanks for Six Years"
+    author: "admin_greyowl"
+    pages:
+      - "§8§lMOTD§r§8:\n§7Server closing 31st. Thank you for six years. Download links for the world are on the forum. Please take your stuff.\n\n§8Players online: 2/40"
+      - "§7To everybody who joined on the first day: I still have the spawn you built. To the kid who flooded the market twice: we forgive you. To whoever kept leaving bread at the old fountain: we saw."
+      - "§7The hosting is paid through midnight. I'm going to stay on until it goes down. You're welcome to come and sit at the fountain.\n\n§8Players online: 1/40"
+      - "§7The world download link on the forum is dead. The forum is gone. But the hosting company never did shut the box off.\n\n§8Players online: 0/40\n§8Bread at the fountain: 1"
+
+  - title: "Hardcore: Day 2,212"
+    author: "spectator"
+    pages:
+      - "§8You died!\n§8Score: 18,402\n\n§8[Spectate world]\n§8[Delete world]\n\n§7That was the choice. Two buttons. I picked the first one, because I couldn't pick the second."
+      - "§7Day 2,212 of my hardcore world. I died on day 1,940. A skeleton, at night, on the stairs to my own front door. Six years. One arrow."
+      - "§7I fly through the walls now. I can't touch anything. I watch the farms I built keep running. The iron golems still patrol. The villagers still trade with nobody."
+      - "§7I log in sometimes and just float over the house. Everything I made keeps going without me.\n\n§7I think that's what I wanted, all along. I just didn't know I'd be watching."
+
+
 # Entry books: the archive contains the old worlds. Rolled before the
 # pre-written pool (so level.dat keeps its rarity); any entry book is about
 # 1 in 15 books at 0.07. Each ends with its own hidden §0 question — opening

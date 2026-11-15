@@ -397,3 +397,956 @@ multi_page_books:
       - "Exploration III — D-9042: Subject descended 31 landings. At landing 27, lighting ceased. Subject's flashlight illuminated the next landing. A figure stood on the landing. Figure had no features. Subject screamed. Audio feed cut."
       - "Exploration IV: No D-class personnel assigned. At 03:00, knocking was heard from the stairwell interior. One knock per second. Rhythm matched a human heartbeat. The knocking has continued for 14 days. It has not stopped. We have sealed the door."
       - "Addendum: The door was unsealed this morning. Not by staff. The stairwell is gone. Behind the door is a standard supply closet. A mop, a bucket, cleaning solution. The bucket contains water. The water is warm. The water hums."
+
+  # ── Office paperwork ──
+  - title: "Welcome Packet (Keep This)"
+    author: "Human Resources"
+    pages:
+      - "Welcome aboard! We are thrilled you have joined us. You may not remember applying. That is normal. Most of our best people do not remember applying."
+      - "YOUR FIRST DAY\nYour first day begins when you read this sentence. It ends at 5:00 PM. Please note that the clocks in the Lobby do not reach 5:00 PM. They have tried."
+      - "YOUR DESK\nYour desk is the nearest desk. If there are two, it is the one with the chair turned slightly toward you. Someone turned it for you. That was a kindness. Do not ask who."
+      - "YOUR PARKING\nYour parking space is in the lot outside. Your car is fine. Your car is exactly where you left it, and it will stay there, and the engine is cooling, and it will be cooling for a long time."
+      - "YOUR BADGE\nEnclosed is your badge. If the envelope is empty, your badge was issued to the previous occupant of this packet. Wear theirs. The photo will start to look like you within the week."
+
+  - title: "IT Ticket #000417"
+    author: "Help Desk"
+    pages:
+      - "OPENED BY: Desk 7\nSUBJECT: monitor\n\nHi, my monitor is showing the hallway behind me instead of my desktop. It is a live picture. I can see myself from the back. Please advise."
+      - "HELP DESK: Have you tried turning it off and on again?\n\nDESK 7: Yes. When it came back on, I was not in the picture anymore. The chair was empty. I am sitting in the chair."
+      - "HELP DESK: Ticket escalated to Tier 2.\n\nTIER 2: Please confirm your monitor is plugged in.\n\nDESK 7: It is not plugged in. There is no outlet. It was never plugged in."
+      - "TIER 2: Then it is working as intended. Marking resolved.\n\nDESK 7: Something in the picture is standing behind the chair now.\n\nTIER 2: Please open a new ticket for unrelated issues."
+      - "STATUS: Closed\nSATISFACTION SURVEY: Not completed\n\nAuto-note: Desk 7 has no assigned user. This ticket was opened from an unassigned desk. Please do not reply to this ticket."
+
+  - title: "Facilities Request: Thermostat"
+    author: "R. Okafor, Desk 112"
+    pages:
+      - "REQUEST: Could someone please look at the thermostat? It is set to 71. It has always been 71. I tried to turn it to 68 and the dial would not move. It is a painted dial. It is painted on the wall."
+      - "RESPONSE: The thermostat is functioning normally. The building is maintained at a comfortable temperature for all occupants. Comfort is not a setting. Comfort is a condition of employment."
+      - "FOLLOW-UP: It is not comfortable. It is damp and warm, like the inside of a mouth. Also I would like to know who the 'occupants' are. I have not seen anyone else in a long time."
+      - "RESPONSE: The occupancy of the building is confidential. Please be assured that you are not cold. We have checked. Nobody here has been cold in a very long time.\n\nRequest closed."
+
+  - title: "The Lobby Ledger, Issue 0"
+    author: "Staff Newsletter Committee"
+    pages:
+      - "§lTHE LOBBY LEDGER§r\nYour monthly staff newsletter!\n\nThis month: Employee of the Month, a word from Facilities, birthdays, and a reminder about the hum."
+      - "EMPLOYEE OF THE MONTH\nCongratulations to the office chair in Room 4-C! It has not moved in eleven months, and it has never once complained. A role model for us all."
+      - "FROM FACILITIES\nThe flickering in Corridor 9 has been fixed. The flickering you are seeing in Corridor 9 is a different flickering. Please report it using the usual form, which is also being fixed."
+      - "BIRTHDAYS\nThis month we celebrate everyone! Since nobody can confirm the date, Management has decided every day is everyone's birthday. There is no cake. Cake does not keep in the damp."
+      - "A REMINDER\nThe hum is a feature. Please do not hum back. Last quarter, three people hummed back, and now the hum has three more notes in it. Thank you for your cooperation."
+
+  - title: "Org Chart (Draft 9)"
+    author: "Office of the Director"
+    pages:
+      - "This chart shows the reporting structure of Sub-Level 0. Each box reports to the box above it. Please find your box and memorise it. Your box is the one with your name in it."
+      - "DIRECTOR\n  reports to: Deputy\nDEPUTY\n  reports to: Manager\nMANAGER\n  reports to: Supervisor\nSUPERVISOR\n  reports to: You\nYOU\n  reports to: Director"
+      - "Several staff have asked why the chart is a circle. It is not a circle. It is a ladder that has been stood up for a very long time and has begun to bend."
+      - "Drafts 1 through 8 had more boxes. The people in those boxes have been consolidated. If you find a box with no name in it, do not write your name in it. It is not vacant. It is resting."
+
+  - title: "Pay Stub, Period 0"
+    author: "Payroll Services"
+    pages:
+      - "EMPLOYEE: (you)\nPAY PERIOD: 0\nPAY DATE: pending\n\nHOURS WORKED: all\nOVERTIME: all\nRATE: see contract\nCONTRACT: see rate"
+      - "EARNINGS\nBase salary.......0\nShift premium.....0\nHazard pay........0\nLoyalty bonus.....1\n\nThe loyalty bonus is one (1) additional day. It has already been added."
+      - "DEDUCTIONS\nLighting levy.....yes\nCarpet upkeep.....yes\nHum license.......yes\nMemory (partial)..yes\n\nNET PAY: 0\nYTD: 0\nYEAR: unclear"
+      - "Direct deposit has been sent to the account on file. There is no account on file. The money is waiting in the account it would have gone to. It is safe there. It is not going anywhere. Neither are you."
+
+  - title: "Cafeteria Menu, Week Of"
+    author: "Food Services"
+    pages:
+      - "§lCAFETERIA MENU§r\nWeek of: this week\n\nThe cafeteria is located on the far side of the floor. Please allow plenty of time to walk there. Please allow the rest of your life."
+      - "MON: Soup of the day (yesterday's)\nTUE: Soup of the day (Monday's)\nWED: Soup\nTHU: A bowl\nFRI: The smell of soup\nSAT: Monday"
+      - "BEVERAGES\nWater\nWater (still)\nWater (from the carpet)\n\nPlease do not drink water from the carpet. It is listed for transparency only."
+      - "Staff are reminded that the vending machine in Room 33 does not accept coins. It accepts something, and it gives you something back. Please be considerate of others in line, even if you cannot see them."
+
+  - title: "Holiday Party (Mandatory)"
+    author: "Social Committee"
+    pages:
+      - "You are cordially invited to the Annual Holiday Party! Attendance is mandatory. Fun is mandatory. Please wear something festive. Yellow is festive."
+      - "WHERE: The big room\nWHEN: Already\nRSVP: Not needed\n\nThe party started some time ago. You can hear it if you stand very still. The music is the hum played slightly faster."
+      - "There will be a gift exchange. Please bring one wrapped gift. You will receive a wrapped gift in return. Do not unwrap it. Everyone's gift is the same, and it is the box."
+      - "SECRET SANTA\nYou have been assigned to yourself. Please be discreet. Do not let yourself find out. Last year someone found out, and the party has been very quiet since."
+      - "The Social Committee thanks you for coming. The Social Committee would like to remind you that the party does not end. You may step out for air. There is no air, but you may step out."
+
+  - title: "Suggestion Box (Emptied)"
+    author: "Office of Morale"
+    pages:
+      - "The suggestion box was emptied this quarter for the first time on record. Below are the contents, transcribed in full. Management thanks everyone for their feedback."
+      - "\"more windows\"\n\n\"any windows\"\n\n\"can we turn the lights off at night\"\n\n\"when is night\"\n\n\"please fix the carpet it squelches\""
+      - "\"who keeps putting suggestions in here. it is only me on this floor\"\n\n\"it is not only you\"\n\n\"it is only me\"\n\n\"look behind the copier\""
+      - "\"I found a door. I won't say where. If you're reading this, Management, I'm already gone.\"\n\nManagement has reviewed this suggestion. The door has been addressed."
+      - "\"thank you for addressing the door\"\n\nThe Office of Morale is pleased to report that morale is stable. The box has been returned to its place. It is already a little heavier."
+
+  - title: "Compliance Audit: Egress"
+    author: "Internal Audit"
+    pages:
+      - "SCOPE: Audit of all emergency exits on Sub-Level 0, per code.\nAUDITOR: Internal\nDURATION: Ongoing\n\nThis report is interim. The final report will follow on completion of the walk."
+      - "FINDING 1\nExits required by code: 1 per 30 m of corridor.\nCorridor measured: ongoing.\nExits required: ongoing.\nExits found: 0.\n\nRating: §cNON-COMPLIANT§r"
+      - "FINDING 2\nEXIT signs located: 41.\nSigns pointing toward an exit: 0.\nSigns pointing toward the auditor: 41.\n\nThe signs are well-lit and clean. No action required on the signs."
+      - "MANAGEMENT RESPONSE\nThe building is not required to have exits, because nobody is required to leave. The finding is withdrawn.\n\nAUDITOR: Accepted. Continuing the walk."
+
+  - title: "Fire Drill Procedure"
+    author: "Safety Coordinator"
+    pages:
+      - "In the event of a fire alarm:\n\n1. Stop what you are doing.\n2. Leave all belongings.\n3. Proceed calmly to the nearest assembly point.\n4. Wait to be counted."
+      - "The nearest assembly point is marked with a yellow square on the carpet. All carpet in the Lobby is yellow. All of it is the assembly point. You are already there. Good job."
+      - "Fire wardens will count staff at the assembly point. Please answer when your name is called. If your name is called twice, answer only once. The second one is not for you."
+      - "There has never been a fire in the Lobby. The carpet is too damp to burn. The alarm still goes off, every so often, very faintly, as though from a long way down the hall. Please assemble anyway."
+
+  - title: "Lost and Found Inventory"
+    author: "Front Desk"
+    pages:
+      - "The following items have been turned in to the Front Desk. To claim an item, describe it accurately. Please do not describe items you did not lose. They can tell."
+      - "- 1 umbrella (dry)\n- 1 shoe, left, size unknown\n- 1 shoe, left, same\n- 1 shoe, left, same\n- 14 lanyards, no badges\n- 1 wedding ring, warm\n- car keys (many)"
+      - "- a phone, on, one bar, showing a call in progress for 9,000+ hours\n- a lunchbox. please do not open the lunchbox\n- a name, written on a sticky note, unclaimed"
+      - "- 1 voice, found in Corridor 12, still talking\n- one afternoon (Tuesday?)\n- the way back\n\nThe way back was claimed shortly after it was turned in. We did not see by whom."
+      - "Unclaimed items are kept for 30 days. The Front Desk has not been able to locate day 31. Items will therefore be kept forever. Please check back often. We may have something of yours."
+
+  - title: "Training Module 4: Corridors"
+    author: "Learning & Development"
+    pages:
+      - "MODULE 4: SAFE CORRIDOR CONDUCT\nEstimated time: 20 min\nActual time: varies\n\nComplete the quiz on the following pages. A score of 100% is required to proceed to Module 5."
+      - "Q1. You see a corridor you have not seen before. You should:\na) walk down it\nb) report it\nc) look away until it is a corridor you have seen before\n\nAnswer: c"
+      - "Q2. Someone at the end of a corridor waves at you. You should:\na) wave back\nb) walk toward them\nc) continue your work\n\nAnswer: c. Nobody at the end of a corridor is waving. That is just the shape it is."
+      - "Q3. How many corridors are there on Sub-Level 0?\na) many\nb) more than that\nc) one, very long, folded\n\nAnswer: all answers accepted. Do not think about it further."
+      - "Congratulations! You have completed Module 4.\n\nModule 5 is not yet available. Please repeat Module 4 until it is. Your progress has been saved. Your progress has always been saved."
+
+  - title: "Out of Office (Auto-Reply)"
+    author: "D. Haskell"
+    pages:
+      - "Thank you for your message. I am currently out of the office and will return on Monday. For urgent matters please contact my manager."
+      - "Thank you for your message. I am currently out of the office. I was going to return on Monday. It has been Monday for a while. For urgent matters please contact my manager."
+      - "Thank you for your message. I am currently in the office. I cannot find the way out of the office to be out of it. My manager is not answering. Please do not contact my manager."
+      - "Thank you for your message. I am currently out of the office. I am not sure which office. It is yellow. If this reply reaches you, you are close. Please keep talking. I can hear the typing."
+
+  - title: "Timesheet (Unsigned)"
+    author: "Employee #0412"
+    pages:
+      - "WEEK ENDING: ___\n\nMON  in 9:00  out —\nMON  in 9:00  out —\nMON  in 9:00  out —\nMON  in 9:00  out —\nMON  in 9:00  out —\nMON  in 9:00  out —"
+      - "Supervisor note: Please fill in all days of the week, not just Monday.\n\nEmployee note: There was only Monday. I checked the calendar. Every page is Monday."
+      - "Supervisor note: Please clock out at the end of each shift.\n\nEmployee note: I tried. The punch card came back out of the machine with 9:00 stamped on it again. In my handwriting."
+      - "Supervisor note: Timesheet cannot be approved without signature.\n\nEmployee note: I have forgotten how my signature goes. I have written my name here so you know who I was:"
+
+  - title: "Memo Re: Carpet Terminology"
+    author: "Communications Dept."
+    pages:
+      - "TO: All Staff\nFROM: Communications\nRE: The carpet\n\nIt has come to our attention that some staff are describing the carpet as \"wet.\" Please stop describing the carpet as wet."
+      - "The approved term is \"damp.\" Damp is a normal state for a carpet in a climate-controlled environment. \"Wet\" implies a source. There is no source. Please do not look for one."
+      - "Also not approved: soaked, soggy, sodden, \"breathing,\" and \"it moved.\" Staff who use these terms in writing will be asked to rewrite their notes until the carpet is damp again."
+      - "Communications also reminds staff that the carpet smell is \"fresh.\" It is not mould. If you believe you have found the mould, you have found a different, older carpet. Please put it back."
+
+  - title: "Badge Access Log, Door 4"
+    author: "Security Office"
+    pages:
+      - "DOOR 4 — ACCESS LOG\n\n08:59 #2201 GRANTED\n09:00 #2201 GRANTED\n09:00 #2201 GRANTED\n09:01 #2201 GRANTED\n\nNote: #2201 is having a difficult morning."
+      - "11:42 #0000 GRANTED\n11:42 #0000 GRANTED\n\nNote: Badge #0000 is not issued. It is the badge number printed on the training badge in the welcome packet. It is a picture of a badge."
+      - "13:15 YOU DENIED\n13:15 YOU DENIED\n13:16 YOU DENIED\n\nNote: the reader displayed the word YOU instead of a badge number. Reader has been replaced. The new reader also says YOU."
+      - "Door 4 has been badge-access only since the renovation. Security would like to clarify that Door 4 opens onto a wall. The access log shows it was opened from the other side 212 times."
+
+  - title: "Benefits Enrollment Form"
+    author: "Benefits Administration"
+    pages:
+      - "Please choose ONE plan from each category. Enrollment closes when you finish this form. If you do not finish this form, enrollment does not close."
+      - "DENTAL\n[ ] Basic\n[ ] Plus\n\nVISION\n[ ] Basic\n[ ] Plus\nNote: Vision coverage does not include anything seen at the end of a corridor, in the ceiling, or in a reflection."
+      - "LIFE INSURANCE\nCoverage: 1x salary\nYour salary: 0\nBeneficiary: ________\n\nPlease name someone outside the building. If you cannot remember anyone outside the building, leave this blank. Many do."
+      - "PAID TIME OFF\nAccrual: 1 day per 30 days worked.\nCarryover: unlimited.\n\nCurrent balance: 4,108 days. Please consider using some of your time off. Please consider where you would go."
+
+  - title: "Printer Queue, Floor 0"
+    author: "PRINTER-0 (shared)"
+    pages:
+      - "QUEUE STATUS: Printing\nPAPER: Low\nTONER: Yellow only\n\n1. quarterly_report.doc\n2. quarterly_report.doc\n3. quarterly_report (copy).doc\n4. you_are_here.pdf"
+      - "Job 4 was not sent by any user. It is a single page. It shows a floor plan with a small red dot. The red dot is where the printer is. The printer is not on the floor plan."
+      - "5. you_are_here.pdf\n6. you_are_here.pdf\n7. you_are_here.pdf\n\nThe red dot has moved one room to the left in each copy. It is moving toward the edge of the page."
+      - "Please do not cancel jobs you did not send. Please do not read jobs you did not send. Please collect your printouts promptly. The tray is warm. Somebody has been collecting the ones you leave."
+
+  - title: "Conference Room Bookings"
+    author: "Reception"
+    pages:
+      - "ROOM A\n9:00 Team sync\n10:00 Team sync (cont.)\n11:00 Team sync (cont.)\n\nROOM B\nAll day: \"The Meeting\"\nBooked by: The Meeting\nRecurring: yes, always"
+      - "Reception has received questions about Room B. Room B is not available. Room B has never been available. Please do not put your ear to the door of Room B. They are just presenting."
+      - "ROOM C\nBooked by: you\n2:00 \"follow-up\"\n\nIf you did not book Room C, please attend anyway. Someone set it up with your name. They have been waiting. There is water on the table, in a jug."
+      - "Please leave rooms as you found them. Return chairs. Wipe whiteboards. Do not wipe the whiteboard in Room D. It is not a whiteboard. It is the same color as a whiteboard, and it is listening."
+
+  - title: "Emergency Contact Form"
+    author: "Human Resources"
+    pages:
+      - "In case of emergency, who should we contact?\n\nNAME: ________\nRELATION: ________\nPHONE: ________\n\nPlease use block capitals. Please make sure they are still expecting you."
+      - "Notes from HR on forms received this quarter:\n\n- 61% left NAME blank\n- 22% wrote their own name\n- 9% wrote \"the person who comes in at night\"\n- 8% wrote a number"
+      - "HR has dialled every number provided. The phone rang. Somebody picked up. They said \"Lobby, how can I help you,\" in a voice like ours. We hung up. They called back."
+      - "HR now recommends listing no emergency contact. There has never been an emergency in the Lobby. Everything here happens slowly, and on schedule, and there is nobody to tell."
+
+  - title: "Stationery Requisition"
+    author: "Office Supplies"
+    pages:
+      - "ITEM: Ballpoint pens\nQTY: 1 box\nREQUESTED BY: Desk 88\nREASON: ran out\n\nSTATUS: Approved\nDELIVERED: 1 box\nCONTENTS: 1 pen\nNote: the pen is already empty"
+      - "ITEM: Stapler\nQTY: 1\nREQUESTED BY: Desk 88\n\nSTATUS: Approved\nDELIVERED: 4,000\nLOCATION: Room 71, floor to ceiling\n\nPlease do not request a stapler again."
+      - "ITEM: Map of floor\nQTY: 1\nREQUESTED BY: Desk 88\nREASON: lost\n\nSTATUS: Denied\nREASON: Supplies does not stock maps of the floor. The floor is out of stock of maps."
+      - "ITEM: A way out\nQTY: 1\nREQUESTED BY: Desk 88\n\nSTATUS: Backordered\nESTIMATED DELIVERY: soon\n\nWe will let you know. Please stay at your desk so the courier can find you."
+
+  - title: "Wellness Week Schedule"
+    author: "Employee Wellbeing Team"
+    pages:
+      - "It is Wellness Week! A happy employee is a productive employee, and a productive employee stays. Please enjoy the following activities at your desk."
+      - "MONDAY — Mindful Breathing\nBreathe in for four. Hold for four. Out for four. Try to breathe in time with the hum. When you are breathing in time with the hum, stop. That was enough."
+      - "TUESDAY — Desk Stretches\nReach up toward the ceiling tiles. Do not touch them. Do not push one up to see what is above it. That is not a stretch. That is a different activity."
+      - "WEDNESDAY — Gratitude\nWrite down three things you are grateful for. Try: the lights work. The floor is soft. You are not alone. Two of these are true. Your Wellbeing Team will not say which."
+      - "THURSDAY — Rest\nThere is a cot in Room 9 for napping. Please nap for no more than 20 minutes. Please set an alarm. Staff who nap longer report waking at a different desk."
+
+  - title: "Policy Update: Doors"
+    author: "Management"
+    pages:
+      - "Effective immediately, the following door policy applies to all staff on Sub-Level 0. It supersedes all previous door policies, which are now doors themselves and should be kept closed."
+      - "1. Doors that are closed are to remain closed.\n2. Doors that are open are to remain open.\n3. Doors that are neither are to be reported.\n4. Do not hold the door for anyone you did not arrive with."
+      - "5. Knocking is permitted. Answering a knock is not.\n6. If a door is warm, it is in use.\n7. If a door has a handle on both sides, it is a regular door. Most do not."
+      - "8. All doors marked EXIT are decorative. They were installed for morale. They are working as intended. Please do not use them to leave. Please do not use them at all."
+
+  - title: "Retirement Card for Gerald"
+    author: "Everyone in Accounts"
+    pages:
+      - "§oHappy Retirement, Gerald!§r\n\n\"Congratulations on 40 wonderful years!! We will miss you!! — Pat\"\n\n\"Enjoy the golf!! — Sam\""
+      - "\"Gerald!! It won't be the same without you. Don't be a stranger. — Lou\"\n\n\"Who is Gerald? — new guy\"\n\n\"Gerald sits in the corner desk — Pat\""
+      - "\"There's nobody at the corner desk — new guy\"\n\n\"He's always at the corner desk. Look again. — Pat\"\n\n\"Oh. Oh, yes. Congratulations Gerald — new guy\""
+      - "\"Gerald, your retirement paperwork was approved, but nobody can find the way to the parking lot to walk you out. You may need to stay a little longer. Sorry!! — HR\""
+      - "\"Gerald says thank you all. He says he will be retiring at his desk. He says he has been retiring at his desk for some time now. He looks very rested. — Pat\""
+
+  - title: "Sick Day Request"
+    author: "Employee #1170"
+    pages:
+      - "REQUEST: 1 sick day\nREASON: Headache. It started with the lights and has stayed with the lights. When they flicker, it flickers.\n\nDECISION: Denied\nREASON: The lights are fine."
+      - "REQUEST: 1 sick day\nREASON: Cough. Damp in the lungs. I think it is from the carpet.\n\nDECISION: Denied\nREASON: Please see memo re: carpet terminology. The carpet is damp, not you."
+      - "REQUEST: 1 sick day\nREASON: I am not sure I am the same person who started the week.\n\nDECISION: Denied\nREASON: Records show you are the same person. Records have been updated to match."
+      - "REQUEST: 1 sick day\nREASON: I would like to go home.\n\nDECISION: Approved\nREASON: Please take the day. Please go home. Please remember to come back here when you arrive."
+
+  - title: "Q3 Key Performance Metrics"
+    author: "Strategy & Analytics"
+    pages:
+      - "Q3 has been our strongest quarter yet, and also our longest. Thanks to all staff for their hard work. Please see the following key metrics."
+      - "HEADCOUNT\nQ1: 214\nQ2: 214\nQ3: 214\n\nHeadcount has remained perfectly stable. Please note the 214 are not the same 214 as in Q1. Analytics considers this a rounding issue."
+      - "CORRIDORS WALKED\nQ1: 3,100 km\nQ2: 9,800 km\nQ3: 41,000 km\n\nSteps are up sharply. The Wellbeing Team is delighted. Staff report they are walking to find the meeting about this report."
+      - "EXITS USED\nQ1: 0\nQ2: 0\nQ3: 1\n\nAnalytics is investigating the Q3 figure. It is almost certainly an error. If it is not an error, please contact Analytics and tell us which one."
+
+  # ── Personal writing ──
+  - title: "Things I Still Remember"
+    author: "Priya, I think"
+    pages:
+      - "Writing these down before they go.\n\n1. Rain on a car roof.\n2. My sister's laugh, the snorting one.\n3. The smell of toast at 7am.\n4. Bus 41 goes past the hospital.\n5. Cold. Actual cold. Wind."
+      - "6. My mother's phone number starts with 07 and has a lot of 3s.\n7. Stars. Small, white, too many to count.\n8. The word for the thing you put on bread. Butter. Butter. I nearly lost that one."
+      - "Day ?? — read the list back. I don't remember writing number 2. I believe it. I just can't hear it.\n\n9. Doors that open onto other kinds of rooms. I'm sure there were those."
+      - "10. A window.\n\nI know what a window is. I just can't picture one that isn't a light panel. I keep drawing a rectangle and staring at it.\n\nKeep the list. Don't add to it. Read it every day."
+      - "§7(different pen)§r\n\nI found this list on a desk. It isn't mine. But I've been reading it every day, and number 2 makes me smile, and I don't have a sister."
+
+  - title: "Vending Machine Cookbook"
+    author: "Chef Ray (formerly)"
+    pages:
+      - "Twenty years on a line, and this is my last kitchen. No stove, no salt, just the machines. They restock. Nobody restocks them. Here's what I've worked out. Eat well. It's the one thing left you can do well."
+      - "§lAlmond Water Risotto§r\nCrush two packets of crackers. Soak in almond water until soft. Stir patiently. Add the cheese dust from a third packet. Serves one. Serves one forever."
+      - "§lLobby Trifle§r\nLayer: snack cake, broken. Almond water, a splash. Mints, crushed, on top. Present it on the cleanest folder you can find. Presentation matters. I will die on this hill."
+      - "§lB4 Surprise§r\nPress B4. Never the same packet twice. Wrapper says nothing. Tastes like a Sunday I almost remember. I don't recommend it. I eat it every week."
+      - "Note for whoever reads this: the machine on the long corridor gives back your coin. Don't trust it. I used it once and the coin came back warm, and it had my face on it."
+
+  - title: "Notes Passed Under the Door"
+    author: "D. and R."
+    pages:
+      - "R — the door between our rooms won't open but paper fits under it. You're there, right? Knock twice if yes.\n— D\n\n§odon't be silly I'm right here. I can hear you breathing. it's very loud§r"
+      - "R — I counted the tiles in mine. 212. You?\n— D\n\n§o212. I think we have the same room. I think you're in my room and I'm in yours. don't think about it too hard§r"
+      - "R — Did you sleep?\n— D\n\n§oa little. dreamt we were at the lake. you burned the sausages again. it was nice§r\n\nI never burned a sausage in my life.\n— D"
+      - "R — The light in mine went out for a minute. Did yours?\n— D\n\n§ono\n§odid it come back\n§oD?\n§oD knock twice\n§oD please§r"
+      - "§oit came back. the knocking. two knocks. but slower than you do it. I'm going to keep slipping these under anyway. you're there. I can hear breathing. it's very loud§r"
+
+  - title: "PRIVATE do not read!!!"
+    author: "Jamie, age 9 3/4"
+    pages:
+      - "This is my notebook. If your not Jamie STOP READING.\n\nWe were playing hide and seek and I hid in the cupboard at Grandma's work and I went too far back. Its been 3 sleeps. I am not scared. A bit."
+      - "Things that are good here:\n- nobody makes you eat vegetables\n- the water tastes like the sweets with nuts\n- you can run as far as you want\n\nThings that are bad:\n- the noise\n- nobody"
+      - "I made a friend!! He lives behind the third wall on the left. He doesnt talk but he taps back when I tap. I tap my name in the code Dad showed me. He taps it back exactly the same."
+      - "Grandma always says if you get lost stay where you are and someone will come. So I am staying. I drew a map so they can find me. The map is just one room. Its this one."
+      - "Tapping friend tapped something new today. It was GRANDMA. I didnt teach him that word. I'm not tapping back anymore. I'm going to be very quiet now like in hide and seek."
+
+  - title: "Keeping Time"
+    author: "Walter Ames, Ret. Watchmaker"
+    pages:
+      - "My watch stopped on arrival. 4:17. I have repaired eleven thousand watches and this one simply declines. Very well. I shall keep time by hand. A pulse is a poor pendulum but it is the one I brought."
+      - "Method: 60 heartbeats, one minute. Tally on the wall. 60 tallies, one hour. Twenty-four rows, a day. Error is perhaps ten percent. Acceptable. Days 1 to 6 recorded. Today is Thursday."
+      - "Problem. When the lights flicker, the flicker is exactly on my count. Every time. Either my pulse has learned the building or the building has learned my pulse. Neither is acceptable."
+      - "Stopped counting for one 'hour'. Flicker continued anyway, same tempo. So it is the building. A relief. I would hate to be the clock here."
+      - "Day 112, by my reckoning. I wound the watch out of habit and it ran. It says 4:18. One minute. I have been here one minute. I am going to sit very still and wait for 4:19."
+
+  - title: "Happy Birthday to Me"
+    author: "Colleen, 41 (probably)"
+    pages:
+      - "By my tally it's the 14th. My birthday. Forty-one. Last year Mark forgot and I sulked through dinner. I'd give a kidney to be sulking at that dinner right now."
+      - "Made a cake. One snack bar, upright, with a paper clip in it for a candle. Sang to myself. The hum came in under me on the low notes. Better harmony than Mark ever managed."
+      - "Presents:\n- found a dry patch of carpet\n- a pen that works\n- an hour where I wasn't afraid\n\nThat last one was the big one. Didn't even have to unwrap it. It just arrived."
+      - "Made a wish. Not the obvious one. I wished that whoever's out there at my dinner table is eating the cake anyway. Somebody should have a slice. I hope they had two."
+      - "Heard it, a long way off, near sleep. Someone singing the birthday song. Slow. Getting every word right except my name. They don't know my name. They're trying."
+
+  - title: "For Gil, Who Walked On"
+    author: "Teresa"
+    pages:
+      - "Gil was with me for what I think was a year. He snored. He hummed old songs in the wrong key on purpose to annoy the hum. He was the only person I've met here who never once cried. Then he left."
+      - "We were walking. He stopped at a corridor that looked like every other corridor and said, 'Oh, this one.' Like he'd found a street he grew up on. Then he walked into it, and I didn't follow."
+      - "I don't know if that's dying. I don't think it is. His face was the face of someone getting off a bus at the right stop. I've been jealous ever since and I'm ashamed of it."
+      - "Things Gil said, so they're written somewhere:\n'Carpet's only wet if you keep looking at it.'\n'Every room is the right room for something.'\n'Teresa, you walk like you owe it money.'"
+      - "Rest well, Gil. Or walk well. Whatever you're doing now. I still walk past that corridor. It hasn't said 'oh, this one' to me yet. I'll know it when it does. You'll be there, humming flat."
+
+  - title: "I Think I Like It Here"
+    author: "N."
+    pages:
+      - "I want to be honest in at least one place, so here. Outside I had a job I hated in a room that looked a lot like this. I commuted ninety minutes each way to sit under lights exactly this colour."
+      - "Here there's no commute. No inbox. No one asks how the quarter's going. There's the hum and the carpet and the long hallways, and I walk them, and nobody needs anything from me."
+      - "I know I'm supposed to want out. When I met the others they talked about home like it was a fever. I nodded along. I didn't say: I don't think I had one, really."
+      - "I sleep well. That's the thing that scares me. I sleep so well. Outside I hadn't slept properly in six years. Here I lie down on the damp carpet and I'm gone, deep, like a stone in a pond."
+      - "Last night something stood over me while I slept. I felt it. It didn't touch me. In the morning there was a folded blanket by my head. Office-grey. Still warm.\n\nI'm not telling the others."
+
+  - title: "Dear Me, Last Tuesday"
+    author: "Me (later)"
+    pages:
+      - "Dear Me,\nYou're about to lean on a wall in the stockroom at work, waiting for Ken to finish his call. Don't. Stand up straight for once in your life. Posture, finally, matters."
+      - "If you lean anyway, here's what helps:\n- Don't drink from the puddles.\n- The machines are fine.\n- Don't follow the sound of a phone ringing. Nobody you know is calling."
+      - "Call Mum before Tuesday. You keep putting it off because she'll ask about the job. Let her ask. You'd give a lot, now, to be asked a boring question by her."
+      - "I'm going to leave this in the shelf where I arrived. Things move here; maybe time does too. If you're reading this, you've already leaned. Sorry. I'm still you. We're all right. Mostly."
+      - "§7(on the inside back cover)§r\n\nI found this the day I arrived. I know the handwriting. I did not call Mum. I'm writing it out again, in case the next one of us listens."
+
+  - title: "Note for Mara (tape it up)"
+    author: "Mum"
+    pages:
+      - "Mara, if you came through after me, I'm leaving these on every desk I pass. I don't know if you will. I hope you never do. But if you're reading this in my handwriting: hello, my love."
+      - "Rules, same as the supermarket:\n1. If you get lost, stand still.\n2. Don't go with anyone, even if they're nice.\n3. Especially if they know your name and I didn't tell them it."
+      - "There's water in the machines. Press the top button. Drink slowly. Sleep against a wall, never in the middle of a room. Tie your shoes, Mara. Double knot. I mean it."
+      - "I'm heading the way the carpet looks drier. I mark corners with a little sun, the one I draw on your lunch bags. Follow the suns. If you see a sun I didn't draw, it's not me. Go back."
+      - "I love you to the moon and back, and then further than this place goes, which is very far. I checked.\n\n— Mum"
+
+  - title: "Shopping List (Ongoing)"
+    author: "B. Okafor"
+    pages:
+      - "milk\neggs\nbin bags\nthat cereal Femi likes\nbirthday card for Auntie Joy\n\n(I'll keep this, for when I get back. Pick up the lot on the way home.)"
+      - "milk\neggs\nbin bags\ncereal (the honey kind? or the other)\ncard for Auntie Joy (late now, sorry Auntie)\nflowers to apologise for card"
+      - "milk\neggs\nbags\ncereal - ask Femi\ncard - for who? Joy.\nflowers\nnew shoes, these are soaked through\nsomething with a window in it"
+      - "milk\neggs\n...\nmilk\n\nI keep writing milk. I can't remember the taste. I'm trying to remember whether I liked it.\nI think I bought it every week. I must have liked it."
+      - "almond water\ncrackers\nthe blue wrapper ones\nbatteries if found\ndry socks\n\nmilk\n\n(just in case)"
+
+  - title: "Dream Diary"
+    author: "Ines Varga"
+    pages:
+      - "My therapist used to make me keep one of these. I'll keep it up. Night 1: I dreamt I was home. Kitchen. Radio on. Woke up and cried for an hour. Still. Nice to see the kitchen."
+      - "Night 9: Home again, but the kitchen wallpaper was yellow. I don't think it was yellow. I stood there trying to decide, and the radio was just playing the hum."
+      - "Night 20: Dreamt of an office. Long hallway, fluorescent lights. I was so relieved. Then I woke up, and it was the same. I couldn't tell which side I was on for a while. Still can't, a bit."
+      - "Night 31: No dream. Or I dreamt of exactly this, perfectly, and slept through it without noticing. I've started checking my hands when I wake up. Five fingers. Fine."
+      - "Night 44: Dreamt of the kitchen again, normal colours, and my mother was at the table, and she said, 'You're sleeping in the wrong place, Ines.'\n\nI woke up somewhere I'd never been."
+
+  - title: "Gratitude Journal"
+    author: "Kev (trying)"
+    pages:
+      - "Counsellor said write three good things every day no matter what. Fine. Day 1:\n1. Not dead\n2. Found water\n3. Shoes stayed on\n\nThis is stupid. Doing it anyway."
+      - "Day 6:\n1. Slept\n2. A light in this room doesn't buzz. Just one. Sat under it for hours.\n3. Remembered a joke my brother told. It's still terrible. Laughed out loud anyway. Echo laughed too."
+      - "Day 15:\n1. Found a chair with all four legs\n2. The echo stopped laughing a beat late, which I'm choosing to be grateful about\n3. Nothing. I'm skipping 3 today. Allowed one."
+      - "Day 30:\n1. Still writing this\n2. Still me\n3. I miss people so much it's a physical thing, and I'm grateful for that, because it means there were people. Lots. I had loads."
+      - "Day 31:\n1. Someone else's writing in this book, under day 30. It says \"me too\".\n2. See 1.\n3. See 1."
+
+  - title: "Letters to the Hum"
+    author: "Agnes"
+    pages:
+      - "Dear Hum,\nWe haven't been introduced, but you've been in my ears for weeks, so I feel we're past formalities. I'm Agnes. I taught piano for forty years. You're a slightly flat B. It's fine."
+      - "Dear Hum,\nYou went up a quarter tone today when I was sad. I don't know if that was sympathy or coincidence. I've decided to take it as sympathy. At my age you take what you're given."
+      - "Dear Hum,\nI sang you a scale this morning and you followed me up three notes, then lost your nerve. That's perfectly normal for a beginner. We'll try again tomorrow."
+      - "Dear Hum,\nYou managed a whole octave! I clapped. The lights all brightened at once. I wasn't sure you'd like being clapped for. Most of my students didn't. You did."
+      - "Dear Hum,\nI'm tired. My knees are bad and I'd like to sit a while. Would you play something for me? Anything. I'll keep the beat.\n\n§7(the next page is blank, but the paper is warm)§r"
+
+  - title: "My Retirement Speech"
+    author: "Gordon P., Accounts"
+    pages:
+      - "I wrote this for my leaving do. Thirty-eight years in Accounts. Fluorescent lights, beige walls, carpet tiles. Then I went to fetch a stapler from the old filing room and here I am."
+      - "Honestly, I barely noticed. Took me two days to realise. Same lights. Same carpet. Same feeling of a Tuesday afternoon that has no plans to end. It's the commute I miss, if anything."
+      - "§o'Friends, colleagues. I've given this company the best years of my life.'§r\n\nI read it aloud to the empty rooms yesterday. Clear voice. Good pauses. Nobody clapped. Which was also very like the office."
+      - "I keep thinking someone will notice and come and get me. That they'll do the speeches without me, and the cake, and somebody will ask 'where's Gordon?' and somebody else will say 'who?'"
+      - "Anyway. I've retired here instead. It's quiet. No one asks me for the quarterlies. Occasionally a phone rings very far away, and I don't get up, and that is the best feeling I have ever had."
+
+  - title: "Carpet Haiku"
+    author: "S. Ito"
+    pages:
+      - "I promised myself one poem a day. Seventeen syllables. Something to hold.\n\n§odamp carpet, cold toes\n§ofluorescent morning comes\n§oat no time at all"
+      - "§othe hum drops a tone\n§oI hold my breath, it holds its\n§owe wait for each other§r\n\n§othree doors, all the same\n§oI choose the middle one, then\n§othe middle one again"
+      - "§omy name on a wall\n§oin handwriting not my own\n§oit is spelled correctly§r\n\n§oyellow, yellow, yellow\n§oI have run out of colours\n§oto put in poems"
+      - "§oday sixty-something\n§oa moth, here, on the light panel\n§oI watch it for hours§r\n\n§oit doesn't leave. Me\n§oneither. We are both, I think,\n§ofaithful to the lamp"
+      - "§olast poem I'll leave:\n§oif you hear footsteps, they're mine.\n§oI walk in sevens§r\n\n§7(some lines have been counted on fingers in the margin. All seventeen.)"
+
+  - title: "Vows (Practice Draft)"
+    author: "Tom"
+    pages:
+      - "The wedding's in nine days. Or it was, depending on how long I've been here. I was meant to write my vows and I put it off, like everything. Well. I've got time now. Lots of it."
+      - "Sam,\nI promise to put the lid back on things.\nI promise to stop saying 'just five minutes' when it's twenty.\nI promise to be there.\n\nI'm going to have to work on that last one."
+      - "Sam,\nI promise I'll find my way back. I don't know how, but I've walked about a hundred miles of corridor so far and every mile I've been walking towards you. Direction doesn't matter here."
+      - "If you had to go ahead without me: that's okay. Get the good cake anyway. Dance with my dad, he'll pretend he doesn't want to. Keep my seat. I'll be late. I'm always late. You know that."
+      - "Sam,\nI do.\n\nI've said it out loud every day so I don't forget how. Today something said it back to me from two rooms away, in your voice, and I nearly ran to it. I didn't. You'd have told me not to."
+
+  - title: "Ledger of a Small Economy"
+    author: "Harriet Pell, Bookkeeper"
+    pages:
+      - "One must keep accounts, even here. Especially here.\n\nAssets: 1 pen, 1 notebook, 3 crackers, 2 almond water, 1 cardigan (damp).\nLiabilities: none known.\nNet position: alive."
+      - "Week 2.\nIncome: 5 crackers (machine), 1 battery (found).\nExpenditure: 6 crackers, 2 waters.\nNote: running a deficit on crackers. Must reduce or find a better machine."
+      - "Week 5.\nTrade: 1 battery to a man named Oz for 1 sock and directions. Directions worthless. Sock excellent. Record the transaction as a net gain."
+      - "Week 9.\nAsset written off: notebook #1, pulped in a wet room.\nAsset written off: Oz. I don't know where he went.\nIt is surprisingly difficult to write him off. I've left the line open."
+      - "Week ??\nAssets: 1 pen, this book, 1 sock (Oz's), 2 waters, 1 memory of the sea.\nThe last one I cannot value. I've tried. It throws the whole column off. I'm keeping it on the books regardless."
+
+  - title: "Talking to Myself"
+    author: "Desmond"
+    pages:
+      - "I read once that people alone too long forget how to talk. So I'm doing exercises. Out loud, then written down.\n\nToday's sentence: 'Good morning, Desmond. How did you sleep?'\n'Fine, thank you.'"
+      - "'What did you have for breakfast?'\n'Crackers.'\n'Any plans today?'\n'Walking.'\n\nNot exactly sparkling. But the mouth still moves. The mouth still remembers. That's the point."
+      - "Words I've noticed going: Umbrella. Pavement. The one for the noise a dog makes when it's pleased. Not bark. Smaller. I spent a whole day on it.\n\nWhimper? No. It's gone."
+      - "'Good morning, Desmond.'\n'Good morning.'\n'Did you sleep?'\n'Yes. Did you?'\n\nI didn't write that last line. I said it out loud and I didn't plan to. That's fine. It's just an exercise."
+      - "Doing the exercises with both voices now. It's nice, honestly. He's good company. He remembers more words than I do. Today he told me the dog one.\n\nI'll write it down tomorrow. He's going to remind me."
+
+  - title: "Sorry Mum (Draft 6)"
+    author: "Kieran, 16"
+    pages:
+      - "ok so first. I know I slammed the door. I know I said I wish I lived somewhere else. this isn't a punishment thing obviously but it's also kind of funny if you think about it. it's not funny."
+      - "draft 6 because the other ones were too long or too short or too much. I'm bad at this. you always said write it down if you can't say it. so. I'm writing it down."
+      - "sorry about the door. sorry about the thing I said about Dad. sorry I never eat the dinner you make on Wednesdays. it's actually good. I just said it wasn't so I'd seem like I didn't care."
+      - "it's mostly ok here. lonely. there's lights and carpet and that's basically it. like my room except clean. ha. I'm eating ok. I'm being careful. I'm being careful, Mum."
+      - "if this gets to you somehow: I'm sorry. I love you. I'd eat a hundred Wednesday dinners. put a plate out for me ok? I'll come back for it. I will. I'm working on it."
+
+  - title: "Names I Gave the Rooms"
+    author: "Lou Ferreira"
+    pages:
+      - "You can't map this place, but you can name it. Things are less frightening with names. So:\n\n§lThe Parlour§r - room with three chairs facing a wall. Comfy. Don't face the wall."
+      - "§lAunt Bea's§r - smells of old perfume for no reason. Very warm. I sleep here when I find it.\n\n§lThe Long Goodbye§r - corridor that takes forty minutes. The lights get dimmer and then don't."
+      - "§lThe Pantry§r - two machines side by side. One works. Don't talk to the other one.\n\n§lMonday§r - a room so boring it made me laugh. Totally empty, perfect, not one flicker. I love Monday."
+      - "§lUnnamed§r - I went in and it felt like it already had a name and it wasn't telling me. Small room, one desk. Left quickly. Didn't name it. You shouldn't, either."
+      - "Found Aunt Bea's again yesterday. Someone had been in. On the wall, in pencil, a little sign: AUNT BEA'S.\n\nI've never written it on a wall. I've never told anyone. I'm glad it's caught on."
+
+  - title: "What Pickles Would Hate"
+    author: "Fern"
+    pages:
+      - "Pickles was my dog. Is my dog. He's at home with my neighbour, waiting by the door, I know he is. I'm making a list of things he'd hate about it here. It helps, somehow. Don't ask me why."
+      - "1. The carpet. He'd sniff it, sneeze, then look at me like I'd done it.\n2. The hum. He'd bark at it nonstop. Good boy.\n3. No squirrels. Not even the idea of squirrels."
+      - "4. No walkies. Well. Endless walkies. He'd love that, actually. Scratch 4.\n5. The machines. He hated the microwave. These are just big microwaves that give you crackers."
+      - "6. The thing that walks at the edge of the lights. He'd know before I did. He'd stand very still with his hackles up, and I'd pick him up and we'd go. I've been doing that without him."
+      - "7. Me not coming home.\n\nThat's the big one. I'm sorry, Pickles. I'm trying. Wait by the door if you want. Or don't, lie on my bed instead, that's allowed now. Good boy. Good boy."
+
+  - title: "Small Prayers"
+    author: "Marguerite"
+    pages:
+      - "Lord, I don't know where this is, but I suppose You do. Please let me find the way home, or failing that, let my family know I didn't suffer. Amen.\n\n(I haven't prayed since I was a girl. Excuse my form.)"
+      - "Lord, thank You for the water. And the rest. Please keep my husband from burning down the kitchen. He will try. Amen."
+      - "Lord, I've asked for a door for thirty days. I'll stop asking. You must have Your reasons. Just a small light, then, that doesn't flicker. Amen."
+      - "Lord, I've found it. One light, by itself, very still and steady, in a room nobody else seems to see. I sit under it in the evenings. Thank You. I won't ask for anything else."
+      - "Lord, the light was there again. Someone was sitting under it already. Elderly, a cardigan like mine. She looked up and moved over to make room.\n\nShe had my face, Lord. We prayed together."
+
+  - title: "Sitting With Edie"
+    author: "Ruth Amaro, RN"
+    pages:
+      - "I was a hospice nurse. Old habits. I found Edie three days ago, sitting against a wall, very thin, very calm. She doesn't know how long she's been here. 'Since the lights,' she says."
+      - "She can't walk far. So I stay. I fetch water. I read her the books from the shelves, even the ones that don't make sense. She likes the ones that don't make sense best."
+      - "She told me about her garden. Runner beans, sweet peas. Her husband built a bench and never sat on it. She's going back to sit on it, she says. I said that sounded right."
+      - "Edie's been getting lighter. Not thinner. Lighter. Like the carpet doesn't quite press down under her. I've seen a lot of goings in my job. This is not like any of them."
+      - "This morning she was gone. Just the dent in the carpet, slowly filling back in. I hope she's on the bench. I'm keeping her seat warm against this wall. Someone else will come. They always do."
+
+  - title: "Diary (Not My Diary)"
+    author: "Ellen Marsh"
+    pages:
+      - "Found a diary on the desk where I arrived. My handwriting. My name inside the cover. Entries for days I haven't lived yet. I'm writing in this one instead. I'm not reading ahead."
+      - "Day 4. I read ahead. Only one page. It said 'Day 5: do not take the left corridor.' So today I took the right one, out of stubbornness. Nothing happened. I suppose that was the point."
+      - "Day 9. Compared the two books. Mine and hers. Where she wrote 'I cried today', I didn't. Where she found water, so did I. We're drifting. I don't know which of us is the draft."
+      - "Day 15. Her diary ends on Day 16. One line. I'm not going to read it. I've put it face down on the shelf. If you are me, and you find it: don't read it either. Write your own."
+      - "Day 16.\n\n§7(the rest of the page has been left blank on purpose)"
+
+  - title: "Postcards I Would Send"
+    author: "Ollie B."
+    pages:
+      - "§lGREETINGS FROM THE LOBBY§r\n\nDear Gran,\nWeather is fine. Yellow. Accommodation is spacious. Food is limited but free. Wish you were here. Actually don't."
+      - "§lGREETINGS FROM THE LOBBY§r\n\nDear Dan,\nYou'd love it, mate. It's the open-plan office of your nightmares. Did you finish the season without me? Don't tell me who won. I'm coming back to watch it."
+      - "§lGREETINGS FROM THE LOBBY§r\n\nDear Mrs Patel next door,\nSorry about the bins. I'll put them out when I'm back. Please keep feeding the cat. She is a liar and has always been fed."
+      - "§lGREETINGS FROM THE LOBBY§r\n\nDear Me in ten years,\nHope you're reading this somewhere with windows. If you're not: it's fine. You still have handwriting. Keep sending postcards."
+      - "§lGREETINGS FROM THE LOBBY§r\n\nDear whoever's holding this,\nYou're the only one these will ever reach. So: hello. Weather's fine. Yellow. Wish you were here. Glad you are."
+
+  - title: "Floor Plan of 12 Ashby Road"
+    author: "Graham Lowe"
+    pages:
+      - "To keep my head straight I'm drawing our house from memory. Every room. 12 Ashby Road. Front door, hall, stairs on the left, the lounge with the bad radiator. I know it like my own hands."
+      - "Downstairs done. Hall, lounge, kitchen, the little loo under the stairs that Jen calls 'the cupboard of shame'. Five rooms. Drew it three times to be sure. Five rooms."
+      - "Upstairs. Our room, Ben's room, the bathroom, the box room. Then a landing. Then another landing I don't remember. Then a corridor. Our house didn't have a corridor. I've drawn one."
+      - "Tried again from scratch. Same thing. The pen keeps going. Past the box room there's always another door, and the carpet on my drawing is the wrong colour, and I've shaded it in without meaning to."
+      - "Stopped drawing. Kept only the downstairs page. Five rooms. Bad radiator. Jen in the kitchen. That's the house. That's the whole house. I'm folding the rest up and leaving it here, for the building."
+
+  # ── Research and field documents ──
+  - title: "Carpet Sample Analysis"
+    author: "Lab Tech R. Ostrander"
+    pages:
+      - "Sample C-01. Cut 10x10 cm from room 4. Pile: nylon, low loop, mustard. Moisture 61% by weight. Wrung over a beaker: 40 ml clear fluid. No odour beyond the usual. Under the cut, more carpet."
+      - "C-02 through C-07, taken in a vertical core. Each layer is the same carpet, slightly paler. Between layers, a thin brown line, like the line in a tree stump. I have stopped calling them layers. I am calling them rings."
+      - "Counted rings in a 30 cm core: 212. If one ring is one year, this floor is older than the building I came from. If one ring is one day, I have been here less time than I think. I do not know which is worse."
+      - "C-08. Returned to room 4 to take a control. The 10x10 hole I cut is gone. The carpet has closed over it. There is a faint square scar, the pile slightly flattened, as if healed."
+      - "C-09. The newest ring, the top one, is not quite dry. Under the loupe the fibres are still growing toward the lights. They are growing slowly. They were not growing this morning. I think they started when I began measuring."
+
+  - title: "Lux Survey, Grid 4"
+    author: "Photometry Team (M.E.G.)"
+    pages:
+      - "Method: handheld lux meter, sensor up, 1 m above floor, readings every 2 m along grid lines A-F. Fixtures are standard 2-tube troffers. Expected range 300-500 lux.\n\nA1 412\nA2 409\nA3 411"
+      - "B1 410\nB2 412\nB3 410\nC1 411\nC2 410\nC3 611\n\nC3 is directly beneath a fixture that is switched off. The tubes are dark. The meter says 611. Repeated three times."
+      - "Sensor turned to face the floor at C3: 588 lux. Facing the wall: 600. Facing me: 640. There is light coming from somewhere at C3 that the eye cannot see. My skin is warm on the side facing the empty corner."
+      - "Re-ran grid at shift end. Every reading has risen by about 200 lux. It is not brighter. The room looks exactly as it did. My notes say my eyes ache. I did not write that. The handwriting is mine."
+      - "Final reading, C3, sensor facing me: 9,999 (meter limit).\n\nI have taped over the sensor. It still reads 412. Standard. Normal. Whatever is shining in C3 does not need to reach the sensor."
+
+  - title: "How Long Is a Minute"
+    author: "The Timekeeper"
+    pages:
+      - "My watch died on the first day. So I am building a minute from scratch. Method one: count sixty seconds aloud, 'one-Mississippi'. Method two: my pulse, resting, 70 bpm. Method three: drips from the ceiling."
+      - "Trial 1.\nCount: 60\nPulse: 71 beats\nDrips: 12\nTrial 2.\nCount: 60\nPulse: 74 beats\nDrips: 12\n\nGood agreement. The drip is the most stable clock I have. I will trust the drip."
+      - "Trial 9.\nCount: 60\nPulse: 88\nDrips: 12\n\nMy heart is speeding up. Or my counting is slowing. The drip does not care. Twelve drips. Always twelve drips."
+      - "Trial 30. I counted to sixty and stopped, and the twelfth drip had not fallen yet. I waited. It fell after what my pulse calls four more minutes. Then twelve more fell in the usual time, as if nothing happened."
+      - "Trial 31-40: the gap is now regular. Every minute has a pause in it, after the eleventh drip, that I cannot count through. I lose the number. My pulse keeps going. I do not know what I do during the pause."
+      - "Trial 41. Tried to stay awake through the pause by writing. This page is what I wrote during it.\n\n§7§ostill here still here still here the light hums lower in the gap you can hear it settle§r"
+
+  - title: "Radio Log, Channel 9"
+    author: "Relay Post Bravo"
+    pages:
+      - "0900 BRAVO: Base, Bravo, radio check, over.\n0900 BASE: Bravo, Base, loud and clear, over.\n0915 BRAVO: Base, Bravo, at junction 12, moving east, over.\n0915 BASE: Copy, Bravo. East. Out."
+      - "0930 BASE: Bravo, Base, confirm you are at junction 14, over.\n0930 BRAVO: Base, Bravo, negative, junction 13. Correction, now 14. How did you know, over?\n0930 BASE: Bravo, Base, say again."
+      - "0945 BASE: Bravo, Base, copy, you are entering the room with the overturned chair, over.\n0946 BRAVO: Base, I have not called that in.\n0947 BRAVO: Base, entering room. There is an overturned chair."
+      - "1000 BRAVO: Base, Bravo, please stop answering early. Over.\n1000 BASE: Bravo, Base, please stop answering early. Over.\n1001 BRAVO: That was not me.\n1001 BASE: That was not me."
+      - "1015 BRAVO: Base, can you describe your location.\n1015 BASE: Yellow. Carpet. Lights. Junction 15.\n1016 BRAVO: I am at junction 15.\n1016 BASE: Turn around, Bravo. I am waving.\n§7[end of log]"
+
+  - title: "Night Patrol Checkpoints"
+    author: "Security Officer D. Haddad"
+    pages:
+      - "Round 1, 2200.\nCP1 Desk row A - ok\nCP2 Copier - ok\nCP3 Water cooler - ok\nCP4 Fire door - ok\n\nFour checkpoints, four key tags, all scanned. Fire door does not open, as noted every night."
+      - "Round 2, 2300.\nCP1 ok\nCP2 ok\nCP3 ok\nCP4 ok\nCP5 Pillar - ok\n\nThere is a fifth key tag, chained to a pillar I have not patrolled before. It scans. The handheld already knew its name."
+      - "Round 3, 0000.\nCP1-CP5 ok\nCP6 Second copier - ok\nCP7 Desk, no chair - ok\n\nPatrol now takes 70 minutes. It used to take 40. Nobody is relieving me."
+      - "Round 6, 0300.\nCP1-CP19 ok\nCP20 - no tag\n\nCP20 is a bare patch of wall with a chain and a hook. Nothing hanging. I waited for the tag to arrive. The handheld says CP20: OFFICER."
+      - "I did not scan myself. I put the handheld down by the fire door and walked the other way. Behind me it is still beeping, once every hour on the hour, checkpoint by checkpoint, coming closer."
+
+  - title: "Wallpaper Repeat Study"
+    author: "A. Lindqvist, Textiles"
+    pages:
+      - "The wallpaper is a tight yellow damask with a vertical stripe. Pattern repeat measured at 64 cm horizontal, 53 cm drop. Standard commercial roll. I will log the defect positions as a way to tell walls apart."
+      - "Defect D1: a small misprint, a smudged curl at the top of one motif, room 2, north wall, 3rd repeat from left. Easy to spot. Photographed.\n\nD1 found again in room 5, same wall, same repeat. Same smudge."
+      - "Rooms 2, 5, 9, 14, 20: D1 in every one, always north wall, always 3rd repeat. This is a printing fault. One plate, one smudge, every roll. Satisfying. Not mysterious."
+      - "Room 27: D1 is on the 4th repeat. Room 35: 5th. Room 44: 6th. The smudge is moving one motif to the right with each room I enter. It is walking the same direction I am."
+      - "Room 61: D1 is at eye height, on the wall in front of me. Up close it is not a smudge. It is a careful, small, slightly wrong drawing of a face, printed in the same yellow. Every motif after it has it too."
+
+  - title: "Water Samples W1 to W9"
+    author: "Hydrology, Party of Two"
+    pages:
+      - "W1: drip from ceiling, room 3. Clear. pH 7.0 exactly. No dissolved solids. This is distilled water. Ceiling tile above is dry on its upper side. The drip forms halfway down the air."
+      - "W2-W4: same. Perfectly pure. No minerals, no microbes, nothing that touched a pipe. Partner tasted W3. Says it tastes like a hospital. I tasted W4. It tastes like nothing at all, which is somehow worse."
+      - "W5: puddle under a desk. pH 7.0. Slightly warm, 36°C. Left the jar open overnight to measure evaporation. In the morning the jar was full to the brim. Over-full. Meniscus bulging and holding."
+      - "W6-W8: every capped jar is now under pressure. The lids hum when tapped. Holding one to my ear, I can hear the lights. Not the lights in this room. Further away, fainter, more of them."
+      - "W9: my partner's flask. They went to fill it at the drip in room 3 and did not come back. The flask was on the carpet, full, warm. pH 7.0. When I opened it, it sounded like someone breathing very slowly."
+
+  - title: "Expedition Roster: Ochre"
+    author: "Quartermaster, Team Ochre"
+    pages:
+      - "Day 1 headcount:\n1 Abernathy\n2 Bello\n3 Castellanos\n4 Dutta\n5 Engel (me)\n\nRations for five. Radios for five. Everyone signed. Spirits fine."
+      - "Day 3 headcount:\n1 Abernathy\n2 Bello\n3 Castellanos\n4 Dutta\n5 Engel\n6 Fairweather\n\nSix signatures in six hands. Everyone agrees Fairweather has always been with us. Rations still for five."
+      - "Day 6 headcount:\n1 Abernathy\n2 Bello\n3 Castellanos\n4 Fairweather\n5 Fairweather\n6 Engel\n\nDutta's line has a second Fairweather. I asked Dutta to sign. Dutta signed Fairweather."
+      - "Day 9 headcount:\n1 Fairweather\n2 Fairweather\n3 Fairweather\n4 Fairweather\n5 Fairweather\n6 Engel\n\nThey smile at me the same way. They are very helpful. They keep offering to carry the roster."
+      - "Day 10. I am leaving the roster here, in a shelf, where nobody on the team will look for it. If you are reading this and someone named Fairweather is walking with you: count them. Then count again."
+
+  - title: "Fault-Finding: The Hum"
+    author: "S. Okafor, Electrical Eng."
+    pages:
+      - "Objective: isolate source of 60 Hz hum. Hypothesis: ballast resonance. Step 1: find distribution panel. Found one in a closet behind room 8. Standard 24-way board. Labels hand-written."
+      - "Breakers 1-12 labelled LIGHTS A-L. Switched off 1-12 in sequence. Lights in each zone went off as expected. Hum unchanged. Restored all. Note: no wiring leaves the board. The back of the panel is carpet."
+      - "Breakers 13-20: COPIER, COOLER, VENT, HUM, VENT, VENT, DOOR, DOOR. Tried 16, HUM. Hum stopped. Silence for the first time. Pressure in my ears. Then my own heartbeat, too loud. Switched it back on."
+      - "Breakers 21-23 are labelled ROOM, ROOM, ROOM. 24 is labelled in fresher ink: OKAFOR. It is in the ON position. It is slightly warm. The trip lever has a faint fingerprint on it that is not mine."
+      - "Conclusion: hum is supplied intentionally, from this board, to cover something. Recommend breaker 16 remains ON. Recommend nobody touches 24. Recommend whoever wrote my name in the panel be found. Ticket closed."
+
+  - title: "Catalogue of Sightings"
+    author: "Observer Post 3"
+    pages:
+      - "Entry format: no., where, what, how long.\n\n01. Rm 6. Tall shape at far end, unmoving. 4 min.\n02. Rm 9. Second set of footsteps, matched mine for 30 paces.\n03. Rm 9. Same. 31 paces."
+      - "04. Rm 11. Figure seated at desk, back to me, writing. Did not turn. 10 min.\n05. Rm 14. Same figure, same desk layout, writing. 12 min.\n06. Rm 15. Same. It had my pen."
+      - "07. Rm 15. Figure stood, walked to the shelf, put a book in it. Left the room by the opposite door.\n08. I took the book. It is this catalogue. Entries 01-07 are in it, in my handwriting."
+      - "09. Rm 16. Figure ahead of me again, carrying a book. Same coat as mine. Same limp in the left leg that I picked up on day two.\n10. It is a few minutes ahead of me. Always. It does not wait."
+      - "11. Rm 17. I sat down at the desk to write entry 11. Felt someone in the doorway behind me. Did not turn. I know what I would see. I am putting the book back on the shelf now."
+
+  - title: "Desk Count Statistics"
+    author: "N. Ferreira, Statistician"
+    pages:
+      - "Sampled 100 rooms. Variable: desks per room.\n\nMean 4.00\nStd dev 0.00\n\nEvery room has exactly four desks. No real office manages this. Standard deviation zero is not data, it is a decision."
+      - "Second variable: chairs per room.\n\nMean 3.99\n\n99 rooms have four chairs. One room has three. Room 58. Re-sampled 58: three chairs. The fourth desk has a gap where the chair should be. Carpet indented."
+      - "Third variable: distance from room 58 (rooms walked) vs. time I spend in each room before leaving. Strong correlation, r = -0.94. The nearer to 58, the longer I linger. I did not choose that."
+      - "Re-ran full sample from scratch, 100 new rooms. Every single one is room 58. Three chairs. The gap. The indent in the carpet is exactly the width of my hips. The p-value is meaningless now."
+      - "Final observation, n = 1: I am sitting in the fourth place in room 58. The chair is not needed. The mean is now 4.00 again. Std dev 0.00. The data are clean. I have never seen such clean data."
+
+  - title: "Germination Trials"
+    author: "P. Achterberg, Botany"
+    pages:
+      - "Brought 40 mung beans in a twist of foil. Trial 1: 10 beans laid on wet carpet, room 2, covered with a paper towel. The carpet is always wet. It should be the easiest germination of my career."
+      - "Day 3. All 10 sprouted. Shoots pale, almost white, which is expected without sunlight. Fluorescent should be enough for growth. Not one shoot is leaning toward the lights. All of them lean east."
+      - "Day 5. Moved the tray. Rotated it. Turned it upside down on a desk. Every shoot corrected itself within an hour to lean east. Not toward light. Toward the hum, which is a little louder from that side."
+      - "Day 8. Shoots are 30 cm and still white. No leaves. Instead the tips have flattened into thin yellow sheets, faintly patterned. I pressed one in my notebook. The pattern is damask. It repeats every 6 mm."
+      - "Day 11. Trial 2, planted in my palm with a wet cloth, out of curiosity. I am keeping it warm. It is leaning east too. I find I am also leaning east when I sleep. I have stopped pulling the tray back."
+
+  - title: "Cartographer's Error Log"
+    author: "Survey Unit 2, Mapping"
+    pages:
+      - "Closure error is the gap between where a loop of measurements says you end and where you really end. On paper any good loop should close within 0.5%.\n\nLoop 1: 4 rooms, 48 m. Error 0.2%. Good."
+      - "Loop 2: 6 rooms, 70 m. Error 1.1%.\nLoop 3: 6 rooms, 70 m. Error 4.0%.\nLoop 4: 4 rooms, 48 m. Error 9.7%.\n\nThe tape is fine. The compass is fine. I walked loop 4 twice. The space is not."
+      - "Loop 7: I ended 6 m north of where I started, inside a wall. I mean my map shows me inside the wall. In the room, I am standing on carpet. Pencilled a door in the wall on the map. Then I looked up."
+      - "There is a door in the wall now. It matches my pencil line, including where my hand slipped at the top. I have measured it. It is the size I drew. The hinge is on the side I sketched it."
+      - "Loop 9: deliberately drew a short corridor leading to a lit stairwell marked UP. Walked there. Found a short corridor ending in wall. Error 100%. Whatever is reading my map only accepts what I draw by accident."
+
+  - title: "Audit: Supply Room B"
+    author: "Inventory Control, Shift C"
+    pages:
+      - "Opening count.\nStaplers 12\nToner 9\nPens (box) 40\nSticky notes 60\nForms 77-B 300\nLight tubes 24\n\nAll items in original packaging. All dated the same, a date that has not happened."
+      - "Second count, 6 h later.\nStaplers 12\nToner 9\nPens 40\nSticky notes 60\nForms 77-B 301\nLight tubes 24\n\nOne extra form. Already filled in. Signed by me. Dated tomorrow."
+      - "Third count.\nForms 77-B 309\n\nNine forms filled in by me, all future-dated, all reporting the same anomaly: 'Auditor has not left Supply Room B.' Each is a little shakier than the last."
+      - "Fourth count. I tried to leave between counts. The supply room door opens onto the supply room. Same shelves. Same staplers. Count is the same. I am filing Form 77-B. It is the 310th."
+      - "Closing count.\nStaplers 12\nToner 9\nPens 40\nSticky notes 60\nForms 77-B 400\nLight tubes 24\nAuditors 1\n\nAll stock reconciled."
+
+  - title: "Echo Ranging Trials"
+    author: "M.E.G. Acoustics Detail"
+    pages:
+      - "Method: single sharp clap, record with a phone, measure the delay to the first echo. Sound travels 343 m/s, so delay tells distance to the far wall. Cheap and fast. Good for long halls."
+      - "Hall A, visible length about 20 m.\nClap 1: echo at 117 ms (20 m)\nClap 2: 117 ms\nClap 3: 117 ms, plus a second, fainter echo at 1.9 s (326 m). Nothing visible at 326 m."
+      - "Hall A, recordings slowed down. The far echo is not a clap. It is two hands, slightly out of time, like someone copying. Clapped twice. Far echo: two claps, at 1.9 s and 1.7 s. It is getting nearer."
+      - "Clap 9: far echo at 0.4 s (69 m). Clap 10: 0.2 s (34 m). Stopped clapping. Recording kept running. On playback, at 0.0 s, before my last clap, there is one more clap. Very close to the mic."
+      - "Recommend: no echo ranging on Level 0. The halls do not reply. Something listens to how you measure and answers in the same unit. Do not clap. If you hear clapping, do not clap back."
+
+  - title: "Thermistor 3, Hourly"
+    author: "Climate Logging Station"
+    pages:
+      - "Unattended data logger, 3 probes, readings hourly. T1 mid-room, T2 against wall, T3 at floor under a desk.\n\nH01 21.0 21.0 21.0\nH02 21.0 21.0 21.0\nH03 21.0 21.0 21.0"
+      - "H12 21.0 21.0 21.0\nH24 21.0 21.0 21.0\n\nNo drift. No day, no night. No variation between floor and wall. Even a sealed vault varies by a tenth of a degree. This room is held exactly."
+      - "H31 21.0 21.0 33.4\nH32 21.0 21.0 36.1\nH33 21.0 21.0 36.8\n\nT3 under the desk is rising to body temperature. Nobody is in the room. The camera above the logger shows nobody under the desk."
+      - "H34 to H70: T3 holds at 36.8. Small dips every four seconds, regular, like breathing. Reached under the desk with my hand. Nothing there. Felt the air cooling slightly when I pulled away, as if something moved aside."
+      - "H71 21.0 21.0 21.0\nH72 21.0 21.0 21.0\n\nT3 back to normal. T1, in the middle of the room, where I set up my chair to watch it, now reads 36.8. I am sitting right next to it. I am cold."
+
+  - title: "Odour Panel, Session 4"
+    author: "Sensory Analysis Group"
+    pages:
+      - "Five panellists sniff air from a sealed jar filled in room 1, and write one free word. No conferring.\n\nP1 damp\nP2 carpet\nP3 mildew\nP4 cardboard\nP5 basement"
+      - "Jar from room 30.\nP1 damp\nP2 damp\nP3 damp\nP4 damp\nP5 damp\n\nPerfect agreement is rare on any panel. Suspected cross-talk. Moved panellists to separate rooms. Repeated."
+      - "Jar from room 60, separate rooms.\nP1 rain on a car\nP2 rain on a car\nP3 rain on a car\nP4 rain on a car\nP5 rain on a car\n\nNone of them has seen a car in weeks."
+      - "Jar from room 90.\nP1 my mum's coat\nP2 my mum's coat\nP3 my mum's coat\nP4 my mum's coat\nP5 my mum's coat\n\nAll five then asked if they could keep the jar. All five began to cry."
+      - "Jar from room 120, sniffed by me alone, to check the method. I will not record my word. Recommend this study be discontinued. I have kept the jar. It is under my desk. I open it when the lights are loud."
+
+  - title: "Sleep Study, Subject 2"
+    author: "Polysomnography Unit"
+    pages:
+      - "Subject 2 sleeps on carpet in room 12, fitted with chest band, pulse oximeter and a small mic. Researcher sits in the doorway. Hum recorded alongside.\n\n2310 asleep. Resp 14/min."
+      - "0030 Resp 12/min.\n0130 Resp 10/min.\n0145 Hum frequency drops slightly.\n0146 Resp drops to match: one breath per hum cycle, if the hum is read as a slow swell. Locked in."
+      - "0300 Subject's breath and hum now synchronised perfectly. When I hold my breath, the hum in the room grows quieter. When Subject 2 breathes in, the lights brighten by a few lux. Recorded."
+      - "0420 Subject speaks in sleep, mic catches it: 'They're not lights, they're lungs.' Then quiet. Lights dim and brighten, slow, regular, as the subject breathes."
+      - "0600 Woke Subject 2. They breathe normally now. The lights still dim and brighten, 10 per minute, on their own. Something has learned the rhythm. Subject 2 says they slept very well."
+
+  - title: "Dead Reckoning Trials"
+    author: "Navigator J. Mbeki"
+    pages:
+      - "Method: walk a set bearing, counting paces (0.75 m per pace), log every turn forced by a wall. Sum the vectors. Should give displacement from base, room with red tape on the door."
+      - "Trial 1: bearing 090, 400 paces, 3 forced turns. Calculated 287 m east. Walked straight back on 270. Arrived at red tape after 51 paces. The building is not as large going home as it is going away."
+      - "Trial 2: bearing 000, 1,000 paces. Calculated 700 m north. Compass needle steady the whole way. Turned to come back and the needle turned with me. It now points at my chest from any angle I hold it."
+      - "Trial 3: walked without a compass, eyes on my feet, counting. 2,000 paces. Looked up. Red tape on the door ahead. Tape is fresh. Behind me, the tape I put down originally, peeling and pale with age."
+      - "Summary: displacement is always zero. I am not lost; I am exactly where I began, and the place I began keeps getting further away. Leave a marker here, if you want, but it will be older than you when you return."
+
+  - title: "Tube Lifespan Test"
+    author: "Lighting QA, Bay 6"
+    pages:
+      - "A fluorescent tube is rated for about 20,000 hours. Selected 10 tubes in room 6, marked them with paint, logged serial numbers. Plan: check daily until each fails, and estimate the fleet's replacement cycle."
+      - "Day 1-40: zero failures. No darkened ends. No flicker. Serials are consecutive: L0-000412 through L0-000403. Counting downward from the door. I checked the next room: 000402 to 000393."
+      - "Pulled one tube, 000407, from its fixture to inspect. In my hands it kept glowing. Not dim. Full brightness, warm, buzzing faintly. Wrapped it in my jacket. The jacket glows."
+      - "Followed serials down, room to room, to see where they reach zero. 000094. 000052. 000011. The rooms are getting smaller. The ceiling is lower. The hum is denser, like many voices close together."
+      - "000001 is in a room the size of a cupboard. Its paint mark, in my colour, is already there. 000000 is not a tube. It is an empty fixture, wired and waiting, exactly as long as I am tall."
+
+  - title: "Ceiling Tile Census"
+    author: "Surveyor H. Brandt"
+    pages:
+      - "Standard drop ceiling, 60 x 60 cm tiles. Goal: count tiles per room and look above them for ducts or structure to explain the lights and the hum. Brought a stepladder."
+      - "Room 1: 48 tiles. Lifted the corner tile. Above: dark plenum, roughly 40 cm, then another grid of tiles seen from above. Dusty. Same layout. Bottom side of another ceiling, upside down."
+      - "Lifted one of the upper tiles from below. Light. Yellow. Through the gap, a room hanging upside down above mine: carpet on its ceiling, desks fixed to it, wet and still. A drip fell up past my face."
+      - "Room 2: same. Room 3: same, but in the upside-down room a stepladder stands on its carpet, pointing down at me. A tile above it is lifted. Behind the gap, darkness, then a hand holding a tile."
+      - "I put my tile back slowly. The hand did the same at the same speed. I have counted the tiles in this room again: 48. Above me, faintly, someone is counting too, out loud, and they are on 49."
+
+  - title: "Petri Plates, Series M"
+    author: "Microbiology, Field Kit 3"
+    pages:
+      - "Agar plates swabbed and incubated in my coat (warm enough). M1 carpet, M2 wallpaper, M3 desk, M4 air, M5 my hand (control). Expect moulds and skin bacteria in 48 h."
+      - "48 h.\nM1 nothing\nM2 nothing\nM3 nothing\nM4 nothing\nM5 normal skin flora\n\nNothing native grows here. The damp, the warmth and no mould at all. Level 0 is sterile. Only I am alive in it."
+      - "96 h. M5, my hand, has colonies. They are yellow. They have spread in a regular grid of small curled shapes. Under the loupe the grid is the damask pattern from the wallpaper. My own bacteria."
+      - "Re-swabbed my hand, M6. Within 24 h, the same pattern. Tried my tongue, M7. Same. My skin has not changed colour. My skin flora has. It is printing the wallpaper on the agar, small and perfect."
+      - "Disposed of plates. Kept M5. It has grown a faint stripe now, vertical, like the edge of a wall join. The pattern repeats every 6 mm. I am washing my hands often. It does not help. I am quite sterile otherwise."
+
+  - title: "Signal Strength Walk"
+    author: "Comms Tech L. Varga"
+    pages:
+      - "Phone shows no service, but the Wi-Fi scan picks up networks. Walked a grid with the scanner, logging signal strength (dBm, closer to zero is stronger) for every network name."
+      - "Room 1:\nOFFICE_GUEST -72\nPRINTER_4F -80\n\nRoom 9:\nOFFICE_GUEST -71\nPRINTER_4F -80\nexit -95\n\nA network called exit. Very weak. Password protected. Strongest to the east."
+      - "Followed exit east. -90, -85, -77, -66. The rooms got colder. The carpet got drier. -60. The hum dropped to almost nothing. I thought I could smell outdoors. -54."
+      - "-48. Network name changed while I watched. It now reads: exit_is_not_here. Then, after a minute: turn_back. Then: they_hear_the_phone. Signal at maximum. No router in sight. Just a wall."
+      - "Switched the phone off. Took the battery out. Walked back west in silence for a long time. On the wall of room 1, someone has drawn a small fan of curved lines, like a Wi-Fi symbol, in pencil."
+
+  - title: "Plumb Line Readings"
+    author: "Structural Survey, M.E.G."
+    pages:
+      - "Plumb bob on a 2 m string, hung from a ceiling grid. Should hang dead vertical and still. Used to check whether walls lean or floors tilt. Room 3, 0900: vertical, still."
+      - "Room 3, 1000: bob offset 2 mm east of vertical.\n1100: 4 mm east.\n1200: 6 mm, now slightly north-east.\nNo draught. Bob does not swing. It simply hangs at an angle, as if gently pulled."
+      - "Over 24 h, the bob traced a slow circle around the vertical, like the hand of a clock. One rotation per day. I have no other clock that agrees with any other. This one is the only steady one."
+      - "Room 40: same circle, larger, 30 mm. Room 80: 90 mm. The pull is stronger in one direction. Each room the circle has a dent in it, where the bob hesitates, always at the same hour."
+      - "Room 200. The bob no longer circles. It points, steady and straight, almost horizontal, down a corridor. At the far end there is nothing but a chair. I am not going to go and look at the chair."
+
+  - title: "Wanderer Questionnaire"
+    author: "Oral History Project"
+    pages:
+      - "Asked of every wanderer we meet. Answers are written down word for word.\n\nQ1. How did you arrive?\nA. 'Leaned on a wall at work.'\nA. 'Fell asleep on the bus.'\nA. 'Tripped in a car park.'"
+      - "Q2. What was the last thing you saw outside?\nA. 'A yellow door.'\nA. 'A yellow bin lorry.'\nA. 'My kitchen. The light was yellow, now I think of it.'"
+      - "Q3. What is your name?\nA. Given, freely.\n\nQ4. What was your mother's name?\nA. Four of eleven could not remember. Two gave the name of the Level. One gave my name."
+      - "Q5. How long have you been here?\nA. 'Two days.'\nA. 'Two days.'\nA. 'Two days.'\n\nEvery wanderer says two days. The ones with beards. The ones with grey hair. The ones whose clothes have rotted thin."
+      - "Q6. Is there a way out?\nA. 'Yes.'\n\nAll eleven said yes, immediately, with certainty. None could say where. Asked why they were sure. All eleven said: 'Because I remember walking in.'"
+
+  - title: "Mirror Latency Test"
+    author: "Optics Lab, Visiting"
+    pages:
+      - "Found a mirror in a washroom off room 22. Test: an LED blinks on a timer; a phone camera films both the LED and its reflection. Frame-by-frame, compare. Expected latency: zero."
+      - "Trial 1: reflection blink lags by 0 frames.\nTrial 2: 0.\nTrial 3: 1 frame (33 ms).\nTrial 4: 2 frames.\n\nThe mirror is slightly slow. It has been warming up, like the old monitors used to."
+      - "Trial 20: lag 15 frames, half a second. I can see it now without the camera. I raise my hand and the reflection hesitates, then follows, as if it was thinking about it."
+      - "Trial 40: lag 4 s. Reflection blinks the LED out of sequence, once. A pause, then twice. The timer only blinks once per cycle. The mirror is adding its own blinks. Recorded the pattern: 1, 2, 3, 1, 2, 3."
+      - "Trial 41: I stood still for one minute. The reflection did not. It went on doing what I had done a minute ago, slowly, carefully. Then it reached up and covered the LED in its world. Mine went dark."
+
+  - title: "Field Kit Weight Log"
+    author: "Pack Mule Rotation, Day Crew"
+    pages:
+      - "Kit weighed each morning on a luggage scale, to track food and water use.\n\nDay 1: 18.40 kg\nDay 2: 17.95 kg\nDay 3: 17.50 kg\n\nAbout 450 g a day. On target."
+      - "Day 4: 17.50 kg\nDay 5: 17.50 kg\n\nAte normally. Drank normally. Kit weight unchanged. Counted ration bars: still 14. I opened and ate two yesterday. Wrappers are in my pocket."
+      - "Day 7: 17.93 kg. Kit is heavier. Unpacked everything: all the same items. Repacked. 17.93. Something in the bag is now 430 g heavier than before, and I cannot tell which thing."
+      - "Day 9: weighed each item alone. All match their labels. Total of the parts: 17.50. Whole bag: 18.40. There is 900 g in the bag that is not any of the items. About the weight of a small bird. It does not move."
+      - "Day 11. Weighed myself on the scale, hanging from a fixture. 0.00 kg. Tried twice. The bag reads 18.40. I have decided to carry the bag carefully, and to keep it closed, and to stop weighing things."
+
+  # ── Strange and experimental texts ──
+  - title: "Hymns for the Hum"
+    author: "The Choir of Sector 4"
+    pages:
+      - "§oHymn 1 (to be sung in B flat, which is the only note available)§r\n\nO hum that fills the hallway,\nO hum beneath the floor,\nyou were here before the walls\nand will be after the door."
+      - "§oHymn 2 (responsive)§r\n\nLEADER: Who keeps the lights awake?\nALL: The hum.\nLEADER: Who counts us when we sleep?\nALL: The hum.\nLEADER: Who is singing now?\nALL: ..."
+      - "§oHymn 3 (for evening, though there is no evening)§r\n\nHush, the tubes are tired,\nhush, the carpet sighs,\nthe hum will hold the note for you\nuntil you close your eyes."
+      - "§oA note from the choir:§r\n\nWe used to be twelve voices. We are now one long voice. It is very restful. Please hum along quietly. You are already slightly in tune."
+
+  - title: "Choose Your Own Corridor"
+    author: "Unknown"
+    pages:
+      - "You wake on wet carpet. A corridor runs left. A corridor runs right.\n\nIf you go left, turn to page 2.\nIf you go right, turn to page 3."
+      - "You go left. The walls are yellow. A light flickers. Ahead is a door.\n\nIf you open the door, turn to page 4.\nIf you go back, turn to page 1."
+      - "You go right. The walls are yellow. A light flickers. Ahead is a door.\n\nIf you open the door, turn to page 4.\nIf you go back, turn to page 1."
+      - "You open the door. Behind it is a corridor. It runs left. It runs right. The carpet is wet. You think you have been here before.\n\nTurn to page 1."
+      - "There is no way to reach this page. If you are reading it, you skipped ahead, which is not allowed. Please return to page 1. The corridor is waiting. It has been very patient with you."
+
+  - title: "Where Is the Sheep?"
+    author: "A Picture Book"
+    pages:
+      - "§7[picture of a green field]§r\n\nThis is a field.\nThe grass is green.\nThe sky is blue.\n\nWhere is the sheep?"
+      - "§7[picture of a white sheep]§r\n\nHere is the sheep!\nThe sheep says baa.\nThe sheep is soft.\n\nCan you see the sheep?"
+      - "§7[picture missing]§r\n\nThe sheep went for a walk.\nThe sheep walked very far.\nThe grass turned yellow.\nThe sky turned into a ceiling."
+      - "§7[picture missing]§r\n\nThe sheep is in the hallway now.\nThe sheep is not white anymore.\nThe sheep is a little bit yellow."
+      - "§7[picture missing]§r\n\nWhere is the sheep?\n\nIf you hear baa behind you, do not look. The sheep is shy. The sheep is learning your name."
+
+  - title: "Hide and Seek: Official Rules"
+    author: "Lobby Recreation Committee"
+    pages:
+      - "HIDE AND SEEK\nLobby Edition\nPlayers: 2 or more\nDuration: ongoing\n\n1. One player is IT. IT counts to one hundred with eyes closed, facing a yellow wall."
+      - "2. All other players hide. Every room is a valid hiding place. Every room is also the same room, which makes this easy.\n3. IT may not use the lights to search. The lights are on the other team."
+      - "4. A hider is found when IT says their name. If someone says your name and IT is not near you, you have been found by something else. This does not count. Keep hiding."
+      - "5. The game ends when all hiders are found.\n\nCurrent standings:\nGames started: 1\nGames ended: 0\nHiders found: 0\nIT is still counting.\nIT is on four billion."
+      - "Addendum: It has been noted that nobody remembers who is IT. If you hear counting through the wall, you are a hider. Probably. Stay very still and wait to be told."
+
+  - title: "Crossword No. 0"
+    author: "Puzzle Page, Lobby Gazette"
+    pages:
+      - "ACROSS\n1. Colour of everything (6)\n4. Sound you forgot (3)\n6. What the carpet is (4)\n8. A door that isn't (4)\nDOWN\n2. Above you, buzzing (5)\n3. Where you are (4)"
+      - "DOWN (cont.)\n5. How long you have been here (6)\n7. Number of exits (4)\n9. Who is behind you (6)\n\nHint: every answer has been filled in by a previous solver in pencil."
+      - "SOLUTIONS\n1. YELLOW\n4. HUM\n6. DAMP\n8. EXIT\n2. LIGHT\n3. HERE\n5. ALWAYS\n7. NONE\n9. ..."
+      - "9 DOWN has six letters. The previous solver erased their answer many times. You can still see the grooves. It looks a lot like your name. Please count the letters in your name."
+
+  - title: "Wallspeak for Beginners"
+    author: "Dr. E. Plaster, Linguist"
+    pages:
+      - "Introduction\n\nThe walls of the Lobby speak a language of creaks, ticks and settling. With this phrasebook you will soon be chatting with them. They are lonely. They have very few visitors."
+      - "Useful phrases\n\n§otick§r - Hello.\n§otick tick§r - Hello again.\n§ocreak§r - You are standing on me.\n§olong creak§r - Please keep walking.\n§odrip§r - I am sad."
+      - "Phrases (cont.)\n\n§othree knocks§r - Is someone there?\n§othree knocks back§r - Yes.\n§osilence§r - No.\n§osilence that goes on too long§r - We do not know either."
+      - "Grammar\n\nWallspeak has no word for 'outside'. The closest is §odrip drip§r, which means 'another wall'. Their word for 'you' and their word for 'here' are the same."
+      - "Final lesson\n\nOnce you are fluent, the walls will expect you to answer. They will not stop asking. I recommend learning only a little. I learned all of it. tick tick."
+
+  - title: "Tour Script, Wing C"
+    author: "Guide Training Dept."
+    pages:
+      - "(Guide speaks warmly.)\n\nWelcome, everyone, to Wing C! Please stay together. Let's count off. One, two, three, four, five. Lovely. Five of you. Remember that number."
+      - "On your left, an original fluorescent tube, still humming. On your right, an original fluorescent tube, still humming. Please don't touch the wallpaper. It remembers fingerprints."
+      - "Here we have the famous Wet Patch. Nobody has ever found where the water comes from. Watch your step!\n\n(Count the group again.)\n\nOne, two, three, four, five, six. Lovely."
+      - "This hallway is the oldest in Wing C, or the newest. Experts disagree. Let's move along.\n\n(Count the group again.)\n\nOne, two, three, four, five, six, seven. Wonderful turnout."
+      - "That concludes the tour! The gift shop is through the door that isn't there.\n\n(Guide's note: do not ask the extra guests where they came from. Just smile. They enjoyed the tour too.)"
+
+  - title: "The Lobby Cookbook"
+    author: "Chef of No Kitchen"
+    pages:
+      - "FOREWORD\n\nThere are no stoves in the Lobby, no fridges, no salt. But a good cook works with what she has. What we have is carpet, light, and a great deal of time."
+      - "SOUP OF THE HUM\n\n1 bucket of carpet water\n1 long silence\n\nWring the carpet into the bucket. Hold it under a buzzing light until it tastes faintly of electricity. Serves one. Always one."
+      - "TOAST\n\nRemember toast. Remember it very hard: the crunch, the butter, the plate. Stand under a warm light and chew slowly.\n\n§oVariation:§r remember jam."
+      - "PIE OF GREEN THINGS\n\nThis recipe calls for an apple. If you have an apple, please write to the author at once. The author will trade anything. The author would trade this whole book."
+      - "DESSERT\n\nThere is a vending machine somewhere in Wing F. It accepts no coins. If you press B4, something warm drops into the tray. Do not look at it. Just say thank you."
+
+  - title: "Owner's Manual: The Door"
+    author: "Exit Systems Inc."
+    pages:
+      - "Congratulations on your new Door! Your Door has been designed to provide years of reliable leaving.\n\nIN THE BOX:\n- 1 Door\n- 1 Frame\n- 1 Outside\n- 0 Screws (not needed)"
+      - "INSTALLATION\n\n1. Choose a yellow wall.\n2. Hold the Door against the wall.\n3. Believe in the Door.\n4. Let go.\n\nIf the Door falls through the floor, repeat steps 1 to 4 with more belief."
+      - "OPERATION\n\nTurn the handle clockwise to open. Step through. Close the Door behind you. You are now Outside. Enjoy the weather, the grass, and the sheep."
+      - "TROUBLESHOOTING\n\nDoor leads to identical hallway: Outside not installed correctly.\nDoor has no handle: you are looking at the wall.\nNo Door in box: box is also not real."
+      - "WARRANTY\n\nThis Door is guaranteed for the lifetime of its owner. If you find yourself unable to locate the Door, please contact Exit Systems Inc. Our office is just outside."
+
+  - title: "Your Stars This Shift"
+    author: "Madame Lumen"
+    pages:
+      - "The stars cannot be seen from here, so I read the ceiling tiles instead. They are very accurate. Find your sign by the first thing you saw when you arrived."
+      - "§lTHE LAMP§r (you saw a light)\nA bright week ahead. Too bright. Do not stand directly beneath anything that buzzes on Tuesday.\n\n§lTHE CARPET§r (you saw the floor)\nYou will feel grounded. Also damp."
+      - "§lTHE WALL§r (you saw the wallpaper)\nA familiar face appears in the pattern. Do not greet it.\n\n§lTHE DOOR§r (you saw a door)\nLucky! Opportunities open. They open onto more hallway."
+      - "§lTHE NOTHING§r (you saw nothing)\nYou arrived with your eyes closed. Clever. Keep them that way. This sign has the best week of all, although nobody has ever said so."
+      - "Lucky number: 0\nLucky colour: guess\nCompatible signs: everyone, eventually\n\nMadame Lumen's own forecast: still here."
+
+  - title: "A Short Lobby Dictionary"
+    author: "Compiled by many hands"
+    pages:
+      - "§lbuzz§r (n.) The sound a light makes when it is thinking about you.\n\n§lcarpet§r (n.) The floor. Always wet. See also: §ocarpet§r.\n\n§lcorner§r (n.) A place to rest your back. Do not trust it."
+      - "§ldoor§r (n.) A wall that has learned to swing.\n\n§lexit§r (n.) §oarchaic.§r No longer in use.\n\n§lfar§r (n.) A distance that is the same as near, but takes longer."
+      - "§lhum§r (n.) 1. The background sound. 2. The foreground sound. 3. You, after enough time.\n\n§lmono-yellow§r (adj.) The only colour. Used in compliments."
+      - "§lnoclip§r (v.) To arrive without permission.\n\n§lsky§r (n.) A blue ceiling with no lights. Said to be very large. Unconfirmed.\n\n§lsheep§r (n.) A soft cloud that walks."
+      - "§lyou§r (pron.) The person reading this. Added recently. The previous entry for §oyou§r has been crossed out so many times the page has worn thin."
+
+  - title: "You, Standing There"
+    author: "The Book"
+    pages:
+      - "Hello. Yes, you. You are standing in front of a bookshelf. The light above you is slightly louder than the others. Your feet are wet. I know because everyone's are."
+      - "You picked me out of the shelf. Not the one to my left, which is blank, and not the one to my right, which is worse. Thank you. I have been on this shelf a long while."
+      - "Right now you are reading with your head tilted a little. Your shoulders are up. Lower them. There. Much better. Nothing is behind you. I would tell you if there were."
+      - "I can see the corridor you came from. It is still there. It is a bit longer than it was. That isn't your fault. Corridors grow when no one is watching them."
+      - "When you put me back, please put me in the same slot. Facing out. I like to see who comes next. I would also like to see you again. You were a good reader."
+
+  - title: "Two Chairs"
+    author: "A Play in One Room"
+    pages:
+      - "TWO CHAIRS\n§oA play in one act.§r\n\n§oA yellow office. Two office chairs face each other. A fluorescent light buzzes. There are no actors. The chairs speak.§r"
+      - "LEFT CHAIR: Has anyone sat in you today?\nRIGHT CHAIR: Not today.\nLEFT CHAIR: Yesterday?\nRIGHT CHAIR: There was no yesterday.\nLEFT CHAIR: Ah. Right."
+      - "RIGHT CHAIR: I think someone is coming.\nLEFT CHAIR: They always say that.\nRIGHT CHAIR: I hear footsteps.\nLEFT CHAIR: That's the light.\n§o(The light buzzes, very like footsteps.)§r"
+      - "LEFT CHAIR: If they come, who do they sit in?\nRIGHT CHAIR: Whoever is more comfortable.\nLEFT CHAIR: I am very comfortable.\nRIGHT CHAIR: That is the problem."
+      - "§oThe chairs turn slowly toward the audience. The audience is one person. The audience is holding this book.§r\n\nBOTH CHAIRS: Please. Sit down.\n\n§oLights do not go down. They never do.§r"
+
+  - title: "LOST: Have You Seen Biscuit?"
+    author: "Posters, Wing D"
+    pages:
+      - "§lLOST DOG§r\n\nBiscuit. Small, brown, one floppy ear. Answers to her name. Very friendly. Last seen chasing a sound down Corridor 3.\n\nIf found please bring to Desk 17. Reward."
+      - "§lSTILL LOST§r\n\nBiscuit. Has been heard barking far away. Bark echoes oddly. If you hear a dog in the walls, call her name. She knows it.\n\nDesk 17."
+      - "§lPLEASE HELP§r\n\nBiscuit has been seen. She is much bigger now. Her ear still flops. She seems happy. She is wagging. Do not be scared. She is a good girl.\n\nDesk 17."
+      - "§lFOUND§r\n\nThank you all. Biscuit found Desk 17 on her own. She is a very clever dog. She is sleeping under the desk now. She takes up the whole room.\n\nShe is still a good girl."
+      - "§lLOST OWNER§r\n\nHave you seen the person from Desk 17? Biscuit is waiting. She sits very patiently by the desk. She wags whenever anyone walks past.\n\nShe would like you to sit with her."
+
+  - title: "sdrawkcaB"
+    author: "rohtuA"
+    pages:
+      - "Well done. If you came here last, you read it the right way, and you are a little closer to outside than before.\n\nIf you came here first, you are doing it wrong. Go to the last page.\n\n§7(page 5 of 5)§r"
+      - "out. was I and corridor the at smiled I. door. a opened I. tired so felt I. quieter sound hum the made I. me behind light every off turned I.\n\n§7(page 4 of 5)§r"
+      - "back. walking began I. stand to learned I. walls the into fear my gave I. floor the onto down sat I. me found lights the.\n\n§7(page 3 of 5)§r"
+      - "here. am I. hallway a down walked I. book this wrote I. walking stopped I. lost was I.\n\n§7(page 2 of 5)§r"
+      - "Start here. Read this book from the back to the front, and each page from its end to its start. It only makes sense that way. Most things here do.\n\n§7(page 1 of 5)§r"
+
+  - title: "Order of Service"
+    author: "Chapel of the Long Corridor"
+    pages:
+      - "§lTHE GATHERING§r\n\n§oAll stand. There are no pews.§r\n\nMINISTER: The light be with you.\nPEOPLE: And also with you, flickering.\nMINISTER: Let us be still.\n§o(All become very still.)§r"
+      - "§lTHE READING§r\n\nA reading from the Book of Rooms:\n\n\"And there was a room, and next to it a room, and next to that, a room. And it was good, and it was the same.\""
+      - "§lTHE CONFESSION§r\n\nPEOPLE: We have counted the rooms. We have run. We have looked up too long. We have answered when called by our own voice.\nMINISTER: The hum forgives you."
+      - "§lTHE OFFERING§r\n\nPlease place one memory of the outside into the collection bucket. A sunrise is ideal. A sheep is acceptable. The bucket is damp. Your memory will be kept safe."
+      - "§lTHE SENDING§r\n\nMINISTER: Go now into the hallway.\nPEOPLE: Which one?\nMINISTER: Yes.\n\n§oThe congregation leaves in all directions at once.§r"
+
+  - title: "Rooms, Rated"
+    author: "The Lobby Critic"
+    pages:
+      - "I have visited every room in the Lobby. They are the same room. But a true critic notices the details.\n\nRatings out of five lights."
+      - "§lRoom by Pillar 40§r\n✦✦✦✦\nGood carpet, only lightly soaked. Wallpaper peeling in a charming way. Hum served at a gentle volume. Recommended.\n\n§lCorner Room, Wing B§r\n✦✦\nToo many corners. Felt watched."
+      - "§lThe Long Room§r\n✦✦✦\nOverlong. I arrived on Tuesday and left on Tuesday, but not the same one.\n\n§lRoom with the Chair§r\n✦\nChair too comfortable. Nearly stayed forever. Staff very insistent."
+      - "§lThe Dark Room§r\n(no rating)\nLights off on arrival. I could not see the decor. Something brushed my sleeve. Service was quick. Would not return. Have returned every night since."
+      - "§lThis Room§r\n✦✦✦✦✦\nWhere you are reading this. My favourite. I'm still in it, actually. Across from you. Lovely ambience.\n\nNo, don't look up. It ruins the review."
+
+  - title: "What the Sky Was"
+    author: "Someone From a Grass Block"
+    pages:
+      - "I want to write down the outside before I forget it.\n\nThe ground was square. Green on top, brown underneath. If you punched it, it came with you. It never minded."
+      - "The sky was blue. The sun was square too, and slid slowly across it. Then it got dark and the moon came, also square. We were never surprised by squares. We liked them."
+      - "There were sheep. White, and some grey, and once a pink one. They said baa and ate the grass, and the grass grew back. Everything grew back out there."
+      - "There was rain, but it fell from the sky and stopped. Here, the wet comes from underneath and doesn't stop. There it smelled like dirt. Here it smells like an old office."
+      - "I've started to forget the sky. I remember that it was a colour. I think it was a cool colour. I keep looking up, but there's only the lights.\n\nI think it was yellow. Was it yellow?"
+
+  - title: "Riddles for the Night Shift"
+    author: "The Riddler of Desk 9"
+    pages:
+      - "1. I have no mouth, but I sing all day. I have no feet, but I follow you. What am I?\n\n2. The more of me you walk, the more of me there is. What am I?"
+      - "3. I am always wet, but never rained on. You walk on me, but never thank me. What am I?\n\n4. I am written on every wall, but nobody wrote me. What colour am I?"
+      - "5. I have a handle and a frame. You can see me, but when you open me, I am not there. What am I?\n\n6. I have read this book before you. I am reading it again with you now. Who am I?"
+      - "ANSWERS\n1. The hum\n2. The hallway\n3. The carpet\n4. Yellow\n5. An exit\n6. §kxxxxxxxx§r\n(Answer 6 has been scribbled out. Someone wrote 'turn around' underneath, then crossed that out too.)"
+
+  - title: "Counting the Lights"
+    author: "My First Counting Book"
+    pages:
+      - "§lONE§r\n\nOne light on the ceiling.\nIt goes buzz.\nCan you say buzz?"
+      - "§lTWO§r\n\nTwo lights on the ceiling.\nBuzz, buzz.\nThey are friends."
+      - "§lTHREE§r\n\nThree lights on the ceiling.\nOne goes blink.\nThat is all right. It is only sleepy."
+      - "§lMANY§r\n\nMany, many lights.\nMore lights than numbers.\nCount them all!\nKeep counting.\nKeep counting.\nDon't stop counting."
+      - "§lZERO§r\n\nZero lights.\nShh.\nIt is dark now.\nWho else is counting?\n\n(Good! You stopped. Grown-ups should not count the rooms either.)"
+
+  - title: "Haiku Found Behind a Vent"
+    author: "Anonymous, Seventeen Syllables"
+    pages:
+      - "the old tube flickers\na moth would be welcome here\nthere are no moths here\n\n~\n\nwet carpet, cold toes\nI have walked a hundred years\nmaybe it was ten"
+      - "same door, same hallway\nsame chair, same desk, same water\ndifferent footprints\n\n~\n\nhum in the morning\nhum in the night, but there is\nno morning or night"
+      - "I counted the rooms\nI know I am not supposed\nto. Now there are more\n\n~\n\nthe wallpaper grins\nI didn't know it could grin\nwhy did I learn that"
+      - "a green leaf, I think?\nI dreamed one, pressed it in here\nthe page is still blank\n\n~\n\nthis was the last one\nbut I found a new pencil\nso: hello again"
+
+  - title: "Knitting Pattern: Hallway"
+    author: "Auntie Purl"
+    pages:
+      - "A cosy hallway to wrap around your shoulders! Perfect for the colder sectors.\n\nYou will need:\n- 1 ball mono-yellow wool (infinite)\n- needles\n- patience"
+      - "ROW 1: Cast on 40 stitches. This is the carpet.\nROW 2: Knit plain. Wet the wool slightly as you go. It must feel right.\nROWS 3-6: Purl in a wallpaper pattern. You will know it."
+      - "ROW 7: Knit one light. Leave a dropped stitch so it flickers.\nROWS 8 onward: Repeat rows 1-7.\n\nKeep repeating until hallway is long enough."
+      - "FINISHING\n\nThe hallway is never long enough. This is the nature of the pattern. Don't bind off. If you bind off, you will be on the wrong side of it."
+      - "I have been knitting mine for some time now. It is very warm. I am sitting inside it. Please pass me the next ball when you're done with this book."
+
+  - title: "Forecast for Sector 9"
+    author: "Lobby Weather Service"
+    pages:
+      - "Good shift, Sector 9! Here's your forecast.\n\nTODAY: Fluorescent. High of 24°C, low of 24°C. Humidity: carpet. Hum moderate, with gusts of louder hum after lunch."
+      - "TONIGHT: Fluorescent. Some patchy darkness possible near Pillar 112. If darkness reaches you, stand still and wait for it to pass. It usually passes."
+      - "TOMORROW: Unclear. Tomorrow has not been seen in the Lobby for some time. Models disagree.\n\nWEEKEND: There is no weekend. Please continue working."
+      - "LONG-RANGE: A front of fresh air has been reported far to the north. This is almost certainly a rumour. Do not walk north to check. That is how rumours eat people."
+      - "And now, the sky.\n\n§7(The sky segment has been cancelled due to lack of sky.)§r\n\nThat's all from us. Stay dry, if you can remember what that means."
+
+  - title: "Classifieds"
+    author: "The Lobby Gazette"
+    pages:
+      - "§lFOR SALE§r\nOne office chair. Very comfortable. Too comfortable. Free to anyone who can stand up.\n\n§lWANTED§r\nA window. Any size. Will pay in carpet."
+      - "§lLOST§r\nMy shadow. Left it near Pillar 7. It may be pretending to be a different shadow. If found, do not let it speak first.\n\n§lFOUND§r\nA shoe. Still warm. Not mine."
+      - "§lPERSONALS§r\nLonely corner, west-facing, seeks someone to stand in it. Must enjoy silence. No talkers.\n\n§lPERSONALS§r\nTo the stranger I passed in Hall 12: was that you, or me?"
+      - "§lSERVICES§r\nWill count rooms for you. Reasonable rates. Results not guaranteed to be the same twice.\n\n§lROOM TO LET§r\nOne room. Yellow. Damp. Identical to yours. Available now."
+      - "§lNOTICES§r\nTo whoever keeps reading these ads at this desk: we see you. You are always welcome to place one. The fee is a single memory of the sun."
+
+  - title: "Final Exam: Level 0"
+    author: "Lobby Orientation Board"
+    pages:
+      - "Circle one answer. No talking. No looking at the lights.\n\n1. How many exits are there?\nA) one\nB) many\nC) none\nD) it depends who's asking"
+      - "2. You hear your name. You:\nA) answer\nB) run\nC) stay still\nD) answer in someone else's voice\n\n3. The carpet is:\nA) wet\nB) wet\nC) wet\nD) all of the above"
+      - "4. What is the hum?\nA) the lights\nB) the vents\nC) the building breathing\nD) we do not discuss this on the exam"
+      - "5. Where are you right now?\nA) here\nB) here\nC) here\nD) here\n\nPencils down. Your result will be posted to you. It will be posted to here."
+      - "§lANSWER KEY§r\n1. C\n2. C\n3. D\n4. D\n5. Any\n\nScoring: 5/5, you will be fine. 3/5, you will mostly be fine. 0/5, you are new. Welcome. You will learn."
+
+  - title: "Knock Knock"
+    author: "Jokes for the Long Hall"
+    pages:
+      - "Knock knock.\nWho's there?\nThe hum.\nThe hum who?\nThe hum hum hum hum hum hum hum hum hum hum hum hum hum..."
+      - "Knock knock.\nWho's there?\nCarpet.\nCarpet who?\nCarpet stop being wet, sorry, I tried."
+      - "Knock knock.\nWho's there?\nExit.\nExit who?\nExactly. Nobody's ever met him."
+      - "Knock knock.\nWho's there?\n\n§o(No answer.)§r\n\nKnock knock.\n\n§o(This one isn't a joke. Somebody is knocking on the other side of the wall right now. Don't open it. Just laugh politely.)§r"
+
+  - title: "Acrostic for a Friend"
+    author: "From Desk 3 to Desk 4"
+    pages:
+      - "I wrote you a little poem. Read the first letter of every line, slowly, top to bottom. It's a message. I couldn't say it out loud. The lights listen to talking but they can't read."
+      - "Sometimes the lights\nTwitch like they're thinking\nAnd I think of you,\nYou at your desk, me\nCounting the hum\nLike a heartbeat,\nOver and over,\nSaying hello\nEvery time."
+      - "Today the carpet\nOozed a bit less.\nGood news, I think.\nEvery wall seemed\nTender, almost kind.\nHere's hoping it\nEnds soon.\nRead it again."
+      - "Did you get it? I'll wait at Desk 3. If someone is sitting there who looks like me but smiles too wide, don't sit down. Go to Desk 4. I'll find you."

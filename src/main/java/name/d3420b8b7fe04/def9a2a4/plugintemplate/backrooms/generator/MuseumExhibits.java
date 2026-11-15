@@ -75,18 +75,18 @@ final class MuseumExhibits {
 
     static Center center(Theme t, Random r) {
         return switch (t) {
-            case MINERALS -> pick(r, Center.CASES, 3, Center.PEDESTALS, 3, Center.GEODE, 2, Center.CRYSTALS, 2, Center.METEORITE, 1);
+            case MINERALS -> pick(r, Center.CASES, 3, Center.PEDESTALS, 3, Center.GEODE, 2, Center.CRYSTALS, 2, Center.METEORITE, 1, Center.MONOLITH, 1);
             case FOSSILS -> pick(r, Center.SKELETON, 6, Center.HANGING, 3, Center.AMMONITE, 2, Center.CASES, 1);
             case MOBS -> pick(r, Center.SKELETON, 7, Center.HANGING, 2, Center.PEDESTALS, 2);
             case BOTANY -> pick(r, Center.PLANTERS, 3, Center.TREE, 3, Center.MUSHROOM, 2, Center.CASES, 1);
             case MARINE -> pick(r, Center.AQUARIUM, 3, Center.HANGING, 3, Center.AMMONITE, 1, Center.CASES, 1, Center.SKELETON, 1);
-            case ARCHAEOLOGY -> pick(r, Center.MONOLITH, 4, Center.POTS, 3, Center.PEDESTALS, 2, Center.CASES, 1);
+            case ARCHAEOLOGY -> pick(r, Center.MONOLITH, 5, Center.POTS, 5, Center.PEDESTALS, 2, Center.CASES, 1);
             case NETHER -> pick(r, Center.SKELETON, 3, Center.HANGING, 2, Center.PEDESTALS, 2, Center.METEORITE, 1, Center.CASES, 1);
-            case END -> pick(r, Center.SKELETON, 1, Center.HANGING, 2, Center.PEDESTALS, 3, Center.MONOLITH, 2, Center.CRYSTALS, 2, Center.CASES, 2);
-            case CURIOSITIES -> pick(r, Center.PEDESTALS, 4, Center.CASES, 3, Center.BENCHES, 1);
-            case ART -> pick(r, Center.PAINTINGS, 6, Center.POTS, 1, Center.MONOLITH, 1);
+            case END -> pick(r, Center.SKELETON, 1, Center.HANGING, 2, Center.PEDESTALS, 3, Center.MONOLITH, 3, Center.CRYSTALS, 2, Center.CASES, 2);
+            case CURIOSITIES -> pick(r, Center.PEDESTALS, 4, Center.CASES, 3, Center.POTS, 1, Center.MONOLITH, 1, Center.BENCHES, 1);
+            case ART -> pick(r, Center.PAINTINGS, 6, Center.POTS, 3, Center.MONOLITH, 2);
             case ZOOLOGY -> pick(r, Center.SKELETON, 4, Center.CASES, 2, Center.PEDESTALS, 1, Center.HANGING, 1);
-            case GEOLOGY -> pick(r, Center.METEORITE, 2, Center.GEODE, 2, Center.CRYSTALS, 1, Center.MONOLITH, 1, Center.PEDESTALS, 2, Center.CASES, 1);
+            case GEOLOGY -> pick(r, Center.METEORITE, 2, Center.GEODE, 2, Center.CRYSTALS, 1, Center.MONOLITH, 2, Center.PEDESTALS, 2, Center.CASES, 1);
         };
     }
 
@@ -147,12 +147,9 @@ final class MuseumExhibits {
             }
             if (t == t0 || t == t1 || (t - t0) % 3 != 1) continue;
             for (int tier : style == 0 ? new int[]{2} : new int[]{2, 5}) {
-                Specimen s = pool[m.r().nextInt(pool.length)];
-                c.set(sx(m.ox(), side, 1, t), m.F() + tier, sz(m.oz(), side, 1, t), specimen(s, INTO_ROOM[side]));
-                if (tier == 2) {
-                    c.sign(sx(m.ox(), side, 3, t), m.F() + 1, sz(m.oz(), side, 3, t), INTO_ROOM[side],
-                            m.subject(MuseumCatalogue.name(s), Topic.SPECIMEN, s.rarity()));
-                }
+                Specimen s = m.r().nextInt(100) < potChance(m.theme()) ? pot(m.r()) : pool[m.r().nextInt(pool.length)];
+                put(c, sx(m.ox(), side, 1, t), m.F() + tier, sz(m.oz(), side, 1, t), s, INTO_ROOM[side], label(m, s));
+                if (tier == 2) c.sign(sx(m.ox(), side, 3, t), m.F() + 1, sz(m.oz(), side, 3, t), INTO_ROOM[side], label(m, s));
             }
         }
     }
@@ -243,11 +240,10 @@ final class MuseumExhibits {
                         for (int y = m.F() + 2; y <= m.F() + 4; y++) if (!mid || y == m.F() + 4) m.c().set(x, y, z, glass);
                     }
                 }
-                Specimen s = pool[m.r().nextInt(pool.length)];
+                Specimen s = m.r().nextInt(100) < potChance(m.theme()) ? pot(m.r()) : pool[m.r().nextInt(pool.length)];
                 BlockFace f = facing(alongX, true);
-                m.c().set(cx, m.F() + 2, cz, specimen(s, f));
-                m.c().sign(cx + f.getModX() * 2, m.F() + 1, cz + f.getModZ() * 2, f,
-                        m.subject(MuseumCatalogue.name(s), Topic.SPECIMEN, s.rarity()));
+                put(m.c(), cx, m.F() + 2, cz, s, f, label(m, s));
+                m.c().sign(cx + f.getModX() * 2, m.F() + 1, cz + f.getModZ() * 2, f, label(m, s));
             }
         }
     }
@@ -260,11 +256,10 @@ final class MuseumExhibits {
                 int x = X(m, alongX, a, b), z = Z(m, alongX, a, b);
                 m.c().set(x, m.F() + 1, z, m.pal().trim);
                 m.c().set(x, m.F() + 2, z, m.pal().carved);
-                Specimen s = pool[m.r().nextInt(pool.length)];
+                Specimen s = m.r().nextInt(100) < potChance(m.theme()) + 10 ? pot(m.r()) : pool[m.r().nextInt(pool.length)];
                 BlockFace f = facing(alongX, b > 16);
-                m.c().set(x, m.F() + 3, z, specimen(s, f));
-                m.c().sign(x + f.getModX(), m.F() + 1, z + f.getModZ(), f,
-                        m.subject(MuseumCatalogue.name(s), Topic.SPECIMEN, s.rarity()));
+                put(m.c(), x, m.F() + 3, z, s, f, label(m, s));
+                m.c().sign(x + f.getModX(), m.F() + 1, z + f.getModZ(), f, label(m, s));
             }
         }
     }
@@ -423,21 +418,40 @@ final class MuseumExhibits {
                 m.subject("Reef, living", Topic.TANK, Rarity.UNCOMMON));
     }
 
-    /** A monolith: obelisk, inscribed stela, menhir, a head, a ring of standing stones, or a totem. */
+    /** Room point (a along the axis, b across) at height y. */
+    private static void at(Room m, boolean alongX, int a, int y, int b, BlockData d) {
+        m.c().set(X(m, alongX, a, b), y, Z(m, alongX, a, b), d);
+    }
+
+    private static boolean hit(int a, int y, int b, int salt, int mod) {
+        return Math.floorMod(a * 73 + y * 151 + b * 37 + salt, mod) == 0;
+    }
+
+    /**
+     * A monolith: obelisk, stela, menhir, a long-faced head, a stone circle, a totem pole, a T-pillar,
+     * a trilithon, a dolmen, a stone sphere, a runestone, a pyramid or ziggurat, a colossal head, a
+     * colossal foot, an inscribed decree, a black monolith (mostly in the End galleries) or a fallen
+     * column. Labelled at the front (+across).
+     */
     static void monolith(Room m, boolean alongX) {
         int cx = m.ox() + 16, cz = m.oz() + 16, y0 = m.F() + 1;
         Random r = m.r();
         String name;
-        switch (r.nextInt(6)) {
+        int type = m.theme() == Theme.END && r.nextBoolean() ? 15 : r.nextInt(17);
+        switch (type) {
             case 0 -> {
-                BlockData[] st = r.nextBoolean() ? new BlockData[]{QUARTZ_BLOCK.createBlockData(), CHISELED_QUARTZ_BLOCK.createBlockData()}
-                        : r.nextBoolean() ? new BlockData[]{SMOOTH_SANDSTONE.createBlockData(), CHISELED_SANDSTONE.createBlockData()}
-                        : new BlockData[]{POLISHED_BLACKSTONE.createBlockData(), CHISELED_POLISHED_BLACKSTONE.createBlockData()};
-                for (int y = 0; y < 15; y++) {
-                    int half = y < 2 ? 2 : y < 13 ? 1 : 0;
+                Material[][] sets = {{QUARTZ_BLOCK, CHISELED_QUARTZ_BLOCK}, {SMOOTH_SANDSTONE, CHISELED_SANDSTONE},
+                        {POLISHED_BLACKSTONE, CHISELED_POLISHED_BLACKSTONE}, {SMOOTH_RED_SANDSTONE, CHISELED_RED_SANDSTONE},
+                        {POLISHED_GRANITE, GRANITE}, {POLISHED_DEEPSLATE, CHISELED_DEEPSLATE}};
+                Material[] set = sets[r.nextInt(sets.length)];
+                BlockData[] st = {set[0].createBlockData(), set[1].createBlockData()};
+                int h = 12 + r.nextInt(5);
+                BlockData tip = (r.nextInt(3) == 0 ? GOLD_BLOCK : set[0]).createBlockData();
+                for (int y = 0; y < h; y++) {
+                    int half = y < 2 ? 2 : y < h - 2 ? 1 : 0;
                     for (int dx = -half; dx <= half; dx++) {
                         for (int dz = -half; dz <= half; dz++) {
-                            m.c().set(cx + dx, y0 + y, cz + dz, y % 3 == 1 && y > 2 && half == 1 ? st[1] : st[0]);
+                            m.c().set(cx + dx, y0 + y, cz + dz, y == h - 1 ? tip : y % 3 == 1 && y > 2 && half == 1 ? st[1] : st[0]);
                         }
                     }
                 }
@@ -451,20 +465,24 @@ final class MuseumExhibits {
                     for (int y = 1; y <= 10; y++) {
                         boolean edge = a == 12 || a == 19 || y == 10;
                         boolean line = !edge && y % 2 == 0 && y > 1 && Math.floorMod(a * 7 + y * 3, 5) != 0;
-                        m.c().set(X(m, alongX, a, 15), y0 + y, Z(m, alongX, a, 15), line ? glyph : stone);
-                        m.c().set(X(m, alongX, a, 16), y0 + y, Z(m, alongX, a, 16), stone);
+                        at(m, alongX, a, y0 + y, 16, line ? glyph : stone);
+                        at(m, alongX, a, y0 + y, 15, stone);
                     }
                 }
                 name = r.nextBoolean() ? "Stela, inscribed" : "Boundary stone";
             }
             case 2 -> {
                 long s = r.nextLong();
-                BlockData[] st = {STONE.createBlockData(), MOSSY_COBBLESTONE.createBlockData(), ANDESITE.createBlockData()};
+                Material[][] sets = {{STONE, MOSSY_COBBLESTONE, ANDESITE}, {GRANITE, STONE, DIORITE},
+                        {TUFF, STONE, ANDESITE}, {SANDSTONE, SMOOTH_SANDSTONE, STONE}};
+                Material[] set = sets[r.nextInt(sets.length)];
                 for (int y = 0; y < 13; y++) {
                     for (int dx = -2; dx <= 2; dx++) {
                         for (int dz = -2; dz <= 2; dz++) {
                             double w = 2.2 - y * 0.08 + 0.5 * SimplexNoise.noise3(s, dx * 0.4, y * 0.2, dz * 0.4);
-                            if (Math.sqrt(dx * dx + dz * dz * 2.5) < w) m.c().set(cx + dx, y0 + y, cz + dz, st[Math.floorMod(dx + y + dz, 3)]);
+                            if (Math.sqrt(dx * dx + dz * dz * 2.5) < w) {
+                                m.c().set(cx + dx, y0 + y, cz + dz, set[Math.floorMod(dx + y + dz, 3)].createBlockData());
+                            }
                         }
                     }
                 }
@@ -477,10 +495,9 @@ final class MuseumExhibits {
                 for (int y = 1; y <= 12; y++) {
                     for (int a = -2; a <= 2; a++) {
                         for (int b = -2; b <= 2; b++) {
-                            boolean nose = b == 3 - 1 && a == 0 && y >= 5 && y <= 8;
                             if (y > 10 && Math.abs(a) > 1) continue;
-                            m.c().set(X(m, alongX, 16 + a, 16 + b), y0 + y, Z(m, alongX, 16 + a, 16 + b), y == 9 && b == 2 ? dark : tuff);
-                            if (nose) m.c().set(X(m, alongX, 16 + a, 16 + b + 1), y0 + y, Z(m, alongX, 16 + a, 16 + b + 1), tuff);
+                            at(m, alongX, 16 + a, y0 + y, 16 + b, y == 9 && b == 2 ? dark : tuff);
+                            if (b == 2 && a == 0 && y >= 5 && y <= 8) at(m, alongX, 16, y0 + y, 19, tuff);
                         }
                     }
                 }
@@ -499,59 +516,448 @@ final class MuseumExhibits {
                         }
                     }
                 }
+                // the altar stone in the middle
+                for (int a = 15; a <= 16; a++) for (int b = 14; b <= 17; b++) at(m, alongX, a, y0, b, st);
                 name = "Stone circle, model";
             }
-            default -> {
+            case 5 -> {
                 Material[] bands = {RED_TERRACOTTA, BLACK_TERRACOTTA, WHITE_TERRACOTTA, CYAN_TERRACOTTA, YELLOW_TERRACOTTA};
                 for (int y = 0; y < 14; y++) {
                     BlockData b = y % 3 == 2 ? bands[Math.floorMod(y * 7 + cx, bands.length)].createBlockData() : STRIPPED_SPRUCE_LOG.createBlockData();
                     m.c().set(cx, y0 + y, cz, b);
-                    m.c().set(cx + 1, y0 + y, cz, b);
-                    m.c().set(cx, y0 + y, cz + 1, b);
-                    m.c().set(cx + 1, y0 + y, cz + 1, b);
+                    m.c().set(cx - 1, y0 + y, cz, b);
+                    m.c().set(cx, y0 + y, cz - 1, b);
+                    m.c().set(cx - 1, y0 + y, cz - 1, b);
                 }
-                for (int d = -3; d <= 4; d++) {
-                    m.c().set(X(m, alongX, 16 + d, 16), y0 + 11, Z(m, alongX, 16 + d, 16), SPRUCE_PLANKS.createBlockData());
-                }
+                for (int d = -4; d <= 3; d++) at(m, alongX, 16 + d, y0 + 11, 15, SPRUCE_PLANKS.createBlockData());
                 name = "Totem pole";
             }
+            case 6 -> {
+                // a T-shaped pillar, its sides carved with animals in relief
+                Material[] set = r.nextBoolean() ? new Material[]{SMOOTH_SANDSTONE, CHISELED_SANDSTONE} : new Material[]{CALCITE, CHISELED_TUFF};
+                BlockData st = set[0].createBlockData(), relief = set[1].createBlockData();
+                dais(m, alongX, 3, 4);
+                for (int y = 1; y <= 12; y++) {
+                    int b0 = y <= 9 ? 13 : 12, b1 = y <= 9 ? 18 : 20;
+                    for (int a = 15; a <= 16; a++) for (int b = b0; b <= b1; b++) at(m, alongX, a, y0 + y, b, st);
+                }
+                String[] beast = {"...#", "####", "####", "#..#"};   // top row first: head, back, belly, legs
+                for (int row = 0; row < beast.length; row++) {
+                    for (int k = 0; k < 4; k++) {
+                        if (beast[row].charAt(k) != '#') continue;
+                        at(m, alongX, 14, y0 + 7 - row, 14 + k, relief);
+                        at(m, alongX, 17, y0 + 7 - row, 17 - k, relief);
+                    }
+                }
+                name = "T-pillar";
+            }
+            case 7 -> {
+                BlockData[] st = {STONE.createBlockData(), ANDESITE.createBlockData()};
+                for (int a = 10; a <= 21; a++) {
+                    for (int b = 15; b <= 16; b++) {
+                        boolean leg = a <= 12 || a >= 19;
+                        for (int y = 0; y <= 10; y++) {
+                            if (y <= 8 && !leg) continue;
+                            if (y <= 8 && (a == 10 || a == 21)) continue;
+                            at(m, alongX, a, y0 + y, b, st[hit(a, y, b, 0, 3) ? 1 : 0]);
+                        }
+                    }
+                }
+                name = "Trilithon, cast";
+            }
+            case 8 -> {
+                BlockData[] st = {STONE.createBlockData(), MOSSY_COBBLESTONE.createBlockData(), COBBLESTONE.createBlockData()};
+                long s = r.nextLong();
+                for (int y = 0; y <= 4; y++) {
+                    for (int k = 13; k <= 18; k++) {
+                        at(m, alongX, 12, y0 + y, k, st[hit(12, y, k, 1, 3) ? 1 : 0]);
+                        at(m, alongX, 19, y0 + y, k, st[hit(19, y, k, 2, 3) ? 1 : 0]);
+                        at(m, alongX, k, y0 + y, 13, st[hit(k, y, 13, 3, 4) ? 2 : 0]);
+                    }
+                }
+                for (int a = 9; a <= 22; a++) {
+                    for (int b = 10; b <= 21; b++) {
+                        double da = a + 0.5 - 16, db = b + 0.5 - 16;
+                        double e = da * da / 36 + db * db / 25 + 0.25 * SimplexNoise.noise2(s, a * 0.3, b * 0.3);
+                        if (e < 1) at(m, alongX, a, y0 + 5, b, st[hit(a, 5, b, 4, 4) ? 1 : 0]);
+                        if (e < 0.55) at(m, alongX, a, y0 + 6, b, st[0]);
+                    }
+                }
+                name = "Dolmen";
+            }
+            case 9 -> {
+                Material[] mats = {POLISHED_GRANITE, POLISHED_ANDESITE, POLISHED_DIORITE, SMOOTH_BASALT};
+                BlockData st = mats[r.nextInt(mats.length)].createBlockData();
+                dais(m, alongX, 4, 4);
+                double R = 3.3 + r.nextDouble() * 0.8, cy = 1 + R;
+                for (int a = 10; a <= 21; a++) {
+                    for (int b = 10; b <= 21; b++) {
+                        for (int y = 1; y <= 10; y++) {
+                            double da = a + 0.5 - 16, db = b + 0.5 - 16, dy = y + 0.5 - cy;
+                            if (da * da + db * db + dy * dy <= R * R) at(m, alongX, a, y0 + y, b, st);
+                        }
+                    }
+                }
+                name = "Stone sphere";
+            }
+            case 10 -> {
+                BlockData stone = (r.nextBoolean() ? STONE : GRANITE).createBlockData();
+                BlockData band = (r.nextBoolean() ? RED_TERRACOTTA : CHISELED_STONE_BRICKS).createBlockData();
+                for (int a = 12; a <= 19; a++) {
+                    int h = 9 - (int) ((a - 15.5) * (a - 15.5) / 4);
+                    for (int y = 0; y < h; y++) {
+                        at(m, alongX, a, y0 + y, 15, stone);
+                        boolean ring = (a == 13 || a == 18 || y == h - 2) && a > 12 && a < 19 && y < h - 1 && y > 0;
+                        boolean cross = (a == 15 || a == 16) && y >= 3 && y <= 6 || (y == 5 && a >= 14 && a <= 17);
+                        at(m, alongX, a, y0 + y, 16, ring || cross ? band : stone);
+                    }
+                }
+                name = "Runestone";
+            }
+            case 11 -> {
+                if (r.nextBoolean()) {
+                    BlockData st = SMOOTH_SANDSTONE.createBlockData(), line = CUT_SANDSTONE.createBlockData(), top = GOLD_BLOCK.createBlockData();
+                    for (int y = 0; y <= 6; y++) {
+                        for (int a = 9 + y; a <= 22 - y; a++) {
+                            for (int b = 9 + y; b <= 22 - y; b++) at(m, alongX, a, y0 + y, b, y == 6 ? top : y % 2 == 1 ? line : st);
+                        }
+                    }
+                    name = "Pyramid, model";
+                } else {
+                    BlockData[] st = {MUD_BRICKS.createBlockData(), PACKED_MUD.createBlockData()};
+                    for (int k = 0; k <= 3; k++) {
+                        for (int y = 2 * k; y <= 2 * k + 1; y++) {
+                            for (int a = 9 + 2 * k; a <= 22 - 2 * k; a++) {
+                                for (int b = 9 + 2 * k; b <= 22 - 2 * k; b++) at(m, alongX, a, y0 + y, b, st[k & 1]);
+                            }
+                        }
+                    }
+                    // a stair up the front
+                    Stairs step = (Stairs) MUD_BRICK_STAIRS.createBlockData();
+                    step.setFacing(facing(alongX, false));
+                    for (int k = 0; k < 7; k++) {
+                        for (int a = 15; a <= 16; a++) {
+                            at(m, alongX, a, y0 + k, 22 - k, step);
+                            if (k < 6) at(m, alongX, a, y0 + k + 1, 22 - k, AIR.createBlockData());
+                        }
+                    }
+                    name = "Ziggurat, model";
+                }
+            }
+            case 12 -> {
+                // a colossal head in a helmet, its face to the front
+                Material[][] sets = {{SMOOTH_BASALT, POLISHED_BASALT, POLISHED_BLACKSTONE, BLACKSTONE},
+                        {ANDESITE, POLISHED_ANDESITE, STONE, TUFF}};
+                Material[] set = sets[r.nextInt(sets.length)];
+                BlockData body = set[0].createBlockData(), helm = set[1].createBlockData(), eye = set[2].createBlockData(),
+                        lip = set[3].createBlockData();
+                dais(m, alongX, 5, 5);
+                double cy = 5.5;
+                int[] front = new int[32 * 16];
+                for (int a = 10; a <= 21; a++) {
+                    for (int y = 1; y <= 10; y++) {
+                        for (int b = 10; b <= 21; b++) {
+                            double da = (a + 0.5 - 16) / 4.3, db = (b + 0.5 - 16) / 3.7, dy = (y + 0.5 - cy) / 5;
+                            if (da * da + db * db + dy * dy >= 1) continue;
+                            double up = y + 0.5 - cy;
+                            at(m, alongX, a, y0 + y, b, up > 2.5 ? helm : up > 1.5 ? eye : body);
+                            front[a * 16 + y] = Math.max(front[a * 16 + y], b);
+                        }
+                    }
+                }
+                int ey = (int) cy + 1;
+                for (int a : new int[]{13, 18}) at(m, alongX, a, y0 + ey - 1, front[a * 16 + ey - 1], eye);
+                for (int a = 15; a <= 16; a++) {
+                    for (int y = ey - 3; y <= ey - 2; y++) at(m, alongX, a, y0 + y, front[a * 16 + y] + 1, body);
+                    at(m, alongX, a, y0 + ey - 5, front[a * 16 + ey - 5], lip);
+                }
+                for (int a : new int[]{14, 17}) at(m, alongX, a, y0 + ey - 5, front[a * 16 + ey - 5], lip);
+                name = "Head, colossal";
+            }
+            case 13 -> {
+                // a foot broken off a statue at the ankle, toes to the front
+                Material[] set = r.nextBoolean() ? new Material[]{QUARTZ_BLOCK, SMOOTH_QUARTZ} : new Material[]{SMOOTH_SANDSTONE, CUT_SANDSTONE};
+                BlockData st = set[0].createBlockData(), broken = set[1].createBlockData();
+                dais(m, alongX, 5, 4);
+                for (int a = 13; a <= 18; a++) {
+                    for (int b = 12; b <= 20; b++) {
+                        if ((a == 13 || a == 18) && b == 12) continue;
+                        int h = b <= 14 ? 4 : b <= 17 ? 3 : 2;
+                        if (b >= 19 && (a == 14 || a == 16)) h = b == 19 ? 1 : 0;
+                        for (int y = 1; y <= h; y++) at(m, alongX, a, y0 + y, b, st);
+                    }
+                }
+                for (int a = 14; a <= 17; a++) {
+                    for (int b = 12; b <= 15; b++) {
+                        int top = 7 + Math.floorMod(a * 5 + b * 3, 3);
+                        for (int y = 5; y <= top; y++) at(m, alongX, a, y0 + y, b, y == top ? broken : st);
+                    }
+                }
+                name = "Foot, colossal";
+            }
+            case 14 -> {
+                Material[] set = r.nextBoolean()
+                        ? new Material[]{POLISHED_BLACKSTONE, CHISELED_POLISHED_BLACKSTONE, POLISHED_BLACKSTONE_BRICKS, CRACKED_POLISHED_BLACKSTONE_BRICKS}
+                        : new Material[]{POLISHED_DEEPSLATE, CHISELED_DEEPSLATE, DEEPSLATE_TILES, CRACKED_DEEPSLATE_TILES};
+                BlockData stone = set[0].createBlockData();
+                dais(m, alongX, 4, 1);
+                for (int a = 12; a <= 19; a++) {
+                    int top = 8 + Math.floorMod(a * 7 + 3, 3) - (a == 19 ? 2 : 0);
+                    for (int y = 1; y <= top; y++) {
+                        at(m, alongX, a, y0 + y, 15, stone);
+                        boolean edge = a == 12 || a == 19 || y == top;
+                        int script = y <= 3 ? 1 : y <= 6 ? 2 : 3;     // three scripts, one above another
+                        boolean mark = !edge && y % 3 != 1 && Math.floorMod(a * 5 + y * 11, 4) != 0;
+                        at(m, alongX, a, y0 + y, 16, mark ? set[script].createBlockData() : stone);
+                    }
+                }
+                name = r.nextBoolean() ? "Decree, three scripts" : "Slab, inscribed";
+            }
+            case 15 -> {
+                BlockData base = END_STONE_BRICKS.createBlockData(), ob = OBSIDIAN.createBlockData(),
+                        cry = CRYING_OBSIDIAN.createBlockData();
+                for (int a = 12; a <= 19; a++) for (int b = 12; b <= 19; b++) at(m, alongX, a, y0, b, base);
+                for (int y = 1; y <= 15; y++) {
+                    for (int a = 15; a <= 16; a++) for (int b = 15; b <= 16; b++) at(m, alongX, a, y0 + y, b, hit(a, y, b, 5, 7) ? cry : ob);
+                }
+                at(m, alongX, 15, y0 + 16, 15, END_ROD.createBlockData());
+                name = "Monolith, black";
+            }
+            default -> {
+                // a column, its shaft broken, its drums and capital fallen beside it
+                BlockData shaft = QUARTZ_PILLAR.createBlockData(), base = SMOOTH_QUARTZ.createBlockData(),
+                        cap = CHISELED_QUARTZ_BLOCK.createBlockData();
+                org.bukkit.block.data.Orientable lying = (org.bukkit.block.data.Orientable) QUARTZ_PILLAR.createBlockData();
+                lying.setAxis(alongX ? org.bukkit.Axis.X : org.bukkit.Axis.Z);
+                dais(m, alongX, 6, 4);
+                for (int a = 13; a <= 18; a++) {
+                    for (int b = 13; b <= 18; b++) {
+                        double da = a + 0.5 - 16, db = b + 0.5 - 16, d2 = da * da + db * db;
+                        if (d2 <= 6.5) at(m, alongX, a, y0 + 1, b, base);
+                        if (d2 > 2.6) continue;
+                        int top = 6 + Math.floorMod(a * 3 + b * 7, 4);
+                        for (int y = 2; y <= top; y++) at(m, alongX, a, y0 + y, b, shaft);
+                    }
+                }
+                for (int a = 9; a <= 13; a++) for (int b = 18; b <= 19; b++) for (int y = 1; y <= 2; y++) at(m, alongX, a, y0 + y, b, lying);
+                for (int a = 19; a <= 21; a++) for (int b = 11; b <= 13; b++) for (int y = 1; y <= 2; y++) at(m, alongX, a, y0 + y, b, cap);
+                name = "Column, fallen";
+            }
         }
-        BlockFace f = facing(alongX, true);
-        m.c().sign(X(m, alongX, 15, 24), y0, Z(m, alongX, 15, 24), f, m.subject(name, Topic.MONOLITH, Rarity.RARE));
-        m.c().set(X(m, alongX, 15, 25), y0, Z(m, alongX, 15, 25), m.pal().trim);
+        // the label, on a post of its own
+        at(m, alongX, 15, y0, 23, m.pal().trim);
+        m.c().sign(X(m, alongX, 15, 24), y0, Z(m, alongX, 15, 24), facing(alongX, true), m.subject(name, Topic.MONOLITH, Rarity.RARE));
     }
 
-    /** Decorated pots on stepped plinths, or a giant amphora. */
+    // ── Pots ─────────────────────────────────────────────────────────────
+
+    private static final String[] POT_NAMES = {"Pot, decorated", "Vase", "Jar", "Urn, funerary", "Storage jar",
+            "Pot, sherd-built", "Cooking pot", "Flask", "Pot, ritual", "Vessel"};
+
+    /** A decorated pot as a specimen. */
+    static Specimen pot(Random r) {
+        return new Specimen(DECORATED_POT, POT_NAMES[r.nextInt(POT_NAMES.length)], r.nextInt(5) == 0 ? Rarity.UNCOMMON : Rarity.COMMON);
+    }
+
+    /** How often a gallery puts a decorated pot where a specimen would go, in percent. */
+    static int potChance(Theme t) {
+        return switch (t) {
+            case ARCHAEOLOGY, ART -> 40;
+            case CURIOSITIES -> 20;
+            default -> 6;
+        };
+    }
+
+    /** A specimen in its place: a decorated pot gets its sherds when the chunk loads. */
+    static void put(MuseumCanvas c, int x, int y, int z, Specimen s, BlockFace f, Subject sub) {
+        if (s.block() == DECORATED_POT) c.pot(x, y, z, f, sub);
+        else c.set(x, y, z, specimen(s, f));
+    }
+
+    /** A specimen's label; pots get the potter's kind of label. */
+    static Subject label(Room m, Specimen s) {
+        return m.subject(MuseumCatalogue.name(s), s.block() == DECORATED_POT ? Topic.POTS : Topic.SPECIMEN, s.rarity());
+    }
+
+    /** Big vessels' profiles: radius at each height, base first. */
+    private static final double[][] VESSELS = {
+            {1.2, 2.5, 3.6, 4.2, 4.4, 4.2, 3.8, 3.2, 2.4, 1.6, 1.3, 1.3, 1.8, 2.2},
+            {2.2, 3.2, 4.0, 4.7, 5.2, 5.5, 5.6, 5.5, 5.3, 5.0, 4.6, 4.0, 3.4, 3.0, 3.0, 3.4},
+            {1.8, 1.4, 1.4, 2.2, 3.4, 4.5, 5.2, 5.7, 6.0, 6.1, 6.2},
+            {1.4, 1.9, 2.3, 2.6, 2.8, 2.9, 3.0, 3.0, 2.9, 2.7, 2.4, 2.0, 1.5, 1.1, 1.1, 1.1, 1.6, 2.0},
+            {2.0, 3.0, 3.8, 4.3, 4.5, 4.5, 4.3, 3.9, 3.2, 2.6, 2.6, 2.9, 2.2, 1.0},
+            {2.4, 1.6, 1.6, 2.6, 3.6, 4.2, 4.4, 4.3, 4.0, 3.4, 2.8, 3.2, 3.0, 2.0, 0.9},
+    };
+    private static final String[] VESSEL_NAMES = {"Amphora", "Storage jar", "Krater", "Lekythos", "Jar, lidded", "Urn"};
+    private static final int[] LIDS = {0, 0, 0, 0, 3, 4};             // solid rows at the top
+    private static final boolean[] HANDLES = {true, false, true, false, false, true};
+
+    /** What a vessel is made of: its body, the painted figures, the bands; and what the label calls it. */
+    private record Ware(String name, Material body, Material figure, Material band) {}
+
+    private static final Ware[] WARES = {
+            new Ware("", TERRACOTTA, BLACK_TERRACOTTA, BLACK_TERRACOTTA),
+            new Ware("", TERRACOTTA, BROWN_TERRACOTTA, WHITE_TERRACOTTA),
+            new Ware("black-figure", ORANGE_TERRACOTTA, BLACK_TERRACOTTA, BLACK_TERRACOTTA),
+            new Ware("red-figure", BLACK_TERRACOTTA, ORANGE_TERRACOTTA, ORANGE_TERRACOTTA),
+            new Ware("blue and white", WHITE_CONCRETE, BLUE_CONCRETE, BLUE_GLAZED_TERRACOTTA),
+            new Ware("celadon", LIME_TERRACOTTA, GREEN_TERRACOTTA, WHITE_TERRACOTTA),
+            new Ware("glazed", CYAN_TERRACOTTA, LIGHT_BLUE_TERRACOTTA, LIGHT_BLUE_GLAZED_TERRACOTTA),
+            new Ware("glazed", BROWN_TERRACOTTA, YELLOW_TERRACOTTA, ORANGE_GLAZED_TERRACOTTA),
+            new Ware("slipware", WHITE_TERRACOTTA, RED_TERRACOTTA, RED_TERRACOTTA),
+            new Ware("unfired", BROWN_TERRACOTTA, PACKED_MUD, MUD_BRICKS),
+            new Ware("bronze", WAXED_OXIDIZED_COPPER, WAXED_WEATHERED_COPPER, WAXED_OXIDIZED_CHISELED_COPPER),
+            new Ware("gilt", GOLD_BLOCK, RAW_GOLD_BLOCK, RAW_GOLD_BLOCK),
+    };
+
+    private static Ware ware(Random r) {
+        // the last is rare
+        return WARES[r.nextInt(8) == 0 ? r.nextInt(WARES.length) : r.nextInt(WARES.length - 1)];
+    }
+
+    /**
+     * A big vessel turned on a lathe around room point (ca, cb): its profile scaled by {@code sr}
+     * across and {@code sy} up, a band below and above a painted frieze (motif 0 zigzag, 1 key, 2
+     * figures, 3 stripes, 4 plain), handles if it has them. Returns its height.
+     */
+    private static int vessel(Room m, boolean alongX, double ca, double cb, int y0, int v, double sr, double sy, Ware w,
+                              int motif, long seed) {
+        double[] prof = VESSELS[v];
+        int h = Math.max(4, (int) Math.round(prof.length * sy)), lid = LIDS[v] == 0 ? 0 : Math.max(2, (int) Math.round(LIDS[v] * sy));
+        BlockData body = w.body().createBlockData(), fig = w.figure().createBlockData(), band = w.band().createBlockData();
+        double[] rad = new double[h];
+        double rmax = 0;
+        for (int y = 0; y < h; y++) {
+            double t = y * (prof.length - 1.0) / (h - 1);
+            int i = (int) t;
+            double f = t - i;
+            rad[y] = sr * (i + 1 < prof.length ? prof[i] * (1 - f) + prof[i + 1] * f : prof[i]);
+            rmax = Math.max(rmax, rad[y]);
+        }
+        int b1 = Math.max(1, (int) (h * 0.22)), b2 = (int) (h * 0.62);
+        int span = (int) Math.ceil(rmax) + 1;
+        for (int y = 0; y < h; y++) {
+            boolean solid = y == 0 || y >= h - lid;
+            int sectors = Math.max(8, (int) Math.round(2 * Math.PI * rad[y] / 1.5));
+            for (int a = (int) Math.floor(ca) - span; a <= (int) Math.floor(ca) + span; a++) {
+                for (int b = (int) Math.floor(cb) - span; b <= (int) Math.floor(cb) + span; b++) {
+                    double da = a + 0.5 - ca, db = b + 0.5 - cb, d = Math.hypot(da, db);
+                    if (d > rad[y] || (!solid && d <= rad[y] - 1.3)) continue;
+                    BlockData bd = body;
+                    if (y == b1 || y == b2 || (y == h - 1 && lid == 0)) bd = band;
+                    else if (y > b1 && y < b2) {
+                        double th = Math.atan2(db, da);
+                        int sec = (int) Math.floor((th + Math.PI) / (2 * Math.PI) * sectors);
+                        boolean on = switch (motif) {
+                            case 0 -> Math.floorMod(sec + y, 4) == 0;
+                            case 1 -> Math.floorMod(sec / 2 + (y - b1) / 2, 2) == 0 && Math.floorMod(sec, 2) == 0;
+                            case 2 -> SimplexNoise.noise2(seed, Math.cos(th) * 2.5 + y * 0.1, Math.sin(th) * 2.5 + y * 0.4) > 0.3;
+                            case 3 -> Math.floorMod(sec, 3) == 0;
+                            default -> false;
+                        };
+                        if (on) bd = fig;
+                    }
+                    at(m, alongX, a, y0 + y, b, bd);
+                }
+            }
+        }
+        if (HANDLES[v]) {
+            int hs = (int) (h * 0.5), he = (int) (h * 0.8);
+            double reach = 0;
+            for (int y = hs; y <= he; y++) reach = Math.max(reach, rad[y]);
+            for (int side = -1; side <= 1; side += 2) {
+                int out = (int) Math.floor(ca + side * (reach + 0.9));
+                for (int b = (int) Math.floor(cb - 0.5); b <= (int) Math.floor(cb); b++) {
+                    for (int y = hs; y <= he; y++) at(m, alongX, out, y0 + y, b, body);
+                    int in = (int) Math.floor(ca + side * (rad[he] - 0.5));
+                    for (int a = Math.min(in, out); a <= Math.max(in, out); a++) at(m, alongX, a, y0 + he, b, body);
+                }
+            }
+        }
+        return h;
+    }
+
+    /**
+     * Pots: one great vessel on a dais with decorated pots at its corners; a magazine of storage
+     * jars; a shelving unit full of decorated pots; or decorated pots on stepped plinths.
+     */
     static void pots(Room m, boolean alongX) {
-        if (m.r().nextInt(3) == 0) {
-            int cx = m.ox() + 16, cz = m.oz() + 16, y0 = m.F() + 1;
-            double[] prof = {1.2, 2.5, 3.6, 4.2, 4.4, 4.2, 3.8, 3.2, 2.4, 1.6, 1.3, 1.3, 1.8, 2.2};
-            BlockData body = (m.r().nextBoolean() ? TERRACOTTA : ORANGE_TERRACOTTA).createBlockData(), band = BLACK_TERRACOTTA.createBlockData();
-            for (int y = 0; y < prof.length; y++) {
-                for (int dx = -5; dx <= 5; dx++) {
-                    for (int dz = -5; dz <= 5; dz++) {
-                        double d = Math.sqrt((dx + 0.5) * (dx + 0.5) + (dz + 0.5) * (dz + 0.5));
-                        if (d <= prof[y] && (d > prof[y] - 1.3 || y == 0)) m.c().set(cx + dx, y0 + y, cz + dz, y == 4 || y == 5 ? band : body);
+        Random r = m.r();
+        int mode = r.nextInt(20);
+        int F = m.F();
+        if (mode < 8) {
+            int v = r.nextInt(VESSELS.length);
+            Ware w = ware(r);
+            double pmax = 0;
+            for (double x : VESSELS[v]) pmax = Math.max(pmax, x);
+            double sr = Math.min(0.85 + r.nextDouble() * 0.4, 6.0 / pmax);
+            double sy = Math.min(0.9 + r.nextDouble() * 0.4, 12.0 / VESSELS[v].length);
+            int ac = Math.min(7, (int) Math.ceil(pmax * sr) + 1);
+            dais(m, alongX, ac, ac);
+            vessel(m, alongX, 16, 16, F + 2, v, sr, sy, w, r.nextInt(5), r.nextLong());
+            for (int a : new int[]{16 - ac, 15 + ac}) {
+                for (int b : new int[]{16 - ac, 15 + ac}) {
+                    m.c().pot(X(m, alongX, a, b), F + 2, Z(m, alongX, a, b), facing(alongX, b > 16), m.subject("Pot", Topic.POTS, Rarity.COMMON));
+                }
+            }
+            String name = VESSEL_NAMES[v] + (w.name().isEmpty() ? "" : ", " + w.name());
+            daisSign(m, alongX, ac, m.subject(name, Topic.POTS, Rarity.RARE));
+        } else if (mode < 11) {
+            // storage jars in rows, as in a palace magazine
+            Ware w = r.nextBoolean() ? WARES[0] : ware(r);
+            double sy = 0.4 + r.nextDouble() * 0.15;
+            for (double ca : new double[]{8, 13, 19, 24}) {
+                for (double cb : new double[]{11, 21}) vessel(m, alongX, ca, cb, F + 1, 1, 0.42, sy, w, r.nextInt(5), r.nextLong());
+            }
+            at(m, alongX, 15, F + 1, 16, m.pal().trim);
+            m.c().sign(X(m, alongX, 15, 17), F + 1, Z(m, alongX, 15, 17), facing(alongX, true),
+                    m.subject("Storage jars" + (w.name().isEmpty() ? "" : ", " + w.name()), Topic.POTS, Rarity.UNCOMMON));
+        } else if (mode < 15) {
+            // a study collection: two tiers of decorated pots both sides of a long shelf, more on top
+            BlockData wood = m.pal().wood;
+            for (int a = 7; a <= 24; a++) {
+                for (int b = 15; b <= 16; b++) {
+                    boolean end = a == 7 || a == 24;
+                    BlockFace f = facing(alongX, b == 16);
+                    for (int y = 1; y <= 6; y++) {
+                        if (y == 1 || y == 3 || y == 5 || (end && y < 6)) at(m, alongX, a, F + y, b, wood);
+                        else if (r.nextInt(5) > 0 && (y < 6 || r.nextBoolean())) {
+                            m.c().pot(X(m, alongX, a, b), F + y, Z(m, alongX, a, b), f, m.subject("Pot", Topic.POTS, Rarity.COMMON));
+                        }
                     }
                 }
             }
-            m.c().sign(X(m, alongX, 15, 22), y0, Z(m, alongX, 15, 22), facing(alongX, true), m.subject("Amphora, reconstructed", Topic.POTS, Rarity.RARE));
-            m.c().set(X(m, alongX, 15, 23), y0, Z(m, alongX, 15, 23), m.pal().trim);
-            return;
-        }
-        for (int a = 8; a <= 23; a++) {
-            for (int b = 12; b <= 19; b++) {
-                int step = Math.min(Math.min(a - 8, 23 - a), Math.min(b - 12, 19 - b));
-                int h = Math.min(3, step + 1);
-                for (int y = 1; y <= h; y++) m.c().set(X(m, alongX, a, b), m.F() + y, Z(m, alongX, a, b), y == h ? m.pal().daisTop : m.pal().dais);
-                if (step < 3 && (a + b) % 2 == 0 && step % 1 == 0 && m.r().nextInt(3) > 0) {
-                    m.c().pot(X(m, alongX, a, b), m.F() + h + 1, Z(m, alongX, a, b), facing(alongX, true),
-                            m.subject("Pot", Topic.POTS, Rarity.COMMON));
+            m.c().sign(X(m, alongX, 15, 17), F + 1, Z(m, alongX, 15, 17), facing(alongX, true),
+                    m.subject("Pots, study collection", Topic.POTS, Rarity.UNCOMMON));
+            m.c().sign(X(m, alongX, 16, 14), F + 1, Z(m, alongX, 16, 14), facing(alongX, false),
+                    m.subject("Pots, decorated", Topic.POTS, Rarity.UNCOMMON));
+        } else {
+            for (int a = 8; a <= 23; a++) {
+                for (int b = 12; b <= 19; b++) {
+                    int step = Math.min(Math.min(a - 8, 23 - a), Math.min(b - 12, 19 - b));
+                    int h = Math.min(3, step + 1);
+                    for (int y = 1; y <= h; y++) at(m, alongX, a, F + y, b, y == h ? m.pal().daisTop : m.pal().dais);
+                    if ((a + b) % 2 == 0 && r.nextInt(5) > 0) {
+                        m.c().pot(X(m, alongX, a, b), F + h + 1, Z(m, alongX, a, b), facing(alongX, b > 15),
+                                m.subject("Pot", Topic.POTS, Rarity.COMMON));
+                    }
                 }
             }
+            m.c().sign(X(m, alongX, 15, 20), F + 1, Z(m, alongX, 15, 20), facing(alongX, true),
+                    m.subject("Pots, decorated", Topic.POTS, Rarity.UNCOMMON));
         }
-        m.c().sign(X(m, alongX, 15, 20), m.F() + 1, Z(m, alongX, 15, 20), facing(alongX, true),
-                m.subject("Pots, decorated", Topic.POTS, Rarity.UNCOMMON));
+    }
+
+    /** Decorated pots on plinths either side of each doorway. */
+    static void doorPots(Room m) {
+        for (int s = 0; s < 4; s++) {
+            if (m.e()[s] != Level1882ChunkGenerator.DOOR) continue;
+            for (int t : new int[]{10, 21}) {
+                int x = sx(m.ox(), s, 1, t), z = sz(m.oz(), s, 1, t);
+                m.c().set(x, m.F() + 1, z, m.pal().carved);
+                m.c().pot(x, m.F() + 2, z, INTO_ROOM[s], m.subject("Pot", Topic.POTS, Rarity.COMMON));
+            }
+        }
     }
 
     /** Paintings on the walls (filled in on load), a block mural on one, benches in the middle. */
@@ -663,78 +1069,165 @@ final class MuseumExhibits {
 
     // ── Libraries ────────────────────────────────────────────────────────
 
-    /** A bookshelf, now and then a chiseled one with some books in it. */
-    private static BlockData shelf(Random r) {
-        if (r.nextInt(8) != 0) return BOOKSHELF.createBlockData();
-        org.bukkit.block.data.type.ChiseledBookshelf b = (org.bukkit.block.data.type.ChiseledBookshelf) CHISELED_BOOKSHELF.createBlockData();
-        for (int i = 0; i < 6; i++) b.setSlotOccupied(i, r.nextInt(3) > 0);
-        return b;
+    /** A library's fittings, by what it collects: its wood, carpet and candles, and what stands on the stalls. */
+    private record Fittings(String wood, Material carpet, Material candle, Material... deco) {}
+
+    private static Fittings fittings(Theme t) {
+        return switch (t) {
+            case MINERALS -> new Fittings("SPRUCE", GRAY_CARPET, WHITE_CANDLE, AMETHYST_CLUSTER, LARGE_AMETHYST_BUD, CALCITE, RAW_IRON_BLOCK);
+            case FOSSILS -> new Fittings("DARK_OAK", BROWN_CARPET, BROWN_CANDLE, SKELETON_SKULL, BONE_BLOCK, SKELETON_SKULL);
+            case MOBS -> new Fittings("SPRUCE", RED_CARPET, RED_CANDLE, SKELETON_SKULL, ZOMBIE_HEAD, CREEPER_HEAD, PIGLIN_HEAD);
+            case BOTANY -> new Fittings("JUNGLE", GREEN_CARPET, GREEN_CANDLE, POTTED_FERN, POTTED_AZALEA_BUSH,
+                    POTTED_FLOWERING_AZALEA_BUSH, MOSS_CARPET, POTTED_CACTUS);
+            case MARINE -> new Fittings("DARK_OAK", CYAN_CARPET, CYAN_CANDLE, SEA_PICKLE, PRISMARINE, DEAD_BRAIN_CORAL_BLOCK,
+                    DEAD_TUBE_CORAL_BLOCK);
+            case ARCHAEOLOGY -> new Fittings("ACACIA", ORANGE_CARPET, ORANGE_CANDLE, DECORATED_POT, DECORATED_POT, DECORATED_POT,
+                    CHISELED_SANDSTONE);
+            case NETHER -> new Fittings("CRIMSON", BLACK_CARPET, RED_CANDLE, WITHER_SKELETON_SKULL, SHROOMLIGHT, MAGMA_BLOCK,
+                    CHISELED_POLISHED_BLACKSTONE);
+            case END -> new Fittings("BIRCH", PURPLE_CARPET, PURPLE_CANDLE, END_ROD, CHORUS_FLOWER, PURPUR_PILLAR, DRAGON_HEAD);
+            case CURIOSITIES -> new Fittings("DARK_OAK", BLUE_CARPET, YELLOW_CANDLE, LODESTONE, BELL, LIGHTNING_ROD, DECORATED_POT);
+            case ART -> new Fittings("CHERRY", MAGENTA_CARPET, PINK_CANDLE, DECORATED_POT, POTTED_POPPY, POTTED_ALLIUM, FLOWER_POT);
+            case ZOOLOGY -> new Fittings("OAK", YELLOW_CARPET, WHITE_CANDLE, TURTLE_EGG, SNIFFER_EGG, SKELETON_SKULL, HAY_BLOCK);
+            case GEOLOGY -> new Fittings("SPRUCE", LIGHT_GRAY_CARPET, GRAY_CANDLE, POINTED_DRIPSTONE, SMOOTH_BASALT, AMETHYST_CLUSTER,
+                    MAGMA_BLOCK);
+        };
+    }
+
+    /** One of a library's ornaments on top of a stall, its face (if it has one) toward {@code f}. */
+    private static void ornament(Room m, int x, int y, int z, Material mt, BlockFace f) {
+        if (mt == DECORATED_POT) {
+            m.c().pot(x, y, z, f, m.subject("Pot", Topic.POTS, Rarity.COMMON));
+            return;
+        }
+        BlockData b = mt.createBlockData();
+        if (b instanceof Rotatable rot) rot.setRotation(f.getOppositeFace());
+        m.c().set(x, y, z, b);
+    }
+
+    /** A bookcase block: a chiseled shelf of books facing {@code f}, now and then a plain one. */
+    private static void books(Room m, int x, int y, int z, BlockFace f, Subject s) {
+        if (m.r().nextInt(10) == 0) m.c().set(x, y, z, BOOKSHELF);
+        else m.c().shelf(x, y, z, f, 0.8, m.r(), s);
     }
 
     /**
-     * A reading room after Duke Humfrey's Library: bookcases up the walls with a gallery and
-     * ladders, stalls of bookcases standing out into the room with desks between, a carpet down
-     * the middle, candles on the desks, and lecterns with learned books.
+     * A reading room after Duke Humfrey's Library, fitted out for its subject: bookcases two deep up
+     * the walls with a gallery and ladders over the closed ones, stalls of bookcases standing out
+     * into the room with desks and candles between, carpet down the aisles, a glass-topped table of
+     * things from the collection, and lecterns with learned books. The shelves are chiseled, their
+     * books facing the reader.
      */
     static void library(Room m, boolean alongX) {
         MuseumCanvas c = m.c();
         Random r = m.r();
         int F = m.F();
-        BlockData floor = m.pal().wood, rail = SPRUCE_FENCE.createBlockData();
+        byte[] e = m.e();
+        Fittings fit = fittings(m.theme());
+        BlockData planks = Material.valueOf(fit.wood() + "_PLANKS").createBlockData(),
+                rail = Material.valueOf(fit.wood() + "_FENCE").createBlockData(),
+                carpet = fit.carpet().createBlockData(), glass = Material.GLASS.createBlockData();
+        Material stairs = Material.valueOf(fit.wood() + "_STAIRS");
+        Subject shelved = new Subject("", Topic.LIBRARY, Rarity.COMMON, m.gallery(), m.theme(), 0);
+
         for (int side = 0; side < 4; side++) {
-            byte e = m.e()[side];
-            if (e == Level1882ChunkGenerator.ARCADE) continue;
-            int[][] runs = e == Level1882ChunkGenerator.DOOR ? new int[][]{{2, 10}, {21, 29}} : new int[][]{{2, 29}};
+            byte k = e[side];
+            if (k == Level1882ChunkGenerator.ARCADE) continue;
+            boolean closed = k == Level1882ChunkGenerator.CLOSED;
+            int[][] runs = closed ? new int[][]{{2, 29}} : new int[][]{{2, 10}, {21, 29}};
             for (int[] run : runs) {
                 for (int t = run[0]; t <= run[1]; t++) {
                     int x1 = sx(m.ox(), side, 1, t), z1 = sz(m.oz(), side, 1, t);
-                    for (int y = F + 1; y <= F + 12; y++) c.set(x1, y, z1, y == F + 12 ? m.pal().trim : shelf(r));
-                    if (e != Level1882ChunkGenerator.CLOSED) continue;
-                    // the gallery: a walkway at F+6 with a railing
-                    for (int d = 2; d <= 3; d++) c.set(sx(m.ox(), side, d, t), F + 6, sz(m.oz(), side, d, t), floor);
-                    c.set(sx(m.ox(), side, 4, t), F + 7, sz(m.oz(), side, 4, t), rail);
-                    c.set(sx(m.ox(), side, 4, t), F + 6, sz(m.oz(), side, 4, t), floor);
-                }
-                if (e == Level1882ChunkGenerator.CLOSED) {
-                    // a ladder up to it at one end
-                    int t = run[0] + 1;
-                    org.bukkit.block.data.type.Ladder ladder = (org.bukkit.block.data.type.Ladder) LADDER.createBlockData();
-                    ladder.setFacing(INTO_ROOM[side]);
-                    for (int y = F + 1; y <= F + 6; y++) c.set(sx(m.ox(), side, 2, t), y, sz(m.oz(), side, 2, t), ladder);
+                    int x2 = sx(m.ox(), side, 2, t), z2 = sz(m.oz(), side, 2, t);
+                    for (int y = F + 1; y <= F + 12; y++) {
+                        if (y == F + 12) {
+                            c.set(x1, y, z1, m.pal().trim);
+                            c.set(x2, y, z2, m.pal().trim);
+                            continue;
+                        }
+                        c.set(x1, y, z1, BOOKSHELF);
+                        // the corners are shared with the next wall; the gallery's floor hides the row behind it
+                        if (t == 2 || t == 29 || (closed && y == F + 6)) c.set(x2, y, z2, BOOKSHELF);
+                        else books(m, x2, y, z2, INTO_ROOM[side], shelved);
+                    }
                 }
             }
+            if (!closed) continue;
+            // the gallery: a walkway two wide with a railing, and a ladder up to it
+            int lo = side < 2 ? 2 : 0, hi = side < 2 ? 3 : 1;   // the walls at either end of this one
+            boolean loC = e[lo] == Level1882ChunkGenerator.CLOSED, hiC = e[hi] == Level1882ChunkGenerator.CLOSED;
+            for (int t = 3; t <= 28; t++) {
+                for (int d = 3; d <= 5; d++) c.set(sx(m.ox(), side, d, t), F + 6, sz(m.oz(), side, d, t), planks);
+                if (t >= (loC ? 5 : 3) && t <= (hiC ? 26 : 28)) c.set(sx(m.ox(), side, 5, t), F + 7, sz(m.oz(), side, 5, t), rail);
+                if ((t == 3 && e[lo] == Level1882ChunkGenerator.ARCADE) || (t == 28 && e[hi] == Level1882ChunkGenerator.ARCADE)) {
+                    for (int d = 3; d <= 4; d++) c.set(sx(m.ox(), side, d, t), F + 7, sz(m.oz(), side, d, t), rail);
+                }
+            }
+            org.bukkit.block.data.type.Ladder ladder = (org.bukkit.block.data.type.Ladder) LADDER.createBlockData();
+            ladder.setFacing(INTO_ROOM[side]);
+            for (int y = F + 1; y <= F + 6; y++) c.set(sx(m.ox(), side, 3, 6), y, sz(m.oz(), side, 3, 6), ladder);
         }
-        // stalls: bookcases across the room, two deep, desks between them
-        Material carpet = new Material[]{RED_CARPET, GREEN_CARPET, BROWN_CARPET, BLUE_CARPET}[r.nextInt(4)];
+
+        // carpet down the aisles
         for (int a = 6; a <= 25; a++) {
-            for (int b = 14; b <= 17; b++) c.set(X(m, alongX, a, b), F + 1, Z(m, alongX, a, b), carpet.createBlockData());
-        }
-        for (int a : new int[]{6, 12, 19, 25}) {
-            for (int b : new int[]{6, 7, 8, 9, 10, 11, 20, 21, 22, 23, 24, 25}) {
-                for (int y = F + 1; y <= F + 4; y++) c.set(X(m, alongX, a, b), y, Z(m, alongX, a, b), y == F + 4 ? m.pal().trim : shelf(r));
+            for (int b = 6; b <= 25; b++) {
+                if ((b >= 14 && b <= 17) || (a >= 14 && a <= 17)) c.set(X(m, alongX, a, b), F + 1, Z(m, alongX, a, b), carpet);
             }
         }
-        org.bukkit.block.data.type.Slab top = (org.bukkit.block.data.type.Slab) SPRUCE_SLAB.createBlockData();
-        top.setType(org.bukkit.block.data.type.Slab.Type.TOP);
-        for (int a0 : new int[]{7, 20}) {
-            for (int b0 : new int[]{6, 20}) {
-                // a desk down the middle of the stall, a bench either side
-                int a = a0 + 2;
-                for (int b = b0 + 1; b <= b0 + 4; b++) {
-                    c.set(X(m, alongX, a, b), F + 1, Z(m, alongX, a, b), top);
-                    c.set(X(m, alongX, a + 1, b), F + 1, Z(m, alongX, a + 1, b), top);
-                    Stairs chair = (Stairs) SPRUCE_STAIRS.createBlockData();
-                    chair.setFacing(facing(!alongX, false));
-                    c.set(X(m, alongX, a - 1, b), F + 1, Z(m, alongX, a - 1, b), chair);
-                    Stairs chair2 = (Stairs) SPRUCE_STAIRS.createBlockData();
-                    chair2.setFacing(facing(!alongX, true));
-                    c.set(X(m, alongX, a + 2, b), F + 1, Z(m, alongX, a + 2, b), chair2);
+        // stalls: bookcases two deep across the room, shelved on both faces, things on top
+        for (int s : new int[]{6, 12, 18, 24}) {
+            for (int b = 6; b <= 25; b++) {
+                if (b > 11 && b < 20) continue;
+                for (int k = 0; k <= 1; k++) {
+                    int x = X(m, alongX, s + k, b), z = Z(m, alongX, s + k, b);
+                    for (int y = F + 1; y <= F + 3; y++) books(m, x, y, z, facing(!alongX, k == 1), shelved);
+                    c.set(x, F + 4, z, planks);
                 }
-                org.bukkit.block.data.type.Candle candle = (org.bukkit.block.data.type.Candle) CANDLE.createBlockData();
+            }
+            for (int b : new int[]{7, 10, 21, 24}) {
+                if (r.nextInt(3) == 0) continue;
+                int a = s + r.nextInt(2);
+                ornament(m, X(m, alongX, a, b), F + 5, Z(m, alongX, a, b), fit.deco()[r.nextInt(fit.deco().length)],
+                        facing(alongX, b < 16));
+            }
+        }
+        // desks between the stalls, a chair either side, a candle
+        org.bukkit.block.data.type.Slab top = (org.bukkit.block.data.type.Slab) Material.valueOf(fit.wood() + "_SLAB").createBlockData();
+        top.setType(org.bukkit.block.data.type.Slab.Type.TOP);
+        for (int a0 : new int[]{8, 20}) {
+            for (int b0 : new int[]{6, 20}) {
+                for (int b = b0 + 1; b <= b0 + 4; b++) {
+                    at(m, alongX, a0 + 1, F + 1, b, top);
+                    at(m, alongX, a0 + 2, F + 1, b, top);
+                    Stairs chair = (Stairs) stairs.createBlockData();
+                    chair.setFacing(facing(!alongX, false));
+                    at(m, alongX, a0, F + 1, b, chair);
+                    Stairs chair2 = (Stairs) stairs.createBlockData();
+                    chair2.setFacing(facing(!alongX, true));
+                    at(m, alongX, a0 + 3, F + 1, b, chair2);
+                }
+                org.bukkit.block.data.type.Candle candle = (org.bukkit.block.data.type.Candle) fit.candle().createBlockData();
                 candle.setLit(true);
                 candle.setCandles(1 + r.nextInt(3));
-                c.set(X(m, alongX, a, b0 + 2 + r.nextInt(2)), F + 2, Z(m, alongX, a, b0 + 2), candle);
+                at(m, alongX, a0 + 1 + r.nextInt(2), F + 2, b0 + 2 + r.nextInt(2), candle);
             }
+        }
+        // glass-topped tables of things from the collection in the cross aisle, labelled toward the middle
+        Specimen[] pool = MuseumCatalogue.pool(m.theme());
+        for (int[] q : new int[][]{{7, 10, 11}, {21, 24, 20}}) {
+            BlockFace f = facing(alongX, q[2] == 11);
+            Specimen first = null;
+            for (int a = 15; a <= 16; a++) {
+                for (int b = q[0]; b <= q[1]; b++) {
+                    at(m, alongX, a, F + 1, b, planks);
+                    at(m, alongX, a, F + 3, b, glass);
+                    if ((a + b) % 2 != 0) continue;
+                    Specimen sp = pool[r.nextInt(pool.length)];
+                    if (first == null) first = sp;
+                    put(c, X(m, alongX, a, b), F + 2, Z(m, alongX, a, b), sp, f, label(m, sp));
+                }
+            }
+            c.sign(X(m, alongX, 15, q[2]), F + 1, Z(m, alongX, 15, q[2]), f, label(m, first));
         }
         // lecterns at the ends of the aisle
         for (int a : new int[]{5, 26}) {
@@ -757,7 +1250,7 @@ final class MuseumExhibits {
         int F = m.F();
         Specimen[] pool = MuseumCatalogue.pool(m.theme());
         BlockData post = STRIPPED_SPRUCE_LOG.createBlockData(), plank = SPRUCE_PLANKS.createBlockData();
-        Material[] crates = {BARREL, BARREL, CHEST, COMPOSTER, HAY_BLOCK, BOOKSHELF, BOOKSHELF, SCAFFOLDING, DECORATED_POT};
+        Material[] crates = {BARREL, BARREL, CHEST, COMPOSTER, HAY_BLOCK, BOOKSHELF, BOOKSHELF, SCAFFOLDING, DECORATED_POT, DECORATED_POT};
         for (int b0 : new int[]{6, 12, 18, 24}) {
             for (int a = 7; a <= 27; a++) {
                 for (int b = b0; b <= b0 + 1; b++) {
@@ -768,7 +1261,7 @@ final class MuseumExhibits {
                         if (upright) c.set(x, y, z, post);
                         else if (lvl == 3 || lvl == 6 || lvl == 9) c.set(x, y, z, plank);
                         else if ((lvl == 1 || lvl == 4 || lvl == 7) && r.nextInt(100) < 55) {
-                            BlockFace f = facing(!alongX, b == b0);
+                            BlockFace f = facing(alongX, b != b0);
                             if (r.nextInt(3) == 0) {
                                 Material cm = crates[r.nextInt(crates.length)];
                                 if (cm == CHEST || cm == BARREL) {
@@ -778,10 +1271,12 @@ final class MuseumExhibits {
                                             new Subject(MuseumCatalogue.name(pool[r.nextInt(pool.length)]), Topic.CRATE,
                                                     Rarity.COMMON, m.gallery(), m.theme(), 0));
                                 } else {
-                                    c.set(x, y, z, cm == DECORATED_POT ? DECORATED_POT.createBlockData() : cm.createBlockData());
+                                    if (cm == DECORATED_POT) c.pot(x, y, z, f, new Subject("", Topic.POTS, Rarity.COMMON, m.gallery(), m.theme(), 0));
+                                    else c.set(x, y, z, cm.createBlockData());
                                 }
                             } else {
-                                c.set(x, y, z, specimen(pool[r.nextInt(pool.length)], f));
+                                Specimen sp = pool[r.nextInt(pool.length)];
+                                put(c, x, y, z, sp, f, label(m, sp));
                             }
                         }
                     }
