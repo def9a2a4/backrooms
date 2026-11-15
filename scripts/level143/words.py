@@ -105,6 +105,18 @@ WORDS = {
     "court": [
         "Court of~the City", "Court in~session~(always)", "All rise", "Justice~is blind~and patient",
     ],
+    # sky.py: the airship docking towers
+    "departures": [
+        "Next departure:~pending", "Boarding~shortly~(since the~opening)", "All flights~on time.~None due.",
+        "Departures~Gate 1~Delayed", "Please wait~to be called.~You will be.", "Last ship~left on~schedule",
+        "Next arrival~expected~any day", "Tickets valid~for any~departure", "No departures~today.~Or tomorrow.",
+        "Passengers~please remain~seated", "Mooring~Tower~Please wait",
+    ],
+    "destinations": [
+        "To: the~Other Side~(return)", "To: Upper~[adjectives]~[roadtypes]", "To: the edge~of town~and back",
+        "To: here~via there", "To: the~next city~(unplanned)", "To: wherever~the wind~is going",
+        "To: Home~(one way)", "To: the~Square~express", "To: the~coast~(none known)",
+    ],
     "shrine": [
         "Keep the~flame lit~for those~yet to come", "Light one~for the~household~expected",
         "The fire~is tended~by someone", "Warm your~hands. It~is always~cold here.",

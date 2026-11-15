@@ -20,8 +20,9 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Puts a book on every lectern in Level 0's office buildings (conference
- * rooms, the control room's back row, auditorium stages) when their chunk is
+ * Puts a book on every lectern in Level 0 (conference rooms, control rooms'
+ * back rows and auditorium stages, in the office buildings and in the
+ * lobby's office districts) when their chunk is
  * first generated: mostly office papers from the book grammar ({@link
  * BookGenerator}'s "office" voice: agendas, minutes, speaker notes, memos,
  * reviews), now and then a Library book outright.

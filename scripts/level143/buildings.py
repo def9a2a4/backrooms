@@ -1999,77 +1999,71 @@ def wrong_turn(rng, st):
 
 SKY = 37   # y of world y100, where Mace's sky features start
 
-def balloon_envelope(b, cx, cy, cz, r, ry, stripe):
-    for y in range(-ry, ry + 1):
-        for z in range(-r, r + 1):
-            for x in range(-r, r + 1):
-                d = (x / (r + 0.5)) ** 2 + (z / (r + 0.5)) ** 2 + (y / (ry + 0.5)) ** 2
-                if d <= 1 and d > 0.55:
-                    vertical = (x + z) % 4 in (0, 1) if stripe else True
-                    b.set(cx + x, cy + y, cz + z, WOOL if vertical else "white_wool")
-
-
-@gen("balloon", kind="sky_feature", freq="very common", n=3)
+@gen("balloon", kind="sky_feature", freq="average", n=3)
 def balloon(rng, st):
-    r = rng.randint(4, 5)
-    S = 2 * r + 3
-    b = Build("Balloon", "sky_feature", S, S)
-    c = S // 2
-    ry = r + 2
-    base = SKY   # the basket's floor: world y100
-    cy = base + 5 + ry
-    balloon_envelope(b, c, cy, c, r, ry, rng.random() < 0.6)
-    wood = pick(rng, st.woods)
-    b.fill(c - 1, base, c - 1, c + 1, base, c + 1, f"{wood}_planks")
-    b.ring(c - 1, c - 1, c + 1, c + 1, base + 1, base + 1, f"{wood}_fence", waterlogged="false")
-    for x, z in ((c - 1, c - 1), (c + 1, c - 1), (c - 1, c + 1), (c + 1, c + 1)):
-        b.fill(x, base + 2, z, x, cy - ry + 1, z, "iron_chain", axis="y", waterlogged="false")
-    b.set(c, base + 1, c, "campfire", facing="north", lit="true", signal_fire="false", waterlogged="false")
-    b.set(c, base + 2, c, "air")
-    return b
+    """A hot-air balloon: a round crown in gores, spirals or bands narrowing to a skirt over the
+    burner, a wicker basket on four lines (sky.hot_air draws it)."""
+    import sky   # sky imports this module: drawn with its helpers once both are loaded
+    k = sky.kit(rng, st)
+    r = rng.randint(4, 6)
+    big = r >= 5 and rng.random() < 0.5
+    s = 2 * r + 3
+    b = Build("Balloon", "sky_feature", s, s)
+    c = s // 2
+    sky.hot_air(b, k, rng, c, SKY, c, r, big=big)
+    return sky.done(b)
 
 
-@gen("airship", kind="sky_feature", freq="common", n=3)
+@gen("airship", kind="sky_feature", freq="very common", n=3)
 def airship(rng, st):
-    L = rng.randint(15, 21)
-    W = 7
-    b = Build("Airship", "sky_feature", 11, L + 2)
-    wood = pick(rng, st.woods)
-    cx = 5
-    deck = SKY + 2
-    for z in range(1, L + 1):
-        t = (z - 1) / (L - 1)
-        half = 3 if 0.2 < t < 0.8 else 2 if 0.08 < t < 0.92 else 1
-        for x in range(cx - half, cx + half + 1):
-            b.set(x, deck, z, f"{wood}_planks")
-            b.set(x, deck - 1, z, f"{wood}_planks") if abs(x - cx) < half else None
-        if half > 1:
-            b.set(cx - half, deck + 1, z, f"{wood}_fence", waterlogged="false")
-            b.set(cx + half, deck + 1, z, f"{wood}_fence", waterlogged="false")
-        b.set(cx, deck - 2, z, f"{wood}_planks") if half > 1 else None
-    # the envelope above, a long ellipsoid
-    ey = deck + 9
-    for z in range(0, L + 2):
-        for x in range(0, 11):
-            for y in range(ey - 4, ey + 5):
-                d = ((x - cx) / 5.4) ** 2 + ((y - ey) / 4.4) ** 2 + ((z - (L + 1) / 2) / ((L + 2) / 2)) ** 2
-                if 0.6 < d <= 1:
-                    b.set(x, y, z, WOOL if (z // 3) % 2 else "white_wool")
-    for z in (3, L // 2, L - 2):
-        for x in (cx - 2, cx + 2):
-            b.fill(x, deck + 2, z, x, ey - 4, z, "iron_chain", axis="y", waterlogged="false")
-    # a cabin aft, a propeller at the stern
-    b.fill(cx - 2, deck + 1, L - 5, cx + 2, deck + 3, L - 2, f"{wood}_planks")
-    b.clear(cx - 1, deck + 1, L - 4, cx + 1, deck + 2, L - 3)
-    b.set(cx, deck + 1, L - 5, "air")
-    b.set(cx, deck + 2, L - 5, "air")
-    b.chest(cx - 1, deck + 1, L - 3, "east", TREASURE)
-    b.set(cx, deck + 2, L + 1, f"{wood}_fence", waterlogged="false")
-    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        b.set(cx + dx, deck + 2 + dy, L + 1, f"{wood}_trapdoor", facing="south", half="bottom", open="true",
-              powered="false", waterlogged="false")
-    b.set(cx, deck + 1, 2, st.light, hanging="false", waterlogged="false")
-    return b
+    """The classic airship: a little ship under a long balloon, a cabin aft with a railed roof, a
+    helm before it, a bowsprit with a lamp, a propeller turning behind the stern, the envelope
+    finned and rigged down to the rails."""
+    import sky
+    k = sky.kit(rng, st)
+    L = rng.randint(17, 21)
+    W, cx = 11, 5
+    b = Build("Airship", "sky_feature", W, L + 3)
+    deck = SKY + 3
+    z0, z1 = 1, L - 1
+    widths, _ = sky.boat(b, k, cx, z0, z1, deck, 3, 2)
+    sky.bowsprit(b, k, cx, z0 - 1, deck + 1, 2)
+    if b.get(cx, deck + 1, z0 + 1) == k.rail:
+        sky.standing(b, cx, deck + 2, z0 + 1, k.light)
+    # the cabin aft, its roof railed
+    c0 = z1 - 5
+    sky.cabin(b, cx - 2, c0, cx + 2, z1 - 1, deck, 3, k.wall, k.plank, k.pane, corner=k.corner, every=2, floor=k.deckplank)
+    for x in range(cx - 2, cx + 3):
+        for z in range(c0, z1):
+            if x in (cx - 2, cx + 2) or z in (c0, z1 - 1):
+                sky.railing(b, k, x, deck + 5, z)
+    b.door(cx, deck + 1, c0, "north", k.wood)
+    if rng.random() < 0.6:
+        b.chest(cx - 1, deck + 1, z1 - 2, "east", TREASURE)
+    else:
+        b.bed(cx - 1, deck + 1, z1 - 2, "north", pick(rng, st.beds))
+    b.set(cx + 1, deck + 1, z1 - 2, "crafting_table" if k.key != "ashen" else "lectern",
+          **({} if k.key != "ashen" else dict(facing="west", has_book="false", powered="false")))
+    sky.hanging(b, cx, deck + 3, c0 + 2, k.light)
+    # the helm
+    b.set(cx, deck + 1, c0 - 2, k.fence, waterlogged="false")
+    b.set(cx, deck + 2, c0 - 2, k.trapdoor, facing="north", half="bottom", open="true", powered="false", waterlogged="false")
+    # the envelope above, finned
+    cy = deck + 11
+    paint = sky.livery(k, cx, cy, 0, L + 1, pick(rng, ("bands", "gores", "ribs")), every=3)
+    inside = sky.envelope(b, cx, cy, 0, L + 1, 5.3, 4.2, paint, nose=0.45, pf=2.4, pb=2.0)
+    sky.fins(b, inside, cx, cy, L + 1, 4, 2, k.fin, dirs="ulr", trim=k.trim)
+    for z in (z0 + 3, (z0 + c0) // 2 + 1, c0 - 1):
+        for s in (-1, 1):
+            if b.get(cx + s * widths[z], deck + 1, z) == k.rail:
+                sky.rig(b, cx + s * widths[z], deck + 2, z)
+    for x in (cx - 2, cx + 2):
+        for z in (c0, z1 - 1):
+            sky.rig(b, x, deck + 6, z)
+    # the propeller behind the stern
+    b.set(cx, deck + 1, z1, k.engine, **({"facing": "south", "lit": "true"} if k.engine == "blast_furnace" else {}))
+    sky.propeller(b, cx, deck + 1, z1 + 1, k)
+    return sky.done(b)
 
 
 # ── Trees for the countryside ─────────────────────────────────────────────

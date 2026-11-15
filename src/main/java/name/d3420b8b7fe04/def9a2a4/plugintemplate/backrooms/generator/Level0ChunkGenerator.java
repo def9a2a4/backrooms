@@ -27,7 +27,8 @@ import static name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Pat
  *   independent, very large {@link PatchPalette}. Around spawn everything is
  *   classic yellow terracotta, with no carpet.</li>
  *   <li>Furnishing per 48-block zone ({@link Level0Zones}): the classic random
- *   walls and pillars, or cubicle farms, cafeterias, offices, corridors.</li>
+ *   walls and pillars, or cubicle farms, open-plan floors, cafeterias,
+ *   offices (control.shp's rooms), control rooms, corridors.</li>
  *   <li>Set pieces per 128-block macro cell ({@link Level0Features}): sunken
  *   rooms (some with Level 101 houses), huge stairwell pits to the void, and
  *   multi-storey oak office buildings.</li>
