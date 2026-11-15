@@ -249,6 +249,30 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
     /** A room's look on one floor: its subject, floor pattern (0-6), wall finish (0-3), ceiling (0-3), cases (0-2). */
     private record Style(Theme theme, int floor, int wall, int ceil, int cases, int gallery, long seed) {}
 
+    enum Kind { GALLERY, LIBRARY, STORE, STAIR, HALL }
+
+    /**
+     * What room (gmx, gmz) is on floor f: dead ends behind a door are often staff-only
+     * storerooms; some rooms are libraries (more of them in library districts).
+     */
+    private static Kind kind(long seed, Plan p, int gmx, int gmz, int f) {
+        Plan q = p.contains(gmx, gmz) ? p : plan(seed, Math.floorDiv(gmx, D), Math.floorDiv(gmz, D));
+        int i = idx(Math.floorMod(gmx, D), Math.floorMod(gmz, D));
+        if (q.hall[i]) return Kind.HALL;
+        if (q.stair[i]) return Kind.STAIR;
+        byte[] e = {westEdge(seed, q, f, gmx, gmz), westEdge(seed, q, f, gmx + 1, gmz),
+                northEdge(seed, q, f, gmx, gmz), northEdge(seed, q, f, gmx, gmz + 1)};
+        int open = 0, doors = 0;
+        for (byte b : e) {
+            if (b != CLOSED) open++;
+            if (b == DOOR) doors++;
+        }
+        Random r = new Random(style(q, i, f).seed() ^ 0x570EL);
+        if (open == 1 && doors == 1 && r.nextInt(100) < 55) return Kind.STORE;
+        if (r.nextInt(100) < (q.pal.name.equals("library") ? 30 : 7)) return Kind.LIBRARY;
+        return Kind.GALLERY;
+    }
+
     private static Style style(Plan p, int i, int f) {
         long seed = p.roomSeed[i] ^ (f + 1) * 0x9E3779B97F4A7C15L;
         Random r = new Random(seed);
@@ -297,7 +321,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         if (hall) {
             hallInterior(c, p);
         } else {
-            for (int f = 0; f < FLOORS; f++) room(c, p, gmx, gmz, f, e[f], st[f]);
+            for (int f = 0; f < FLOORS; f++) room(c, seed, p, gmx, gmz, f, e[f], st[f]);
         }
         // the vault and gables stand on the hall's wall belts too, which are in the rooms around it
         if (x0 + 15 >= p.hx0() - 1 && x0 <= p.hx1() + 1 && z0 + 15 >= p.hz0() - 1 && z0 <= p.hz1() + 1) {
@@ -460,23 +484,51 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
 
     // ── Rooms ────────────────────────────────────────────────────────────
 
-    private void room(MuseumCanvas c, Plan p, int gmx, int gmz, int f, byte[] e, Style st) {
+    private void room(MuseumCanvas c, long seed, Plan p, int gmx, int gmz, int f, byte[] e, Style st) {
         int i = idx(Math.floorMod(gmx, D), Math.floorMod(gmz, D));
         int ox = gmx * M, oz = gmz * M, F = FLOOR0 + f * STORY;
         Random r = new Random(st.seed() ^ 0x5EEDL);
         Room m = new Room(c, r, ox, oz, F, p.pal, st.theme(), st.gallery(), e, f == FLOORS - 1, st.seed());
+        Kind kind = kind(seed, p, gmx, gmz, f);
+        // which doors lead into staff-only rooms
+        int[][] nb = {{gmx - 1, gmz}, {gmx + 1, gmz}, {gmx, gmz - 1}, {gmx, gmz + 1}};
+        boolean[] staff = new boolean[4];
+        for (int s = 0; s < 4; s++) staff[s] = e[s] == DOOR && (kind == Kind.STORE || kind(seed, p, nb[s][0], nb[s][1], f) == Kind.STORE);
 
-        // even light from hidden light blocks
-        for (int lx : new int[]{4, 11, 20, 27}) {
-            for (int lz : new int[]{4, 11, 20, 27}) c.set(ox + lx, F + STORY - 4, oz + lz, LIGHT);
+        // even light from hidden light blocks; dimmer in a storeroom
+        if (kind == Kind.STORE) {
+            org.bukkit.block.data.Levelled dim = (org.bukkit.block.data.Levelled) Material.LIGHT.createBlockData();
+            dim.setLevel(10);
+            for (int lx : new int[]{8, 23}) for (int lz : new int[]{8, 23}) c.set(ox + lx, F + STORY - 4, oz + lz, dim);
+        } else {
+            for (int lx : new int[]{4, 11, 20, 27}) {
+                for (int lz : new int[]{4, 11, 20, 27}) c.set(ox + lx, F + STORY - 4, oz + lz, LIGHT);
+            }
         }
 
-        if (p.stair[i]) {
+        if (kind == Kind.STAIR) {
             if (f == 0) stairFlight(c, p.pal, ox, oz);
             else stairWell(c, p.pal, ox, oz, F);
             if (e[3] == CLOSED) MuseumExhibits.wallCase(m, 3, 3, M - 4, st.cases());
             chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 20);
-            titles(m, st);
+            titles(m, st, staff, null);
+            return;
+        }
+        if (kind == Kind.STORE) {
+            int door = 0;
+            for (int s = 0; s < 4; s++) if (e[s] != CLOSED) door = s;
+            MuseumExhibits.storeroom(m, r.nextBoolean(), door);
+            c.set(ox + 15, F + STORY - 3, oz + 15, CHAIN);
+            c.set(ox + 15, F + STORY - 4, oz + 15, p.pal.lantern);
+            titles(m, st, staff, null);
+            return;
+        }
+        if (kind == Kind.LIBRARY) {
+            MuseumExhibits.library(m, r.nextBoolean());
+            chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 9);
+            chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 22);
+            String[] names = {"Reading Room", "The Library", "Map Room", "Upper Reading Room", "Library of " + st.theme().titles[0]};
+            titles(m, st, staff, names[r.nextInt(names.length)]);
             return;
         }
 
@@ -498,7 +550,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
                 }
             }
         }
-        titles(m, st);
+        titles(m, st, staff, null);
 
         switch (ctr) {
             case SKELETON -> MuseumExhibits.skeleton(m, alongX, MuseumExhibits.skeleton(st.theme(), r, false));
@@ -545,13 +597,18 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         }
     }
 
-    /** The gallery's number and subject over each door, inside. */
-    private static void titles(Room m, Style st) {
+    /**
+     * Over each door, inside: the gallery's number and subject (or the room's {@code name}), or a
+     * staff-only notice where the door leads into, or out of, a storeroom.
+     */
+    private static void titles(Room m, Style st, boolean[] staff, String name) {
         for (int s = 0; s < 4; s++) {
             if (m.e()[s] != DOOR) continue;
             int x = MuseumExhibits.sx(m.ox(), s, 1, 15), z = MuseumExhibits.sz(m.oz(), s, 1, 15);
-            m.c().sign(x, m.F() + 14, z, MuseumExhibits.INTO_ROOM[s],
-                    new Subject("", Topic.ROOM, Rarity.COMMON, st.gallery(), st.theme(), st.seed()));
+            Subject sub = staff[s]
+                    ? new Subject("", Topic.STAFF, Rarity.COMMON, st.gallery(), st.theme(), st.seed() + s)
+                    : new Subject(name == null ? "" : name, Topic.ROOM, Rarity.COMMON, st.gallery(), st.theme(), st.seed());
+            m.c().sign(x, m.F() + 14, z, MuseumExhibits.INTO_ROOM[s], sub);
         }
     }
 
@@ -831,19 +888,18 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
                     if (!(b.getState() instanceof Sign sign)) continue;
                     String[] lines = MuseumCatalogue.sign(s, r);
                     for (int i = 0; i < 4; i++) sign.getSide(Side.FRONT).line(i, Component.text(lines[i]));
+                    // dark text is hard to read on dark wood
+                    Material sm = b.getType();
+                    if (sm == Material.DARK_OAK_WALL_SIGN || sm == Material.SPRUCE_WALL_SIGN || sm == Material.CRIMSON_WALL_SIGN
+                            || sm == Material.JUNGLE_WALL_SIGN) {
+                        sign.getSide(Side.FRONT).setColor(org.bukkit.DyeColor.WHITE);
+                    }
                     sign.setWaxed(true);
                     sign.update(true, false);
                 }
                 case LECTERN -> {
                     if (!(b.getState() instanceof Lectern lectern)) continue;
-                    MuseumCatalogue.Book book = MuseumCatalogue.book(s, r);
-                    ItemStack item = new ItemStack(Material.WRITTEN_BOOK);
-                    BookMeta meta = (BookMeta) item.getItemMeta();
-                    meta.setTitle(book.title().length() > 32 ? book.title().substring(0, 32) : book.title());
-                    meta.setAuthor(book.author());
-                    meta.setPages(book.pages());
-                    item.setItemMeta(meta);
-                    lectern.getInventory().setItem(0, item);
+                    lectern.getInventory().setItem(0, book(MuseumCatalogue.book(s, r)));
                 }
                 case POT -> {
                     if (!(b.getState() instanceof DecoratedPot pot)) continue;
@@ -853,8 +909,32 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
                     pot.update(true, false);
                 }
                 case PAINTING -> hangPainting(world, l, r);
+                case CHEST -> {
+                    if (!(b.getState() instanceof org.bukkit.block.Container box)) continue;
+                    org.bukkit.inventory.Inventory inv = box.getSnapshotInventory();
+                    inv.clear();
+                    for (Material jm : MuseumCatalogue.junk(r)) {
+                        if (!jm.isItem()) continue;
+                        inv.setItem(r.nextInt(inv.getSize()), new ItemStack(jm, 1 + r.nextInt(Math.min(8, jm.getMaxStackSize()))));
+                    }
+                    if (r.nextInt(3) == 0) {
+                        MuseumCatalogue.Book bk = MuseumCatalogue.record(s, r);
+                        inv.setItem(r.nextInt(inv.getSize()), book(bk));
+                    }
+                    box.update(true, false);
+                }
             }
         }
+    }
+
+    private static ItemStack book(MuseumCatalogue.Book book) {
+        ItemStack item = new ItemStack(Material.WRITTEN_BOOK);
+        BookMeta meta = (BookMeta) item.getItemMeta();
+        meta.setTitle(book.title().length() > 32 ? book.title().substring(0, 32) : book.title());
+        meta.setAuthor(book.author());
+        meta.setPages(book.pages());
+        item.setItemMeta(meta);
+        return item;
     }
 
     private static List<Art> arts;

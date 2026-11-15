@@ -17,7 +17,7 @@ import java.util.List;
  */
 final class MuseumCanvas {
 
-    enum Kind { SIGN, LECTERN, POT, PAINTING }
+    enum Kind { SIGN, LECTERN, POT, PAINTING, CHEST }
 
     /**
      * What a label describes. The catalogue writes its text from this and a seed: {@code seed} if
@@ -78,12 +78,23 @@ final class MuseumCanvas {
         label(x, y, z, Kind.SIGN, face, s, 0, 0);
     }
 
-    /** A lectern whose reader stands on the {@code face} side; it gets a book. */
+    /**
+     * A lectern whose reader stands on the {@code face} side; it gets a book. It's placed with
+     * has_book set, which the book alone doesn't change.
+     */
     void lectern(int x, int y, int z, BlockFace face, Subject s) {
-        Directional d = (Directional) Material.LECTERN.createBlockData();
+        Directional d = (Directional) Material.LECTERN.createBlockData("[has_book=true]");
         d.setFacing(face);
         set(x, y, z, d);
         label(x, y, z, Kind.LECTERN, face, s, 0, 0);
+    }
+
+    /** A chest (or barrel) whose contents are filled in. */
+    void chest(int x, int y, int z, Material m, BlockFace face, Subject s) {
+        Directional d = (Directional) m.createBlockData();
+        d.setFacing(face);
+        set(x, y, z, d);
+        label(x, y, z, Kind.CHEST, face, s, 0, 0);
     }
 
     /** A decorated pot; it gets sherds. */

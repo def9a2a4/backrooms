@@ -159,7 +159,8 @@ final class MuseumExhibits {
 
     static BlockData specimen(Specimen s, BlockFace facing) {
         BlockData b = s.block().createBlockData();
-        if (b instanceof Rotatable rot) rot.setRotation(facing);
+        // a skull's rotation is the way the back of its head points
+        if (b instanceof Rotatable rot) rot.setRotation(facing.getOppositeFace());
         else if (b instanceof Directional dir && dir.getFaces().contains(facing)) dir.setFacing(facing);
         return b;
     }
@@ -658,5 +659,162 @@ final class MuseumExhibits {
         // a lectern's facing is the side its reader stands on
         m.c().lectern(sx(m.ox(), side, 4, t), m.F() + 1, sz(m.oz(), side, 4, t), INTO_ROOM[side],
                 new Subject("", Topic.GUIDE, Rarity.COMMON, m.gallery(), m.theme(), m.seed()));
+    }
+
+    // ── Libraries ────────────────────────────────────────────────────────
+
+    /** A bookshelf, now and then a chiseled one with some books in it. */
+    private static BlockData shelf(Random r) {
+        if (r.nextInt(8) != 0) return BOOKSHELF.createBlockData();
+        org.bukkit.block.data.type.ChiseledBookshelf b = (org.bukkit.block.data.type.ChiseledBookshelf) CHISELED_BOOKSHELF.createBlockData();
+        for (int i = 0; i < 6; i++) b.setSlotOccupied(i, r.nextInt(3) > 0);
+        return b;
+    }
+
+    /**
+     * A reading room after Duke Humfrey's Library: bookcases up the walls with a gallery and
+     * ladders, stalls of bookcases standing out into the room with desks between, a carpet down
+     * the middle, candles on the desks, and lecterns with learned books.
+     */
+    static void library(Room m, boolean alongX) {
+        MuseumCanvas c = m.c();
+        Random r = m.r();
+        int F = m.F();
+        BlockData floor = m.pal().wood, rail = SPRUCE_FENCE.createBlockData();
+        for (int side = 0; side < 4; side++) {
+            byte e = m.e()[side];
+            if (e == Level1882ChunkGenerator.ARCADE) continue;
+            int[][] runs = e == Level1882ChunkGenerator.DOOR ? new int[][]{{2, 10}, {21, 29}} : new int[][]{{2, 29}};
+            for (int[] run : runs) {
+                for (int t = run[0]; t <= run[1]; t++) {
+                    int x1 = sx(m.ox(), side, 1, t), z1 = sz(m.oz(), side, 1, t);
+                    for (int y = F + 1; y <= F + 12; y++) c.set(x1, y, z1, y == F + 12 ? m.pal().trim : shelf(r));
+                    if (e != Level1882ChunkGenerator.CLOSED) continue;
+                    // the gallery: a walkway at F+6 with a railing
+                    for (int d = 2; d <= 3; d++) c.set(sx(m.ox(), side, d, t), F + 6, sz(m.oz(), side, d, t), floor);
+                    c.set(sx(m.ox(), side, 4, t), F + 7, sz(m.oz(), side, 4, t), rail);
+                    c.set(sx(m.ox(), side, 4, t), F + 6, sz(m.oz(), side, 4, t), floor);
+                }
+                if (e == Level1882ChunkGenerator.CLOSED) {
+                    // a ladder up to it at one end
+                    int t = run[0] + 1;
+                    org.bukkit.block.data.type.Ladder ladder = (org.bukkit.block.data.type.Ladder) LADDER.createBlockData();
+                    ladder.setFacing(INTO_ROOM[side]);
+                    for (int y = F + 1; y <= F + 6; y++) c.set(sx(m.ox(), side, 2, t), y, sz(m.oz(), side, 2, t), ladder);
+                }
+            }
+        }
+        // stalls: bookcases across the room, two deep, desks between them
+        Material carpet = new Material[]{RED_CARPET, GREEN_CARPET, BROWN_CARPET, BLUE_CARPET}[r.nextInt(4)];
+        for (int a = 6; a <= 25; a++) {
+            for (int b = 14; b <= 17; b++) c.set(X(m, alongX, a, b), F + 1, Z(m, alongX, a, b), carpet.createBlockData());
+        }
+        for (int a : new int[]{6, 12, 19, 25}) {
+            for (int b : new int[]{6, 7, 8, 9, 10, 11, 20, 21, 22, 23, 24, 25}) {
+                for (int y = F + 1; y <= F + 4; y++) c.set(X(m, alongX, a, b), y, Z(m, alongX, a, b), y == F + 4 ? m.pal().trim : shelf(r));
+            }
+        }
+        org.bukkit.block.data.type.Slab top = (org.bukkit.block.data.type.Slab) SPRUCE_SLAB.createBlockData();
+        top.setType(org.bukkit.block.data.type.Slab.Type.TOP);
+        for (int a0 : new int[]{7, 20}) {
+            for (int b0 : new int[]{6, 20}) {
+                // a desk down the middle of the stall, a bench either side
+                int a = a0 + 2;
+                for (int b = b0 + 1; b <= b0 + 4; b++) {
+                    c.set(X(m, alongX, a, b), F + 1, Z(m, alongX, a, b), top);
+                    c.set(X(m, alongX, a + 1, b), F + 1, Z(m, alongX, a + 1, b), top);
+                    Stairs chair = (Stairs) SPRUCE_STAIRS.createBlockData();
+                    chair.setFacing(facing(!alongX, false));
+                    c.set(X(m, alongX, a - 1, b), F + 1, Z(m, alongX, a - 1, b), chair);
+                    Stairs chair2 = (Stairs) SPRUCE_STAIRS.createBlockData();
+                    chair2.setFacing(facing(!alongX, true));
+                    c.set(X(m, alongX, a + 2, b), F + 1, Z(m, alongX, a + 2, b), chair2);
+                }
+                org.bukkit.block.data.type.Candle candle = (org.bukkit.block.data.type.Candle) CANDLE.createBlockData();
+                candle.setLit(true);
+                candle.setCandles(1 + r.nextInt(3));
+                c.set(X(m, alongX, a, b0 + 2 + r.nextInt(2)), F + 2, Z(m, alongX, a, b0 + 2), candle);
+            }
+        }
+        // lecterns at the ends of the aisle
+        for (int a : new int[]{5, 26}) {
+            if (r.nextInt(3) == 0) continue;
+            c.lectern(X(m, alongX, a, 16), F + 1, Z(m, alongX, a, 16), facing(!alongX, a < 16),
+                    new Subject("", Topic.LIBRARY, Rarity.COMMON, m.gallery(), m.theme(), m.seed() + a));
+        }
+    }
+
+    // ── Storerooms ───────────────────────────────────────────────────────
+
+    /**
+     * A staff-only storeroom: racks of shelves crammed with whatever didn't fit in the galleries,
+     * chests and crates, bookshelves of files, things left on the floor, a desk by the door with
+     * the day book on a lectern.
+     */
+    static void storeroom(Room m, boolean alongX, int doorSide) {
+        MuseumCanvas c = m.c();
+        Random r = m.r();
+        int F = m.F();
+        Specimen[] pool = MuseumCatalogue.pool(m.theme());
+        BlockData post = STRIPPED_SPRUCE_LOG.createBlockData(), plank = SPRUCE_PLANKS.createBlockData();
+        Material[] crates = {BARREL, BARREL, CHEST, COMPOSTER, HAY_BLOCK, BOOKSHELF, BOOKSHELF, SCAFFOLDING, DECORATED_POT};
+        for (int b0 : new int[]{6, 12, 18, 24}) {
+            for (int a = 7; a <= 27; a++) {
+                for (int b = b0; b <= b0 + 1; b++) {
+                    int x = X(m, alongX, a, b), z = Z(m, alongX, a, b);
+                    boolean upright = (a - 7) % 5 == 0 || a == 27;
+                    for (int y = F + 1; y <= F + 9; y++) {
+                        int lvl = y - F;
+                        if (upright) c.set(x, y, z, post);
+                        else if (lvl == 3 || lvl == 6 || lvl == 9) c.set(x, y, z, plank);
+                        else if ((lvl == 1 || lvl == 4 || lvl == 7) && r.nextInt(100) < 55) {
+                            BlockFace f = facing(!alongX, b == b0);
+                            if (r.nextInt(3) == 0) {
+                                Material cm = crates[r.nextInt(crates.length)];
+                                if (cm == CHEST || cm == BARREL) {
+                                    c.chest(x, y, z, cm, cm == BARREL ? BlockFace.UP : f,
+                                            new Subject("", Topic.CHEST, Rarity.COMMON, m.gallery(), m.theme(), 0));
+                                    if (r.nextInt(3) == 0) c.sign(x + f.getModX(), y, z + f.getModZ(), f,
+                                            new Subject(MuseumCatalogue.name(pool[r.nextInt(pool.length)]), Topic.CRATE,
+                                                    Rarity.COMMON, m.gallery(), m.theme(), 0));
+                                } else {
+                                    c.set(x, y, z, cm == DECORATED_POT ? DECORATED_POT.createBlockData() : cm.createBlockData());
+                                }
+                            } else {
+                                c.set(x, y, z, specimen(pool[r.nextInt(pool.length)], f));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // things left on the floor of the aisles
+        Material[] floor = {BONE_BLOCK, BARREL, FLOWER_POT, WHITE_CARPET, BROWN_CARPET, LANTERN, CHIPPED_ANVIL, HAY_BLOCK,
+                CAULDRON, SCAFFOLDING};
+        for (int k = 0; k < 10; k++) {
+            int a = 4 + r.nextInt(24), b = new int[]{4, 9, 10, 15, 16, 21, 22, 27}[r.nextInt(8)];
+            Material fm = floor[r.nextInt(floor.length)];
+            BlockData bd = fm.createBlockData();
+            if (bd instanceof org.bukkit.block.data.type.Lantern l) l.setHanging(false);
+            c.set(X(m, alongX, a, b), F + 1, Z(m, alongX, a, b), bd);
+        }
+        // dust in the top corners
+        for (int[] q : new int[][]{{1, 1}, {30, 1}, {1, 30}, {30, 30}}) {
+            if (r.nextBoolean()) c.set(m.ox() + q[0], F + 17, m.oz() + q[1], COBWEB.createBlockData());
+        }
+        // the desk by the door: a table, a chair, a chest of files, the day book
+        int t = 23;
+        int dx = sx(m.ox(), doorSide, 3, t), dz = sz(m.oz(), doorSide, 3, t);
+        c.set(dx, F + 1, dz, m.pal().wood);
+        c.set(sx(m.ox(), doorSide, 3, t + 1), F + 1, sz(m.oz(), doorSide, 3, t + 1), m.pal().wood);
+        Stairs chair = (Stairs) SPRUCE_STAIRS.createBlockData();
+        chair.setFacing(INTO_ROOM[doorSide]);
+        c.set(sx(m.ox(), doorSide, 4, t), F + 1, sz(m.oz(), doorSide, 4, t), chair);
+        c.lectern(sx(m.ox(), doorSide, 3, t + 2), F + 1, sz(m.oz(), doorSide, 3, t + 2), INTO_ROOM[doorSide],
+                new Subject("", Topic.LOG, Rarity.COMMON, m.gallery(), m.theme(), m.seed()));
+        c.chest(sx(m.ox(), doorSide, 1, t), F + 1, sz(m.oz(), doorSide, 1, t), CHEST, INTO_ROOM[doorSide],
+                new Subject("", Topic.CHEST, Rarity.COMMON, m.gallery(), m.theme(), 0));
+        c.set(sx(m.ox(), doorSide, 1, t + 1), F + 1, sz(m.oz(), doorSide, 1, t + 1), BOOKSHELF.createBlockData());
+        c.set(sx(m.ox(), doorSide, 1, t + 1), F + 2, sz(m.oz(), doorSide, 1, t + 1), BOOKSHELF.createBlockData());
     }
 }

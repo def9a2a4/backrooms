@@ -26,7 +26,14 @@ public final class MuseumCatalogue {
     }
 
     /** What a label is about. */
-    public enum Topic { SPECIMEN, SKELETON, MONOLITH, POTS, PAINTING, ROOM, GUIDE, MURAL, TANK }
+    public enum Topic {
+        SPECIMEN, SKELETON, MONOLITH, POTS, PAINTING, ROOM, GUIDE, MURAL, TANK,
+        LIBRARY,    // a scholarly book in a library
+        LOG,        // an internal record, in staff-only rooms
+        STAFF,      // the sign on a staff-only door
+        CRATE,      // a label on something in a storeroom
+        CHEST       // a storeroom chest's contents
+    }
 
     /** A gallery's subject: its titles, and what its cases hold. */
     public enum Theme {
@@ -214,13 +221,34 @@ public final class MuseumCatalogue {
         return GENUS_A[r.nextInt(GENUS_A.length)] + GENUS_B[r.nextInt(GENUS_B.length)] + " " + SPECIES[r.nextInt(SPECIES.length)];
     }
 
+    /** A year from 9999 BCE to 9999 CE (there's no year 0). */
     static int year(Random r) {
-        return 1824 + r.nextInt(150);
+        int y = r.nextInt(19999) - 9999;
+        return y == 0 ? 1 : y;
+    }
+
+    static String yr(int y) {
+        return y < 0 ? -y + " BCE" : y < 1000 ? y + " CE" : String.valueOf(y);
+    }
+
+    static String yr(Random r) {
+        return yr(year(r));
+    }
+
+    /** Two years, in order, except one time in ten. */
+    static int[] span(Random r) {
+        int a = year(r), b = year(r);
+        if (a > b && r.nextInt(10) != 0) {
+            int t = a;
+            a = b;
+            b = t;
+        }
+        return new int[]{a, b};
     }
 
     static String regNo(Random r) {
         return switch (r.nextInt(4)) {
-            case 0 -> year(r) + "." + (1 + r.nextInt(12)) + "." + (1 + r.nextInt(400));
+            case 0 -> (1800 + r.nextInt(220)) + "." + (1 + r.nextInt(12)) + "." + (1 + r.nextInt(400));
             case 1 -> "NH " + (100 + r.nextInt(9900));
             case 2 -> (char) ('A' + r.nextInt(8)) + "." + (1000 + r.nextInt(9000));
             default -> "M" + (10000 + r.nextInt(90000));
@@ -241,44 +269,60 @@ public final class MuseumCatalogue {
         String rarity = s.rarity().label;
         return switch (s.topic()) {
             case ROOM -> {
-                String title = s.theme().titles[r.nextInt(s.theme().titles.length)];
+                String title = !name.isEmpty() ? name : s.theme().titles[r.nextInt(s.theme().titles.length)];
                 String[] t = wrap(title);
                 yield r.nextInt(4) == 0
                         ? new String[]{"Gallery " + s.gallery(), "", t[0], t[1]}
                         : new String[]{"Gallery " + s.gallery(), t[0], t[1], ""};
             }
             case GUIDE -> new String[]{"", "Please do not", "touch the", "exhibits"};
+            case STAFF -> switch (r.nextInt(5)) {
+                case 0 -> new String[]{"", "STAFF ONLY", "", ""};
+                case 1 -> new String[]{"Store " + (1 + r.nextInt(60)), "", "Staff only", ""};
+                case 2 -> new String[]{"PRIVATE", "", "No admittance", ""};
+                case 3 -> new String[]{"Store Room", String.valueOf(1 + r.nextInt(60)), "Keep this door", "closed"};
+                default -> new String[]{"Department of", short15(s.theme().titles[0]), "Staff only", ""};
+            };
+            case CRATE -> switch (r.nextInt(7)) {
+                case 0 -> new String[]{"Crate " + (1 + r.nextInt(400)), "Unsorted", "", ""};
+                case 1 -> lines(short15(place(r)), yr(r), "To be", "catalogued");
+                case 2 -> new String[]{"Duplicates", "", "Return to", "Gallery " + (1 + r.nextInt(240))};
+                case 3 -> new String[]{"DO NOT", "OPEN", "", ""};
+                case 4 -> lines(name.isEmpty() ? "Misc." : name, "Box " + (1 + r.nextInt(90)) + " of " + (90 + r.nextInt(30)), "", "");
+                case 5 -> new String[]{"Spare labels", "", "", ""};
+                default -> new String[]{"Recd. " + yr(r), short15("from " + collector(r)), "", ""};
+            };
             case SKELETON -> switch (r.nextInt(5)) {
                 case 0 -> lines(name, "(cast)", "Original in", "the reserve");
-                case 1 -> lines(name, short15(latin(r)), "Mounted " + year(r), "");
-                case 2 -> lines(name, "From " + short15(place(r)), "Coll. " + year(r), short15(collector(r)));
+                case 1 -> lines(name, short15(latin(r)), "Mounted " + yr(r), "");
+                case 2 -> lines(name, "From " + short15(place(r)), "Coll. " + yr(r), short15(collector(r)));
                 case 3 -> lines(name, "", "Do not climb", "on the bones");
-                default -> lines(name, "Reg. " + regNo(r), "Purchased", String.valueOf(year(r)));
+                default -> lines(name, "Reg. " + regNo(r), "Purchased", yr(r));
             };
             case MONOLITH -> switch (r.nextInt(4)) {
-                case 0 -> lines(name, "From " + short15(place(r)), "Removed " + year(r), "");
+                case 0 -> lines(name, "From " + short15(place(r)), "Removed " + yr(r), "");
                 case 1 -> lines(name, "Inscription", "not yet", "translated");
                 case 2 -> lines(name, "Cast, plaster", "Original " + (r.nextBoolean() ? "lost" : "in situ"), "");
                 default -> lines(name, "Gift of", short15(collector(r)), "Reg. " + regNo(r));
             };
-            case POTS -> lines(name, "From " + short15(place(r)), "Excavated", String.valueOf(year(r)));
+            case POTS -> lines(name, "From " + short15(place(r)), "Excavated", yr(r));
             case PAINTING -> switch (r.nextInt(4)) {
-                case 0 -> lines(paintingTitle(r), "Oil on canvas", String.valueOf(year(r)), "");
+                case 0 -> lines(paintingTitle(r), "Oil on canvas", yr(r), "");
                 case 1 -> lines(paintingTitle(r), "Attributed to", short15(collector(r)), "");
-                case 2 -> lines(paintingTitle(r), "", "Bequeathed " + year(r), "");
+                case 2 -> lines(paintingTitle(r), "", "Bequeathed " + yr(r), "");
                 default -> lines("Untitled", "Artist unknown", "", "");
             };
-            case MURAL -> lines(paintingTitle(r), "Block on wall", "Commissioned", String.valueOf(year(r)));
+            case MURAL -> lines(paintingTitle(r), "Block on wall", "Commissioned", yr(r));
             case TANK -> lines(name, "Living", "collection", "Do not tap glass");
             default -> switch (r.nextInt(9)) {
-                case 0, 1 -> lines(name, "Collected " + year(r), "by " + short15(collector(r)), rarity);
-                case 2 -> lines(name, "From " + short15(place(r)), String.valueOf(year(r)), "");
+                case 0, 1 -> lines(name, "Collected " + yr(r), "by " + short15(collector(r)), rarity);
+                case 2 -> lines(name, "From " + short15(place(r)), yr(r), "");
                 case 3 -> lines(name, "Gift of", short15(collector(r)), "Reg. " + regNo(r));
                 case 4 -> lines(name, rarity, "", "");
                 case 5 -> lines("", name, "", "");
                 case 6 -> lines(name, "On loan from", short15(collector(r)), "");
                 case 7 -> lines(name, short15(place(r)), rarity, "Reg. " + regNo(r));
-                default -> lines(name, "Coll. " + short15(collector(r)), String.valueOf(year(r)), "");
+                default -> lines(name, "Coll. " + short15(collector(r)), yr(r), "");
             };
         };
     }
@@ -308,7 +352,8 @@ public final class MuseumCatalogue {
      * then whole words from the end.
      */
     private static String short15(String s) {
-        for (String pre : new String[]{"From ", "by ", "Coll. ", "Reg. "}) {
+        for (String pre : new String[]{"From ", "by ", "Coll. ", "Reg. ", "Collected ", "Mounted ", "Removed ",
+                "Bequeathed ", "Purchased "}) {
             if (s.length() > LINE && s.startsWith(pre)) s = s.substring(pre.length());
         }
         for (String t : TITLES) {
@@ -336,12 +381,17 @@ public final class MuseumCatalogue {
 
     private static final String[] ROMAN = {"I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"};
 
-    /** A book for a lectern in a gallery of {@code s.theme()}. */
+    /**
+     * A book for a lectern: in a gallery a catalogue, a guide or the visitors' book; in a library a
+     * learned treatise; in a staff room an internal record.
+     */
     static Book book(MuseumCanvas.Subject s, Random r) {
+        if (s.topic() == Topic.LIBRARY) return treatise(s, r);
+        if (s.topic() == Topic.LOG || s.topic() == Topic.CHEST) return record(s, r);
         Theme t = s.theme();
         String subject = t.titles[r.nextInt(t.titles.length)];
         List<String> pages = new ArrayList<>();
-        switch (r.nextInt(6)) {
+        switch (r.nextInt(4)) {
             case 0, 1 -> {
                 // a catalogue: numbered entries
                 int no = 1 + r.nextInt(3000);
@@ -353,8 +403,8 @@ public final class MuseumCatalogue {
                         b.append("No. ").append(no++).append(". ").append(name(sp)).append(". ");
                         b.append(switch (r.nextInt(4)) {
                             case 0 -> "From " + place(r) + ".";
-                            case 1 -> "Presented by " + collector(r) + ", " + year(r) + ".";
-                            case 2 -> "Purchased " + year(r) + ". " + sp.rarity().label + ".";
+                            case 1 -> "Presented by " + collector(r) + ", " + yr(r) + ".";
+                            case 2 -> "Purchased " + yr(r) + ". " + sp.rarity().label + ".";
                             default -> "Good condition.";
                         });
                         b.append("\n\n");
@@ -371,44 +421,14 @@ public final class MuseumCatalogue {
                 // a gallery guide
                 pages.add("Gallery " + s.gallery() + " holds part of the collections of " + t.titles[0]
                         + " (" + subject + "). The cases are arranged by place of origin, then by date of collection.");
-                pages.add("The specimens in the wall cases were collected between " + (1830 + r.nextInt(40)) + " and "
-                        + (1890 + r.nextInt(60)) + ", chiefly from " + place(r) + " and " + place(r) + ".");
+                int[] sp = span(r);
+                pages.add("The specimens in the wall cases were collected between " + yr(sp[0]) + " and "
+                        + yr(sp[1]) + ", chiefly from " + place(r) + " and " + place(r) + ".");
                 pages.add("Visitors are asked not to lean on the cases. Further specimens may be seen by appointment"
                         + " with the Keeper.");
                 if (r.nextBoolean()) pages.add("The gallery is closed on Mondays and on the first Tuesday of each month"
                         + " for cleaning.");
                 return new Book("Guide to Gallery " + s.gallery(), "The Trustees", pages);
-            }
-            case 3 -> {
-                // an annual report
-                int y = year(r);
-                pages.add("Report of the Trustees for the year " + y + ".\n\nThe number of visitors was "
-                        + (40000 + r.nextInt(600000)) + ", an " + (r.nextBoolean() ? "increase" : "decrease")
-                        + " on the previous year.");
-                pages.add((50 + r.nextInt(4000)) + " specimens were added to the collections, chiefly of "
-                        + subject.toLowerCase(Locale.ROOT) + ". The largest donation was from " + collector(r) + ".");
-                pages.add("The roof over Gallery " + gallery(r.nextLong()) + " was repaired. The heating in the Central"
-                        + " Hall was improved. Two new cases were made for Gallery " + s.gallery() + ".");
-                pages.add("The Trustees record their thanks to the staff of the department, and to "
-                        + collector(r) + ", who retired after " + (10 + r.nextInt(35)) + " years of service.");
-                return new Book("Annual Report, " + y, "The Trustees", pages);
-            }
-            case 4 -> {
-                // notes on the arrangement
-                String[] order = {"by kind rather than by donor", "by place of collection", "in order of acquisition",
-                        "by size, the largest at the back", "by colour, at the request of the Keeper"};
-                pages.add("Notes on the Arrangement of " + subject + ".\n\nThe collection was rearranged in "
-                        + year(r) + ". Specimens are now shown " + order[r.nextInt(order.length)] + ".");
-                String[] notes = {
-                        "Labels in black are original. Labels in red were added when a specimen was identified again.",
-                        "Some labels have not yet been replaced. Where two labels disagree, the newer is to be preferred.",
-                        "Specimens marked Reserve are stored in the basement and may be seen by students on written application.",
-                        "Duplicates have been exchanged with other museums. A list is kept in the Keeper's office.",
-                        "The cases were relined in green baize in " + year(r) + ". The old lining is in store.",
-                        "Measurements are given in blocks. Weights were not recorded before " + year(r) + ".",
-                        "Casts are marked with a white spot. Original material is unmarked."};
-                for (int k = 0, n = 2 + r.nextInt(3); k < n; k++) pages.add(notes[r.nextInt(notes.length)]);
-                return new Book("Notes on " + cut(subject, 22), collector(r), pages);
             }
             default -> {
                 // a visitors' book
@@ -427,6 +447,162 @@ public final class MuseumCatalogue {
                 return new Book("Visitors' Book", "Gallery " + s.gallery(), pages);
             }
         }
+    }
+
+    /** An internal record, for staff-only rooms. */
+    static Book record(MuseumCanvas.Subject s, Random r) {
+        Theme t = s.theme();
+        String subject = t.titles[r.nextInt(t.titles.length)];
+        List<String> pages = new ArrayList<>();
+        switch (r.nextInt(6)) {
+            case 0 -> {
+                // an annual report
+                int y = year(r);
+                pages.add("Report of the Trustees for the year " + yr(y) + ".\n\nThe number of visitors was "
+                        + (40000 + r.nextInt(600000)) + ", an " + (r.nextBoolean() ? "increase" : "decrease")
+                        + " on the previous year.");
+                pages.add((50 + r.nextInt(4000)) + " specimens were added to the collections, chiefly of "
+                        + subject.toLowerCase(Locale.ROOT) + ". The largest donation was from " + collector(r) + ".");
+                pages.add("The roof over Gallery " + gallery(r.nextLong()) + " was repaired. The heating in the Central"
+                        + " Hall was improved. Two new cases were made for Gallery " + s.gallery() + ".");
+                pages.add("The Trustees record their thanks to the staff of the department, and to "
+                        + collector(r) + ", who retired after " + (10 + r.nextInt(35)) + " years of service.");
+                return new Book("Annual Report, " + yr(y), "The Trustees", pages);
+            }
+            case 1 -> {
+                // notes on the arrangement
+                String[] order = {"by kind rather than by donor", "by place of collection", "in order of acquisition",
+                        "by size, the largest at the back", "by colour, at the request of the Keeper"};
+                pages.add("Notes on the Arrangement of " + subject + ".\n\nThe collection was rearranged in "
+                        + yr(r) + ". Specimens are now shown " + order[r.nextInt(order.length)] + ".");
+                String[] notes = {
+                        "Labels in black are original. Labels in red were added when a specimen was identified again.",
+                        "Some labels have not yet been replaced. Where two labels disagree, the newer is to be preferred.",
+                        "Specimens marked Reserve are stored in the basement and may be seen by students on written application.",
+                        "Duplicates have been exchanged with other museums. A list is kept in the Keeper's office.",
+                        "The cases were relined in green baize in " + yr(r) + ". The old lining is in store.",
+                        "Measurements are given in blocks. Weights were not recorded before " + yr(r) + ".",
+                        "Casts are marked with a white spot. Original material is unmarked."};
+                for (int k = 0, n = 2 + r.nextInt(3); k < n; k++) pages.add(notes[r.nextInt(notes.length)]);
+                return new Book("Notes on " + cut(subject, 22), collector(r), pages);
+            }
+            case 2 -> {
+                // the accessions register
+                int[] sp = span(r);
+                int no = 1 + r.nextInt(9000);
+                for (int p = 0, n = 3 + r.nextInt(5); p < n; p++) {
+                    StringBuilder b = new StringBuilder();
+                    for (int k = 0; k < 3; k++) {
+                        Specimen x = pool(t)[r.nextInt(pool(t).length)];
+                        b.append(no++).append(". ").append(name(x)).append(", ").append(1 + r.nextInt(12)).append(". ")
+                                .append(r.nextInt(3) == 0 ? "Recd. from " + collector(r) : "From " + place(r)).append(".\n\n");
+                    }
+                    pages.add(b.toString().trim());
+                }
+                return new Book("Register " + yr(sp[0]) + "-" + yr(sp[1]), "Accessions", pages);
+            }
+            case 3 -> {
+                // a day book
+                String[] days = {"Mon.", "Tues.", "Wed.", "Thurs.", "Fri.", "Sat."};
+                String[] entries = {
+                        "Lights in Gallery %g left on overnight again.", "Received %n crates from %p. Unpacked two.",
+                        "Ladder in the store needs repair. Reported.", "%c called about the loan. Not in.",
+                        "Requisition: %n labels, two pots of glue, string.", "Case in Gallery %g relined.",
+                        "Cleaned the skeleton in the Central Hall. Took all day.", "Ammonite returned from conservation.",
+                        "Inventory of Store %g begun. Not finished.", "Rain. Bucket under the skylight in Gallery %g.",
+                        "%n visitors. Quiet.", "Moved the %s to the reserve.", "Crate %n opened. Contents as listed.",
+                        "Keeper away. %c in charge.", "Found the key to Store %g in a drawer."};
+                for (int p = 0, n = 3 + r.nextInt(5); p < n; p++) {
+                    StringBuilder b = new StringBuilder();
+                    for (int k = 0; k < 3; k++) {
+                        Specimen x = pool(t)[r.nextInt(pool(t).length)];
+                        String e = entries[r.nextInt(entries.length)].replace("%g", String.valueOf(1 + r.nextInt(240)))
+                                .replace("%n", String.valueOf(2 + r.nextInt(40))).replace("%p", place(r))
+                                .replace("%c", collector(r)).replace("%s", name(x).toLowerCase(Locale.ROOT));
+                        b.append(days[r.nextInt(days.length)]).append(' ').append(e).append("\n\n");
+                    }
+                    pages.add(b.toString().trim());
+                }
+                return new Book("Day Book, " + yr(r), collector(r), pages);
+            }
+            case 4 -> {
+                // a night porter's log
+                for (int p = 0, n = 3 + r.nextInt(4); p < n; p++) {
+                    StringBuilder b = new StringBuilder();
+                    for (int k = 0; k < 4; k++) {
+                        int h = 22 + r.nextInt(8);
+                        b.append(h % 24 < 10 ? "0" : "").append(h % 24).append(r.nextBoolean() ? ":00" : ":30").append(' ')
+                                .append(switch (r.nextInt(6)) {
+                                    case 0 -> "Rounds. All in order.";
+                                    case 1 -> "Gallery " + (1 + r.nextInt(240)) + " locked.";
+                                    case 2 -> "Central Hall. All in order.";
+                                    case 3 -> "Checked the stores.";
+                                    case 4 -> "Tea.";
+                                    default -> "Window in Gallery " + (1 + r.nextInt(240)) + " shut.";
+                                }).append('\n');
+                    }
+                    pages.add(b.toString().trim());
+                }
+                return new Book("Night Porter's Log", collector(r), pages);
+            }
+            default -> {
+                // memoranda
+                String[] memos = {
+                        "Staff are reminded that specimens are not to be taken home for study.",
+                        "The tea urn in the basement is out of order.",
+                        "From Monday the stores will be locked at five.",
+                        "All labels are to be typed. Handwritten labels will be replaced.",
+                        "Please return the long ladder to Store %g after use.",
+                        "Overtime for the move of the %s will be paid at the usual rate.",
+                        "The Keeper asks that crates not be left in the corridors.",
+                        "Visitors are not to be admitted to the stores without an escort."};
+                for (int p = 0, n = 2 + r.nextInt(4); p < n; p++) {
+                    Specimen x = pool(t)[r.nextInt(pool(t).length)];
+                    pages.add("MEMORANDUM\n\nTo all staff, " + subject + ".\n\n" + memos[r.nextInt(memos.length)]
+                            .replace("%g", String.valueOf(1 + r.nextInt(60))).replace("%s", name(x).toLowerCase(Locale.ROOT))
+                            + "\n\n" + collector(r));
+                }
+                return new Book("Memoranda", "The Keeper", pages);
+            }
+        }
+    }
+
+    /** A learned book, for a library. */
+    static Book treatise(MuseumCanvas.Subject s, Random r) {
+        Theme t = s.theme();
+        String subject = t.titles[r.nextInt(t.titles.length)];
+        String[] forms = {"A Treatise on ", "Observations on ", "On the Classification of ", "Remarks upon ",
+                "A Handbook of ", "Studies in ", "An Introduction to ", "Proceedings: "};
+        String title = forms[r.nextInt(forms.length)] + subject;
+        if (title.length() > 32) title = subject;
+        List<String> pages = new ArrayList<>();
+        Specimen a = pool(t)[r.nextInt(pool(t).length)], b = pool(t)[r.nextInt(pool(t).length)];
+        String[] prose = {
+                "It has long been held that the " + name(a).toLowerCase(Locale.ROOT) + " and the " + name(b).toLowerCase(Locale.ROOT)
+                        + " are of one kind. The present author cannot agree.",
+                "Specimens from " + place(r) + " differ from those of " + place(r) + " chiefly in colour.",
+                "The earliest account is that of " + collector(r) + ", written in " + yr(r) + ", which is in most respects sound.",
+                "No complete example is known. The best is in the collection of this Museum (Reg. " + regNo(r) + ").",
+                "The question of age must be left open. The evidence of the strata points to " + yr(r) + ".",
+                "For the figures the author is indebted to " + collector(r) + ".",
+                "The reader is referred to the plates at the end of the volume.",
+                "Of the " + (3 + r.nextInt(40)) + " specimens examined, all but " + (1 + r.nextInt(3)) + " agreed in form."};
+        pages.add(title + ".\n\nBy " + collector(r) + ".\n\n" + (r.nextBoolean() ? "Second edition, " + yr(r) + "." : "Printed for the Trustees."));
+        for (int p = 0, n = 3 + r.nextInt(4); p < n; p++) pages.add(prose[r.nextInt(prose.length)]);
+        return new Book(title, collector(r), pages);
+    }
+
+    /** Odds and ends for a storeroom chest. */
+    static Material[] junk(Random r) {
+        Material[] common = {PAPER, PAPER, BOOK, BONE, BONE_MEAL, STRING, GLASS_BOTTLE, FLOWER_POT, CANDLE, NAME_TAG,
+                INK_SAC, FEATHER, BRUSH, COMPASS, CLOCK, MAP, LEAD, BUCKET, SHEARS, BOWL, STICK, CLAY_BALL, FLINT,
+                GOLD_NUGGET, IRON_NUGGET, BRICK, AMETHYST_SHARD, PRISMARINE_SHARD, SPYGLASS, WRITABLE_BOOK};
+        Theme t = Theme.values()[r.nextInt(Theme.values().length)];
+        Material[] out = new Material[3 + r.nextInt(8)];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = r.nextInt(3) == 0 ? pool(t)[r.nextInt(pool(t).length)].block() : common[r.nextInt(common.length)];
+        }
+        return out;
     }
 
     private static String cut(String s, int n) {
