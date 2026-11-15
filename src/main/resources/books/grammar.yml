@@ -19,7 +19,7 @@
 rules:
   # Bound for every book, so any genre can refer back to them.
   setup:
-    - "[writerfirst:#first#][writerlast:#last#][writer:{#writerfirst# #writerlast#|#writerfirst# #writerlast#|#writerfirst# #writerlast.initial#.|#writerfirst.initial#. #writerlast#}][day:{n:2-999}][place:#room#][other:#fullname#][obj1:#obj#][num:{n:3-97}]"
+    - "[writerfirst:#first#][writerlast:#last#][writer:{#writerfirst# #writerlast#|#writerfirst# #writerlast#|#writerfirst# #writerlast#|#writerfirst.initial#. #writerlast#}][day:{n:2-999}][place:#room#][other:#fullname#][obj1:#obj#][num:{n:3-97}]"
 
   # ─── People and places ───
 
@@ -27,7 +27,7 @@ rules:
           "Agnes", "Boris", "Cora", "Desmond", "Edith", "Felix", "Gwen", "Hector", "Ida", "Jonah", "Kit", "Lorna", "Milo", "Nadia", "Oscar", "Paz", "Quentin", "Rhea", "Stellan", "Tamsin", "Ulla", "Viktor", "Wanda", "Yusuf", "Zelda", "Arlo", "Bram", "Delphine", "Emeka", "Fern"]
   last: ["Fisk", "Okafor", "Lindqvist", "Ruiz", "Hale", "Brandt", "Moreau", "Pak", "Abernathy", "Voss", "Kowalski", "Tran", "Quill", "Harlow", "Mercer", "Dobbs", "Sato", "Fenwick", "Ames", "Castell", "Nakamura", "Oyelaran", "Petrov", "Lund",
          "Achterberg", "Bellweather", "Crane", "Dunmore", "Ekwueme", "Farrow", "Gallo", "Holm", "Ibarra", "Jessup", "Kettering", "Larch", "Mabry", "Nordahl", "Ostrander", "Pell", "Quarles", "Rask", "Stroud", "Thistlewood", "Underhill", "Varga", "Wexley", "Yarrow"]
-  fullname: ["#first# #last#", "#first# #last#", "#first# #last#", "#first# #last#", "#first# #last.initial#.", "#first.initial#. #last#", "Mr. #last#", "Ms. #last#", "Dr. #last#", "Mx. #last#", "#first# #last#-#last#", "#first# #first.initial#. #last#"]
+  fullname: ["#first# #last#", "#first# #last#", "#first# #last#", "#first# #last#", "#first.initial#. #last#", "Mr. #last#", "Ms. #last#", "Dr. #last#", "Mx. #last#", "#first# #last#-#last#", "#first# #first.initial#. #last#"]
   dept: ["Accounting", "Facilities", "Human Resources", "Records", "Night Shift", "Maintenance", "Level Planning", "Compliance", "Sub-Level 0 Operations", "Lighting", "Mapping", "Reception", "the department with no name",
          "Payroll", "Legal", "Archives", "Wayfinding", "Internal Services", "Carpet Services", "Doors and Openings", "Continuity", "Lost Property", "Internal Audit", "Headcount", "Quality Assurance", "the Third Floor"]
   room: ["Room {n:2-99}", "the break room", "Conference B", "Hallway C", "the copy room", "Sub-Level 0", "the east stairwell", "the room with two doors", "the room with no doors", "Room 3", "the storage closet", "the long hallway", "the yellow room", "Accounting", "the mail room", "the room where the carpet changes", "the office with the window", "the server closet", "the second lobby", "Corridor {n:9-40}-{A|B|C|D}",
@@ -48,7 +48,7 @@ rules:
   colour: ["yellow", "mono-yellow", "beige", "the colour of old paper", "off-white", "a yellow that isn't yellow", "manila", "nicotine yellow", "mustard",
            "custard", "faded lemon", "pale ochre", "wheat", "butterscotch", "the yellow of old newspaper", "faded highlighter", "sand", "straw"]
   light_state: ["flickering", "buzzing", "too bright", "off in one corner", "humming a half-step flat", "on", "all on, every one of them", "dimmer than yesterday", "pulsing slowly", "brighter when I walk away",
-                "out, except mine", "flickering in a pattern", "steady, which is new", "warm to the touch", "buzzing in time with my steps", "on in rooms nobody uses", "a little green", "flickering only when I blink", "brighter in the corners", "on again"]
+                "out, except over me", "flickering in a pattern", "steady, which is new", "warm to the touch", "buzzing in time with my steps", "on in rooms nobody uses", "a little green", "flickering only when I blink", "brighter in the corners", "on, off, on"]
   carpet_state: ["damp", "dry for once", "squelching", "warm", "a different shade here", "newer than the walls", "soaked near the pillars", "humming too", "pulled up in one place, and there is more carpet underneath",
                  "dry in a perfect circle", "wetter than yesterday", "cold for the first time", "marked with one footprint", "springy, like moss", "patterned here, plain there", "squeaking", "slightly sticky", "warm under the desks"]
   thing: ["something tall", "a coworker I don't recognise", "the thing behind the drywall", "a man in a lanyard", "a shape at the end of the hall", "somebody wearing my badge", "the night janitor", "a person with no face", "whatever moves the walls", "a woman holding a clipboard", "someone who looked like me", "the manager",
@@ -79,7 +79,7 @@ rules:
     - "The lights are #light_state# again."
     - "I passed #landmark# for the #ordinal# time."
     - "I heard #sound#."
-    - "It smells like #smell# near #room#."
+    - "Near #room# it smells of #smell#."
     - "I found #obj.a#. It was warm."
     - "I think I saw #thing#."
     - "I feel #feeling#."
@@ -98,8 +98,8 @@ rules:
     - "I found a desk with my handwriting on the blotter."
     - "The #obj# in #room# has moved again. Nobody else is here."
     - "I slept {n:2-14} hours. The lights did not change."
-    - "Someone left a radio on. It was playing #sound#."
-    - "I followed #sound# for an hour. It was always one room ahead."
+    - "Someone left a radio on. Under the static: #sound#."
+    - "For an hour I followed #sound#. It was always one room ahead."
     - "I sat at a desk and pretended to work. It helped."
     - "A phone rang in #room#. I let it."
     - "The vending machine took my coin and gave me #obj.a#."
@@ -116,8 +116,8 @@ rules:
     - "I found a coat on a chair. My size. Still warm."
   dream: ["a window", "my mother's kitchen, but the walls were #colour#", "an exit sign that kept stepping back", "carpet up to my knees", "my desk, and I was already sitting at it", "a phone that rang and rang and was my own voice", "rain on a roof", "the outside. I don't remember what it looked like, only that it was there", "#other#, who told me the way out and I forgot it", "a staircase going up, for once",
           "a car park at night, empty and lovely", "the sea, except it was carpeted", "a lift that went up for a whole day", "my own front door, painted #colour#", "a sky with fluorescent tubes in it", "a birthday party where everyone had my face", "the office, which is not a dream", "a field. Just grass, going on", "#obj.a# that spoke in #other#'s voice", "a timetable for trains that do not stop here"]
-  addressee: ["Mum", "Dad", "Sarah", "whoever is reading", "#other.title#", "Margaret", "my replacement", "future me", "the next one", "Facilities",
-              "Grandma", "Ben", "Aunt Jo", "my landlord", "whoever has my old desk", "the night shift", "the last letter-writer", "#first#", "HR", "anyone"]
+  addressee: ["Mum", "Dad", "Sarah", "whoever is reading", "#other.title#", "Margaret", "my replacement", "future me", "whoever comes next", "Facilities",
+              "Grandma", "Ben", "Aunt Jo", "Mr. Landlord", "whoever has my old desk", "Night Shift", "whoever wrote the last letter", "#first#", "HR", "anyone"]
   letter_line:
     - "I'm still at work. I know how that sounds."
     - "They said the shift would end at #time#. It has been #time# for a long time."
@@ -165,7 +165,7 @@ rules:
     - "A visitor signed in at reception as #writer#. #writer# was at their desk at the time."
   action: ["None.", "Room sealed.", "Carpet replaced.", "Logged and filed.", "Staff advised to keep walking.", "Under review.", "Lights left on.", "We moved the desks.", "Please see attached (nothing attached).", "Escalated to #dept#.", "The hallway was asked to leave.",
            "Told nobody.", "Ceiling tiles counted.", "The door was painted over.", "Desk moved {n:2-40} feet to the left.", "Light replaced. Light replaced again.", "Visitor log shredded.", "Referred to #other#.", "Added to the floor plan.", "Staff told to stop asking.", "Closed (reopened).", "Filed under #memo_topic#."]
-  dir_step: ["Go #direction# at #landmark#.", "Walk until the carpet is dry. Then #direction#.", "Pass {n:3-30} pillars. Do not count out loud.", "Take the door with the #obj# beside it.", "If the hum gets louder, you are close. If it stops, you are lost.", "At #landmark#, close your eyes and walk {n:5-40} steps.", "Ignore the stairs.", "Follow the exit signs only if they are lit.", "Turn #direction#. Turn #direction#. Turn #direction#.",
+  dir_step: ["Go #direction# at #landmark#.", "Walk until the carpet is dry. Then #direction#.", "Pass {n:3-30} pillars. Do not count out loud.", "Take the door with the #obj# beside it.", "If the hum gets louder, you are close. If it stops, you are lost.", "At #landmark#, close your eyes and walk {n:5-40} steps.", "Ignore the stairs.", "Follow the exit signs only if they are lit.", "Turn {left|right}. Turn {left|right}. Turn {left|right|back}.",
              "Find the vending machine that hums. Turn your back on it.", "Walk past {n:2-9} empty desks. Sit at the next one for a minute. Stand up. Continue.", "Don't go #direction#. Everyone goes #direction#.", "Follow the wet patches until they stop.", "When the carpet changes colour, wait for the hum to change too.", "Take the stairs down {n:2-6} flights. They will feel like up.", "Look for a door with a handle on both sides.", "Walk with your eyes on the ceiling. Count the dark tubes, not the lit ones.", "At #landmark#, say your name. If nothing answers, go #direction#."]
   transcript_a: ["Did you hear that?", "Which way did we come in?", "Read me the floor plan again.", "Is that #other#?", "How long have we been walking?", "Your badge says a different name.", "Don't look at the light.", "Stop. Count the doors.", "The carpet's wet here.", "I think this is #place#.",
                  "Is the tape running?", "Did you leave that chair like that?", "Say your name for the recording.", "That door was a wall a minute ago.", "Can you smell #smell#?", "What's the date?", "Who's #other#?", "Why are the lights like that?", "Do you hear #sound#?", "Where's the rest of the team?"]
@@ -223,7 +223,7 @@ rules:
   exit_qa:
     - "Q: Why are you leaving?\nA: I found the door. Don't ask me which."
     - "Q: How would you describe your time here?\nA: Long. Yellow. Quiet, except for the hum."
-    - "Q: Did you feel supported by #dept#?\nA: I never found #dept#. I found their memos."
+    - "[d:#dept#]Q: Did you feel supported by #d#?\nA: I never found #d#. I found their memos."
     - "Q: Would you recommend us to a friend?\nA: I wouldn't do that to a friend."
     - "Q: Is there anything you are taking with you?\nA: #obj1.a.cap#. I think I've earned it."
     - "Q: Who should replace you?\nA: Whoever sits down at my desk next. They always do."
@@ -238,14 +238,16 @@ rules:
   guest_comment: ["Lovely carpet.", "Just passing through. Still passing through.", "Came for the meeting. Stayed.", "Very quiet. 5 stars.", "Has anyone seen my group?", "Lights a bit bright.", "Second visit! Didn't mean to come back.", "Hi #writerfirst#!", "Couldn't find the way in. Then couldn't find the way out.", "Thank you for having me. Please stop having me.",
                   "We'll be back. We always come back.", "#rule#.", "Nice to see the old place hasn't changed. It has never changed.", "Signed in. Did not sign out.", "Is this the right floor?", "I was here before the guestbook.", "Lovely. Smells of #smell#.", "Here for the interview. Which interview? I'll wait."]
   cw_clue: ["Never sleep under one that flickers (5)", "Sign that lies in green letters (4)", "Always damp, underfoot (6)", "Wall colour, all of them (6)", "What the stairs refuse to do (2)", "It was a door yesterday (4)", "You, according to your badge (7)", "Almond, to drink (5)", "No such place (7)", "Shift that never ends (5)",
-            "Taken at every meeting, never right (9)", "Something you mustn't answer (5)", "Left, then left, then ___ (4)", "What the clipboard man wants (4)", "It has been #time# on this for ages (5)", "Where the floor plan ends (7)", "#first# from #dept#, rearranged ({n:4-12})", "The answer to this clue ({n:3-9})", "See {n:1-30} Down", "See {n:1-30} Across",
-            "A room you can't leave ({n:4-10})", "What the hum is saying (3,4,3)", "Your name, said from the next room ({n:3-9})", "Counted twice, still wrong (5)"]
+            "Taken at every meeting, never right (9)", "Something you mustn't answer (5)", "Left, then left, then ___ (4)", "What the clipboard man wants (4)", "It always says #time# (5)", "Where the floor plan ends (7)", "#first# from #dept#, rearranged ({n:4-12})", "The answer to this clue ({n:3-9})", "See {n:1-30} Down", "See {n:1-30} Across",
+            "A room you can't leave ({n:4-10})", "What the hum is saying (3,4,3)", "Your name, said from the next room ({n:3-9})", "Counted twice, still wrong (5)", "Kept under the sink, for emergencies (6)", "Lanyard holder (5)", "Hums, flickers, never sleeps (4)", "Room for copies (4)", "What you are, on Level 0 (4)", "Door that only opens one way (4)", "Where the coats go, and the people (10)", "Sound of a dying tube (4)"]
   cw_guess: ["EXIT?", "DOOR", "LIGHT", "#~word.caps#", "NO", "WALL", "ME?", "HERE", "LEFT", "YELLOW", "HUM", "HELP"]
   dish: ["vending-machine stew", "break room soup", "almond water tea", "desk-drawer cake", "carpet-day biscuits", "microwave bread", "corridor porridge", "emergency noodles", "Level 0 crumble", "sugar-sachet toffee", "the sandwich", "night-shift pancakes"]
-  ingredient: ["{n:1-4} cups almond water", "{n:2-9} sugar sachets", "a tin (any)", "{n:1-3} packets of crisps, crushed", "a pinch of salt from the canteen", "{n:2-6} biscuits from the drawer that refills", "half a sandwich (the other half is somebody's)", "powdered creamer", "{n:1-5} tea bags", "instant noodles", "a ketchup sachet",
-               "something from the vending machine (do not look at what)", "water from the cooler (only before #time#)", "a lemon, if you find one. You won't.", "{n:1-3} spoonfuls of instant coffee", "a handful of crackers", "dry cereal", "a stock cube"]
-  method: ["Heat in the break room microwave for {n:1-9} minutes. It will beep when it wants to.", "Stir {n:20-200} times. Count out loud. It helps.", "Leave to stand in #place# until it smells of #smell#.", "Do not stir anticlockwise.", "Add the rest. Taste. Add the rest again.", "Cover with a memo and wait.", "Mash with the back of a stapler.",
-           "If the lights flicker, take it off the heat.", "Bake on top of the photocopier (it runs hot) for {n:10-90} minutes.", "Season with whatever is in the sachets.", "Leave it overnight. If there is no night, leave it anyway.", "Pour into #obj.a#. It holds more than you'd think."]
+  ing_base: ["{n:1-4} cups almond water", "water from the cooler (only before #time#)", "{n:1-3} cups cold coffee", "milk from the fridge (check the date; there is no date)", "a tin of soup (any)", "a kettle's worth of hot water", "a tin (no label)"]
+  ing_dry: ["{n:2-9} sugar sachets", "{n:1-3} packets of crisps, crushed", "{n:2-6} biscuits from the drawer that refills", "instant noodles", "a handful of crackers", "dry cereal", "powdered creamer", "a stock cube"]
+  ing_odd: ["half a sandwich (the other half is somebody's)", "something from the vending machine (do not look at what)", "a lemon, if you find one. You won't.", "a ketchup sachet", "{n:1-5} tea bags", "a pinch of salt from the canteen", "{n:1-3} spoonfuls of instant coffee", "one mint from the tin on reception"]
+  m_prep: ["Mix everything in #obj.a# (washed).", "Crush the dry things with the back of a stapler.", "Stir {n:20-200} times. Count out loud. It helps.", "Stir clockwise only. Never the other way.", "Add the rest. Taste. Add the rest again.", "Mix it on a desk nobody is using. Check that nobody is using it."]
+  m_cook: ["Heat in the break room microwave for {n:1-9} minutes. It will beep when it wants to.", "Bake on top of the photocopier (it runs hot) for {n:10-90} minutes.", "Leave to stand in #place# until it smells of #smell#.", "Cover with a memo and wait.", "Leave it overnight. If there is no night, leave it anyway.", "Warm it under a desk lamp. If the lights flicker, take it away."]
+  m_finish: ["Season with whatever is in the sachets.", "Cut into {n:2-12} pieces. There will be one more piece than people.", "Let it cool. It won't cool all the way.", "Pour into #obj.a#. It holds more than you'd think.", "Eat standing up. Sitting down makes it worse.", "Share it. Someone always turns up when it's ready."]
 
   # ─── Office: helpdesk, bulletins, canteen, training ───
 
@@ -265,11 +267,11 @@ rules:
     - "WELLNESS TIP\nDrink water and look at a distant point. If there is no distant point, look at #landmark#."
     - "FROM THE KITCHEN\nThe microwave is for everybody. Please stop leaving #obj.a# in it."
     - "BIRTHDAYS\nHappy birthday to #fullname#, #fullname#, and #fullname#! Cake in #place# at #time#."
-    - "DEPARTMENT NEWS\n#dept# has moved to #room#. #dept# has always been in #room#."
+    - "[d:#dept#][rm:#room#]DEPARTMENT NEWS\n#d# has moved to #rm#. #d# has always been in #rm#."
     - "COMPETITION\nGuess the number of ceiling tiles on this floor and win #obj.a#. Last winner: #other#."
     - "OUR VALUES\nWe are kind. We are present. We are here. We are here."
     - "SURVEY RESULTS\n{n:60-99}% of staff feel #feeling#. The rest did not reply."
-    - "MAINTENANCE\nThe lights in #place# are #light_state#. This is being looked at. Do not look at it."
+    - "MAINTENANCE\nThe lights in #place# are {flickering|buzzing|a little green|too bright}. This is being looked at. Do not look at it."
   job_title: ["Senior Analyst", "Junior Analyst", "Head of #dept#", "Deputy Head of Lighting", "Carpet Lead", "Door Coordinator", "Floor Plan Officer", "Head of Headcount", "Corridor Manager", "Temp", "Assistant to the Assistant", "Associate (Nights)", "Records Clerk", "Wayfinding Specialist", "Acting Manager (since Day #day#)", "Intern", "Liaison to #dept#", "Team Lead, Pending"]
   org_up: ["#fullname#", "the floor above", "Management", "nobody", "the hum", "#writer#", "(vacant)", "the chair at the end of the hall", "Ext. {n:100-999}", "themselves"]
   org_note: ["post vacant since Day #day#", "position filled by #other# (unconfirmed)", "this box prints empty", "do not contact", "dotted line to the hum", "appears twice on the chart", "reports to self, by mistake", "on leave (indefinite)", "has never been seen", "same person as above?"]
@@ -295,7 +297,7 @@ rules:
   quiz_result: ["PASS", "FAIL", "PASS (provisional)", "See HR", "Retake", "We will be in touch", "You already took this test", "Incomplete. Please stay until complete."]
   card_msg: ["Have a great one!", "HBD!! Cake in #place#!", "Hope this year is shorter than the last one.", "Many happy returns. Many. Many.", "Don't work too hard! Ha ha.", "See you at your desk tomorrow!", "Enjoy your day off (there are no days off).", "Happy birthday! I think we've met?", "Have a slice for me. I can't find the break room.",
              "{n:20-40} today! Or {n:41-90}. Nobody can remember.", "So glad you're still here!", "Best wishes from the night shift.", "Sorry I missed the cake. And the {n:2-9} cakes before it.", "Who is #bday#?", "From the desk beside yours. You don't know me. I know you.", "Wishing you a year of dry carpet.", "Make a wish! (Not that one.)", "We got you #obj.a#!"]
-  card_sign: ["— #first#", "— #fullname#", "— #first# x", "— #first# (#dept#)", "— everyone in #room#", "— ?", "— the night shift", "— #first# & #first#"]
+  card_sign: ["— #first#", "— #fullname#", "— #first# x", "— #first# (#dept#)", "— everyone in #room#", "— (illegible)", "— the night shift", "— #first# & #first#"]
 
   # ─── Library ───
 
@@ -343,7 +345,7 @@ rules:
   overdue_line: ["Our records show the item has not been returned. Our records also show it is on the shelf.", "Fines accrue at one page per day. Please bring the pages.", "If you have already returned this item, please return it again.", "The Librarian has noticed.", "A reader in Gallery {n:2-999} is waiting for this item. They have waited #late# years and are very patient.",
                  "Please do not return the item to a different library. It will find its way back to you.", "Your borrowing rights are suspended. Your reading rights are not. Nothing can suspend those.", "We have sent this notice {n:2-90} times. Please confirm you exist.", "We have written to your previous address, which is this desk.", "If the item has been lost, please describe where."]
   tr_note: ["p. {n:2-400}: the word '#~word#' means both 'door' and 'the moment before a door'. I have used 'door'. I regret it.", "p. {n:2-400}: the original has no word for 'outside'. I have left a blank.", "p. {n:2-400}: '#~word#' is rendered here as '#obj#', which is wrong, but nearer than anything else.", "p. {n:2-400}: the author repeats this sentence {n:2-90} times. I have kept them all.",
-            "p. {n:2-400}: in #src#, hallways are counted, not named.", "p. {n:2-400}: a line here addresses the translator directly. I have not translated it.", "p. {n:2-400}: #src# has {n:3-9} words for the hum. I have used 'hum' for all of them, and I apologise.", "p. {n:2-400}: the ink changes here. So does the hand. So, I think, does the author.", "p. {n:2-400}: '#~word#', an untranslatable word for feeling #feeling#.", "p. {n:2-400}: the original reads '#~syllabic#'. I have left it as it is."]
+            "p. {n:2-400}: in #src#, hallways are counted, not named.", "p. {n:2-400}: a line here addresses the translator directly. I have not translated it.", "p. {n:2-400}: #src# has {n:3-9} words for the hum. I have used 'hum' for all of them, and I apologise.", "p. {n:2-400}: the ink changes here. So does the hand. So, I think, does the author.", "p. {n:2-400}: '#~word#', an untranslatable word for feeling #feeling#.", "p. {n:2-400}: the original reads '#~word# #~word# #~word#'. I have left it as it is."]
   debate_a: ["This passage is plainly about the stacks.", "The author is describing a real gallery. I have stood in it.", "Read it again. The word is 'exit'.", "The text predicts the next shelf.", "Every copy says the same here.", "Clearly a later interpolation.", "The book is complete. Nothing is missing.", "This is the key to the whole catalogue.", "I have found the author in the index. It is me.", "Page {n:2-400} confirms it."]
   debate_b: ["It is about nothing. Most things are.", "You have stood in every gallery. They are all this one.", "The word is 'wall'. It has always been 'wall'.", "It predicts the previous shelf. You are reading backwards.", "Mine doesn't.", "Interpolated by whom? By you?", "Then where are pages {n:2-90} to {n:91-400}?", "There is no key. There is no lock.", "Mine too. We should talk.", "That page has been removed. By you, I assume."]
   debate_c: ["Stop writing in my books.", "They are not your books.", "Agreed.", "Disagreed.", "See my previous note.", "I moved shelves to get away from you. You are here.", "We have argued for {n:2-90} years. I no longer remember my position.", "I concede. I take it back.", "Who is the third hand?", "Still here?", "Yes."]
@@ -360,16 +362,16 @@ genres:
     author: ["#writer#", "#writerfirst#", "Me", "??"]
     opening:
       - "Day #day#.\n\n#journal_line# #journal_line#\n\n#journal_line#"
-      - "#time#.\n\n#journal_line# #journal_line# #journal_line#"
+      - "#time.cap#.\n\n#journal_line# #journal_line# #journal_line#"
       - "If found, return to #writer#, #dept#.\n\nDay #day#. #journal_line#"
-      - "Day #day#. Or #day#. #journal_line#\n\n#journal_line#"
+      - "Day #day#. Or {n:2-999}. #journal_line#\n\n#journal_line#"
       - "#writerfirst#'s notes. Day #day#.\n\nI'm writing this so I don't forget. #journal_line#"
       - "Found this notebook in #place#. It was blank. Now it isn't.\n\n#journal_line#"
       - "Day #day#, #time#.\n\n#journal_line#\n#journal_line#\n#journal_line#"
     body:
       - "Later.\n\n#journal_line# #journal_line#"
       - "Day ??\n\n#journal_line# #journal_line# #journal_line#"
-      - "#time#. #journal_line#\n\n#journal_line#"
+      - "#time.cap#. #journal_line#\n\n#journal_line#"
       - "Next day. #journal_line# {?40:#journal_line#} #journal_line#"
       - "I dreamed of #dream#.\n\n#journal_line#"
       - "#journal_line#\n\nThat's all for today. #journal_line#"
@@ -403,8 +405,8 @@ genres:
       - "Staff are reminded:\n\n- #rule#.\n- #rule#.\n- #rule#."
       - "Several employees have reported #sound# near #place#. This is normal. #rule#."
       - "Regarding #office_word#: progress is on track. The track is longer than expected."
-      - "From #time#, #topic# will be handled by #dept#. #dept# has not been told."
-      - "A reminder that #backrooms_truth# is not to be discussed in #place#."
+      - "[d:#dept#]From #time#, #topic# will be handled by #d#. #d# has not been told."
+      - "Staff are reminded not to discuss, in #place# or anywhere, the fact that #backrooms_truth#."
       - "Please stop leaving #obj.a# at #landmark#. We know it's you."
       - "The following are no longer permitted:\n- #obj.a#\n- #obj.a#\n- asking about #topic#"
     body_pages: [0, 2]
@@ -420,7 +422,7 @@ genres:
     voices: [lobby, library, office]
     weight: 3
     decay: 0.5
-    title: ["RULES", "The Rules", "House Rules", "Read First", "What I Know", "Rules (revised)", "Rules (revised again)", "Rules for #place.title#", "For the New One"]
+    title: ["RULES", "The Rules", "House Rules", "Read First", "What I Know", "Rules (revised)", "Rules (revised again)", "Rules ({n:2-9})", "For the New One"]
     author: ["#writer#", "Someone Who Stayed", "Management", "Unknown", "Whoever was here before you"]
     opening:
       - "{RULES|THE RULES|READ THIS FIRST|WHAT I KNOW|HOUSE RULES}\n\n{+r}. #rule#.\n{+r}. #rule#.\n{+r}. #rule#.\n{+r}. #rule#."
@@ -516,7 +518,7 @@ genres:
       - "Read all of this before you start.\n\n{+d}. #dir_step#\n{+d}. #dir_step#\n{+d}. #dir_step#"
     body:
       - "{+d}. #dir_step#\n{+d}. #dir_step#\n{+d}. #dir_step#"
-      - "If you reach #landmark#, you went wrong. Go back to #landmark# and #dir_step.lower#"
+      - "If you reach #landmark#, you went wrong. Go back to #landmark#. #dir_step#"
       - "{+d}. #dir_step#\n{+d}. #dir_step#\n\nBy now you should smell #smell#."
       - "{+d}. #dir_step#\n\nIf you see #thing#, don't stop.\n\n{+d}. #dir_step#"
     body_pages: [0, 2]
@@ -525,7 +527,7 @@ genres:
       - "It worked for me.\n\n(It didn't.)"
       - "The last step changes. I'm sorry."
       - "Good luck.\n#writerfirst#"
-      - "Last step: #dir_step.lower#\n\nThen you're out. Then you're out."
+      - "Last step: #dir_step#\n\nThen you're out. Then you're out."
       - "{+d}. You're there. Look around. Is it the same?"
 
   transcript:
@@ -578,7 +580,7 @@ genres:
     opening:
       - "FORM #num#-{A|B|C}\n\nName: #form_answer#\nDepartment: #dept#\nHow long have you been here: #form_answer#\nDescribe the exit: #form_answer#"
       - "APPLICATION FOR LEAVE\n\nName: #writer#\nDates requested: #form_answer#\nDestination: #form_answer#\nReason: #form_answer#"
-      - "TIMESHEET\nEmployee: #writer#\nWeek: #day#\n\nMon: {n:8-24} hrs\nTue: {n:8-24} hrs\nWed: {n:8-24} hrs\nThu: {n:24-99} hrs\nFri: ?"
+      - "TIMESHEET\nEmployee: #writer#\nWeek: #day#\n\nMon: {n:8-24} hrs\nTue: {n:8-24} hrs\nWed: {n:8-24} hrs\nThu: {n:24-99} hrs\nFri: (blank)"
     body:
       - "Have you seen #thing#? #form_answer#\nDo you hear the hum? #form_answer#\nDo you hear it now? #form_answer#"
       - "Reason for request:\n#form_answer#\n\nApproved by: ________\nDenied by: #other#"
@@ -588,7 +590,7 @@ genres:
     closing:
       - "Signature: #writer#\n\nPlease return to #place#. Please return to #place#. Please return."
       - "Office use only:\nReceived: #time#\nProcessed: #form_answer#\nOutcome: #action#"
-      - "Return this form to #dept#.\nIf #dept# cannot be found, keep this form. It is yours now."
+      - "[d:#dept#]Return this form to #d#.\nIf #d# cannot be found, keep this form. It is yours now."
 
   dream_log:
     voices: [lobby, library]
@@ -706,7 +708,8 @@ genres:
       - "EXIT INTERVIEW\nEmployee: #writer#\nDept: #dept#\nInterviewer: #other#\n\nQ: #exit_q#\nA: #exit_a#"
       - "LEAVER'S INTERVIEW\n#writer#, #dept#\nLast day: Day #day#\n\n#exit_qa#"
     body:
-      - "Q: #exit_q#\nA: #exit_a#\n\nQ: #exit_q#\nA: #exit_a#"
+      - "Q: #exit_q#\nA: #exit_a#"
+      - "#exit_qa#"
       - "#exit_qa#"
       - "#exit_qa#\n\nQ: #exit_q#\nA: #exit_a#"
     body_pages: [1, 3]
@@ -764,14 +767,13 @@ genres:
       - "LUNCHTIME PUZZLE\n(grid missing)\n\nACROSS\n{+cw}. #cw_clue#\n{+cw}. #cw_clue#"
     body:
       - "{+cw}. #cw_clue#{?40: §7#cw_guess#§0}\n{+cw}. #cw_clue#\n{+cw}. #cw_clue#{?40: §7#cw_guess#§0}"
-      - "DOWN\n{+cwd}. #cw_clue#\n{+cwd}. #cw_clue#{?40: §7#cw_guess#§0}\n{+cwd}. #cw_clue#"
-      - "{+cwd}. #cw_clue#\n{+cwd}. #cw_clue#{?40: §7#cw_guess#§0}"
+      - "{+cw}. #cw_clue#\n{+cw}. #cw_clue#{?40: §7#cw_guess#§0}"
     body_pages: [1, 3]
     closing:
-      - "Answers on page {n:2-90}."
-      - "Solution next week. There is no next week."
-      - "§7(in pencil: every answer is EXIT)§0"
-      - "§7(in pencil: #cw_guess#, #cw_guess#, #cw_guess#)§0"
+      - "DOWN\n1. #cw_clue#\n2. #cw_clue#\n3. #cw_clue#\n\nAnswers on page {n:2-90}."
+      - "DOWN\n1. #cw_clue#\n2. #cw_clue#{?40: §7#cw_guess#§0}\n\nSolution next week. There is no next week."
+      - "DOWN\n1. #cw_clue#\n2. #cw_clue#\n\n§7(in pencil: every answer is EXIT)§0"
+      - "DOWN\n(torn off)\n\n§7(in pencil: #cw_guess#, #cw_guess#, #cw_guess#)§0"
 
   recipe:
     voices: [lobby]
@@ -781,18 +783,18 @@ genres:
     title: ["Recipe", "#dish.title#", "Break Room Cookbook", "From #writerfirst#'s Kitchen", "Something Warm"]
     author: ["#writer#", "#writerfirst#", "The Break Room"]
     opening:
-      - "#dish.title#\n\nServes {n:1-6} (more if anyone turns up).\n\nYou will need:\n- #ingredient#\n- #ingredient#\n- #ingredient#"
-      - "#dish.caps#\n(#other#'s, as I remember it)\n\n- #ingredient#\n- #ingredient#\n- #ingredient#\n- #ingredient#"
+      - "#dish.title#\nServes {n:1-6} (more if anyone turns up).\n\nYou will need:\n- #ing_base#\n- #ing_dry#\n- #ing_odd#"
+      - "#dish.caps#\n(#other#'s, as I remember it)\n\n- #ing_base#\n- #ing_dry#\n- #ing_odd#"
     body:
-      - "{+m}. #method#\n\n{+m}. #method#"
-      - "{+m}. #method#"
-      - "{+m}. #method#\n\n{?40:Tip: #rule.lower#.}"
-    body_pages: [1, 3]
+      - "1. #m_prep#\n\n2. #m_cook#"
+      - "Method:\n\n1. #m_prep#\n2. #m_cook#"
+      - "1. #m_prep#\n\n2. #m_cook#\n\n{?50:Tip: #rule.lower#.}"
+    body_pages: [1, 1]
     closing:
-      - "Serve warm. Serve to whoever is still here."
-      - "Tastes like #smell#. That means it's done."
-      - "Keeps for {n:2-90} days. Everything here keeps."
-      - "Goes well with the hum."
+      - "3. #m_finish#\n\nServe warm. Serve to whoever is still here."
+      - "3. #m_finish#\n\nTastes like #smell#. That means it's done."
+      - "3. #m_finish#\n\nKeeps for {n:2-90} days. Everything here keeps."
+      - "3. #m_finish#\n\nGoes well with the hum."
 
   # ─── Office: lecterns in the office buildings ───
 
@@ -830,7 +832,7 @@ genres:
       - "MINUTES\n#place.cap#, #time#\n\nPresent: #writer#, #other#, #fullname#, #fullname#\nApologies: #other#"
       - "MEETING No. {n:2-999}\n\nChair: #writer#\nMinutes: #other#\nPresent: everyone\nAbsent: everyone else"
     body:
-      - "#writer# opened the meeting. #agenda_item# was discussed. #other# raised #memo_topic#. Motion to #rule.lower#: carried."
+      - "#writer# opened the meeting. #agenda_item# was discussed. #other# raised #memo_topic#. Motion: '#rule#.' Carried."
       - "The lights were #light_state#. Meeting paused for {n:2-40} minutes. On resuming, #other# was not present."
       - "#other# asked where the exit was. Moved to any other business."
       - "Matters arising: #memo_topic#. #other# reported #sound# in #place#. Noted."
@@ -858,7 +860,7 @@ genres:
       - "#speaker_note#\n\n#speaker_note#"
       - "Slide {n:2-99}.\n\n#speaker_note#"
       - "Slide {n:2-99}: #office_word.title#\n\n#speaker_note#\n\n#speaker_note#"
-      - "If they look restless: #speaker_note#"
+      - "If they look restless:\n\n#speaker_note#"
     body_pages: [1, 4]
     closing:
       - "If you are reading these notes out loud, stop."
@@ -944,11 +946,12 @@ genres:
     voices: [office]
     weight: 2
     decay: 0.45
-    title: ["Org Chart", "Who Reports to Whom", "Structure (Draft)", "#dept# Org Chart", "Reporting Lines"]
-    author: ["HR", "#dept#", "#writer#", "Management"]
+    setup: "[od:#dept#]"
+    title: ["Org Chart", "Who Reports to Whom", "Structure (Draft)", "#od# Org Chart", "Reporting Lines"]
+    author: ["HR", "#od#", "#writer#", "Management"]
     opening:
-      - "ORGANISATION CHART\n#dept#\n\nHead: #fullname#\n  reports to: #org_up#"
-      - "WHO'S WHO\n#dept#, as of Day #day#\n\n#job_title# — #fullname#\n  reports to: #org_up#"
+      - "ORGANISATION CHART\n#od#\n\nHead: #fullname#\n  reports to: #org_up#"
+      - "WHO'S WHO\n#od#, as of Day #day#\n\n#job_title# — #fullname#\n  reports to: #org_up#"
     body:
       - "#job_title# — #fullname#\n  reports to: #org_up#\n#job_title# — #fullname#\n  reports to: #org_up#{?40:\n  note: #org_note#}"
       - "#job_title# — #fullname#\n  note: #org_note#\n\n#job_title# — (vacant)\n  reports to: #org_up#"
@@ -1042,14 +1045,14 @@ genres:
     title: ["#book_name#", "#book_name# (annotated)", "A Reader's Copy"]
     author: ["#~word.title# #~word.title#", "Anonymous", "#writer#"]
     opening:
-      - "#~salad.cap#.\n\n§7[#margin#]§0\n\n#~salad.cap#."
+      - "#~salad.cap#\n\n§7[#margin#]§0\n\n#~salad.cap#"
       - "#library_line#\n\n§7[#margin#]§0"
-      - "Chapter {n:2-90}\n\n#~salad.cap#. #~salad.cap#.\n\n§7[#margin#]§0"
+      - "Chapter {n:2-90}\n\n#~salad.cap# #~salad.cap#\n\n§7[#margin#]§0"
     body:
-      - "#~syllabic.cap#. #~salad#.\n\n§7[#margin#]§0"
-      - "#library_line#\n\n§7[#margin#]§0\n\n#~salad.cap#."
-      - "#~salad.cap#.\n\n§7[#margin#] [#margin#]§0"
-      - "#~syllabic.cap#.\n\n§7[#margin# — #writerfirst#]§0"
+      - "#~syllabic.cap# #~salad#\n\n§7[#margin#]§0"
+      - "#library_line#\n\n§7[#margin#]§0\n\n#~salad.cap#"
+      - "#~salad.cap#\n\n§7[#margin#] [#margin#]§0"
+      - "#~syllabic.cap#\n\n§7[#margin# — #writerfirst#]§0"
     body_pages: [1, 4]
     closing:
       - "§7[#margin#]\n[#margin#]\n[#margin#]"
@@ -1142,9 +1145,8 @@ genres:
       - "INTERLIBRARY LOAN REQUEST\n\nTitle: #want#\nShelf: #shelf_mark#\nFrom: #lib#\nReader: #writer#\nNeeded by: #ill_needed#"
       - "REQUEST SLIP\n\nI would like to borrow #want#, held by #lib#.\n\n#writer#"
     body:
-      - "REPLY FROM #lib.caps#\n\n#ill_reply#"
+      - "Reply from #lib#:\n\n#ill_reply#"
       - "Reader's note:\n#ill_reader#"
-      - "REPLY FROM #lib.caps#\n\n#ill_reply#\n\nReader's note:\n#ill_reader#"
     body_pages: [1, 3]
     closing:
       - "Status: #ill_status#\n\nCharges: none. Nothing here is ever charged."
@@ -1180,8 +1182,8 @@ genres:
       - "Dear #writer#,\n\nThe item #od# is now #late# years overdue."
     body:
       - "Reminder {+od}.\n\n#overdue_line#"
-      - "#overdue_line#\n\n#overdue_line#"
-      - "Reminder {+od}.\n\n#overdue_line#\n\n#overdue_line#"
+      - "Reminder {+od}.\n\n#overdue_line#"
+      - "#overdue_line#"
     body_pages: [1, 3]
     closing:
       - "Amount owed: {n:2-900} pages.\n\nThe Circulation Desk"
@@ -1198,7 +1200,7 @@ genres:
     opening:
       - "A NOTE ON THE TRANSLATION\n\n#tr# was written in #src#, a language of which only this book survives. I have done my best."
       - "TRANSLATOR'S NOTES\n\nThe #src# original is longer than the shelf it sits on. This is a selection."
-    body: ["#tr_note#\n\n#tr_note#", "#tr_note#"]
+    body: ["#tr_note#\n\n#tr_note#", "#tr_note#", "#tr_note#"]
     body_pages: [2, 4]
     closing:
       - "Where the original is silent, I have been silent too.\n\n#writer#, translator"
@@ -1209,15 +1211,15 @@ genres:
     voices: [library]
     weight: 2
     decay: 0.6
-    title: ["#book_name#", "A Disputed Copy", "Annotated (Heavily)", "#book_name# (two hands)"]
+    title: ["#book_name#", "A Disputed Copy", "Annotated (Heavily)", "Two Hands"]
     author: ["#~word.title# #~word.title#", "Anonymous", "Two Readers"]
     opening:
-      - "#~salad.cap#.\n\n§1[#debate_a#]§0\n§4[#debate_b#]§0"
+      - "#~salad.cap#\n\n§1[#debate_a#]§0\n§4[#debate_b#]§0"
       - "#library_line#\n\n§4[#debate_a#]§0\n§1[#debate_b#]§0"
     body:
-      - "#~salad.cap#.\n\n§1[#debate_a#]§0\n§4[#debate_b#]§0"
+      - "#~salad.cap#\n\n§1[#debate_a#]§0\n§4[#debate_b#]§0"
       - "§1[#debate_c#]§0\n§4[#debate_c#]§0\n§1[#debate_c#]§0"
-      - "#~syllabic.cap#.\n\n§4[#debate_b#]§0\n§1[#debate_c#]§0"
+      - "#~syllabic.cap#\n\n§4[#debate_b#]§0\n§1[#debate_c#]§0"
     body_pages: [1, 4]
     closing:
       - "§1[I'm leaving the last word to you.]§0\n§4[#debate_c#]§0\n§1[See? You can't stop either.]§0"

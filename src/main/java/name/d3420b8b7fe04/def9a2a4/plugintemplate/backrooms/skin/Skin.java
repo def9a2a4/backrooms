@@ -5,9 +5,11 @@ import org.jetbrains.annotations.Nullable;
 import java.awt.image.BufferedImage;
 
 /**
- * A player skin as a 64x64 ARGB grid in the modern layout. Legacy 64x32
- * skins are converted the way the vanilla client does it (the left arm and
- * leg are mirrored copies of the right), so callers never see that format.
+ * A player skin as a 64x64 ARGB grid in the modern layout, cleaned up the way
+ * the vanilla client does it: legacy 64x32 skins are converted (the left arm
+ * and leg are mirrored copies of the right), the base layer is made opaque,
+ * and a legacy skin whose whole hat area is opaque (Notch's, and many old
+ * skins) has its hat dropped, as the game draws them.
  */
 public record Skin(String name, int[] argb, boolean slim) {
 
@@ -31,7 +33,12 @@ public record Skin(String name, int[] argb, boolean slim) {
                 px[y * SIZE + x] = image.getRGB(x, y);
             }
         }
-        if (h == SIZE / 2) convertLegacy(px);
+        boolean legacy = h == SIZE / 2;
+        if (legacy) convertLegacy(px);
+        setNoAlpha(px, 0, 0, 32, 16);
+        if (legacy) notchTransparencyHack(px, 32, 0, 64, 32);
+        setNoAlpha(px, 0, 16, 64, 32);
+        setNoAlpha(px, 16, 48, 48, 64);
         return new Skin(name, px, slim);
     }
 
@@ -49,6 +56,17 @@ public record Skin(String name, int[] argb, boolean slim) {
         copyRect(px, 44, 20, -8, 32, 4, 12);
         copyRect(px, 48, 20, -16, 32, 4, 12);
         copyRect(px, 52, 20, -8, 32, 4, 12);
+    }
+
+    /** The base layer is drawn opaque whatever its alpha. */
+    private static void setNoAlpha(int[] px, int x0, int y0, int x1, int y1) {
+        for (int y = y0; y < y1; y++) for (int x = x0; x < x1; x++) px[y * SIZE + x] |= 0xFF000000;
+    }
+
+    /** An overlay region with no transparent pixel at all was never meant as an overlay: clear it. */
+    private static void notchTransparencyHack(int[] px, int x0, int y0, int x1, int y1) {
+        for (int y = y0; y < y1; y++) for (int x = x0; x < x1; x++) if ((px[y * SIZE + x] >>> 24) < 128) return;
+        for (int y = y0; y < y1; y++) for (int x = x0; x < x1; x++) px[y * SIZE + x] = 0;
     }
 
     private static void copyRect(int[] px, int x0, int y0, int dx, int dy, int w, int h) {
