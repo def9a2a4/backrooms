@@ -1,19 +1,35 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
-import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.noise.SimplexNoise;
-import org.bukkit.Axis;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCanvas.Label;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCanvas.Subject;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCatalogue.Rarity;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCatalogue.Specimen;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCatalogue.Theme;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCatalogue.Topic;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumExhibits.Center;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumExhibits.Room;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumSkeletons.Body;
+import net.kyori.adventure.text.Component;
+import org.bukkit.Art;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.DecoratedPot;
+import org.bukkit.block.Lectern;
+import org.bukkit.block.Sign;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Directional;
-import org.bukkit.block.data.Orientable;
-import org.bukkit.block.data.Rotatable;
-import org.bukkit.block.data.type.Lantern;
 import org.bukkit.block.data.type.Stairs;
+import org.bukkit.block.sign.Side;
+import org.bukkit.entity.Painting;
 import org.bukkit.generator.WorldInfo;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,20 +37,25 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Level 1882 — "The Collections". Hintze Hall's museum gone on forever: two floors of terracotta
- * galleries joined by tall round arches, buff walls banded in blue-grey, display cases along the
- * walls, skeletons on plinths, fossils, minerals and plants, and every so often a great vaulted hall
+ * Level 1882 — "The Collections". Hintze Hall's museum gone on forever: two floors of galleries
+ * joined by tall arches, display cases along the walls, skeletons, minerals, plants, monoliths,
+ * pots, paintings and aquariums, every exhibit labelled, and every so often a great vaulted hall
  * with a balcony, a grand staircase and a giant skeleton.
  *
  * <p>Built like Alpha's megastructures ({@link AlphaMegastructures}): everything is hashed from the
  * world seed and grid coordinates, so every chunk works out its own slice and nothing is stored.
  * The world is a grid of 32-block rooms (two chunks a side), grouped into districts of 8×8 rooms.
- * Each district has one central hall (2×4 rooms, both floors, roofed with a pointed vault) and on
- * each floor a maze through its other rooms: a random spanning tree, so every room can be
- * reached, plus a few extra openings so it isn't a perfect tree. Neighbouring districts are joined
- * by two doors in each shared wall, picked from a hash of the wall alone so both sides agree. Two
- * rooms per district hold a staircase between the floors; the hall's grand staircase climbs to its
- * balcony, which opens onto the upper rooms.
+ * Each district has its own architecture ({@link MuseumPalette}: Waterhouse terracotta, marble,
+ * brick, Gothic, mud brick and more), a few favourite subjects, one central hall (2×4 rooms, both
+ * floors, under a pointed vault), and on each floor a maze through its other rooms: a random
+ * spanning tree, so every room can be reached, plus a few extra openings. Neighbouring districts
+ * are joined by two doors in each shared wall, picked from a hash of the wall alone. Two rooms per
+ * district hold a staircase between the floors; the hall's grand staircase climbs to its balcony.
+ *
+ * <p>Each room has its own subject ({@link Theme}), floor pattern, wall finish and ceiling, and
+ * its exhibits come from {@link MuseumExhibits} and {@link MuseumSkeletons}. Signs, lectern books,
+ * pot sherds and paintings can't be set from ChunkData; {@link #applyBlockEntities} fills them in
+ * when the chunk first loads (Level1882Listener), from the same labels the generator placed.
  */
 public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
 
@@ -47,59 +68,18 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
     static final int FOUNDATION = FLOOR0 - 4;
     static final int BAL = 6;                       // hall balcony depth
     static final int VAULT_R = 40;                  // radius of the hall vault's arcs
+    static final int FLIGHT = 24;                   // the grand staircase's run
 
     // wall between two rooms
     static final byte CLOSED = 0, DOOR = 1, ARCADE = 2, OPEN = 3;   // OPEN: both sides are the hall
 
-    private static final long PLAN_SALT = 0x1882, BORDER_SALT = 0xB0D3;
+    private static final int PLAN_SALT = 0x1882, BORDER_SALT = 0xB0D3, LABEL_SALT = 0x1AB;
 
-    // ── Palette (Waterhouse's buff and blue-grey terracotta) ────────────
-    private static final BlockData BUFF = Material.SMOOTH_SANDSTONE.createBlockData();
-    private static final BlockData TRIM = Material.CUT_SANDSTONE.createBlockData();
-    private static final BlockData CARVED = Material.CHISELED_SANDSTONE.createBlockData();
-    private static final BlockData BAND = Material.LIGHT_BLUE_TERRACOTTA.createBlockData();
-    private static final BlockData TILE_A = Material.SMOOTH_SANDSTONE.createBlockData();
-    private static final BlockData TILE_B = Material.WHITE_TERRACOTTA.createBlockData();
-    private static final BlockData TILE_EDGE = Material.TERRACOTTA.createBlockData();
     private static final BlockData FOUND = Material.POLISHED_ANDESITE.createBlockData();
-    private static final BlockData ROOF_TILE = Material.DEEPSLATE_TILES.createBlockData();
     private static final BlockData GLASS = Material.GLASS.createBlockData();
-    private static final BlockData WOOD = Material.DARK_OAK_PLANKS.createBlockData();
-    private static final BlockData DAIS = Material.POLISHED_DEEPSLATE.createBlockData();
-    private static final BlockData DAIS_TOP = Material.SMOOTH_STONE.createBlockData();
     private static final BlockData LIGHT = Material.LIGHT.createBlockData();
-    private static final BlockData CHAIN = Material.IRON_CHAIN.createBlockData();
-    private static final BlockData LANTERN;
-    private static final BlockData[] BONE = new BlockData[3];   // axis x, y, z
-    private static final BlockData IVORY = Material.CALCITE.createBlockData();
-
-    static {
-        Lantern l = (Lantern) Material.LANTERN.createBlockData();
-        l.setHanging(true);
-        LANTERN = l;
-        Axis[] axes = {Axis.X, Axis.Y, Axis.Z};
-        for (int i = 0; i < 3; i++) {
-            Orientable b = (Orientable) Material.BONE_BLOCK.createBlockData();
-            b.setAxis(axes[i]);
-            BONE[i] = b;
-        }
-    }
-
-    /** Small things in display cases. */
-    private static final Material[] SPECIMENS = {
-            Material.SKELETON_SKULL, Material.SKELETON_SKULL, Material.BONE_BLOCK, Material.AMETHYST_CLUSTER,
-            Material.BUDDING_AMETHYST, Material.RAW_IRON_BLOCK, Material.RAW_COPPER_BLOCK, Material.RAW_GOLD_BLOCK,
-            Material.EMERALD_ORE, Material.DIAMOND_ORE, Material.LAPIS_ORE, Material.DEEPSLATE_REDSTONE_ORE,
-            Material.TURTLE_EGG, Material.SNIFFER_EGG, Material.DEAD_BRAIN_CORAL_BLOCK, Material.DEAD_TUBE_CORAL_BLOCK,
-            Material.DEAD_FIRE_CORAL_BLOCK, Material.DECORATED_POT, Material.HONEYCOMB_BLOCK, Material.POTTED_FERN,
-            Material.POTTED_CACTUS, Material.POTTED_DEAD_BUSH, Material.POTTED_AZALEA_BUSH, Material.HEAVY_CORE,
-            Material.CONDUIT, Material.SEA_PICKLE, Material.MOSS_BLOCK, Material.SMOOTH_BASALT, Material.OBSIDIAN,
-    };
-
-    private static final Material[] PLANTS = {
-            Material.AZALEA, Material.FLOWERING_AZALEA, Material.FERN, Material.SHORT_GRASS, Material.MOSS_CARPET,
-            Material.FERN, Material.AZALEA,
-    };
+    private static final BlockData AIR = Material.AIR.createBlockData();
+    private static final BlockData CHAIN = MuseumSkeletons.CHAIN;
 
     public Level1882ChunkGenerator(NamespacedKey biomeKey) {
         super(biomeKey);
@@ -107,17 +87,19 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
 
     // ── District plan ─────────────────────────────────────────────────────
 
-    /** One district's layout: its hall, staircase rooms and the walls between its rooms. */
+    /** One district's layout: its look, its hall, staircase rooms and the walls between its rooms. */
     private static final class Plan {
         final int ddx, ddz;
         final boolean[] hall = new boolean[D * D], stair = new boolean[D * D];
         // [floor][room]: the wall on the room's west / north side
         final byte[][] west = new byte[FLOORS][D * D], north = new byte[FLOORS][D * D];
         final long[] roomSeed = new long[D * D];
+        MuseumPalette pal;
+        Theme[] themes;         // the district's favourite subjects
         boolean alongX;         // the hall's long axis
         int hmx, hmz, sizeX, sizeZ;
         int stairEnd;           // 0: the grand staircase is at the hall's low end, 1: the high end
-        int skeleton;           // 0 whale, 1 sauropod
+        int skeleton;           // 0 whale, 1 sauropod, 2 dragon, 3 theropod, 4 mammoth
         long hallSeed;
 
         Plan(int ddx, int ddz) {
@@ -140,9 +122,28 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         return dx * D + dz;
     }
 
+    /** Subjects that suit an architecture, to weight a district's choice. */
+    private static Theme[] suits(MuseumPalette p) {
+        return switch (p.name) {
+            case "prismarine" -> new Theme[]{Theme.MARINE, Theme.MARINE, Theme.FOSSILS};
+            case "blackstone" -> new Theme[]{Theme.NETHER, Theme.NETHER, Theme.MOBS};
+            case "end stone" -> new Theme[]{Theme.END, Theme.END, Theme.CURIOSITIES};
+            case "calcite" -> new Theme[]{Theme.GEOLOGY, Theme.MINERALS, Theme.FOSSILS};
+            case "library" -> new Theme[]{Theme.ART, Theme.CURIOSITIES, Theme.BOTANY};
+            case "mudbrick", "red sandstone" -> new Theme[]{Theme.ARCHAEOLOGY, Theme.ART, Theme.MINERALS};
+            case "copper" -> new Theme[]{Theme.CURIOSITIES, Theme.MINERALS, Theme.ART};
+            case "gothic" -> new Theme[]{Theme.FOSSILS, Theme.MOBS, Theme.GEOLOGY};
+            default -> null;
+        };
+    }
+
     private static Plan plan(long seed, int ddx, int ddz) {
-        Random r = new Random(AlphaMegastructures.hash(ddx, ddz, seed, (int) PLAN_SALT));
+        Random r = new Random(AlphaMegastructures.hash(ddx, ddz, seed, PLAN_SALT));
         Plan p = new Plan(ddx, ddz);
+        p.pal = ddx == 0 && ddz == 0 ? MuseumPalette.ALL[0] : MuseumPalette.pick(r.nextLong());
+        Theme[] all = Theme.values(), suit = suits(p.pal);
+        p.themes = new Theme[3];
+        for (int i = 0; i < 3; i++) p.themes[i] = suit != null && r.nextInt(3) > 0 ? suit[i] : all[r.nextInt(all.length)];
         p.alongX = r.nextBoolean();
         p.sizeX = p.alongX ? 4 : 2;
         p.sizeZ = p.alongX ? 2 : 4;
@@ -153,7 +154,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
             for (int dz = p.hmz; dz < p.hmz + p.sizeZ; dz++) p.hall[idx(dx, dz)] = true;
         }
         p.stairEnd = r.nextInt(2);
-        p.skeleton = r.nextInt(2);
+        p.skeleton = r.nextInt(5);
         p.hallSeed = r.nextLong();
         // staircase rooms: never in the district's north row (their north wall must stay shut, and
         // that row's north walls belong to the border)
@@ -220,7 +221,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
 
     /** A wall on a district's border: two doors in it, from a hash of the wall alone. */
     private static byte border(long seed, int f, int ddx, int ddz, int along, int axis) {
-        long h = AlphaMegastructures.hash(ddx, ddz, seed, (int) (BORDER_SALT + f * 16 + axis));
+        long h = AlphaMegastructures.hash(ddx, ddz, seed, BORDER_SALT + f * 16 + axis);
         int a = (int) Math.floorMod(h, (long) D), b = (int) Math.floorMod(h >>> 20, (long) D);
         return along == a || along == b ? DOOR : CLOSED;
     }
@@ -245,45 +246,36 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         return p.contains(gmx, gmz) && p.hall[idx(Math.floorMod(gmx, D), Math.floorMod(gmz, D))];
     }
 
-    // ── Chunk ────────────────────────────────────────────────────────────
+    /** A room's look on one floor: its subject, floor pattern (0-6), wall finish (0-3), ceiling (0-3), cases (0-2). */
+    private record Style(Theme theme, int floor, int wall, int ceil, int cases, int gallery, long seed) {}
 
-    /** Writes in world coordinates, clipped to one chunk. */
-    private static final class Canvas {
-        final ChunkData data;
-        final int x0, z0, minY, maxY;
-
-        Canvas(ChunkData data, int x0, int z0) {
-            this.data = data;
-            this.x0 = x0;
-            this.z0 = z0;
-            this.minY = data.getMinHeight();
-            this.maxY = data.getMaxHeight() - 1;
-        }
-
-        boolean has(int x, int z) {
-            return x >= x0 && x < x0 + 16 && z >= z0 && z < z0 + 16;
-        }
-
-        void set(int x, int y, int z, BlockData b) {
-            if (y < minY || y > maxY || !has(x, z)) return;
-            data.setBlock(x - x0, y, z - z0, b);
-        }
-
-        /** Air, or an invisible light block. */
-        boolean air(int x, int y, int z) {
-            if (y < minY || y > maxY || !has(x, z)) return false;
-            Material m = data.getType(x - x0, y, z - z0);
-            return m == Material.AIR || m == Material.CAVE_AIR || m == Material.LIGHT;
-        }
+    private static Style style(Plan p, int i, int f) {
+        long seed = p.roomSeed[i] ^ (f + 1) * 0x9E3779B97F4A7C15L;
+        Random r = new Random(seed);
+        Theme[] all = Theme.values();
+        Theme t = r.nextInt(100) < 65 ? p.themes[r.nextInt(p.themes.length)] : all[r.nextInt(all.length)];
+        return new Style(t, r.nextInt(7), r.nextInt(4), r.nextInt(4), r.nextInt(3), MuseumCatalogue.gallery(seed), seed);
     }
+
+    // ── Chunk ────────────────────────────────────────────────────────────
 
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData data) {
-        long seed = worldInfo.getSeed();
+        generate(new MuseumCanvas(data, chunkX * 16, chunkZ * 16), worldInfo.getSeed(), chunkX, chunkZ);
+    }
+
+    /** The labels (signs, lecterns, pots, paintings) the generator placed in this chunk. */
+    public List<Label> labels(long seed, int chunkX, int chunkZ) {
+        MuseumCanvas c = new MuseumCanvas(null, chunkX * 16, chunkZ * 16);
+        generate(c, seed, chunkX, chunkZ);
+        return c.labels;
+    }
+
+    private void generate(MuseumCanvas c, long seed, int chunkX, int chunkZ) {
         int x0 = chunkX * 16, z0 = chunkZ * 16;
         int gmx = Math.floorDiv(x0, M), gmz = Math.floorDiv(z0, M);
         Plan p = plan(seed, Math.floorDiv(gmx, D), Math.floorDiv(gmz, D));
-        Canvas c = new Canvas(data, x0, z0);
+        c.palette = p.pal;
 
         // this room's four walls on each floor: west, east, north, south
         byte[][] e = new byte[FLOORS][4];
@@ -294,24 +286,29 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
             e[f][3] = northEdge(seed, p, f, gmx, gmz + 1);
         }
         boolean hall = isHall(p, gmx, gmz);
+        int i = idx(Math.floorMod(gmx, D), Math.floorMod(gmz, D));
+        Style[] st = {style(p, i, 0), style(p, i, 1)};
 
-        for (int x = x0; x < x0 + 16; x++) {
-            for (int z = z0; z < z0 + 16; z++) column(c, p, x, z, gmx, gmz, e, hall);
+        if (c.data != null) {
+            for (int x = x0; x < x0 + 16; x++) {
+                for (int z = z0; z < z0 + 16; z++) column(c, p, x, z, gmx, gmz, e, hall, st);
+            }
         }
         if (hall) {
             hallInterior(c, p);
         } else {
-            for (int f = 0; f < FLOORS; f++) room(c, p, gmx, gmz, f, e[f]);
+            for (int f = 0; f < FLOORS; f++) room(c, p, gmx, gmz, f, e[f], st[f]);
         }
         // the vault and gables stand on the hall's wall belts too, which are in the rooms around it
         if (x0 + 15 >= p.hx0() - 1 && x0 <= p.hx1() + 1 && z0 + 15 >= p.hz0() - 1 && z0 <= p.hz1() + 1) {
-            hallRoof(c, p);
+            if (c.data != null) hallRoof(c, p);
             if (hall) hallSkeleton(c, p);
         }
     }
 
     /** Foundation, walls with their arches, floors and ceilings of one column. */
-    private void column(Canvas c, Plan p, int x, int z, int gmx, int gmz, byte[][] e, boolean hall) {
+    private void column(MuseumCanvas c, Plan p, int x, int z, int gmx, int gmz, byte[][] e, boolean hall, Style[] st) {
+        MuseumPalette pal = p.pal;
         int mlx = Math.floorMod(x, M), mlz = Math.floorMod(z, M);
         for (int y = FOUNDATION; y < FLOOR0; y++) c.set(x, y, z, FOUND);
 
@@ -321,15 +318,15 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
             boolean inside = isHall(p, cmx - 1, cmz - 1) && isHall(p, cmx, cmz - 1)
                     && isHall(p, cmx - 1, cmz) && isHall(p, cmx, cmz);
             if (!inside) {
-                pier(c, x, z);
+                pier(c, pal, x, z);
                 return;
             }
         } else if (mlx == 0 || mlx == M - 1 || mlz == 0 || mlz == M - 1) {
             int side = mlx == 0 ? 0 : mlx == M - 1 ? 1 : mlz == 0 ? 2 : 3;
             int t = side < 2 ? mlz : mlx;
             if (e[0][side] != OPEN) {
-                for (int f = 0; f < FLOORS; f++) wall(c, x, z, f, t, e[f][side]);
-                c.set(x, ROOF, z, ROOF_TILE);
+                for (int f = 0; f < FLOORS; f++) wall(c, pal, x, z, f, t, e[f][side], hall ? 0 : st[f].wall());
+                c.set(x, ROOF, z, pal.roof);
                 return;
             }
         }
@@ -338,62 +335,98 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
             return;
         }
         for (int f = 0; f < FLOORS; f++) {
-            int F = FLOOR0 + f * STORY;
-            c.set(x, F, z, floorTile(mlx, mlz));
+            int F = FLOOR0 + f * STORY, C = F + STORY - 2;
+            c.set(x, F, z, floorTile(pal, mlx, mlz, st[f].floor()));
             int dx = Math.min(mlx - 1, M - 2 - mlx), dz = Math.min(mlz - 1, M - 2 - mlz);
-            boolean beam = dx % 5 == 4 || dz % 5 == 4;
-            c.set(x, F + STORY - 2, z, beam ? TRIM : dx % 5 == 2 && dz % 5 == 2 ? BAND : BUFF);
-            if (beam) c.set(x, F + STORY - 3, z, TRIM);
-            c.set(x, F + STORY - 1, z, BUFF);
+            int ceil = st[f].ceil() == 3 && f < FLOORS - 1 ? 0 : st[f].ceil();
+            if (ceil == 3 && dx >= 7 && dz >= 7) {
+                // a skylight through the roof
+                boolean bar = mlx % 4 == 0 || mlz % 4 == 0;
+                c.set(x, C, z, bar ? pal.trim : GLASS);
+                c.set(x, ROOF, z, GLASS);
+                continue;
+            }
+            boolean beam = ceil == 0 ? dx % 5 == 4 || dz % 5 == 4 : ceil == 1 && dx % 5 == 4;
+            double rc = Math.hypot(mlx - 15.5, mlz - 15.5);
+            BlockData cb = beam ? pal.trim
+                    : ceil == 0 && dx % 5 == 2 && dz % 5 == 2 ? pal.band
+                    : ceil == 2 && rc >= 3 && rc < 4.5 ? pal.band
+                    : ceil == 2 && rc < 1.5 ? pal.carved
+                    : ceil == 3 && (dx == 6 || dz == 6) && dx >= 6 && dz >= 6 ? pal.trim : pal.wall;
+            c.set(x, C, z, cb);
+            if (beam) c.set(x, C - 1, z, pal.trim);
+            c.set(x, C + 1, z, pal.wall);
         }
-        c.set(x, ROOF, z, ROOF_TILE);
+        c.set(x, ROOF, z, pal.roof);
     }
 
-    private static BlockData floorTile(int mlx, int mlz) {
+    private static BlockData floorTile(MuseumPalette pal, int mlx, int mlz, int style) {
         int d = Math.min(Math.min(mlx - 1, M - 2 - mlx), Math.min(mlz - 1, M - 2 - mlz));
-        if (d <= 1) return TILE_EDGE;
-        if (d == 2) return TRIM;
-        return ((mlx >> 1) + (mlz >> 1) & 1) == 0 ? TILE_A : TILE_B;
+        if (d <= 1) return pal.edge;
+        if (d == 2) return pal.trim;
+        int k = switch (style) {
+            case 0 -> (mlx >> 1) + (mlz >> 1);
+            case 1 -> mlx + mlz;
+            case 2 -> mlx >> 1;
+            case 3 -> (int) (Math.abs(mlx - 15.5) + Math.abs(mlz - 15.5)) >> 1;
+            case 4 -> d == 4 ? 1 : 0;
+            case 5 -> d >> 1;
+            default -> mlx / 3 + mlz / 3;
+        };
+        return (k & 1) == 0 ? pal.tileA : pal.tileB;
     }
 
-    /** Banding of a wall course {@code r} blocks above its story's floor. */
-    private static BlockData course(int r, int t) {
-        return switch (r) {
-            case 0, 1, 2, 16 -> TRIM;
-            case 3, 8, 13 -> BAND;
-            case 15 -> (t & 1) == 0 ? CARVED : TRIM;
-            default -> BUFF;
+    /** A wall course {@code r} blocks above its story's floor: 0 banded, 1 wainscot, 2 plain, 3 dado. */
+    private static BlockData course(MuseumPalette pal, int r, int t, int style) {
+        return switch (style) {
+            case 1 -> switch (r) {
+                case 0, 4, 16 -> pal.trim;
+                case 1, 2, 3 -> pal.wood;
+                case 15 -> (t & 1) == 0 ? pal.carved : pal.trim;
+                default -> pal.wall;
+            };
+            case 2 -> r <= 1 || r == 16 ? pal.trim : pal.wall;
+            case 3 -> switch (r) {
+                case 0, 3, 16 -> pal.trim;
+                case 1, 2, 14 -> pal.band;
+                case 15 -> pal.accent;
+                default -> pal.wall;
+            };
+            default -> switch (r) {
+                case 0, 1, 2, 16 -> pal.trim;
+                case 3, 8, 13 -> pal.band;
+                case 15 -> (t & 1) == 0 ? pal.carved : pal.trim;
+                default -> pal.wall;
+            };
         };
     }
 
-    private void pier(Canvas c, int x, int z) {
+    private void pier(MuseumCanvas c, MuseumPalette pal, int x, int z) {
         for (int f = 0; f < FLOORS; f++) {
             int F = FLOOR0 + f * STORY;
             for (int r = 0; r < STORY; r++) {
-                c.set(x, F + r, z, r == 14 || r == 15 ? CARVED : r == 3 || r == 8 || r == 13 ? BAND : TRIM);
+                c.set(x, F + r, z, r == 14 || r == 15 ? pal.carved : r == 3 || r == 8 || r == 13 ? pal.band : pal.trim);
             }
         }
-        c.set(x, ROOF, z, ROOF_TILE);
+        c.set(x, ROOF, z, pal.roof);
     }
 
     /** One story of a wall column, {@code t} blocks along the wall, with its arch if it has one. */
-    private void wall(Canvas c, int x, int z, int f, int t, byte type) {
+    private void wall(MuseumCanvas c, MuseumPalette pal, int x, int z, int f, int t, byte type, int style) {
         int F = FLOOR0 + f * STORY;
         for (int r = 0; r < STORY; r++) {
-            int a = type == CLOSED ? 0 : arch(type, t, r);
+            int a = type == CLOSED ? 0 : arch(pal.arch, type, t, r);
             if (a == 1) continue;   // open
-            BlockData b = course(r, t);
-            if (a == 2) b = TRIM;
-            else if (a == 3) b = BAND;
+            BlockData b = a == 2 ? pal.trim : a == 3 ? pal.accent : course(pal, r, t, style);
             c.set(x, F + r, z, b);
         }
     }
 
     /**
-     * 0 wall, 1 opening, 2 jamb or light voussoir, 3 dark voussoir. A door is a round arch 8 wide
-     * and 13 tall; an arcade a wide elliptical arch 24 wide and 15 tall.
+     * 0 wall, 1 opening, 2 jamb or light voussoir, 3 dark voussoir. A door is 8 wide and about 13
+     * tall; an arcade 24 wide and about 15 tall. Round, pointed or square-headed, by the palette.
      */
-    static int arch(byte type, int t, int r) {
+    static int arch(MuseumPalette.Arch shape, byte type, int t, int r) {
         if (r <= 0) return 0;
         double tc = t + 0.5 - M / 2.0;
         double hw = type == ARCADE ? 12 : 4, vr = type == ARCADE ? 7 : 4;
@@ -401,265 +434,168 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         double ax = Math.abs(tc);
         if (r <= spring) return ax < hw ? 1 : ax < hw + 1 ? 2 : 0;
         double ry = r - spring - 0.5;
-        double e = (ax / hw) * (ax / hw) + (ry / vr) * (ry / vr);
-        if (e < 1) return 1;
-        double ex = ax / (hw + 1.3), ey = ry / (vr + 1.3);
-        if (ex * ex + ey * ey >= 1) return 0;
-        int sector = (int) (Math.atan2(ry / vr, tc / hw) / (Math.PI / 9));
-        return (sector & 1) == 0 ? 2 : 3;
+        switch (shape) {
+            case SQUARE -> {
+                if (ry < vr - 1 && ax < hw) return 1;
+                return ry < vr && ax < hw + 1 ? 2 : 0;
+            }
+            case POINTED -> {
+                double R = 1.6 * hw, yy = ry * 1.48 * hw / vr;
+                double inner = Math.sqrt(Math.max(0, R * R - yy * yy)) - (R - hw);
+                if (yy < R && ax < inner) return 1;
+                double R2 = R + 1.3, outer = Math.sqrt(Math.max(0, R2 * R2 - yy * yy)) - (R - hw);
+                if (yy >= R2 || ax >= outer) return 0;
+                return ((int) (yy / 2) & 1) == 0 ? 2 : 3;
+            }
+            default -> {
+                double e = (ax / hw) * (ax / hw) + (ry / vr) * (ry / vr);
+                if (e < 1) return 1;
+                double ex = ax / (hw + 1.3), ey = ry / (vr + 1.3);
+                if (ex * ex + ey * ey >= 1) return 0;
+                int sector = (int) (Math.atan2(ry / vr, tc / hw) / (Math.PI / 9));
+                return (sector & 1) == 0 ? 2 : 3;
+            }
+        }
     }
 
     // ── Rooms ────────────────────────────────────────────────────────────
 
-    private void room(Canvas c, Plan p, int gmx, int gmz, int f, byte[] e) {
+    private void room(MuseumCanvas c, Plan p, int gmx, int gmz, int f, byte[] e, Style st) {
         int i = idx(Math.floorMod(gmx, D), Math.floorMod(gmz, D));
         int ox = gmx * M, oz = gmz * M, F = FLOOR0 + f * STORY;
-        Random r = new Random(p.roomSeed[i] ^ (f + 1) * 0x9E3779B97F4A7C15L);
+        Random r = new Random(st.seed() ^ 0x5EEDL);
+        Room m = new Room(c, r, ox, oz, F, p.pal, st.theme(), st.gallery(), e, f == FLOORS - 1, st.seed());
 
-        // even light from hidden light blocks, and a chandelier
+        // even light from hidden light blocks
         for (int lx : new int[]{4, 11, 20, 27}) {
             for (int lz : new int[]{4, 11, 20, 27}) c.set(ox + lx, F + STORY - 4, oz + lz, LIGHT);
         }
-        chandelier(c, ox + 15, F + STORY - 3, oz + 15);
 
         if (p.stair[i]) {
-            if (f == 0) stairFlight(c, ox, oz);
-            else stairWell(c, ox, oz, F);
-            if (e[3] == CLOSED) wallCase(c, r, ox, oz, F, 3, 3, M - 4);
+            if (f == 0) stairFlight(c, p.pal, ox, oz);
+            else stairWell(c, p.pal, ox, oz, F);
+            if (e[3] == CLOSED) MuseumExhibits.wallCase(m, 3, 3, M - 4, st.cases());
+            chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 20);
+            titles(m, st);
             return;
         }
 
-        int kind = r.nextInt(100);
+        Center ctr = MuseumExhibits.center(st.theme(), r);
         boolean alongX = r.nextBoolean();
         int feature = -1;   // the wall the ammonite hangs on
-        if (kind >= 75 && kind < 85) {
+        if (ctr == Center.AMMONITE) {
             int start = r.nextInt(4);
             for (int s = 0; s < 4 && feature < 0; s++) if (e[(start + s) % 4] == CLOSED) feature = (start + s) % 4;
+            if (feature < 0) ctr = Center.CASES;
         }
-        for (int s = 0; s < 4; s++) {
-            if (s == feature) continue;
-            if (e[s] == CLOSED) wallCase(c, r, ox, oz, F, s, 3, M - 4);
-            else if (e[s] == DOOR) {
-                wallCase(c, r, ox, oz, F, s, 3, 9);
-                wallCase(c, r, ox, oz, F, s, 22, M - 4);
+        if (ctr != Center.PAINTINGS) {
+            for (int s = 0; s < 4; s++) {
+                if (s == feature) continue;
+                if (e[s] == CLOSED) MuseumExhibits.wallCase(m, s, 3, M - 4, st.cases());
+                else if (e[s] == DOOR) {
+                    MuseumExhibits.wallCase(m, s, 3, 9, st.cases());
+                    MuseumExhibits.wallCase(m, s, 22, M - 4, st.cases());
+                }
             }
         }
+        titles(m, st);
 
-        if (kind < 30) {
-            int sk = r.nextInt(100);
-            double len = sk < 40 ? 20 : sk < 75 ? 15 : 20;
-            dais(c, ox, oz, F, alongX, (int) (len / 2), 5);
-            int ux = alongX ? 1 : 0, uz = alongX ? 0 : 1;
-            double hx = ox + 16 - ux * len / 2, hz = oz + 16 - uz * len / 2;
-            if (sk < 40) theropod(c, hx, F + 2, hz, ux, uz, len);
-            else if (sk < 75) mammoth(c, hx, F + 2, hz, ux, uz, len);
-            else sauropod(c, hx, F + 2, hz, ux, uz, len);
-        } else if (kind < 55) {
-            int[] across = {11, 20}, along = {8, 15, 23};
-            for (int a : along) {
-                for (int b : across) islandCase(c, r, ox + (alongX ? a : b), oz + (alongX ? b : a), F);
+        switch (ctr) {
+            case SKELETON -> MuseumExhibits.skeleton(m, alongX, MuseumExhibits.skeleton(st.theme(), r, false));
+            case HANGING -> MuseumExhibits.hanging(m, alongX, MuseumExhibits.skeleton(st.theme(), r, true));
+            case CASES -> MuseumExhibits.islandCases(m, alongX);
+            case PEDESTALS -> MuseumExhibits.pedestals(m, alongX);
+            case GEODE -> MuseumExhibits.geode(m, alongX);
+            case CRYSTALS -> MuseumExhibits.crystals(m, alongX);
+            case METEORITE -> MuseumExhibits.meteorite(m, alongX);
+            case PLANTERS -> MuseumExhibits.planters(m, alongX);
+            case TREE -> MuseumExhibits.tree(m, alongX);
+            case MUSHROOM -> MuseumExhibits.mushroom(m, alongX);
+            case AQUARIUM -> MuseumExhibits.aquarium(m, alongX);
+            case MONOLITH -> MuseumExhibits.monolith(m, alongX);
+            case POTS -> MuseumExhibits.pots(m, alongX);
+            case PAINTINGS -> MuseumExhibits.paintings(m);
+            case AMMONITE -> {
+                MuseumExhibits.ammonite(m, feature);
+                MuseumExhibits.benchRows(m, feature >= 2, 13, 18, true);
             }
-        } else if (kind < 65) {
-            dais(c, ox, oz, F, alongX, 5, 5);
-            if (r.nextBoolean()) geode(c, ox + 16, F + 7, oz + 16, alongX);
-            else meteorite(c, r, ox + 16, F + 6, oz + 16);
-            benches(c, ox, oz, F, !alongX, 9, 22, true);
-        } else if (kind < 75) {
-            planters(c, r, ox, oz, F, alongX);
-        } else if (kind < 85 && feature >= 0) {
-            ammonite(c, ox, oz, F, feature);
-            benches(c, ox, oz, F, feature >= 2, 13, 18, true);
+            default -> MuseumExhibits.benchRows(m, alongX, 15, 16, false);
+        }
+        if (MuseumExhibits.compact(ctr) && r.nextInt(3) == 0) MuseumExhibits.columns(m, F + STORY - 2);
+
+        boolean tall = switch (ctr) {
+            case HANGING, TREE, MONOLITH, CRYSTALS, MUSHROOM -> true;
+            default -> false;
+        };
+        if (tall) {
+            for (int[] o : new int[][]{{8, 8}, {8, 23}, {23, 8}, {23, 23}}) {
+                c.set(ox + o[0], F + STORY - 3, oz + o[1], CHAIN);
+                c.set(ox + o[0], F + STORY - 4, oz + o[1], p.pal.lantern);
+            }
         } else {
-            benches(c, ox, oz, F, alongX, 15, 16, false);
+            chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 15);
         }
-    }
-
-    /** Room-local (side, depth from the wall, t along it) to world x/z. Sides: 0 W, 1 E, 2 N, 3 S. */
-    private static int sx(int ox, int side, int d, int t) {
-        return ox + switch (side) {
-            case 0 -> d;
-            case 1 -> M - 1 - d;
-            default -> t;
-        };
-    }
-
-    private static int sz(int oz, int side, int d, int t) {
-        return oz + switch (side) {
-            case 2 -> d;
-            case 3 -> M - 1 - d;
-            default -> t;
-        };
-    }
-
-    private static final BlockFace[] INTO_ROOM = {BlockFace.EAST, BlockFace.WEST, BlockFace.SOUTH, BlockFace.NORTH};
-
-    /** A glazed case against a wall from t0 to t1: wooden base and lid, specimens on the base. */
-    private void wallCase(Canvas c, Random r, int ox, int oz, int F, int side, int t0, int t1) {
-        for (int t = t0; t <= t1; t++) {
-            for (int d = 1; d <= 2; d++) {
-                int x = sx(ox, side, d, t), z = sz(oz, side, d, t);
-                c.set(x, F + 1, z, WOOD);
-                c.set(x, F + 5, z, WOOD);
-                boolean pane = d == 2 || t == t0 || t == t1;
-                for (int y = F + 2; y <= F + 4; y++) if (pane) c.set(x, y, z, GLASS);
-                if (!pane && (t - t0) % 3 == 1) c.set(x, F + 2, z, specimen(r, INTO_ROOM[side]));
+        if (r.nextInt(5) < 3) {
+            for (int s = 0; s < 4; s++) {
+                if (e[s] != ARCADE && s != feature) {
+                    MuseumExhibits.lectern(m, s, 10);
+                    break;
+                }
             }
         }
     }
 
-    private static BlockData specimen(Random r, BlockFace facing) {
-        Material m = SPECIMENS[r.nextInt(SPECIMENS.length)];
-        BlockData b = m.createBlockData();
-        if (b instanceof Rotatable rot) rot.setRotation(facing);
-        else if (b instanceof Directional dir && dir.getFaces().contains(BlockFace.UP)) dir.setFacing(BlockFace.UP);
-        else if (b instanceof Directional dir && dir.getFaces().contains(facing)) dir.setFacing(facing);
-        return b;
-    }
-
-    /** A free-standing 3×3 glass case on a wooden plinth, one specimen inside. */
-    private void islandCase(Canvas c, Random r, int cx, int cz, int F) {
-        for (int x = cx - 1; x <= cx + 1; x++) {
-            for (int z = cz - 1; z <= cz + 1; z++) {
-                c.set(x, F + 1, z, WOOD);
-                boolean mid = x == cx && z == cz;
-                for (int y = F + 2; y <= F + 4; y++) if (!mid || y == F + 4) c.set(x, y, z, GLASS);
-            }
-        }
-        c.set(cx, F + 2, cz, specimen(r, BlockFace.SOUTH));
-    }
-
-    /** A raised plinth around the room's center: half-length {@code al} along the axis, {@code ac} across. */
-    private void dais(Canvas c, int ox, int oz, int F, boolean alongX, int al, int ac) {
-        for (int a = 16 - al - 1; a <= 15 + al + 1; a++) {
-            for (int b = 16 - ac - 1; b <= 15 + ac + 1; b++) {
-                boolean rim = a == 16 - al - 1 || a == 15 + al + 1 || b == 16 - ac - 1 || b == 15 + ac + 1;
-                c.set(ox + (alongX ? a : b), F + 1, oz + (alongX ? b : a), rim ? DAIS : DAIS_TOP);
-            }
+    /** The gallery's number and subject over each door, inside. */
+    private static void titles(Room m, Style st) {
+        for (int s = 0; s < 4; s++) {
+            if (m.e()[s] != DOOR) continue;
+            int x = MuseumExhibits.sx(m.ox(), s, 1, 15), z = MuseumExhibits.sz(m.oz(), s, 1, 15);
+            m.c().sign(x, m.F() + 14, z, MuseumExhibits.INTO_ROOM[s],
+                    new Subject("", Topic.ROOM, Rarity.COMMON, st.gallery(), st.theme(), st.seed()));
         }
     }
 
-    private void chandelier(Canvas c, int x, int y, int z) {
+    private static void chandelier(MuseumCanvas c, MuseumPalette pal, int x, int y, int z) {
         c.set(x, y, z, CHAIN);
         c.set(x, y - 1, z, CHAIN);
-        c.set(x, y - 2, z, LANTERN);
+        c.set(x, y - 2, z, pal.lantern);
         for (int[] o : new int[][]{{2, 0}, {-2, 0}, {0, 2}, {0, -2}}) {
             c.set(x + o[0], y, z + o[1], CHAIN);
-            c.set(x + o[0], y - 1, z + o[1], LANTERN);
-        }
-    }
-
-    /**
-     * Two rows of benches running along the axis, at {@code b0} and {@code b1} across: seated
-     * facing the room's middle, or back to back facing out.
-     */
-    private void benches(Canvas c, int ox, int oz, int F, boolean alongX, int b0, int b1, boolean faceMiddle) {
-        for (int row : new int[]{b0, b1}) {
-            // a stair's facing is its back: away from where the sitter looks
-            BlockFace low = alongX ? BlockFace.NORTH : BlockFace.WEST;
-            boolean looksUp = (row < 16) == faceMiddle;   // looking toward higher across
-            Stairs s = (Stairs) Material.SPRUCE_STAIRS.createBlockData();
-            s.setFacing(looksUp ? low : low.getOppositeFace());
-            for (int a = 11; a <= 20; a++) {
-                if (a == 15 || a == 16) continue;
-                c.set(ox + (alongX ? a : row), F + 1, oz + (alongX ? row : a), s);
-            }
-        }
-    }
-
-    private void planters(Canvas c, Random r, int ox, int oz, int F, boolean alongX) {
-        for (int b0 : new int[]{8, 19}) {
-            for (int a = 5; a <= 26; a++) {
-                for (int b = b0; b < b0 + 5; b++) {
-                    int x = ox + (alongX ? a : b), z = oz + (alongX ? b : a);
-                    boolean rim = a == 5 || a == 26 || b == b0 || b == b0 + 4;
-                    c.set(x, F + 1, z, rim ? TRIM : Material.MOSS_BLOCK.createBlockData());
-                    if (!rim && r.nextInt(3) > 0) c.set(x, F + 2, z, PLANTS[r.nextInt(PLANTS.length)].createBlockData());
-                }
-            }
-        }
-    }
-
-    /** A geode cut in half: basalt, calcite, amethyst, hollow. */
-    private void geode(Canvas c, int cx, int cy, int cz, boolean alongX) {
-        BlockData basalt = Material.SMOOTH_BASALT.createBlockData(), calcite = Material.CALCITE.createBlockData(),
-                amethyst = Material.AMETHYST_BLOCK.createBlockData(), budding = Material.BUDDING_AMETHYST.createBlockData();
-        for (int dx = -5; dx <= 5; dx++) {
-            for (int dy = -5; dy <= 5; dy++) {
-                for (int dz = -5; dz <= 5; dz++) {
-                    double d = Math.sqrt(dx * dx + dy * dy * 1.1 + dz * dz);
-                    if (d > 5.2 || d < 2.6 || (alongX ? dx : dz) > 0) continue;
-                    BlockData b = d > 4.4 ? basalt : d > 3.6 ? calcite : (dx * 7 + dy * 3 + dz) % 5 == 0 ? budding : amethyst;
-                    c.set(cx + dx, cy + dy, cz + dz, b);
-                }
-            }
-        }
-    }
-
-    private void meteorite(Canvas c, Random r, int cx, int cy, int cz) {
-        long s = r.nextLong();
-        BlockData[] mats = {Material.BLACKSTONE.createBlockData(), Material.BASALT.createBlockData(),
-                Material.GILDED_BLACKSTONE.createBlockData(), Material.RAW_IRON_BLOCK.createBlockData()};
-        for (int dx = -5; dx <= 5; dx++) {
-            for (int dy = -4; dy <= 5; dy++) {
-                for (int dz = -5; dz <= 5; dz++) {
-                    double d = Math.sqrt(dx * dx + dy * dy * 1.3 + dz * dz);
-                    double n = SimplexNoise.noise3(s, dx * 0.35, dy * 0.35, dz * 0.35);
-                    if (d > 3.8 + 1.4 * n) continue;
-                    double k = SimplexNoise.noise3(s + 1, dx * 0.6, dy * 0.6, dz * 0.6);
-                    c.set(cx + dx, cy + dy, cz + dz, mats[k > 0.45 ? 2 : k < -0.5 ? 3 : (dx + dy + dz & 1)]);
-                }
-            }
-        }
-    }
-
-    /** A giant ammonite on a wall: a bone spiral with ribs. */
-    private void ammonite(Canvas c, int ox, int oz, int F, int side) {
-        double ct = 15.5, cr = 9.5;
-        for (double th = 0.6; th < 6 * Math.PI; th += 0.04) {
-            double rad = 0.42 * th;
-            int t = (int) Math.floor(ct + rad * Math.cos(th)), y = (int) Math.floor(cr + rad * Math.sin(th));
-            c.set(sx(ox, side, 1, t), F + y, sz(oz, side, 1, t), BONE[1]);
-        }
-        for (double th = 2 * Math.PI; th < 6 * Math.PI; th += Math.PI / 7) {
-            for (double rad = 0.42 * (th - 2 * Math.PI); rad < 0.42 * th; rad += 0.4) {
-                int t = (int) Math.floor(ct + rad * Math.cos(th)), y = (int) Math.floor(cr + rad * Math.sin(th));
-                c.set(sx(ox, side, 1, t), F + y, sz(oz, side, 1, t), IVORY);
-            }
+            c.set(x + o[0], y - 1, z + o[1], pal.lantern);
         }
     }
 
     /** Staircase room, ground floor: a flight along the north wall up through the ceiling. */
-    private void stairFlight(Canvas c, int ox, int oz) {
+    private void stairFlight(MuseumCanvas c, MuseumPalette pal, int ox, int oz) {
         int F1 = FLOOR0 + STORY;
         for (int lx = 3; lx <= 23; lx++) {
             for (int lz = 1; lz <= 6; lz++) {
                 for (int y = F1 - 3; y <= F1; y++) c.set(ox + lx, y, oz + lz, AIR);
             }
         }
-        Stairs st = (Stairs) Material.SMOOTH_SANDSTONE_STAIRS.createBlockData();
+        Stairs st = (Stairs) pal.stairs.createBlockData();
         st.setFacing(BlockFace.EAST);
         for (int k = 0; k < STORY; k++) {
             int top = FLOOR0 + 1 + k, x = ox + 4 + k;
             for (int lz = 2; lz <= 5; lz++) {
-                for (int y = FLOOR0 + 1; y < top; y++) c.set(x, y, oz + lz, TRIM);
-                c.set(x, top, oz + lz, k == STORY - 1 ? BUFF : st);
+                for (int y = FLOOR0 + 1; y < top; y++) c.set(x, y, oz + lz, pal.trim);
+                c.set(x, top, oz + lz, k == STORY - 1 ? pal.wall : st);
             }
-            for (int y = FLOOR0 + 1; y <= top + 1; y++) c.set(x, y, oz + 6, BUFF);   // the outer side wall
+            // the outer side: a panelled stringer with a parapet
+            for (int y = FLOOR0 + 1; y <= top + 1; y++) c.set(x, y, oz + 6, y == top + 1 ? pal.trim : (y - FLOOR0) % 5 == 0 ? pal.band : pal.wall);
         }
     }
 
     /** Staircase room, upper floor: a parapet round the stairwell. */
-    private void stairWell(Canvas c, int ox, int oz, int F) {
-        for (int lx = 2; lx <= 23; lx++) c.set(ox + lx, F + 1, oz + 7, BUFF);
-        for (int lz = 1; lz <= 6; lz++) c.set(ox + 2, F + 1, oz + lz, BUFF);
+    private void stairWell(MuseumCanvas c, MuseumPalette pal, int ox, int oz, int F) {
+        for (int lx = 2; lx <= 23; lx++) c.set(ox + lx, F + 1, oz + 7, pal.trim);
+        for (int lz = 1; lz <= 6; lz++) c.set(ox + 2, F + 1, oz + lz, pal.trim);
     }
-
-    private static final BlockData AIR = Material.AIR.createBlockData();
 
     // ── The hall ─────────────────────────────────────────────────────────
 
     /** Along/across coordinates of a column in the hall, measured inside its walls. */
-    private record HallPos(double along, double across, int aLow, int aHigh, int dWall, double o) {}
+    private record HallPos(int along, int aLow, int aHigh, int dWall, double o) {}
 
     private static HallPos hallPos(Plan p, int x, int z) {
         int ix0 = p.hx0() + 1, ix1 = p.hx1() - 1, iz0 = p.hz0() + 1, iz1 = p.hz1() - 1;
@@ -667,7 +603,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         int along = p.alongX ? x : z, a0 = p.alongX ? ix0 : iz0, a1 = p.alongX ? ix1 : iz1;
         int across = p.alongX ? z : x, b0 = p.alongX ? iz0 : ix0, b1 = p.alongX ? iz1 : ix1;
         double o = across + 0.5 - (b0 + b1 + 1) / 2.0;   // from the hall's center line
-        return new HallPos(along, across, along - a0, a1 - along, dWall, o);
+        return new HallPos(along, along - a0, a1 - along, dWall, o);
     }
 
     /** Distance (blocks) of the column from the end with the grand staircase. */
@@ -675,7 +611,19 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         return p.stairEnd == 0 ? h.aLow() : h.aHigh();
     }
 
-    private static final int FLIGHT = 24;   // the grand staircase's run
+    /** World x/z of the point {@code fromEnd} blocks from the staircase end, {@code o} off the center line. */
+    private static int[] hallPoint(Plan p, int fromEnd, int o) {
+        int ix0 = p.hx0() + 1, ix1 = p.hx1() - 1, iz0 = p.hz0() + 1, iz1 = p.hz1() - 1;
+        int along = p.stairEnd == 0 ? (p.alongX ? ix0 : iz0) + fromEnd : (p.alongX ? ix1 : iz1) - fromEnd;
+        int mid = p.alongX ? (iz0 + iz1 + 1) / 2 : (ix0 + ix1 + 1) / 2;
+        return p.alongX ? new int[]{along, mid + o} : new int[]{mid + o, along};
+    }
+
+    /** The direction from the staircase toward the far end of the hall. */
+    private static BlockFace downHall(Plan p) {
+        BlockFace up = p.alongX ? BlockFace.EAST : BlockFace.SOUTH;
+        return p.stairEnd == 0 ? up : up.getOppositeFace();
+    }
 
     /** Height of step {@code k} of the grand staircase (k = 0 at the foot); a landing halfway. */
     private static int stepRise(int k) {
@@ -684,34 +632,35 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         return Math.min(k - 4, STORY - 1);
     }
 
-    private void hallColumn(Canvas c, Plan p, int x, int z) {
+    private void hallColumn(MuseumCanvas c, Plan p, int x, int z) {
+        MuseumPalette pal = p.pal;
         HallPos h = hallPos(p, x, z);
         int F1 = FLOOR0 + STORY;
         double ao = Math.abs(h.o());
         int fromEnd = fromStairEnd(p, h);
         boolean stairGap = fromEnd < BAL && ao < 6;
 
-        // floor: tiles with a terracotta runner down the middle
-        c.set(x, FLOOR0, z, ao < 3 ? TILE_EDGE : ao < 4 ? TRIM
-                : h.dWall() <= 1 ? TILE_EDGE : ((x >> 1) + (z >> 1) & 1) == 0 ? TILE_A : TILE_B);
+        // floor: tiles with a runner down the middle
+        c.set(x, FLOOR0, z, ao < 3 ? pal.edge : ao < 4 ? pal.trim
+                : h.dWall() <= 1 ? pal.edge : ((x >> 1) + (z >> 1) & 1) == 0 ? pal.tileA : pal.tileB);
 
         if (h.dWall() < BAL) {
             // the balcony round the hall, on an arcade; open where the staircase arrives
-            c.set(x, F1 - 2, z, TRIM);
-            c.set(x, F1 - 1, z, BUFF);
-            c.set(x, F1, z, h.dWall() == 0 ? TILE_EDGE : TILE_A);
-            if (h.dWall() == BAL - 1 && !stairGap) c.set(x, F1 + 1, z, TRIM);
+            c.set(x, F1 - 2, z, pal.trim);
+            c.set(x, F1 - 1, z, pal.wall);
+            c.set(x, F1, z, h.dWall() == 0 ? pal.edge : pal.tileA);
+            if (h.dWall() == BAL - 1 && !stairGap) c.set(x, F1 + 1, z, pal.trim);
             if (h.dWall() >= BAL - 2 && !stairGap) {
                 // along the edge: piers every 8 blocks, round arches between
                 int dxw = Math.min(x - p.hx0() - 1, p.hx1() - 1 - x), dzw = Math.min(z - p.hz0() - 1, p.hz1() - 1 - z);
                 int m = Math.floorMod(dxw <= dzw ? z : x, 8);
                 if (m <= 1) {
-                    for (int y = FLOOR0 + 1; y < F1 - 2; y++) c.set(x, y, z, course(y - FLOOR0, 0));
+                    for (int y = FLOOR0 + 1; y < F1 - 2; y++) c.set(x, y, z, course(pal, y - FLOOR0, 0, 0));
                 } else {
                     double sc = m + 0.5 - 5.0;
                     for (int y = FLOOR0 + 12; y < F1 - 2; y++) {
                         double ry = y + 0.5 - (FLOOR0 + 13);
-                        if (ry > 0 && (sc / 3) * (sc / 3) + (ry / 4) * (ry / 4) > 1) c.set(x, y, z, y == F1 - 3 ? BAND : TRIM);
+                        if (ry > 0 && (sc / 3) * (sc / 3) + (ry / 4) * (ry / 4) > 1) c.set(x, y, z, y == F1 - 3 ? pal.band : pal.trim);
                     }
                 }
             }
@@ -722,17 +671,16 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         if (k >= 0 && k < FLIGHT && ao < 6) {
             int top = FLOOR0 + 1 + stepRise(k);
             boolean rail = ao >= 5;
-            for (int y = FLOOR0 + 1; y < top; y++) c.set(x, y, z, TRIM);
+            for (int y = FLOOR0 + 1; y < top; y++) c.set(x, y, z, pal.trim);
             if (rail) {
-                c.set(x, top, z, TRIM);
-                c.set(x, top + 1, z, BUFF);
+                c.set(x, top, z, pal.trim);
+                c.set(x, top + 1, z, pal.wall);
             } else if (k + 1 < FLIGHT && stepRise(k + 1) > stepRise(k)) {
-                Stairs st = (Stairs) Material.SMOOTH_SANDSTONE_STAIRS.createBlockData();
-                BlockFace up = p.alongX ? BlockFace.EAST : BlockFace.SOUTH;
-                st.setFacing(p.stairEnd == 0 ? up.getOppositeFace() : up);
+                Stairs st = (Stairs) pal.stairs.createBlockData();
+                st.setFacing(downHall(p).getOppositeFace());
                 c.set(x, top, z, st);
             } else {
-                c.set(x, top, z, BUFF);
+                c.set(x, top, z, pal.wall);
             }
         }
 
@@ -742,34 +690,59 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         }
     }
 
-    /** Benches down the nave, clear of the staircase. */
-    private void hallInterior(Canvas c, Plan p) {
-        for (int x = c.x0; x < c.x0 + 16; x++) {
-            for (int z = c.z0; z < c.z0 + 16; z++) {
-                if (x <= p.hx0() || x >= p.hx1() || z <= p.hz0() || z >= p.hz1()) continue;
-                HallPos h = hallPos(p, x, z);
-                double ao = Math.abs(h.o());
-                int fromEnd = fromStairEnd(p, h), farEnd = p.stairEnd == 0 ? h.aHigh() : h.aLow();
-                if (fromEnd < BAL + FLIGHT + 8 || farEnd < BAL + 4) continue;
-                if (ao > 14 && ao < 15 && Math.floorMod((int) h.along(), 16) < 6) {
-                    Stairs s = (Stairs) Material.SPRUCE_STAIRS.createBlockData();
-                    BlockFace out = p.alongX ? (h.o() < 0 ? BlockFace.NORTH : BlockFace.SOUTH)
-                            : (h.o() < 0 ? BlockFace.WEST : BlockFace.EAST);
-                    s.setFacing(out);   // seated facing the middle
-                    c.set(x, FLOOR0 + 1, z, s);
+    /** Down the nave: benches, pedestals with things from the district's collections, a guide and a label. */
+    private void hallInterior(MuseumCanvas c, Plan p) {
+        MuseumPalette pal = p.pal;
+        BlockFace down = downHall(p);
+        int inner = (p.alongX ? p.sizeX : p.sizeZ) * M - 2;
+        Stairs bench = (Stairs) Material.SPRUCE_STAIRS.createBlockData();
+        for (int fe = BAL + FLIGHT + 10; fe < inner - BAL - 4; fe += 16) {
+            for (int sd = -1; sd <= 1; sd += 2) {
+                // benches facing the middle
+                BlockFace out = p.alongX ? (sd < 0 ? BlockFace.NORTH : BlockFace.SOUTH) : (sd < 0 ? BlockFace.WEST : BlockFace.EAST);
+                bench.setFacing(out);
+                for (int d = 0; d < 6; d++) {
+                    int[] q = hallPoint(p, fe + d, sd * 14 + (sd < 0 ? 0 : -1));
+                    c.set(q[0], FLOOR0 + 1, q[1], bench);
                 }
+                // a pedestal between bench rows, by the arcade
+                int[] q = hallPoint(p, fe + 9, sd * 19 + (sd < 0 ? 0 : -1));
+                Random r = new Random(AlphaMegastructures.hash(q[0], q[1], p.hallSeed, 0x9ED));
+                Theme t = p.themes[r.nextInt(p.themes.length)];
+                Specimen[] pool = MuseumCatalogue.pool(t);
+                Specimen s = pool[r.nextInt(pool.length)];
+                BlockFace face = out.getOppositeFace();
+                c.set(q[0], FLOOR0 + 1, q[1], pal.trim);
+                c.set(q[0], FLOOR0 + 2, q[1], pal.carved);
+                c.set(q[0], FLOOR0 + 3, q[1], MuseumExhibits.specimen(s, face));
+                c.sign(q[0] + face.getModX(), FLOOR0 + 1, q[1] + face.getModZ(), face,
+                        new Subject(MuseumCatalogue.name(s), Topic.SPECIMEN, s.rarity(), 0, t, 0));
             }
         }
+        // the skeleton's label on a post, and a guide on a lectern, by the foot of the staircase
+        int[] post = hallPoint(p, BAL + FLIGHT + 5, 4);
+        c.set(post[0], FLOOR0 + 1, post[1], pal.carved);
+        BlockFace back = down.getOppositeFace();
+        c.sign(post[0] + back.getModX(), FLOOR0 + 1, post[1] + back.getModZ(), back,
+                new Subject(hallSkeletonName(p), Topic.SKELETON, Rarity.EPIC, 0, p.themes[0], 0));
+        int[] lec = hallPoint(p, BAL + FLIGHT + 5, -4);
+        c.lectern(lec[0], FLOOR0 + 1, lec[1], back,
+                new Subject("", Topic.GUIDE, Rarity.COMMON, MuseumCatalogue.gallery(p.hallSeed), p.themes[0], p.hallSeed));
     }
 
-    /** Inner radius of the vault above a column {@code ao} blocks off the center line, or -1. */
-    private static double vaultY(double ao, int half) {
-        double dd = ao + VAULT_R - half, rr = (VAULT_R - 2.0) * (VAULT_R - 2.0) - dd * dd;
-        return rr < 0 ? -1 : ROOF + Math.sqrt(rr);
+    private static String hallSkeletonName(Plan p) {
+        return switch (p.skeleton) {
+            case 0 -> "Blue Whale";
+            case 1 -> "Sauropod";
+            case 2 -> "Ender Dragon";
+            case 3 -> "Theropod";
+            default -> "Mammoth";
+        };
     }
 
     /** The pointed vault over the hall, with a skylight along its ridge; gables with rose windows. */
-    private void hallRoof(Canvas c, Plan p) {
+    private void hallRoof(MuseumCanvas c, Plan p) {
+        MuseumPalette pal = p.pal;
         int half = ((p.alongX ? p.sizeZ : p.sizeX) * M - 2) / 2;   // 31
         for (int x = c.x0; x < c.x0 + 16; x++) {
             for (int z = c.z0; z < c.z0 + 16; z++) {
@@ -783,250 +756,125 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
                     if (gable) {
                         if (y == ROOF || r > VAULT_R) continue;
                         double wy = y + 0.5 - (ROOF + 17), rw = Math.sqrt(h.o() * h.o() + wy * wy);
-                        BlockData b = BUFF;
+                        BlockData b = pal.wall;
                         if (rw < 9) {
                             double ang = Math.atan2(wy, h.o()) / (Math.PI / 4);
                             boolean spoke = Math.abs(ang - Math.rint(ang)) * rw < 0.6 && rw > 1.5;
-                            b = spoke || (rw >= 4 && rw < 5) ? TRIM : GLASS;
+                            b = spoke || (rw >= 4 && rw < 5) ? pal.trim : GLASS;
                         } else if (rw < 10) {
-                            b = BAND;
+                            b = pal.band;
                         }
                         c.set(x, y, z, b);
                     } else if (ao <= half && r >= VAULT_R - 2 && r <= VAULT_R) {
                         boolean rib = Math.floorMod(h.aLow(), 8) == 0;
-                        c.set(x, y, z, ao < 3 ? GLASS : rib ? BAND : r > VAULT_R - 1 ? TRIM : BUFF);
+                        c.set(x, y, z, ao < 3 ? GLASS : rib ? pal.band : r > VAULT_R - 1 ? pal.trim : pal.wall);
                     }
                 }
             }
         }
     }
 
-    /** The hall's skeleton: a whale hanging under the vault, or a sauropod on a plinth. */
-    private void hallSkeleton(Canvas c, Plan p) {
+    /** The hall's skeleton: a whale or a dragon hanging under the vault, or a giant on a plinth. */
+    private void hallSkeleton(MuseumCanvas c, Plan p) {
         int ix0 = p.hx0() + 1, ix1 = p.hx1() - 1, iz0 = p.hz0() + 1, iz1 = p.hz1() - 1;
         int a0 = p.alongX ? ix0 : iz0, a1 = p.alongX ? ix1 : iz1;
         double mid = p.alongX ? (iz0 + iz1 + 1) / 2.0 : (ix0 + ix1 + 1) / 2.0;
         // clear of the staircase and its foot
-        int lo = p.stairEnd == 0 ? a0 + BAL + FLIGHT + 6 : a0 + BAL + 4;
-        int hi = p.stairEnd == 0 ? a1 - BAL - 4 : a1 - BAL - FLIGHT - 6;
+        int lo = p.stairEnd == 0 ? a0 + BAL + FLIGHT + 8 : a0 + BAL + 4;
+        int hi = p.stairEnd == 0 ? a1 - BAL - 4 : a1 - BAL - FLIGHT - 8;
         int u = p.stairEnd == 0 ? -1 : 1;           // head toward the staircase
         double head = u < 0 ? lo + 2 : hi - 2;
-        int ux = p.alongX ? u : 0, uz = p.alongX ? 0 : u;
-        if (p.skeleton == 0) {
-            double len = Math.min(80, hi - lo - 4);
-            double hx = p.alongX ? head : mid, hz = p.alongX ? mid : head;
-            whale(c, hx, FLOOR0 + STORY + 16, hz, -ux, -uz, len, (p.alongX ? p.sizeZ : p.sizeX) * M / 2 - 1);
-        } else {
-            double len = Math.min(72, hi - lo - 8);
-            double hx = p.alongX ? head : mid, hz = p.alongX ? mid : head;
-            // plinth under it
-            double c0 = head - u * -1, c1 = head - u * (len + 1);
-            for (int x = c.x0; x < c.x0 + 16; x++) {
-                for (int z = c.z0; z < c.z0 + 16; z++) {
-                    double a = p.alongX ? x : z, b = (p.alongX ? z : x) + 0.5 - mid;
-                    if (a >= Math.min(c0, c1) && a <= Math.max(c0, c1) && Math.abs(b) < 8) {
-                        c.set(x, FLOOR0 + 1, z, Math.abs(b) > 7 ? DAIS : DAIS_TOP);
-                    }
-                }
-            }
-            sauropod(c, hx, FLOOR0 + 2, hz, -ux, -uz, len);
-        }
-    }
-
-    // ── Skeletons ────────────────────────────────────────────────────────
-
-    /** Draws bones along a body: a = along from the head end, l = to the left, v = up. */
-    private record Body(Canvas c, double hx, double hy, double hz, int ux, int uz) {
-        double x(double a, double l) { return hx + ux * a - uz * l; }
-        double z(double a, double l) { return hz + uz * a + ux * l; }
-
-        void bone(double a0, double l0, double v0, double a1, double l1, double v1, double r, BlockData[] mat) {
-            double x0 = x(a0, l0), z0 = z(a0, l0), x1 = x(a1, l1), z1 = z(a1, l1);
-            double dx = x1 - x0, dy = v1 - v0, dz = z1 - z0;
-            double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            BlockData b = mat.length == 1 ? mat[0]
-                    : mat[Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) >= Math.abs(dz) ? 0 : Math.abs(dy) >= Math.abs(dz) ? 1 : 2];
-            int n = Math.max(1, (int) Math.ceil(len * 2));
-            for (int i = 0; i <= n; i++) {
-                double t = (double) i / n;
-                ball(x0 + dx * t, hy + v0 + dy * t, z0 + dz * t, r, b);
-            }
-        }
-
-        void ball(double x, double y, double z, double r, BlockData b) {
-            if (r < 0.75) {
-                c.set((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z), b);
-                return;
-            }
-            int R = (int) Math.ceil(r);
-            for (int dx = -R; dx <= R; dx++) {
-                for (int dy = -R; dy <= R; dy++) {
-                    for (int dz = -R; dz <= R; dz++) {
-                        if (dx * dx + dy * dy + dz * dz <= r * r) {
-                            c.set((int) Math.floor(x) + dx, (int) Math.floor(y) + dy, (int) Math.floor(z) + dz, b);
+        int ux = p.alongX ? -u : 0, uz = p.alongX ? 0 : -u;   // the body runs away from the staircase
+        double hx = p.alongX ? head : mid, hz = p.alongX ? mid : head;
+        int half = (p.alongX ? p.sizeZ : p.sizeX) * M / 2 - 1;
+        double room = hi - lo - 4;
+        switch (p.skeleton) {
+            case 0 -> MuseumSkeletons.whale(new Body(c, hx, FLOOR0 + STORY + 16, hz, ux, uz), Math.min(80, room), half);
+            case 2 -> MuseumSkeletons.flyer(new Body(c, hx, FLOOR0 + STORY + 14, hz, ux, uz), Math.min(70, room), 26, 0.3, 0.4, 6, false);
+            default -> {
+                double len = switch (p.skeleton) {
+                    case 1 -> Math.min(72, room - 4);
+                    case 3 -> Math.min(48, room - 4);
+                    default -> Math.min(34, room - 4);
+                };
+                int w = p.skeleton == 3 ? 6 : 8;
+                double c0 = head - u * -1, c1 = head - u * (len + 1);
+                for (int x = c.x0; x < c.x0 + 16; x++) {
+                    for (int z = c.z0; z < c.z0 + 16; z++) {
+                        double a = p.alongX ? x : z, b = (p.alongX ? z : x) + 0.5 - mid;
+                        if (a >= Math.min(c0, c1) && a <= Math.max(c0, c1) && Math.abs(b) < w) {
+                            c.set(x, FLOOR0 + 1, z, Math.abs(b) > w - 1 ? p.pal.dais : p.pal.daisTop);
                         }
                     }
                 }
+                Body b = new Body(c, hx, FLOOR0 + 2, hz, ux, uz);
+                if (p.skeleton == 1) MuseumSkeletons.sauropod(b, len);
+                else if (p.skeleton == 3) MuseumSkeletons.theropod(b, len);
+                else MuseumSkeletons.mammoth(b, len);
             }
         }
+    }
 
-        /** A pair of ribs hanging from the spine at (a, v): out {@code w}, down {@code h}. */
-        void ribs(double a, double v, double w, double h, double sweep) {
-            int n = (int) Math.ceil((w + h) * 2.5);
-            for (int side = -1; side <= 1; side += 2) {
-                for (int i = 0; i <= n; i++) {
-                    double th = 0.93 * Math.PI * i / n;
-                    double l = side * w * Math.sin(th), dv = -h * (1 - Math.cos(th)) / 2;
-                    ball(x(a + sweep * (1 - Math.cos(th)) / 2, l), hy + v + dv, z(a + sweep * (1 - Math.cos(th)) / 2, l), 0.5,
-                            BONE[1]);
+    // ── Block entities ───────────────────────────────────────────────────
+
+    /** Writes sign text, lectern books, pot sherds and paintings into a newly generated chunk. */
+    public void applyBlockEntities(Chunk chunk) {
+        World world = chunk.getWorld();
+        long seed = world.getSeed();
+        for (Label l : labels(seed, chunk.getX(), chunk.getZ())) {
+            Subject s = l.subject();
+            Random r = new Random(s.seed() != 0 ? s.seed()
+                    : AlphaMegastructures.hash(l.x() * 31L + l.y(), l.z(), seed, LABEL_SALT));
+            Block b = world.getBlockAt(l.x(), l.y(), l.z());
+            switch (l.kind()) {
+                case SIGN -> {
+                    if (!(b.getState() instanceof Sign sign)) continue;
+                    String[] lines = MuseumCatalogue.sign(s, r);
+                    for (int i = 0; i < 4; i++) sign.getSide(Side.FRONT).line(i, Component.text(lines[i]));
+                    sign.setWaxed(true);
+                    sign.update(true, false);
                 }
-            }
-        }
-
-        /** A chain from (a, v) up to the first solid block. */
-        void hang(double a, double v) {
-            int x = (int) Math.floor(x(a, 0)), z = (int) Math.floor(z(a, 0));
-            for (int y = (int) Math.floor(hy + v) + 1; y < c.maxY && c.air(x, y, z); y++) c.set(x, y, z, CHAIN);
-        }
-    }
-
-    /** A blue whale, head at (hx, hy, hz), body running along (ux, uz); {@code half}: the hall's half width. */
-    private void whale(Canvas c, double hx, double hy, double hz, int ux, int uz, double len, int half) {
-        Body b = new Body(c, hx, hy, hz, ux, uz);
-        double skull = 0.2 * len;
-        // rostrum: a broad plate, wider toward the back
-        for (double a = 0; a <= skull; a += 0.5) {
-            double q = a / skull, w = 1.2 + 4.5 * q, v = 1 - (1 - q) * 1.5;
-            for (double l = -w; l <= w; l += 0.5) b.ball(b.x(a, l), hy + v, b.z(a, l), 0.5, BONE[ux != 0 ? 0 : 2]);
-            if (q > 0.5) for (double l = -w * 0.4; l <= w * 0.4; l += 0.5) b.ball(b.x(a, l), hy + v + 1, b.z(a, l), 0.5, BONE[1]);
-        }
-        // the two lower jaws, bowed outward
-        for (int side = -1; side <= 1; side += 2) {
-            b.bone(skull, side * 5.9, -2.5, skull / 2, side * 5.0, -3.2, 0.6, BONE);
-            b.bone(skull / 2, side * 5.0, -3.2, 0, side * 1.0, -1.5, 0.6, BONE);
-        }
-        // spine
-        double prevA = skull, prevL = 0, prevV = 0;
-        for (double a = skull; a <= len; a += 1) {
-            double s = a / len;
-            double v = 3 * Math.sin(Math.PI * s) - 1.5 * s, l = 2.5 * Math.sin(2 * Math.PI * s) * s;
-            double r = 1.3 * (1 - s) + 0.5;
-            b.bone(prevA, prevL, prevV, a, l, v, r, BONE);
-            if (s < 0.7 && Math.round(a) % 2 == 0) b.bone(a, l, v, a + 0.5, l, v + 1.5 + 2 * (1 - s), 0.5, BONE);
-            if (s >= 0.24 && s <= 0.5 && Math.round(a) % 2 == 0) {
-                double q = (s - 0.24) / 0.26, size = Math.sin(Math.PI * (0.25 + 0.75 * q));
-                b.ribs(a, v, 6.5 * size + 1, 8 * size + 1, 1.5);
-            }
-            prevA = a;
-            prevL = l;
-            prevV = v;
-        }
-        // flippers
-        double fa = 0.27 * len;
-        for (int side = -1; side <= 1; side += 2) {
-            b.bone(fa, side * 4, -2, fa + 2, side * 8, -6, 0.8, BONE);
-            b.bone(fa + 2, side * 8, -6, fa + 5, side * Math.min(11, half - 2), -10, 0.6, BONE);
-        }
-        for (double s : new double[]{0.1, 0.35, 0.6, 0.85}) {
-            double a = s * len;
-            b.hang(a, 3 * Math.sin(Math.PI * s) - 1.5 * s + (s < 0.2 ? 2 : 1.6));
-        }
-    }
-
-    /** A long-necked sauropod standing at y0, head end at (hx, hz); {@code len} nose to tail. */
-    private void sauropod(Canvas c, double hx, double y0, double hz, int ux, int uz, double len) {
-        Body b = new Body(c, hx, y0, hz, ux, uz);
-        double k = len / 70.0, sh = 15 * k;
-        java.util.function.DoubleUnaryOperator spine = s -> {
-            if (s < 0.28) return sh + 16 * k * Math.pow((0.28 - s) / 0.28, 1.2);
-            if (s < 0.55) return sh + 1.5 * k * Math.sin(Math.PI * (s - 0.28) / 0.27);
-            return sh - (sh - 2.5 * k) * Math.pow((s - 0.55) / 0.45, 0.8);
-        };
-        java.util.function.DoubleUnaryOperator side = s -> s > 0.55 ? 4 * k * Math.sin(Math.PI * (s - 0.55) / 0.45) : 0;
-        double pa = 0, pl = 0, pv = spine.applyAsDouble(0);
-        for (double a = 1; a <= len; a += 1) {
-            double s = a / len, v = spine.applyAsDouble(s), l = side.applyAsDouble(s);
-            double r = s < 0.28 ? (0.6 + 0.4 * s / 0.28) * Math.max(1, k * 1.2) : s < 0.55 ? 1.5 * Math.max(0.6, k) : (1.3 - s) * Math.max(0.6, k);
-            b.bone(pa, pl, pv, a, l, v, r, BONE);
-            if (s > 0.3 && s < 0.53 && (int) a % Math.max(2, (int) Math.round(2 * k)) == 0) {
-                b.ribs(a, v, 4.5 * k + 0.8, 8 * k + 0.8, 0);
-            }
-            pa = a;
-            pl = l;
-            pv = v;
-        }
-        // head
-        double hv = spine.applyAsDouble(0);
-        b.bone(0, 0, hv, -2.5 * k - 1, 0, hv - 0.8, Math.max(0.6, 1.2 * k), BONE);
-        b.bone(-0.5, 0, hv - 1.2 * k - 0.5, -2.5 * k - 1, 0, hv - 1.5 * k - 0.5, 0.5, BONE);
-        // legs: hip, knee, foot
-        for (double s : new double[]{0.31, 0.53}) {
-            double a = s * len, v = spine.applyAsDouble(s);
-            double fwd = s < 0.4 ? 1 : -1;
-            for (int sd = -1; sd <= 1; sd += 2) {
-                b.bone(a, sd * 3 * k, v - 1, a + fwd * k, sd * 3.5 * k, 7 * k, Math.max(0.6, 1.1 * k), BONE);
-                b.bone(a + fwd * k, sd * 3.5 * k, 7 * k, a, sd * 3.5 * k, 0, Math.max(0.6, k), BONE);
+                case LECTERN -> {
+                    if (!(b.getState() instanceof Lectern lectern)) continue;
+                    MuseumCatalogue.Book book = MuseumCatalogue.book(s, r);
+                    ItemStack item = new ItemStack(Material.WRITTEN_BOOK);
+                    BookMeta meta = (BookMeta) item.getItemMeta();
+                    meta.setTitle(book.title().length() > 32 ? book.title().substring(0, 32) : book.title());
+                    meta.setAuthor(book.author());
+                    meta.setPages(book.pages());
+                    item.setItemMeta(meta);
+                    lectern.getInventory().setItem(0, item);
+                }
+                case POT -> {
+                    if (!(b.getState() instanceof DecoratedPot pot)) continue;
+                    Material[] sh = MuseumCatalogue.sherds(r);
+                    DecoratedPot.Side[] sides = DecoratedPot.Side.values();
+                    for (int i = 0; i < sides.length && i < sh.length; i++) pot.setSherd(sides[i], sh[i]);
+                    pot.update(true, false);
+                }
+                case PAINTING -> hangPainting(world, l, r);
             }
         }
     }
 
-    /** A two-legged predator, jaws open; {@code len} snout to tail. */
-    private void theropod(Canvas c, double hx, double y0, double hz, int ux, int uz, double len) {
-        Body b = new Body(c, hx, y0, hz, ux, uz);
-        double k = len / 22.0, hh = 8 * k;
-        // skull and open jaw
-        b.bone(0, 0, hh + 2 * k, 4 * k, 0, hh + 3 * k, 1.2 * Math.max(0.7, k), BONE);
-        b.bone(0.3, 0, hh + 2.5 * k, 3.5 * k, 0, hh + 3.8 * k, 0.5, BONE);
-        b.bone(4 * k, 0, hh + 1.5 * k, 0.5, 0, hh - 0.5 * k, 0.6, BONE);
-        // neck
-        b.bone(4.5 * k, 0, hh + 2.5 * k, 6 * k, 0, hh + 1 * k, 0.9, BONE);
-        // back and tail
-        double pa = 6 * k, pl = 0, pv = hh + k;
-        for (double a = 6 * k + 1; a <= len; a += 1) {
-            double s = a / len;
-            double v = s < 0.48 ? hh + k - 0.5 * k * (s - 0.27) / 0.21 : hh + 0.5 * k - 2.5 * k * (s - 0.48) / 0.52;
-            double l = s > 0.48 ? 1.5 * k * Math.sin(Math.PI * (s - 0.48) / 0.52) : 0;
-            b.bone(pa, pl, pv, a, l, v, s < 0.5 ? 0.9 : 0.6, BONE);
-            if (s > 0.27 && s < 0.46) b.ribs(a, v, 2.2 * k, 3.5 * k, 0.5);
-            pa = a;
-            pl = l;
-            pv = v;
-        }
-        // legs: hip, knee forward, ankle back, toes forward
-        double la = 0.45 * len;
-        for (int sd = -1; sd <= 1; sd += 2) {
-            b.bone(la, sd * 1.8 * k, hh, la - 2 * k, sd * 2.2 * k, hh - 4 * k, 0.9, BONE);
-            b.bone(la - 2 * k, sd * 2.2 * k, hh - 4 * k, la + 1.5 * k, sd * 2.2 * k, 1.5 * k, 0.7, BONE);
-            b.bone(la + 1.5 * k, sd * 2.2 * k, 1.5 * k, la - 1.5 * k, sd * 2.2 * k, 0, 0.5, BONE);
-            // little arms
-            double aa = 0.28 * len;
-            b.bone(aa, sd * 1.5 * k, hh, aa - 1.2 * k, sd * 1.8 * k, hh - 1.5 * k, 0.5, BONE);
-        }
-    }
+    private static List<Art> arts;
 
-    /** A mammoth with curling ivory tusks; {@code len} tusk tip to tail. */
-    private void mammoth(Canvas c, double hx, double y0, double hz, int ux, int uz, double len) {
-        Body b = new Body(c, hx, y0, hz, ux, uz);
-        double k = len / 18.0, sh = 9 * k, h0 = 5.5 * k;   // h0: where the skull is, along
-        BlockData[] ivory = {IVORY};
-        for (int sd = -1; sd <= 1; sd += 2) {
-            b.bone(h0 + k, sd * 1.3 * k, sh - k, h0 - 3 * k, sd * 2.5 * k, 3 * k, 0.6, ivory);
-            b.bone(h0 - 3 * k, sd * 2.5 * k, 3 * k, h0 - 5.5 * k, sd * 1.5 * k, 6 * k, 0.6, ivory);
-            b.bone(h0 - 5.5 * k, sd * 1.5 * k, 6 * k, h0 - 5 * k, sd * 0.5 * k, 8 * k, 0.5, ivory);
+    private static void hangPainting(World world, Label l, Random r) {
+        if (arts == null) {
+            List<Art> all = new ArrayList<>();
+            RegistryAccess.registryAccess().getRegistry(RegistryKey.PAINTING_VARIANT).forEach(all::add);
+            arts = all;
         }
-        b.ball(b.x(h0 + 1.5 * k, 0), y0 + sh + 1, b.z(h0 + 1.5 * k, 0), 1.8 * k, BONE[1]);
-        double pa = h0 + 3 * k, pl = 0, pv = sh + k;
-        for (double a = pa + 1; a <= len; a += 1) {
-            double s = (a - h0) / (len - h0);
-            double v = s < 0.8 ? sh + 1.5 * k * Math.sin(Math.PI * s / 0.8) + k * (1 - s) : sh - 4 * k * (s - 0.8) / 0.2;
-            b.bone(pa, pl, pv, a, 0, v, s < 0.8 ? 1.0 : 0.5, BONE);
-            if (s > 0.1 && s < 0.7 && Math.round(a) % 2 == 0) b.ribs(a, v, 3 * k, 5 * k, 0);
-            pa = a;
-            pv = v;
-        }
-        for (double s : new double[]{0.15, 0.7}) {
-            double a = h0 + s * (len - h0);
-            for (int sd = -1; sd <= 1; sd += 2) b.bone(a, sd * 2 * k, sh - 1, a, sd * 2.2 * k, 0, 0.9 * Math.max(0.8, k), BONE);
+        List<Art> fits = arts.stream().filter(a -> a.getBlockWidth() <= l.w() && a.getBlockHeight() <= l.h()).toList();
+        if (fits.isEmpty()) return;
+        Art art = fits.get(r.nextInt(fits.size()));
+        try {
+            world.spawn(new Location(world, l.x(), l.y(), l.z()), Painting.class, pt -> {
+                pt.setFacingDirection(l.face(), true);
+                pt.setArt(art, true);
+            });
+        } catch (IllegalArgumentException ignored) {
+            // no room for it here
         }
     }
 
@@ -1041,12 +889,14 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
     @Override
     public Location getFixedSpawnLocation(World world, Random random) {
         Plan p = plan(world.getSeed(), 0, 0);
-        int ix0 = p.hx0() + 1, ix1 = p.hx1() - 1, iz0 = p.hz0() + 1, iz1 = p.hz1() - 1;
-        int foot = BAL + FLIGHT + 3;
-        double along = p.stairEnd == 0 ? (p.alongX ? ix0 : iz0) + foot : (p.alongX ? ix1 : iz1) - foot;
-        double mid = p.alongX ? (iz0 + iz1 + 1) / 2.0 : (ix0 + ix1 + 1) / 2.0;
-        float yaw = p.alongX ? (p.stairEnd == 0 ? -90 : 90) : (p.stairEnd == 0 ? 0 : 180);
-        return p.alongX ? new Location(world, along + 0.5, FLOOR0 + 1, mid, yaw, 0)
-                : new Location(world, mid, FLOOR0 + 1, along + 0.5, yaw, 0);
+        int[] q = hallPoint(p, BAL + FLIGHT + 3, 0);
+        BlockFace d = downHall(p);
+        float yaw = switch (d) {
+            case SOUTH -> 0;
+            case WEST -> 90;
+            case NORTH -> 180;
+            default -> -90;
+        };
+        return new Location(world, q[0] + 0.5, FLOOR0 + 1, q[1] + 0.5, yaw, 0);
     }
 }

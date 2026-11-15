@@ -38,6 +38,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.level.LevelRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.BackroomsListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level101SignListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level142Listener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1882Listener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1WaterDripListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level0LecternListener;
@@ -221,6 +222,7 @@ public class BackroomsPlugin {
         Bukkit.getPluginManager().registerEvents(
                 new Level101SignListener(plugin, loadLevel101SignConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new Level142Listener(plugin), plugin);
+        Bukkit.getPluginManager().registerEvents(new Level1882Listener(plugin), plugin);
 
         // 7. Apply NMS dimension types and create worlds
         levelRegistry.setDimensionTypeHelper(new DimensionTypeHelper(plugin.getLogger()));

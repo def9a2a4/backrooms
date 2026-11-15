@@ -5,8 +5,10 @@ CATALOG lists them with their Mace type, frequency and how many of each to draw 
 
 from dataclasses import dataclass
 
-from parts import (Room, Shell, bench, chimney, flat, furnish, front_door, gable, hang, hip, ladder,
-                   lamp_post, look, mat, pick, roof, shell, shed, table, tree, windows)
+from parts import (FULL, LEAF, Room, Shell, bench, buttresses, chimney, cornice, door_dress, edge_points, flat,
+                   furnish, front_door, gable, hang, hang_chain, hip, ladder, lamp_post, look, mat, pick, roof,
+                   roof_kind, roof_levels, draw_roof, shell, shed, slab_of, solid, spire, stairs_of, table, terrace,
+                   tree, trim_of, wall_of, window_dress, windows)
 from schem import GROUND, LEFT, OPPOSITE, PATH, RIGHT, STEP, TREASURE, WALL, WOOL, Build
 
 
@@ -54,51 +56,89 @@ def yard_cells(b, z_max):
 # ── Houses ────────────────────────────────────────────────────────────────
 
 def house_body(b, rng, st, s, lk, items_by_floor, sign=None, cellar=False, kind=None, door_x=None):
-    """A whole house in the shell: walls, door, windows, ladder, rooms, roof, chimney."""
-    shell(b, s, lk)
+    """A whole house in the shell: walls, door, windows, ladder, rooms, roof, chimney. A
+    timbered house with a yard in front may overhang the street upstairs (a jetty)."""
+    jetty = lk.jetty and lk.timbered and s.floors >= 2 and s.z0 >= 2
+    up = Shell(s.x0, s.z0 - 1, s.x1, s.z1, s.floors, s.h) if jetty else s
+    shell(b, up, lk)
+    if jetty:
+        jetty_front(b, s, up, lk)
     dx = front_door(b, s, lk, door_x if door_x is not None else rng.randint(s.x0 + 1, s.x1 - 1))
-    skip = {(dx, s.z0), (dx - 1, s.z0), (dx + 1, s.z0)}
+    skip = {(dx, s.z0), (dx - 1, s.z0), (dx + 1, s.z0), (dx, up.z0), (dx - 1, up.z0), (dx + 1, up.z0)}
     lx, lz = (s.x0 + 1, s.z1 - 1) if rng.random() < 0.5 else (s.x1 - 1, s.z1 - 1)
-    windows(b, s, lk, skip=skip)
-    if s.floors > 1:
-        ladder(b, lx, lz, 1, (s.floors - 1) * s.h, "north")
+    if kind is None:
+        kind = roof_kind(rng, st, up)
+    flat_roof = kind == "flat"
+    if s.floors > 1 or flat_roof:
+        ladder(b, lx, lz, 1, s.top - 1 if flat_roof else (s.floors - 1) * s.h, "north", support=lk.infill)
+    if jetty:
+        windows(b, s, lk, sides=("north",), skip=skip, floors=[0])
+        windows(b, up, lk, sides=("north",), skip=skip, floors=range(1, s.floors))
+        windows(b, up, lk, sides=("south", "east", "west"), skip=skip | {(s.x0, s.z0), (s.x1, s.z0)})
+    else:
+        windows(b, s, lk, skip=skip)
+    door_dress(b, rng, st, lk, dx, 1, s.z0, torches=not sign)
+    if lk.buttress:
+        buttresses(b, s, lk, sides=("east", "west"))
     for k in range(s.floors):
         y = k * s.h + 1
+        r = s if k == 0 else up
         keep = {(dx, s.z0 + 1), (lx, lz), (lx, lz - 1)}
-        room = Room(b, s.x0 + 1, s.z0 + 1, s.x1 - 1, s.z1 - 1, y, keep)
+        room = Room(b, r.x0 + 1, r.z0 + 1, r.x1 - 1, r.z1 - 1, y, keep)
         items = items_by_floor[min(k, len(items_by_floor) - 1)]
         if k == 0 and s.x1 - s.x0 >= 6 and s.z1 - s.z0 >= 5:
             tx, tz = (s.x0 + s.x1) // 2, (s.z0 + s.z1) // 2 + 1
-            if room.free(tx, tz) and (tx, tz) not in keep:
+            if room.free(tx, tz) and (tx, tz) not in keep and abs(tx - lx) + abs(tz - lz) > 2:
                 table(b, tx, y, tz, lk.wood, chairs=("east", "west"))
                 for c in ((tx, tz), (tx - 1, tz), (tx + 1, tz)):
                     room.keep_out(*c)
         furnish(room, rng, st, lk, items, carpet=pick(rng, st.beds) if rng.random() < 0.4 else None)
-    top = roof(b, rng, st, s, lk, kind=kind)
+    top = roof(b, rng, st, up, lk, kind=kind, hatch=(lx, lz) if flat_roof else None)
     if rng.random() < 0.6:
         cx = s.x1 - 1 if lx == s.x0 + 1 else s.x0 + 1
         chimney(b, cx, s.z1, 1, top + 1, pick(rng, ("bricks", lk.found)))
     if cellar:
         under(b, rng, s, lk)
     if sign:
-        b.sign(dx + 1, 2, s.z0 - 1, "north", sign, lk.wood)
+        sx = dx + 1 if solid(b, dx + 1, 2, s.z0) else dx - 1
+        b.sign(sx, 2, s.z0 - 1, "north", sign, lk.wood)
     return dx
+
+
+def jetty_front(b, s, up, lk):
+    """Moves the ground floor's front wall a block back under the upper storeys, which rest on
+    a beam and brackets over the street."""
+    z = up.z0
+    b.clear(s.x0, 1, z, s.x1, s.h - 1, z)
+    b.fill(s.x0, 0, z, s.x1, 0, z, GROUND)
+    b.fill(s.x0, 0, s.z0, s.x1, 0, s.z0, lk.found)
+    b.fill(s.x0, 1, s.z0, s.x1, 1, s.z0, lk.found)
+    b.fill(s.x0, 2, s.z0, s.x1, s.h - 1, s.z0, lk.infill)
+    for x in edge_points(s.x0, s.x1, lk.post_every):
+        b.fill(x, 2, s.z0, x, s.h - 1, s.z0, lk.log, axis="y")
+        if b.empty(x, s.h - 1, z):
+            b.set(x, s.h - 1, z, f"{lk.wood}_stairs", facing="south", half="top", waterlogged="false")
+    for x in (s.x0, s.x1):   # the side walls' corner posts come down to the ground floor's front
+        b.set(x, s.h, z, lk.log, axis="x")
 
 
 def under(b, rng, s, lk):
     """A cellar under the house, down a ladder by the door."""
     x0, z0, x1, z1 = s.x0, s.z0, s.x1, s.z1
+    hx, hz = x0 + 1, z0 + 1
+    if not b.empty(hx, 1, hz) or not b.empty(hx, 2, hz) or b.get(hx + 1, 1, hz).endswith("_door"):
+        hx = x1 - 1
+        if not b.empty(hx, 1, hz) or not b.empty(hx, 2, hz) or b.get(hx - 1, 1, hz).endswith("_door"):
+            return
     b.fill(x0, -4, z0, x1, -1, z1, lk.found)
     b.clear(x0 + 1, -3, z0 + 1, x1 - 1, -1, z1 - 1)
-    hx, hz = x0 + 1, z0 + 1
-    if not b.empty(hx, 1, hz):
-        return
-    ladder(b, hx, hz, -3, 0, "south")
-    b.set(hx, 1, hz, "air")
+    ladder(b, hx, hz, -3, -1, "south")
+    b.set(hx, 0, hz, f"{lk.wood}_trapdoor", facing="north", half="top", open="false", powered="false",
+          waterlogged="false")
     for x in range(x0 + 2, x1):
         if (x + z1) % 2 == 0:
             b.barrel(x, -3, z1 - 1, [(pick(rng, ("potato", "carrot", "apple", "beetroot", "wheat")), rng.randint(4, 16))])
-    b.chest(x1 - 1, -3, z0 + 1, "west")
+    b.chest(x1 - 1 if hx == x0 + 1 else x0 + 1, -3, z0 + 1, "west" if hx == x0 + 1 else "east")
     b.set((x0 + x1) // 2, -1, (z0 + z1) // 2, "lantern", hanging="true", waterlogged="false")
 
 

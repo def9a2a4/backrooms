@@ -62,7 +62,7 @@ final class MuseumPalette {
 
     static final MuseumPalette[] ALL = {
             // Waterhouse's buff and blue-grey terracotta (Hintze Hall itself)
-            new MuseumPalette("terracotta", 5, Arch.ROUND, SMOOTH_SANDSTONE, CUT_SANDSTONE, CHISELED_SANDSTONE,
+            new MuseumPalette("terracotta", 3, Arch.ROUND, SMOOTH_SANDSTONE, CUT_SANDSTONE, CHISELED_SANDSTONE,
                     LIGHT_BLUE_TERRACOTTA, LIGHT_BLUE_TERRACOTTA, SMOOTH_SANDSTONE, WHITE_TERRACOTTA, TERRACOTTA,
                     DARK_OAK_PLANKS, DARK_OAK_WALL_SIGN, POLISHED_DEEPSLATE, SMOOTH_STONE, false),
             // a neoclassical marble gallery

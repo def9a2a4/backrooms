@@ -1269,7 +1269,7 @@ def almshouse(rng, st):
     uw = 4
     W, D = n * uw + 1, 6
     yard = 4
-    b = new("Almshouse", "city", W + 2, yard + D + 1)
+    b = new("Almshouse", "city", W + 2, W + 2)   # square: allotments behind
     lk = look(rng, st)
     s = Shell(1, yard, W, yard + D - 1, 1)
     shell(b, s, lk)
@@ -1282,9 +1282,8 @@ def almshouse(rng, st):
         b.set(dx, 0, s.z0, lk.floor)
         b.door(dx, 1, s.z0, "south", lk.wood, hinge="left" if i % 2 == 0 else "right")
         b.set(wx, 2, s.z0, lk.pane if lk.pane != "air" else "glass_pane")
-        b.set(ux0 + 2, 2, s.z1, lk.pane if lk.pane != "air" else "glass_pane")
         b.path(dx, 0, dx, s.z0 - 1)
-        room = Room(b, ux0 + 1, s.z0 + 1, ux0 + 3, s.z1 - 1, 1, {(dx, s.z0 + 1)})
+        room = Room(b, ux0 + 1, s.z0 + 1, ux0 + 3, s.z1 - 1, 1, {(dx, s.z0 + 1), (ux0 + 2, s.z1 - 1)})
         furnish(room, rng, st, lk, ["bed", "chest", "furnace", "plant"])
         b.sign(wx, 2, s.z0 - 1, "north", ["2[surnames]" if rng.random() < 0.5 else "Vacant", "", "", ""], lk.wood)
     # the veranda: posts, a lean-to roof, benches between the doors
@@ -1317,6 +1316,28 @@ def almshouse(rng, st):
         if i % 2 == 0:
             chimney(b, 1 + i * uw, s.z1 - 1, s.top, s.top + 4, pick(rng, ("bricks", lk.found)))
     flowers(b, rng, st, [(x, z) for x in range(b.w) for z in range(0, vz - 1)], 0.35)
+    # an allotment behind each dwelling, a path down the middle, a shared water butt
+    az0, az1 = s.z1 + 2, b.l - 2
+    crop = pick(rng, st.crops)
+    for i in range(n):
+        ux0 = 1 + i * uw
+        for x in range(ux0 + 1, ux0 + uw):
+            for z in range(az0 + 1, az1):
+                if (z - az0) % 3 == 0:
+                    b.set(x, 0, z, "water", level="0")
+                elif rng.random() < 0.8:
+                    farmland(b, x, z, crop if rng.random() < 0.7 else pick(rng, st.crops), rng)
+        for z in range(az0, az1 + 1):
+            b.set(ux0, 0, z, "coarse_dirt")
+    for x in range(s.x0, s.x1 + 1):
+        b.set(x, 1, az1, f"{lk.wood}_fence", **WL)
+    b.path(s.x0, az0 - 1, s.x1, az0 - 1)
+    b.set(s.x1, 1, az0, "water_cauldron", level="3")
+    b.set(s.x0, 1, az0, "composter", level="4")
+    for i in range(n):   # back doors
+        bx = 1 + i * uw + 2
+        b.door(bx, 1, s.z1, "north", lk.wood)
+        b.set(bx, 0, s.z1, lk.floor)
     return b
 
 
@@ -1380,4 +1401,306 @@ def pottery(rng, st):
             b.set(x, y, z, "water_cauldron", level="2")
     gable(b, s.x0, s.z0, s.x1, s.z1, s.top, pick(rng, st.roofs), along="z", fill=lk.infill, pitch=1)
     b.sign(dx + 1, 2, s.z0 - 1, "north", ["2[surnames]~Pottery", "", "", ""], lk.wood)
+    return b
+
+
+# ── Ashen ─────────────────────────────────────────────────────────────────
+
+@gen("mausoleum", freq="rare", n=3, styles=("ashen",))
+def mausoleum(rng, st):
+    """A family tomb: a pillared porch under a pediment, coffins inside, a crypt below."""
+    W, D = rng.choice((7, 9)), rng.choice((8, 10))
+    b = new("Mausoleum", "city", W + 4, D + 6)
+    wall = pick(rng, ("polished_blackstone_bricks", "deepslate_bricks", "deepslate_tiles"))
+    trim = pick(rng, ("polished_blackstone", "polished_deepslate", "chiseled_tuff"))
+    tm = mat_of(pick(rng, ("polished_blackstone", "polished_deepslate")))
+    x0, x1, z0, z1 = 2, W + 1, 4, D + 3
+    mx = (x0 + x1) // 2
+    b.fill(x0 - 1, 0, 1, x1 + 1, 0, z1 + 1, trim)
+    for x in range(x0 - 1, x1 + 2):
+        stair(b, x, 1, 1, tm.stairs, "south")
+    b.fill(x0 - 1, 1, 2, x1 + 1, 1, z1 + 1, trim)
+    b.ring(x0, z0, x1, z1, 2, 6, wall)
+    for x, z in ((x0, z0), (x1, z0), (x0, z1), (x1, z1)):
+        b.fill(x, 2, z, x, 6, z, trim)
+    for x in (x0, x0 + 2, x1 - 2, x1):   # the porch columns
+        b.fill(x, 2, 2, x, 5, 2, "polished_basalt", axis="y")
+    b.fill(x0, 6, 2, x1, 6, z0, trim)
+    gable(b, x0, 2, x1, z1, 6, mat_of(wall), along="z", fill=wall, pitch=1, over=1, end_over=0)
+    b.door(mx, 2, z0, "south", material="iron_door")
+    b.fill(mx - 1, 2, z0 - 1, mx + 1, 2, z0 - 1, "air")
+    for x in (mx - 1, mx + 1):
+        b.set(x, 4, z0, "chiseled_polished_blackstone")
+    b.path(mx, 0, mx, 0)
+    b.sign(mx, 5, z0 - 1, "north", ["2The [surnames]~Family~[epitaph]", "", "", ""], "dark_oak")
+    for x in (x0 + 1, x1 - 1):
+        b.set(x, 2, 3, "soul_lantern", hanging="false", **WL)
+    # inside: coffins along the walls with candles, an altar at the back
+    for z in range(z0 + 2, z1 - 1, 2):
+        for x in (x0 + 1, x1 - 1):
+            b.set(x, 2, z, wall)
+            slab(b, x, 3, z, tm.slab)
+            candle(b, x, 4, z, rng.randint(1, 3), "black" if rng.random() < 0.5 else None)
+    b.set(mx, 2, z1 - 1, "chiseled_polished_blackstone")
+    candle(b, mx, 3, z1 - 1, 4, "white")
+    b.set(mx, 2, z1 - 2, "soul_lantern", hanging="false", **WL)
+    hanging(b, mx, 5, (z0 + z1) // 2, st)
+    # the crypt: a ladder down through a hatch
+    b.fill(x0, -5, z0, x1, -1, z1, wall)
+    b.clear(x0 + 1, -4, z0 + 1, x1 - 1, -1, z1 - 1)
+    b.fill(x0 + 1, 0, z0 + 1, x1 - 1, 1, z1 - 1, trim)
+    hx, hz = mx, z0 + 2
+    b.set(hx, 1, hz, "air")
+    b.set(hx, 2, hz, "dark_oak_trapdoor", facing="south", half="bottom", open="false", powered="false", **WL)
+    ladder(b, hx, hz, -4, 1, "north")
+    b.set(hx, -4, hz - 1, wall)
+    for z in range(z0 + 2, z1, 2):   # niches
+        for x in (x0, x1):
+            b.set(x, -3, z, "air")
+            candle(b, x, -3, z, rng.randint(1, 4))
+    b.chest(mx, -4, z1 - 1, "north", TREASURE if rng.random() < 0.5 else 3)
+    hanging(b, mx, -2, (z0 + z1) // 2 + 1, st)
+    return b
+
+
+@gen("lamplighter", freq="average", n=3, styles=("ashen",))
+def lamplighter(rng, st):
+    """The lamplighter's hut: spare lanterns on a rack, ladders on the wall, a tall lamp outside."""
+    b = new("Lamplighter's Hut", "city", 10, 10)
+    lk = look(rng, st)
+    s = Shell(1, 3, 6, 8, 1)
+    shell(b, s, lk)
+    dx = front_door(b, s, lk, 3)
+    windows(b, s, lk, sides=("north", "west"), skip={(dx, s.z0)}, every=2)
+    room = Room(b, s.x0 + 1, s.z0 + 1, s.x1 - 1, s.z1 - 1, 1, {(dx, s.z0 + 1)})
+    furnish(room, rng, st, lk, ["bed", "chest", "barrel", lambda b, x, y, z, f: (slab(b, x, y, z, f"{lk.wood}_slab", "top"),
+                                                                                 light(b, x, y + 1, z, st)), "furnace"])
+    shed(b, s.x0, s.z0, s.x1, s.z1, s.top, pick(rng, st.roofs), high="south")
+    chimney(b, s.x1 - 1, s.z1, s.top, s.top + 5, lk.found)
+    # the rack of spare lanterns on the east side
+    rx = s.x1 + 2
+    b.fill(rx, 1, s.z0, rx, 3, s.z0, f"{lk.wood}_fence", **WL)
+    b.fill(rx, 1, s.z1, rx, 3, s.z1, f"{lk.wood}_fence", **WL)
+    for z in range(s.z0, s.z1 + 1):
+        b.set(rx, 4, z, lk.log, axis="z")
+    for z in range(s.z0 + 1, s.z1):
+        if rng.random() < 0.8:
+            hanging(b, rx, 3, z, st)
+    ladder(b, s.x1 + 1, s.z0 + 1, 1, 3, "east")
+    ladder(b, s.x1 + 1, s.z0 + 3, 1, 2, "east")
+    lamp_post(b, 8, 1, st, lk.wood, h=5)
+    b.barrel(rx - 1, 1, s.z1, [("candle", rng.randint(4, 16))])
+    b.sign(dx + 1, 2, s.z0 - 1, "north", ["2[lamplighter]", "", "", ""], lk.wood)
+    return b
+
+
+@gen("soul_shrine", freq="average", n=3, styles=("ashen",))
+def soul_shrine(rng, st):
+    """A square around a basin of soul fire under a canopy, candles and benches about it."""
+    S = rng.choice((9, 11))
+    b = new("Soul Shrine", "city", S, S)
+    b.fill(0, 0, 0, S - 1, 0, S - 1, PATH)
+    c = S // 2
+    stone_ = pick(rng, ("polished_blackstone", "polished_deepslate", "polished_blackstone_bricks"))
+    b.fill(c - 2, 0, c - 2, c + 2, 0, c + 2, stone_)
+    for dx, dz in circle(1) + [(0, 0)]:
+        b.set(c + dx, 0, c + dz, "soul_soil")
+        b.set(c + dx, 1, c + dz, "soul_fire")
+    b.ring(c - 2, c - 2, c + 2, c + 2, 1, 1, wall_of(stone_))
+    for dx, dz in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+        b.set(c + dx, 1, c + dz, wall_of(stone_), **WL)
+        b.set(c + dx, 0, c + dz, stone_)
+    for x, z in ((c - 2, c - 2), (c + 2, c - 2), (c - 2, c + 2), (c + 2, c + 2)):
+        b.fill(x, 1, z, x, 5, z, "polished_basalt", axis="y")
+    b.ring(c - 2, c - 2, c + 2, c + 2, 6, 6, stone_)
+    top = hip(b, c - 2, c - 2, c + 2, c + 2, 7, mat_of(pick(rng, ("deepslate_tiles", "polished_blackstone_bricks"))), over=1)
+    for y in (5, 4):
+        b.set(c, y, c, "iron_chain", axis="y", **WL)
+    hanging(b, c, 3, c, st)
+    b.fill(c - 1, 6, c - 1, c + 1, 6, c + 1, "air")
+    for x, z in ((1, 1), (S - 2, 1), (1, S - 2), (S - 2, S - 2)):
+        b.set(x, 1, z, stone_)
+        light(b, x, 2, z, st)
+    for i in range(3):   # benches facing the fire
+        stair(b, c - 1 + i, 1, S - 2, "dark_oak_stairs", "south")
+        stair(b, 1, 1, c - 1 + i, "dark_oak_stairs", "west")
+        stair(b, S - 2, 1, c - 1 + i, "dark_oak_stairs", "east")
+    for x, z in ((c - 3, c - 3), (c + 3, c + 3), (c + 3, c - 3), (c - 3, c + 3)):
+        if 0 < x < S - 1 and 0 < z < S - 1:
+            candle(b, x, 1, z, rng.randint(2, 4), pick(rng, ("black", "gray", "white", None)))
+    b.sign(c, 1, c - 3, "north", ["2[shrine]", "", "", ""], "dark_oak", wall=False)
+    return b
+
+
+# ── Ochre ─────────────────────────────────────────────────────────────────
+
+@gen("domed_house", freq="common", n=4, styles=("ochre",))
+def domed_house(rng, st):
+    """A white cube of a house with a dome over its main room and a roof terrace beside it."""
+    W, D = rng.choice((7, 9)), rng.choice((7, 9))
+    yard = rng.randint(1, 3)
+    b = new("Domed House", "city", W + 2, yard + D + 1)
+    lk = look(rng, st, timbered=False)
+    lk.infill = pick(rng, ("white_terracotta", "calcite", "smooth_sandstone", "white_concrete"))
+    lk.found = pick(rng, st.found)
+    floors = rng.choice((1, 2))
+    s = Shell(1, yard, W, yard + D - 1, floors)
+    shell(b, s, lk)
+    mx = (s.x0 + s.x1) // 2
+    dx = front_door(b, s, lk, mx)
+    stair(b, dx - 1, 3, s.z0 - 1, mat_of(lk.found, "smooth_sandstone").stairs, "east", "top")
+    stair(b, dx + 1, 3, s.z0 - 1, mat_of(lk.found, "smooth_sandstone").stairs, "west", "top")
+    windows(b, s, lk, skip={(dx, s.z0)}, every=2)
+    lx = s.x0 + 1
+    for k in range(floors):
+        room = Room(b, s.x0 + 1, s.z0 + 1, s.x1 - 1, s.z1 - 1, k * s.h + 1, {(dx, s.z0 + 1), (lx, s.z1 - 1), (lx, s.z1 - 2)})
+        furnish(room, rng, st, lk, pick(rng, HOUSE_ONE) if floors == 1 else (pick(rng, HOUSE_GROUND) if k == 0 else pick(rng, HOUSE_UPPER)),
+                carpet=pick(rng, ("orange", "red", "yellow", "cyan")) if rng.random() < 0.5 else None)
+    ladder(b, lx, s.z1 - 1, 1, s.top, "north")
+    flat(b, s.x0, s.z0, s.x1, s.z1, s.top, lk.infill)
+    b.set(lx, s.top, s.z1 - 1, "ladder", facing="north", **WL)
+    # the dome over the front half, a pergola and plants on the back half
+    r = (W - 1) // 2 - 1
+    dz = s.z0 + r + 1
+    dome(b, mx, dz, s.top, r, pick(rng, ("white_terracotta", "light_blue_terracotta", "cyan_terracotta", "calcite")))
+    b.set(mx, s.top + r + 1, dz, "lightning_rod", facing="up", powered="false", **WL)
+    for x in range(s.x0 + 1, s.x1):
+        if rng.random() < 0.3 and b.empty(x, s.top + 1, s.z1 - 1) and x != lx:
+            b.set(x, s.top + 1, s.z1 - 1, potted(rng))
+    if s.z1 - dz - r > 1:
+        light(b, s.x1 - 1, s.top + 1, s.z1 - 1, st)
+    hang(b, mx, dz, (floors - 1) * s.h + 1, st)
+    flowers(b, rng, st, yard_cells(b, yard), 0.3)
+    if rng.random() < 0.5:
+        b.sign(dx + 1, 2, s.z0 - 1, "north", "[house]", lk.wood)
+    return b
+
+
+GLAZED = ("cyan_glazed_terracotta", "blue_glazed_terracotta", "light_blue_glazed_terracotta", "orange_glazed_terracotta",
+          "white_glazed_terracotta", "yellow_glazed_terracotta")
+
+
+@gen("riad", freq="average", n=3, styles=("ochre",))
+def riad(rng, st):
+    """Two storeys of rooms about a tiled court with a fountain, a gallery round the upper floor."""
+    S = rng.choice((19, 21))
+    b = new("Riad", "city", S, S)
+    lk = look(rng, st, timbered=False)
+    lk.infill = pick(rng, ("terracotta", "orange_terracotta", "smooth_sandstone", "white_terracotta"))
+    s = Shell(1, 1, S - 2, S - 2, 2)
+    shell(b, s, lk)
+    c = S // 2
+    ci = 2   # the court's half width
+    gx0, gx1 = c - ci - 1, c + ci + 1   # the gallery ring round it
+    b.fill(gx0, 1, gx0, gx1, s.top, gx1, "air")
+    b.fill(gx0, s.h, gx0, gx1, s.h, gx1, lk.floor)
+    b.fill(c - ci, s.h, c - ci, c + ci, s.h, c + ci, "air")
+    b.ring(gx0 - 1, gx0 - 1, gx1 + 1, gx1 + 1, 1, s.top, lk.infill)
+    tile = pick(rng, GLAZED)
+    for x in range(gx0, gx1 + 1):
+        for z in range(gx0, gx1 + 1):
+            b.set(x, 0, z, tile, facing=("north", "east", "south", "west")[(x % 2) * 2 + (z % 2)])
+    for x, z in ((gx0, gx0), (gx1, gx0), (gx0, gx1), (gx1, gx1)):   # gallery columns
+        b.fill(x, 1, z, x, s.h - 1, z, lk.found)
+        b.fill(x, s.h + 1, z, x, s.top - 1, z, lk.found)
+    for i in range(c - ci, c + ci + 1):   # railing round the gallery
+        for x, z in ((i, c - ci), (i, c + ci), (c - ci, i), (c + ci, i)):
+            b.set(x, s.h + 1, z, f"{lk.wood}_fence", **WL)
+    b.clear(c - ci + 1, s.h + 1, c - ci + 1, c + ci - 1, s.h + 1, c + ci - 1)
+    # arches from the rooms into the court
+    for i in (c - 1, c, c + 1):
+        for (x, z) in ((i, gx0 - 1), (i, gx1 + 1), (gx0 - 1, i), (gx1 + 1, i)):
+            if i == c:
+                b.clear(x, 1, z, x, 2, z)
+                b.clear(x, s.h + 1, z, x, s.h + 2, z)
+            else:
+                b.set(x, 2, z, lk.pane if lk.pane != "air" else "glass_pane")
+    # the fountain
+    b.ring(c - 1, c - 1, c + 1, c + 1, 1, 1, pick(rng, ("smooth_sandstone_slab", "cut_sandstone_slab")), type="bottom", **WL)
+    b.set(c, 0, c, "water", level="0")
+    b.set(c, 1, c, "water", level="0")
+    b.ring(c - 1, c - 1, c + 1, c + 1, 0, 0, "smooth_sandstone")
+    for x, z in ((gx0 + 1, gx0 + 1), (gx1 - 1, gx1 - 1), (gx1 - 1, gx0 + 1), (gx0 + 1, gx1 - 1)):
+        b.set(x, 1, z, "potted_flowering_azalea_bush")
+    # the street door, a passage to the court
+    dx = front_door(b, s, lk, c)
+    b.set(dx, 3, s.z0 - 1, "air")
+    windows(b, s, lk, sides=("north",), skip={(dx, s.z0)}, floors=[1], every=2)
+    windows(b, s, lk, sides=("east", "west", "south"), floors=[1], every=3)
+    b.fill(c - 1, 1, s.z0 + 1, c - 1, 3, gx0 - 2, lk.infill)
+    b.fill(c + 1, 1, s.z0 + 1, c + 1, 3, gx0 - 2, lk.infill)
+    ladder(b, s.x0 + 1, s.z0 + 1, 1, s.h, "south")
+    rooms = [((s.x0 + 1, s.z0 + 1, c - 2, gx0 - 2), ["chest", "barrel", "furnace", "crafting_table", "smoker"]),
+             ((c + 2, s.z0 + 1, s.x1 - 1, gx0 - 2), ["barrel", "plant", "chest", "loom"]),
+             ((s.x0 + 1, gx1 + 2, s.x1 - 1, s.z1 - 1), ["bed", "plant", "chest", "shelf"]),
+             ((s.x0 + 1, gx0, gx0 - 2, gx1), ["bed", "barrel", "plant"]),
+             ((gx1 + 2, gx0, s.x1 - 1, gx1), ["bed", "chest", "plant"])]
+    for (xa, za, xb, zb), items in rooms:
+        for k in range(2):
+            furnish(Room(b, xa, za, xb, zb, k * s.h + 1, {(s.x0 + 1, s.z0 + 1), (s.x0 + 1, s.z0 + 2), (dx, s.z0 + 1)}),
+                    rng, st, lk, items if k == 0 else pick(rng, HOUSE_UPPER), light=False)
+            hang(b, (xa + xb) // 2, (za + zb) // 2, k * s.h + 1, st)
+    for x, z in ((gx0, c), (gx1, c), (c, gx0), (c, gx1)):
+        hang(b, x, z, 1, st)
+    # the roof terrace
+    b.fill(s.x0, s.top, s.z0, s.x1, s.top, s.z1, lk.found)
+    b.clear(gx0, s.top, gx0, gx1, s.top, gx1)
+    b.fill(gx0, s.top, gx0, gx1, s.top, gx1, lk.floor)
+    b.clear(c - ci, s.top, c - ci, c + ci, s.top, c + ci)
+    b.ring(s.x0, s.z0, s.x1, s.z1, s.top + 1, s.top + 1, lk.infill)
+    for x in range(s.x0, s.x1 + 1, 2):
+        b.set(x, s.top + 2, s.z0, lk.infill)
+        b.set(x, s.top + 2, s.z1, lk.infill)
+    for z in range(s.z0, s.z1 + 1, 2):
+        b.set(s.x0, s.top + 2, z, lk.infill)
+        b.set(s.x1, s.top + 2, z, lk.infill)
+    ladder(b, s.x0 + 1, s.z0 + 1, s.h + 1, s.top, "south")
+    b.ring(c - ci, c - ci, c + ci, c + ci, s.top + 1, s.top + 1, f"{lk.wood}_fence", **WL)
+    b.sign(dx + 1, 2, s.z0 - 1, "north", "[house]", lk.wood)
+    return b
+
+
+@gen("olive_press", freq="average", n=3, styles=("ochre",))
+def olive_press(rng, st):
+    """A press yard: a stone edge-mill turning in a round basin, a shaded shed of jars, olive trees."""
+    W, D = 15, 13
+    b = new("Olive Press", "city", W, D)
+    wood = pick(rng, st.woods)
+    lk = look(rng, st)
+    # a low wall round the yard
+    lw = wall_of(pick(rng, st.found))
+    for x in range(1, W - 1):
+        for z in range(1, D - 1):
+            if x in (1, W - 2) or z in (1, D - 2):
+                b.set(x, 1, z, lw, **WL)
+    b.clear(6, 1, 1, 8, 1, 1)
+    b.path(6, 0, 8, 3)
+    # the basin and the millstone
+    cx, cz = 5, 7
+    for dx, dz in disc(2):
+        b.set(cx + dx, 0, cz + dz, "smooth_stone")
+    for dx, dz in circle(2):
+        b.set(cx + dx, 1, cz + dz, "smooth_stone_slab", type="bottom", **WL)
+    b.fill(cx, 1, cz, cx, 3, cz, f"{wood}_log", axis="y")
+    b.fill(cx - 1, 1, cz, cx - 1, 2, cz, "polished_andesite")
+    b.fill(cx - 1, 1, cz - 1, cx - 1, 1, cz + 1, "polished_andesite")
+    b.fill(cx + 1, 3, cz, cx + 3, 3, cz, f"{wood}_log", axis="x")
+    b.set(cx + 3, 2, cz, f"{wood}_fence", **WL)
+    # the shed: posts, a lean-to roof, jars and barrels under it
+    sx0, sz0, sx1, sz1 = 9, 4, W - 3, D - 3
+    for x, z in ((sx0, sz0), (sx1, sz0), (sx0, sz1), (sx1, sz1)):
+        b.fill(x, 1, z, x, 3, z, lk.log, axis="y")
+    b.fill(sx1, 1, sz0 + 1, sx1, 3, sz1 - 1, lk.infill)
+    b.fill(sx0, 0, sz0, sx1, 0, sz1, PATH)
+    shed(b, sx0, sz0, sx1, sz1, 4, pick(rng, st.roofs), high="east")
+    for z in range(sz0 + 1, sz1):
+        b.set(sx1 - 1, 1, z, "decorated_pot", facing="west", cracked="false", **WL)
+        if rng.random() < 0.5:
+            b.barrel(sx0 + 1, 1, z, [("honey_bottle", rng.randint(1, 4))] if rng.random() < 0.3 else [])
+    b.set(sx0 + 1, 1, sz1 - 1, "water_cauldron", level="3")
+    hanging(b, (sx0 + sx1) // 2, 3, (sz0 + sz1) // 2, st)
+    tree(b, rng, 3, 3, "olive")
+    tree(b, rng, 2, D - 3, "olive")
+    b.sign(9, 2, 1, "north", ["2[surnames]~Oil Press", "", "", ""], wood, wall=False)
+    flowers(b, rng, st, [(x, z) for x in range(2, W - 2) for z in range(2, D - 2)], 0.15)
     return b

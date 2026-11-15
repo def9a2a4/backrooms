@@ -67,8 +67,6 @@ def stairs_of(block, default="stone_brick_stairs"):
 
 def wall_of(block, default="cobblestone_wall"):
     base = trim_of(block, None)
-    if base and base.endswith("_brick") and base + "s" in FULL.values() and base not in WALLED:
-        base = None
     return f"{base}_wall" if base in WALLED else default
 
 
@@ -449,10 +447,12 @@ def door_dress(b, rng, st, lk, x, y, z, out="north", wide=False, torches=True):
                 b.set(cx + dx, top, cz + dz, f"{t}_stairs", facing=f, half="bottom", waterlogged="false")
             if torches and b.empty(cx + dx, y + 1, cz + dz) and solid(b, cx, y + 1, cz):
                 b.set(cx + dx, y + 1, cz + dz, st.wall_torch, facing=out)
-        for i in range(w):
+        for i in range(w):   # a pointed hood
             cx, cz = x + r[0] * i + dx, z + r[1] * i + dz
             if b.empty(cx, top, cz):
-                b.set(cx, top, cz, f"{t}_slab", type="bottom", waterlogged="false")
+                b.set(cx, top, cz, FULL.get(t, lk.found))
+                if b.empty(cx, top + 1, cz):
+                    b.set(cx, top + 1, cz, f"{t}_slab", type="bottom", waterlogged="false")
 
 
 def door_in(b, x, y, z, facing, wood):
@@ -473,7 +473,7 @@ def buttresses(b, s, lk, sides=("east", "west"), block=None, height=None, corner
     """Stone buttresses against the walls, between the windows, each capped by a sloping stair."""
     block = block or lk.found
     cap = stairs_of(block)
-    h = height or max(3, s.top - 2)
+    h = height or max(3, min(s.top - 2, round(s.top * 0.6)))
     spots = []
     for side in sides:
         cells, out = wall_cells(s, side)
@@ -723,7 +723,7 @@ def roof(b, rng, st, s, lk, m=None, kind=None, along=None, hatch=None, pitch=Non
     if kind == "hip":
         top = hip(b, s.x0, s.z0, s.x1, s.z1, s.top, m, pitch=min(pitch, 1 if st.key == "ochre" else pitch),
                   fill=lk.infill)
-        eaves(b, s, lk)
+        eaves(b, s, lk, stone=st.key == "ochre")
         return top
     along = along or ("x" if w >= d else "z")
     extra = ()
@@ -753,21 +753,23 @@ def roof(b, rng, st, s, lk, m=None, kind=None, along=None, hatch=None, pitch=Non
                     if b.get(cx, y, s.z0) == lk.infill:
                         b.set(cx - 2, y, s.z0, lk.log, axis="y") if b.get(cx - 2, y, s.z0) == lk.infill else None
                         b.set(cx + 2, y, s.z0, lk.log, axis="y") if b.get(cx + 2, y, s.z0) == lk.infill else None
-    eaves(b, s, lk)
+    eaves(b, s, lk, stone=st.key == "ochre")
     if st.key == "ashen" and pitch == 2:   # finials at the gable ends
         A0, A1, C0, C1, at, _, _ = _axes(along, s.x0, s.z0, s.x1, s.z1)
         cm = (C0 + C1) // 2
         for a in (A0, A1):
             x, z = at(a, cm)
             if b.get(x, top, z) in (m.slab, m.stairs) and b.empty(x, top + 1, z) and clip == 0:
-                b.set(x, top + 1, z, "lightning_rod", facing="up", powered="false", waterlogged="false")
+                b.set(x, top + 1, z, wall_of(m.block, "polished_blackstone_wall"), waterlogged="false")
     return top
 
 
-def eaves(b, s, lk):
+def eaves(b, s, lk, timber=True, stone=True):
     """Brackets under the eaves: at the posts of a timber frame, along the whole wall of stone."""
     y = s.top - 1
     if lk.timbered:
+        if not timber:
+            return
         for x, z in posts(s, lk.post_every):
             for side, (dx, dz) in STEP.items():
                 ox, oz = x + dx, z + dz
@@ -775,6 +777,8 @@ def eaves(b, s, lk):
                     continue
                 if b.empty(ox, y, oz) and b.get(ox, y + 1, oz).endswith("_stairs") and b.inside(ox, oz):
                     b.set(ox, y, oz, f"{lk.wood}_stairs", facing=OPPOSITE[side], half="top", waterlogged="false")
+        return
+    if not stone:
         return
     for side in ("north", "south", "east", "west"):
         cells, out = wall_cells(s, side)
@@ -946,7 +950,6 @@ def tree(b, rng, x, z, kind, y=1, size=None):
     lv = leaves(kind)
     log = log_of(kind)
     L = dict(LEAF)
-    trunk = set()
 
     def put(px, py, pz):
         if b.empty(px, py, pz) and b.inside(px, pz):
@@ -1006,4 +1009,3 @@ def tree(b, rng, x, z, kind, y=1, size=None):
             px, py, pz = x + rng.randint(-1, 1), y + h + rng.randint(0, 1), z + rng.randint(-1, 1)
             if b.get(px, py, pz) == lv:
                 b.set(px, py, pz, "flowering_azalea_leaves", **L)
-    del trunk
