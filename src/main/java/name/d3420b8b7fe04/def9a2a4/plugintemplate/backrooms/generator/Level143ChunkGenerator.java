@@ -7,7 +7,9 @@ import org.bukkit.NamespacedKey;
  * {@link Level142ChunkGenerator} and {@link MaceCity}), but built from a set of buildings drawn by
  * rules rather than by hand: scripts/level143/build_pack.py generates every house, shop, chapel,
  * gatehouse, farm, mine and airship as a schematic in Mace's format, in three styles of its own
- * (Timber Town, Ochre Town, Ashen Town), with their own street names, signs and emblems.
+ * (Timber Town, Ochre Town, Ashen Town), with their own street names, signs and emblems. Under
+ * each city run sewers, an underground railway and passages to the mine and the guard towers
+ * ({@link CityUnderground}); balloons and airships crowd its sky.
  *
  * <p>The pack is downloaded by MeshStore as "level143", like Level 142's.
  */

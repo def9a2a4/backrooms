@@ -567,7 +567,7 @@ def courthouse(rng, st):
         b.set(x, 1, s.z0 - 3, stone_)
     b.fill(px0, s.h, s.z0 - 3, px1, s.h, s.z0 - 1, stone_)
     pm = Mat(f"{tm}_stairs", f"{tm}_slab", FULL.get(tm, stone_))
-    draw_roof(b, roof_levels(px0, s.z0 - 3, px1, s.z0, "gable", "z", 0, 1, ends=(True, False)), s.h + 1, pm, 1, stone_,
+    draw_roof(b, roof_levels(px0, s.z0 - 3, px1, s.z0, "gable", "z", 0, 1, ends=(True, False)), s.h, pm, 1, stone_,
               walls=[(px0, s.z0 - 3, px1, s.z0 - 1)])
     b.path(mx - 1, 0, mx + 1, s.z0 - 4) if s.z0 - 4 >= 0 else None
     b.sign(mx, s.h, s.z0 - 4, "north", ["2[court]", "", "", ""], lk.wood)
@@ -1924,15 +1924,12 @@ def smokehouse(rng, st):
     gable(b, s.x0, s.z0, s.x1, s.z1, s.top, m, along="z", fill=f"{lk.wood}_planks")
     top = highest(b, 3, 4)
     # a smoke louvre on the ridge: a little roof on posts
-    b.set(3, top, 4, "air")
     b.set(3, top + 1, 4, "air")
     for z in (3, 5):
         b.set(3, top + 1, z, f"{lk.wood}_fence", **WL)
     for z in range(2, 7):
         slab(b, 3, top + 2, z, m.slab)
     for x, f in ((2, "west"), (4, "east")):   # slatted sides
-        if b.empty(x, top, 4):
-            trapdoor(b, x, top, 4, lk.wood, f, "bottom", open_=True)
         if b.empty(x, top + 1, 4):
             trapdoor(b, x, top + 1, 4, lk.wood, f, "bottom", open_=True)
     # the salting shed
@@ -2524,13 +2521,12 @@ def gate_horseshoe(rng, st):
     gate_base(b, rng, st)
     tile = pick(rng, ("cyan_glazed_terracotta", "blue_glazed_terracotta", "light_blue_glazed_terracotta"))
     b.fill(2, 0, 0, 10, 13, 1, WALL)
-    b.clear(4, 1, 0, 8, 7, 1)
-    b.clear(4, 1, 2, 8, 5, 5)
+    b.clear(4, 1, 0, 8, 7, 0)   # the arch in the frame, taller than the passage behind it
+    b.clear(4, 1, 1, 8, 5, 5)
     # the horseshoe: the arch's top rounded with stairs, narrowing at the springing
     for x, y, f in ((4, 7, "east"), (8, 7, "west"), (5, 7, "east"), (7, 7, "west")):
         stair(b, x, y, 0, "smooth_sandstone_stairs", f, "top")
-        stair(b, x, y, 1, "smooth_sandstone_stairs", f, "top")
-    b.fill(6, 7, 0, 6, 7, 1, "air")
+    b.set(6, 7, 0, "air")
     b.set(6, 8, 0, "chiseled_sandstone")
     for x in range(3, 10):   # the tiled frame
         b.set(x, 9, 0, tile, facing="north")

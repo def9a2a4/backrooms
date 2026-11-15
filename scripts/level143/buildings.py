@@ -180,6 +180,8 @@ def house_body(b, rng, st, s, lk, items_by_floor, sign=None, cellar=False, kind=
             furnish(Room(b, wg.x0 + 1, wg.z0 + 1, wg.x1 - 1, wg.z1 - 1, k * wg.h + 1, set()), xr, st, lk,
                     pick(xr, HOUSE_UPPER))
     top = roof(b, rng, st, up, lk, m=m, kind=kind, hatch=(lx, lz) if flat_roof else None)
+    for wg, _ in wings:
+        wg.redraw()
     if rng.random() < 0.6:
         cx = s.x1 - 1 if lx == s.x0 + 1 else s.x0 + 1
         block = pick(rng, ("bricks", lk.found))
@@ -270,17 +272,21 @@ def under(b, rng, s, lk, st=None, kind=None, keep=(), stairs=None, depth=None):
             not any(b.get(x + a, 1, z + c).endswith("_door") for a, c in ((1, 0), (-1, 0), (0, 1), (0, -1)))
 
     way = None
-    if stairs is not False and (stairs or xr.random() < 0.65):
-        n = depth - 1                   # steps from y = -1 down to y
-        for sx, out in ((x0 + 1, x0 + 2), (x1 - 1, x1 - 2)):
-            for za in range(z1 - n, z0 + 1, -1):
-                cells = [(sx, z) for z in range(za - 1, za + 3)] + [(out, za), (out, za + 1)]
-                if za - 1 <= z0 or za + 2 >= z1 or not all(clear_above(x, z) for x, z in cells):
-                    continue
-                way = ("stairs", sx, za, out)
-                break
-            if way:
-                break
+    if stairs is not False and (stairs or xr.random() < 0.75):
+        # a straight flight against a wall: down the side walls towards the back, or along the back wall
+        runs = [((x0 + 1, z), "south", "east") for z in range(z0 + 2, z1)] + \
+               [((x1 - 1, z), "south", "west") for z in range(z0 + 2, z1)] + \
+               [((x, z1 - 1), "east", "north") for x in range(x0 + 2, x1)] + \
+               [((x, z1 - 1), "west", "north") for x in range(x1 - 2, x0, -1)]
+        inside = lambda x, z: x0 < x < x1 and z0 < z < z1
+        for (sx, sz), d, side in runs:
+            (ddx, ddz), (ox, oz) = STEP[d], STEP[side]
+            at = lambda i: (sx + i * ddx, sz + i * ddz)
+            cells = [at(i) for i in range(-1, 4)] + [(at(i)[0] + ox, at(i)[1] + oz) for i in range(3)]
+            if not all(inside(*c) for c in cells + [at(depth)]) or not all(clear_above(*c) for c in cells):
+                continue
+            way = ("stairs", sx, sz, d, side)
+            break
     if way is None:
         for hx in (x0 + 1, x1 - 1):
             if clear_above(hx, z0 + 1) and (hx, z0 + 1) not in keep:
@@ -293,19 +299,23 @@ def under(b, rng, s, lk, st=None, kind=None, keep=(), stairs=None, depth=None):
     b.fill(x0 + 1, fy, z0 + 1, x1 - 1, fy, z1 - 1, floor)
     held = set()
     if way[0] == "stairs":
-        _, sx, za, out = way
-        for i in range(depth - 1):
-            b.set(sx, -1 - i, za + i, stairs_of(wall, "cobblestone_stairs"), facing="north", half="bottom",
+        _, sx, sz, d, side = way
+        (ddx, ddz), (ox, oz) = STEP[d], STEP[side]
+        at = lambda i: (sx + i * ddx, sz + i * ddz)
+        for i in (1, 2):                            # the opening in the floor
+            b.set(at(i)[0], 0, at(i)[1], "air")
+        for i in range(depth):
+            x, z = at(i)
+            b.set(x, -i, z, stairs_of(wall, "cobblestone_stairs"), facing=OPPOSITE[d], half="bottom",
                   waterlogged="false")
-            if -1 - i - 1 >= fy + 1:
-                b.set(sx, -2 - i, za + i, wall)   # solid under the step
-            held.add((sx, za + i))
-        held |= {(sx, za + depth - 1), (sx, za + depth)}
-        b.clear(sx, 0, za, sx, 0, za + 1)           # the opening in the floor
-        for z in (za, za + 1):
-            b.set(out, 1, z, f"{lk.wood}_fence", waterlogged="false")
-        b.set(sx, 1, za + 2, f"{lk.wood}_fence", waterlogged="false")
-        ground = {(sx, z) for z in range(za - 1, za + 3)} | {(out, za), (out, za + 1)}
+            if -i - 1 > fy:
+                b.set(x, -i - 1, z, wall)   # solid under the step
+            held.add((x, z))
+        held |= {at(depth), (at(depth - 1)[0] + ox, at(depth - 1)[1] + oz)}
+        for i in range(3):
+            b.set(at(i)[0] + ox, 1, at(i)[1] + oz, f"{lk.wood}_fence", waterlogged="false")
+        b.set(*((at(3)[0], 1, at(3)[1])), f"{lk.wood}_fence", waterlogged="false")
+        ground = {at(i) for i in range(-1, 4)} | {(at(i)[0] + ox, at(i)[1] + oz) for i in range(3)}
     else:
         _, hx, hz, _ = way
         ladder(b, hx, hz, y, -1, "south")
@@ -385,7 +395,7 @@ def cottage(rng, st):
     b = new("Cottage", "city", W + 2, yard + D + 1)
     s = Shell(1, yard, W, yard + D - 1, 1, h=rng.choice((4, 4, 5)))
     house_body(b, rng, st, s, look(rng, st), [pick(rng, HOUSE_ONE)], sign="[house]" if rng.random() < 0.5 else None,
-               cellar=rng.random() < 0.2)
+               cellar=rng.random() < 0.45)
     flowers(b, rng, st, yard_cells(b, yard), 0.3)
     return b
 
@@ -394,10 +404,17 @@ def cottage(rng, st):
 def house(rng, st):
     W, D = rng.randint(6, 9), rng.randint(6, 8)
     yard = rng.randint(1, 3)
-    b = new("House", "city", W + 2, yard + D + 1)
-    s = Shell(1, yard, W, yard + D - 1, 2)
+    xr = random.Random(rng.random())
+    plan = pick(xr, (None, None, None, "L", "L", "T", "side")) if W >= 7 else None
+    back = 6 if plan in ("L", "T") else 0
+    side = 6 if plan == "side" else 0
+    if plan == "side":
+        plan = pick(xr, ("east", "west"))
+    west = side if plan == "west" else 0
+    b = new("House", "city", W + 2 + side, yard + D + 1 + back)
+    s = Shell(1 + west, yard, W + west, yard + D - 1, 2)
     house_body(b, rng, st, s, look(rng, st), [pick(rng, HOUSE_GROUND), pick(rng, HOUSE_UPPER)],
-               sign="[house]" if rng.random() < 0.6 else None, cellar=rng.random() < 0.25)
+               sign="[house]" if rng.random() < 0.6 else None, cellar=xr.random() < 0.6, plan=plan)
     flowers(b, rng, st, yard_cells(b, yard), 0.3)
     if yard >= 2 and rng.random() < 0.5:   # a fence along the front garden
         for x in range(b.w):
@@ -410,10 +427,17 @@ def house(rng, st):
 def large_house(rng, st):
     W, D = rng.randint(9, 12), rng.randint(7, 10)
     yard = rng.randint(2, 4)
-    b = new("Large House", "city", W + 2, yard + D + 1)
-    s = Shell(1, yard, W, yard + D - 1, rng.choice((2, 3)))
+    xr = random.Random(rng.random())
+    plan = pick(xr, (None, None, "L", "T", "U", "U", "side", "side"))
+    back = 6 if plan in ("L", "T", "U") else 0
+    side = 6 if plan == "side" else 0
+    if plan == "side":
+        plan = pick(xr, ("east", "west"))
+    west = side if plan == "west" else 0
+    b = new("Large House", "city", W + 2 + side, yard + D + 1 + back)
+    s = Shell(1 + west, yard, W + west, yard + D - 1, rng.choice((2, 3)))
     house_body(b, rng, st, s, look(rng, st), [pick(rng, HOUSE_GROUND), pick(rng, HOUSE_UPPER), pick(rng, HOUSE_UPPER)],
-               sign="[house]", cellar=rng.random() < 0.4)
+               sign="[house]", cellar=xr.random() < 0.75, plan=plan)
     flowers(b, rng, st, yard_cells(b, yard), 0.4)
     return b
 
@@ -425,7 +449,8 @@ def tall_house(rng, st):
     b = new("Tall House", "city", W + 2, yard + D + 1)
     s = Shell(1, yard, W, yard + D - 1, rng.choice((3, 4)))
     house_body(b, rng, st, s, look(rng, st), [pick(rng, HOUSE_GROUND), pick(rng, HOUSE_UPPER)],
-               sign="[house]" if rng.random() < 0.5 else None, kind=pick(rng, ("gable", "hip")))
+               sign="[house]" if rng.random() < 0.5 else None, kind=pick(rng, ("gable", "hip")),
+               cellar=rng.random() < 0.5)
     return b
 
 
@@ -444,14 +469,16 @@ def l_house(rng, st):
     shell(b, wing, lk)
     windows(b, wing, lk, sides=("south", "east" if not left else "west"))
     # the wing's roof dies into the house's back wall: no overhang into it, never steeper
-    draw_roof(b, roof_levels(wing.x0, wing.z0, wing.x1, wing.z1, "gable", "z", 1, 1, ends=(False, True)),
-              wing.top, pick(rng, st.roofs), 1, lk.infill, walls=[(wing.x0, wing.z0, wing.x1, wing.z1)])
+    wing_roof = (roof_levels(wing.x0, wing.z0, wing.x1, wing.z1, "gable", "z", 1, 1, ends=(False, True)),
+                 wing.top, pick(rng, st.roofs), 1, lk.infill)
+    draw_roof(b, *wing_roof, walls=[(wing.x0, wing.z0, wing.x1, wing.z1)])
     furnish(Room(b, wing.x0 + 1, wing.z0 + 1, wing.x1 - 1, wing.z1 - 1, 1), rng, st, lk,
             ["bed", "chest", "plant"] if floors == 1 else ["furnace", "barrel", "crafting_table"])
     lk.jetty = False   # the wing's roof meets the back wall
     main = Shell(1, yard, W, yard + D - 1, floors)
     house_body(b, rng, st, main, lk, [pick(rng, HOUSE_GROUND), pick(rng, HOUSE_UPPER)],
-               sign="[house]" if rng.random() < 0.5 else None)
+               sign="[house]" if rng.random() < 0.5 else None, cellar=rng.random() < 0.5)
+    draw_roof(b, *wing_roof, walls=[(wing.x0, wing.z0, wing.x1, wing.z1)])   # again: the house's eaves cut into it
     # a doorway from the house into the wing, where both sides are clear
     for mx in sorted(range(wing.x0 + 1, wing.x1), key=lambda x: abs(x - (wing.x0 + wing.x1) // 2)):
         if all(b.empty(mx, y, z) for y in (1, 2) for z in (main.z1 - 1, main.z1 + 1)) and \
@@ -492,9 +519,13 @@ def row_houses(rng, st):
         windows(b, s, lk, sides=("north",), every=2 if uw == 5 else 1, floors=range(1, floors))
         windows(b, s, lk, sides=("south",), every=2)
         door_dress(b, rng, st, lk, dx, 1, s.z0, torches=False)
+        held = set()
+        if rng.random() < 0.4:   # a cellar, down a ladder under a hatch
+            held = under(b, rng, s, lk, st=st, stairs=False, keep={(dx, s.z0 + 1), (lx, s.z1 - 1)}) or set()
         for k in range(floors):
             y = k * s.h + 1
-            room = Room(b, s.x0 + 1, s.z0 + 1, s.x1 - 1, s.z1 - 1, y, {(dx, s.z0 + 1), (lx, s.z1 - 1), (lx, s.z1 - 2)})
+            room = Room(b, s.x0 + 1, s.z0 + 1, s.x1 - 1, s.z1 - 1, y,
+                        {(dx, s.z0 + 1), (lx, s.z1 - 1), (lx, s.z1 - 2)} | (held if k == 0 else set()))
             furnish(room, rng, st, lk, pick(rng, HOUSE_UPPER) if k else pick(rng, HOUSE_GROUND)[:3])
         b.sign(sx, 2, s.z0 - 1, "north", "[house]", lk.wood)
     top = units[0][0].top
@@ -658,6 +689,11 @@ def shop(rng, st, kind):
                pick(rng, ("hip", "gable")))
     if kind in ("smithy", "bakery"):
         chimney(b, s.x1 - 1, s.z1, 1, top + 1, "bricks")
+    xr = random.Random(rng.random())
+    if xr.random() < 0.55:   # the stock room below
+        under(b, xr, s, lk, st=st, kind={"smithy": "coal", "mason": "workshop", "fletcher": "workshop",
+                                         "tailor": "storage"}.get(kind, pick(xr, ("storage", "storage", "wine"))),
+              keep={(dx, s.z0 + 1), (lx, lz), (lx, lz - 1)})
     b.sign(dx + 1, 2, s.z0 - 1, "north", ["2[surnames]'s~" + title, "", "", ""], lk.wood)
     return b
 
@@ -723,6 +759,9 @@ def tavern(rng, st):
                 carpet=pick(rng, st.beds))
     top = roof(b, rng, st, s, lk, kind=pick(rng, ("gable", "half_hip", "cross")) if st.key != "ochre" else "hip")
     chimney(b, s.x0 - 1, zm, 1, top + 1, "bricks")
+    xr = random.Random(rng.random())
+    if xr.random() < 0.85:   # the beer and wine cellar
+        under(b, xr, s, lk, st=st, kind="wine", keep={(dx, s.z0 + 1), (dx + 1, s.z0 + 1), (lx, lz)})
     b.sign(dx + 2, 2, s.z0 - 1, "north", ["2The [tavernadj]~[tavernnoun]", "", "", ""], lk.wood)
     b.set(dx - 1, 3, s.z0 - 1, st.wall_torch, facing="north") if solid(b, dx - 1, 3, s.z0) and \
         b.empty(dx - 1, 3, s.z0 - 1) else None
@@ -888,6 +927,9 @@ def town_hall(rng, st):
     furnish(up, rng, st, lk, ["shelf", "shelf", "shelf", "lectern", "chest", "shelf", "shelf"])
     top = hip(b, s.x0, s.z0, s.x1, s.z1, s.top, pick(rng, st.roofs), fill=stone)
     cornice(b, s, f"{trim}_stairs", s.top - 1)
+    xr = random.Random(rng.random())
+    if xr.random() < 0.7:   # the strongroom and the records below
+        under(b, xr, s, lk, st=st, kind="storage", depth=5, keep={(mx - 1, s.z0 + 1), (mx, s.z0 + 1), (lx, lz)})
     # a clock tower on the ridge
     zc = (s.z0 + s.z1) // 2
     b.fill(mx - 1, s.top + 1, zc - 1, mx + 1, top + 4, zc + 1, stone)
@@ -1707,13 +1749,14 @@ def gate_towers(rng, st):
     m = pick(rng, st.roofs)
     wood = pick(rng, st.woods)
     for tx in (0, 9):
-        b.fill(tx, 0, 0, tx + 3, 14, 6, WALL)
+        # the towers stand on the wall's rows 0-5: row 6 keeps gate_base's ladder up to the walkway
+        b.fill(tx, 0, 0, tx + 3, 14, 5, WALL)
         b.clear(tx + 1, 10, 1, tx + 2, 13, 5)
-        x_in = tx + 3 if tx == 0 else tx
-        b.clear(x_in, 10, 3, x_in, 11, 3)
+        for x in (tx, tx + 3):   # the walkway runs through the guard room, door to door
+            b.clear(x, 10, 3, x, 11, 3)
         for z in (2, 4):
             b.set(tx if tx == 0 else tx + 3, 12, z, "iron_bars", waterlogged="false")
-        hip(b, tx, 0, tx + 3, 6, 15, m, over=0, pitch=2 if st.key == "ashen" else 1)
+        hip(b, tx, 0, tx + 3, 5, 15, m, over=0, pitch=2 if st.key == "ashen" else 1)
         b.set(tx + 1, 13, 3, st.light, hanging="true", waterlogged="false")
     for x in (4, 8):
         b.set(x, 5, 1, WALL)

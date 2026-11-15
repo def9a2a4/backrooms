@@ -22,7 +22,7 @@ import buildings_extra  # noqa: E402,F401  (registers more kinds)
 import sky  # noqa: E402,F401  (registers more sky features)
 import buildings_more  # noqa: E402,F401  (registers a third set of kinds)
 from parts import STYLES  # noqa: E402
-from schem import Checker  # noqa: E402
+from schem import GROUND, PATH, Checker  # noqa: E402
 import words  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -36,6 +36,20 @@ Drawn by scripts/level143/build_pack.py from rules and fixed seeds, in the forma
 Mace pack (Sponge v3 schematics with Metadata.Mace; stand-in blocks for what each city fills in),
 with the word lists, gate emblems and tower flags the cities use.
 """
+
+
+# The city fills in GROUND and PATH on the ground layer only; raised beds and terraces get real blocks.
+RAISED = {"timber": ("grass_block", "gravel"), "ochre": ("coarse_dirt", "smooth_sandstone"),
+          "ashen": ("podzol", "cobbled_deepslate")}
+
+
+def settle(b, st):
+    ground, path = RAISED[st.key]
+    if b.kind == "mineshaft_section":
+        return
+    for (x, y, z), (n, _) in list(b.blocks.items()):
+        if y != 0 and n in (GROUND, PATH):
+            b.set(x, y, z, ground if n == GROUND else path)
 
 
 def seed(*parts):
@@ -62,6 +76,7 @@ def main():
                 b = e.make(rng, st)
                 if b.kind != "sky_feature":   # floats over the mine entrance, never in a lot
                     b.square()
+                settle(b, st)
                 b.meta["frequency"] = e.freq
                 b.meta["files"] = st.file
                 if e.unique:

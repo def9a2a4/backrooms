@@ -42,6 +42,10 @@ import java.util.Set;
  *
  * <p>Like Mace, everything comes from one RNG in a fixed order, so a seed always gives the same
  * city. The finished buffer is read-only and shared between chunk threads.
+ *
+ * <p>Level 143's cities get more, each from an RNG of its own so the rest comes out as it would:
+ * sewers, a railway and passages under the streets ({@link CityUnderground}), and airships all
+ * over the sky, in a taller buffer ({@link #HEIGHT_143}).
  */
 final class MaceCity {
 
@@ -1120,7 +1124,7 @@ final class MaceCity {
 
     /**
      * Balloons and airships all over the city's sky (and over its farms), about one for every
-     * three or four chunks, at heights from {@link #SKY_LOW} to the top of the buffer, none
+     * seven chunks, at heights from {@link #SKY_LOW} to the top of the buffer, none
      * touching another or anything built below. Their own RNG, so the rest of the city is as before.
      */
     private void makeSkyFeatures() {
@@ -1128,7 +1132,7 @@ final class MaceCity {
         if (pool.isEmpty()) pool = lib.ofType("sky_feature");
         if (pool.isEmpty()) return;
         Random r = new Random(plan.seed() ^ SKY_SALT);
-        int target = (int) Math.round(sizeX * (double) sizeZ / 256 / (3 + r.nextDouble()));
+        int target = Math.max(2, (int) Math.round(sizeX * (double) sizeZ / 256 / (6 + 2 * r.nextDouble())));
         int placed = 0;
         for (int tries = 0; placed < target && tries < target * 40; tries++) {
             MaceBuilding b = MaceLibrary.select(pool, BUILDING_FREQUENCY, "frequency", r);

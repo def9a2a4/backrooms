@@ -609,7 +609,7 @@ def roof_block(b, x, y, z, state, props, m):
     old = b.blocks.get((x, y, z))
     new_q = _quarters(state, props)
     old_q = _quarters(*old) if old else None
-    if old_q is None and old and solid(b, x, y, z):
+    if old_q is None and old and solid(b, x, y, z) and not old[0].startswith(("potted_", "flower_pot")):
         return   # a wall the roof runs into (a wing's roof into the main house): it stays whole
     if old_q is None or new_q is None or old_q <= new_q:
         b.set(x, y, z, state, **props)
@@ -945,8 +945,9 @@ def wing(b, rng, st, main, lk, side, length, depth, offset=0, floors=1, m=None, 
     `length` along that wall from `offset`, `depth` out from it, `floors` storeys: walls,
     windows, and a gable roof whose ridge runs out from the house, its end on the shared wall
     walled up to the roof and its slopes merged into whatever roof is there. The shared wall
-    stays the main house's; the caller cuts the doorways. Draw it after the main house's roof.
-    Returns the wing's Shell."""
+    stays the main house's; the caller cuts the doorways. Returns the wing's Shell, whose
+    redraw() draws its roof again: call it once the main house's roof is on, so that roof's
+    eaves and parapets don't cut into the wing's."""
     h = h or main.h
     if side == "south":
         w = Shell(main.x0 + offset, main.z1, main.x0 + offset + length - 1, main.z1 + depth - 1, floors, h)
@@ -960,6 +961,10 @@ def wing(b, rng, st, main, lk, side, length, depth, offset=0, floors=1, m=None, 
         w = Shell(main.x0 - depth + 1, main.z0 + offset, main.x0, main.z0 + offset + length - 1, floors, h)
         along, ends, out = "x", (True, False), ("west", "north", "south")
         line = [(main.x0, z) for z in range(w.z0, w.z1 + 1)]
+    for x in range(w.x0, w.x1 + 1):   # the yard it's built on: shutters, sills, bushes the walls had there
+        for z in range(w.z0, w.z1 + 1):
+            if (x, z) not in line:
+                b.clear(x, 1, z, x, w.top + max(length, depth) + 2, z)
     keep = {(x, y, z): v for (x, y, z), v in b.blocks.items() if (x, z) in line and v[0] != "air"}
     ents = {k: v for k, v in b.entities.items() if (k[0], k[2]) in line}
     shell(b, w, lk)
@@ -969,7 +974,8 @@ def wing(b, rng, st, main, lk, side, length, depth, offset=0, floors=1, m=None, 
     windows(b, w, lk, sides=out)
     m = m or pick(rng, st.roofs)
     levels = roof_levels(w.x0, w.z0, w.x1, w.z1, "gable", along, 1, 1, ends=ends)
-    draw_roof(b, levels, w.top, m, pitch, lk.infill, walls=[(w.x0, w.z0, w.x1, w.z1)])
+    w.redraw = lambda: draw_roof(b, levels, w.top, m, pitch, lk.infill, walls=[(w.x0, w.z0, w.x1, w.z1)])
+    w.redraw()
     return w
 
 
@@ -1008,15 +1014,18 @@ def porch(b, rng, st, s, lk, x0, x1, depth=2, m=None, door_x=None):
             b.set(x, 1, z, f"{lk.wood}_fence", waterlogged="false")
     m = m or (mat(lk.wood) if st.key == "timber" else pick(rng, st.roofs))
     shed(b, x0, zf, x1, s.z0 - 1, 3, m, high="south", over=0)
-    if door_x is not None:
+    if door_x is not None and zf >= 1:
         b.path(door_x, 0, door_x, zf - 1)
         hx = door_x + (2 if door_x + 2 < x1 else -2)
     else:
         hx = (x0 + x1) // 2
-    if b.get(hx, 3, s.z0 - 1).endswith("_slab"):
+    if b.get(hx, 1, s.z0).endswith("_door") or not b.inside(hx, s.z0):
+        hx = next((x for x in range(x0 + 1, x1) if not b.get(x, 1, s.z0).endswith("_door")
+                   and abs(x - (door_x if door_x is not None else -9)) >= 2), hx)
+    if b.get(hx, 3, s.z0 - 1).endswith("_slab") and not b.get(hx, 1, s.z0).endswith("_door"):
         b.set(hx, 2, s.z0 - 1, st.light, hanging="true", waterlogged="false")
     bx = x1 - 1 if door_x is None or door_x < x1 - 2 else x0 + 1
-    if b.empty(bx, 1, s.z0 - 1) and depth >= 2:
+    if b.empty(bx, 1, s.z0 - 1) and depth >= 2 and not b.get(bx, 1, s.z0).endswith("_door"):
         b.set(bx, 1, s.z0 - 1, f"{lk.wood}_stairs", facing="south", half="bottom", waterlogged="false")
     return True
 

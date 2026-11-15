@@ -32,13 +32,49 @@ def mounts(b):
                 b.set(x + dx, y, z + dz, under, **b.props(x + dx, y - 1, z + dz) if b.get(x + dx, y - 1, z + dz) == under else {})
 
 
+def ladders(b):
+    """A ladder needs a solid block behind it: a window pane or bars there (a window cut in the
+    wall it climbs) is walled up with the wall block beside or under it."""
+    from parts import solid
+    for (x, y, z), (n, p) in list(b.blocks.items()):
+        if n != "ladder":
+            continue
+        dx, dz = STEP[OPPOSITE[p["facing"]]]
+        bx, bz = x + dx, z + dz
+        back = b.get(bx, y, bz)
+        if back in _FLIMSY or back.endswith("_pane"):
+            near = [(bx + dz, y, bz + dx), (bx - dz, y, bz - dx), (bx, y - 1, bz), (bx, y + 1, bz)]
+            src = next((c for c in near if solid(b, *c) and not b.get(*c).endswith(("_ore",))), None)
+            if src:
+                b.set(bx, y, bz, b.get(*src), **b.props(*src))
+            else:
+                b.set(bx, y, bz, "stone_bricks")
+
+
+def doorways(b):
+    """Nothing but air (or a carpet, a torch) right in front of or behind a closed door: shutters
+    and pots dressed onto the wall beside a window can land in a doorway."""
+    for (x, y, z), (n, p) in list(b.blocks.items()):
+        if not n.endswith("_door") or p.get("half") != "lower" or p.get("open") == "true":
+            continue
+        dx, dz = STEP[p["facing"]]
+        for sgn in (1, -1):
+            for dy in (0, 1):
+                c = (x + sgn * dx, y + dy, z + sgn * dz)
+                m = b.get(*c)
+                if m.endswith("_trapdoor") or m.startswith("potted_") or m == "flower_pot" or m.endswith("_leaves"):
+                    b.set(*c, "air")
+
+
 def gen(*args, **kw):
-    """buildings.gen, with mounts() run over what the generator draws."""
+    """buildings.gen, with mounts(), ladders() and doorways() run over what the generator draws."""
     def deco(f):
         @functools.wraps(f)
         def make(rng, st):
             b = f(rng, st)
             mounts(b)
+            ladders(b)
+            doorways(b)
             return b
         _gen(*args, **kw)(make)
         return f
@@ -333,7 +369,7 @@ def jettied_house(rng, st):
     counter(b, s.x0 + 1, s.x1 - 1, s.z0 + 3, 1, lk.wood)
     b.set(dx, 1, s.z0 + 3, "air")
     lx = s.x1 - 1 if dx == s.x0 + 1 else s.x0 + 1
-    ladder(b, lx, s.z1 - 1, 1, 4 * up, "north")
+    ladder(b, lx, s.z1 - 1, 1, 4 * up, "north", support=lk.infill)
     shop_room = Room(b, s.x0 + 1, s.z0 + 4, s.x1 - 1, s.z1 - 1, 1, {(lx, s.z1 - 1), (lx, s.z1 - 2), (dx, s.z0 + 4)})
     furnish(shop_room, rng, st, lk, pick(rng, SHOPFRONT), light=False)
     hang(b, mx, s.z0 + 1, 1, st)
@@ -366,7 +402,7 @@ def merchant_house(rng, st):
     dx = front_door(b, s, lk, s.x0 + 1)
     windows(b, s, lk, sides=("north", "south"), skip={(dx, s.z0)}, every=2)
     lx = s.x1 - 1
-    ladder(b, lx, s.z1 - 1, 1, (floors - 1) * s.h, "north")
+    ladder(b, lx, s.z1 - 1, 1, (floors - 1) * s.h, "north", support=lk.infill)
     for k in range(floors):
         room = Room(b, s.x0 + 1, s.z0 + 1, s.x1 - 1, s.z1 - 1, k * s.h + 1, {(dx, s.z0 + 1), (lx, s.z1 - 1), (lx, s.z1 - 2)})
         if k == 0:
@@ -1026,7 +1062,7 @@ def campanile(rng, st):
             b.set(x0 + i, yy, z1, "air")
             b.set(x0, yy, z0 + i, "air")
             b.set(x1, yy, z0 + i, "air")
-    b.set((x0 + x1) // 2, by + 2, (z0 + z1) // 2, "bell", attachment="ceiling", facing="north", powered="false")
+    b.set((x0 + x1) // 2, h - 1, (z0 + z1) // 2, "bell", attachment="ceiling", facing="north", powered="false")
     b.fill(x0 + 1, h, z0 + 1, x1 - 1, h, z1 - 1, wall)
     string_course(b, x0, z0, x1, z1, h, tm)
     top = hip(b, x0, z0, x1, z1, h + 1, pick(rng, st.roofs), over=1)
@@ -1269,6 +1305,7 @@ def school_house(rng, st):
             b.fill(mx + dx, ridge + 1, cz + 1 + dz, mx + dx, ridge + 2, cz + 1 + dz, f"{lk.wood}_fence", **WL)
     b.set(mx, ridge + 2, cz + 1, "bell", attachment="ceiling", facing="north", powered="false")
     hip(b, mx - 1, cz, mx + 1, cz + 2, ridge + 3, m, over=0)
+    b.set(mx, ridge + 3, cz + 1, m.block)   # the bell hangs from the cap
     b.fill(mx - 1, ridge, cz, mx + 1, ridge, cz + 2, m.block)
     # the playground
     px0 = s.x1 + 2
@@ -1547,10 +1584,12 @@ def soul_shrine(rng, st):
         b.fill(x, 1, z, x, 5, z, "polished_basalt", axis="y")
     b.ring(c - 2, c - 2, c + 2, c + 2, 6, 6, stone_)
     top = hip(b, c - 2, c - 2, c + 2, c + 2, 7, mat_of(pick(rng, ("deepslate_tiles", "polished_blackstone_bricks"))), over=1)
-    for y in (5, 4):
-        b.set(c, y, c, "iron_chain", axis="y", **WL)
-    hanging(b, c, 3, c, st)
     b.fill(c - 1, 6, c - 1, c + 1, 6, c + 1, "air")
+    y = 4
+    while y < top and b.empty(c, y, c):   # the lantern on a chain from the roof's point
+        b.set(c, y, c, "iron_chain", axis="y", **WL)
+        y += 1
+    hanging(b, c, 3, c, st)
     for x, z in ((1, 1), (S - 2, 1), (1, S - 2), (S - 2, S - 2)):
         b.set(x, 1, z, stone_)
         light(b, x, 2, z, st)
@@ -1594,6 +1633,8 @@ def domed_house(rng, st):
     b.set(lx, s.top, s.z1 - 1, "ladder", facing="north", **WL)
     # the dome over the front half, a pergola and plants on the back half
     r = (W - 1) // 2 - 1
+    while r > 2 and s.z0 + 2 * r + 1 >= s.z1 - 1:   # clear of the ladder's hatch at the back
+        r -= 1
     dz = s.z0 + r + 1
     dome(b, mx, dz, s.top, r, pick(rng, ("white_terracotta", "light_blue_terracotta", "cyan_terracotta", "calcite")))
     b.set(mx, s.top + r + 1, dz, "lightning_rod", facing="up", powered="false", **WL)

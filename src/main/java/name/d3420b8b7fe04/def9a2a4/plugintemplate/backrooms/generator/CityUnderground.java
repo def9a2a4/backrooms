@@ -169,7 +169,7 @@ final class CityUnderground {
     /** Untouched ground: the theme's rock and ore, and below y53 the wall's (and towers') foundations. */
     private boolean natural(int x, int y, int z, boolean wallOk) {
         Material t = c.type(x, y, z);
-        return natural.contains(t) || (wallOk || y <= 52) && t == c.wall.getMaterial() && y < STREET;
+        return natural.contains(t) || ((wallOk || y <= 52) && t == c.wall.getMaterial() && y < STREET);
     }
 
     private boolean air(int x, int y, int z) {
@@ -402,6 +402,10 @@ final class CityUnderground {
             }
             railToSewer(d, end, step);
         }
+        // on a long line, another stair up to the sewer just outside the station
+        for (int[] d : DIRS) {
+            if (Math.abs(lineEnd(d) - k) > 45 && railToSewer(d, k + (d[0] + d[1]) * (HALL + 9), d[0] + d[1])) break;
+        }
     }
 
     private BlockData platform() {
@@ -415,13 +419,13 @@ final class CityUnderground {
         String[] names = {"East", "West", "South", "North"};
         for (int i = 0; i < 4; i++) {
             int[] d = DIRS[i];
-            // the station's name on the wall to the line's left, the line's beside its mouth
-            int lx = k + d[0] * HALL + d[1] * 3, lz = k + d[1] * HALL - d[0] * 3;
+            // the station's name and the line's beside its mouth, on the side away from the stairs
+            int lx = k + d[0] * HALL - Math.abs(d[1]) * 3, lz = k + d[1] * HALL - Math.abs(d[0]) * 3;
             int wx = lx + d[0], wz = lz + d[1];
             if (air(lx, RAIL + 2, lz) && !air(wx, RAIL + 2, wz)) {
                 sign(lx, RAIL + 2, lz, face(-d[0], -d[1]), "", station, "Station", "");
             }
-            int nx = k + d[0] * HALL + d[1] * 2, nz = k + d[1] * HALL - d[0] * 2;
+            int nx = k + d[0] * HALL - Math.abs(d[1]) * 2, nz = k + d[1] * HALL - Math.abs(d[0]) * 2;
             if (air(nx, RAIL + 2, nz) && !air(nx + d[0], RAIL + 2, nz + d[1])) {
                 sign(nx, RAIL + 2, nz, face(-d[0], -d[1]), names[i] + " Line", "to the", names[i] + " Gate", "");
             }
@@ -443,7 +447,7 @@ final class CityUnderground {
      * At a line's far end, a stair from the track's side up through the ceiling onto the sewer's
      * walkway above: seven steps, rising toward the gate.
      */
-    private void railToSewer(int[] d, int end, int step) {
+    private boolean railToSewer(int[] d, int end, int step) {
         int n = SEWER_WALK - RAIL + 1;
         int lat = k + 1;
         int over = (1 << TRACK) | (1 << SEWER);
@@ -452,9 +456,9 @@ final class CityUnderground {
             int u = end - step * (n - i), s = RAIL + i;
             int x = d[0] != 0 ? u : lat, z = d[0] != 0 ? lat : u;
             for (int y = s; y <= s + 3; y++) {
-                if (!diggable(x, y, z, over, false)) return;
+                if (!diggable(x, y, z, over, false)) return false;
             }
-            if (i == n - 1 && !walkway(x, z)) return;
+            if (i == n - 1 && !walkway(x, z)) return false;
             cells.add(new int[]{x, z, s});
         }
         BlockFace up = face(d[0], d[1]);
@@ -464,6 +468,7 @@ final class CityUnderground {
             for (int y = s + 1; y <= s + 3; y++) {
                 if (y < SEWER_WALK + 1 || own(x, y, z) != SEWER) put(x, y, z, null, STAIR);
             }
+            line(x, s + 4, z, railBrick(), STAIR);   // no loose gravel overhead
             // where the stairwell opens beside the channel, a weir and a rail keep the water and walkers out
             int cx = d[0] != 0 ? x : k, cz = d[0] != 0 ? k : z;
             if (s + 3 >= SEWER_WALK && s < SEWER_WALK) {
@@ -481,18 +486,20 @@ final class CityUnderground {
         if (air(ix, RAIL + 1, iz) && !air(ox, RAIL + 1, oz)) {
             sign(ix, RAIL + 1, iz, face(ix - ox, iz - oz), "", "Sewer", "Stairs", "");
         }
+        return true;
     }
 
     /**
      * Stairs from the station up to the street beside a main street (on its south or east side,
      * clear of the sewer that runs under the street's middle), climbing away from the crossing:
-     * the first that fits, starting from inside the hall. The opening is railed on three sides.
+     * the first that fits, starting from inside the hall, or further out at the end of a passage
+     * from it. The opening is railed on three sides.
      */
     private void stationStairs(int[] d) {
         int step = d[0] + d[1];
         boolean alongX = d[0] != 0;
         int r = mid + p + 1;
-        for (int ub = k - step * (HALL - 1); Math.abs(ub - k) <= HALL; ub += step) {
+        for (int ub = k - step * (HALL - 1); Math.abs(ub - k) <= HALL + 24; ub += step) {
             if (tryStairs(alongX, step, r, ub)) return;
         }
     }
@@ -502,9 +509,22 @@ final class CityUnderground {
         Map<Long, BlockData> inside = new LinkedHashMap<>();
         List<int[]> lining = new ArrayList<>(), rails = new ArrayList<>();
         BlockFace up = alongX ? face(step, 0) : face(0, step);
-        // the step before the first must be the hall's floor
+        // the step before the first must be the hall's floor, or a passage to it
         int bx = alongX ? ub - step : r, bz = alongX ? r : ub - step;
-        if (own(bx, RAIL, bz) != STATION || !air(bx, RAIL + 1, bz)) return false;
+        if (Math.abs(ub - k) <= HALL) {
+            if (own(bx, RAIL, bz) != STATION || !air(bx, RAIL + 1, bz)) return false;
+        } else {
+            for (int u = k + step * (HALL + 1); u != ub; u += step) {
+                int x = alongX ? u : r, z = alongX ? r : u;
+                for (int y = RAIL_BED; y <= HALL_CEIL; y++) {
+                    if (!diggable(x, y, z, over, false)) return false;
+                    inside.put(MaceCity.key(x, y, z), y == RAIL_BED ? c.data(st.hallFloor())
+                            : y == HALL_CEIL ? (u % 6 == 0 ? c.data(st.light()) : c.data(st.rail()[0])) : null);
+                }
+                int[][] around = {{x + (alongX ? 0 : 1), z + (alongX ? 1 : 0)}, {x - (alongX ? 0 : 1), z - (alongX ? 1 : 0)}};
+                for (int y = RAIL_BED; y <= HALL_CEIL; y++) for (int[] a : around) lining.add(new int[]{a[0], y, a[1]});
+            }
+        }
         for (int i = 0; i < STEPS; i++) {
             int u = ub + step * i, s = RAIL + i;
             int x = alongX ? u : r, z = alongX ? r : u;
@@ -552,6 +572,9 @@ final class CityUnderground {
             put(MaceCity.keyX(key), MaceCity.keyY(key), MaceCity.keyZ(key), e.getValue(), STAIR);
         }
         for (int[] a : lining) line(a[0], a[1], a[2], railBrick(), STAIR);
+        // where the street itself roofs the stairwell, it mustn't be gravel or sand
+        int cx = alongX ? ub + step * (STREET - 4 - RAIL) : r, cz = alongX ? r : ub + step * (STREET - 4 - RAIL);
+        if (c.type(cx, STREET, cz).hasGravity()) c.set(cx, STREET, cz, c.data(st.walk()));
         for (int i = 6; i < STEPS - 4; i += 6) {   // lights in the stairwell's ceiling
             int x = alongX ? ub + step * i : r, z = alongX ? r : ub + step * i, y = RAIL + i + 4;
             if (own(x, y, z) == STAIR && !air(x, y, z)) put(x, y, z, c.data(st.light()), STAIR);
@@ -826,10 +849,10 @@ final class CityUnderground {
     private void rooms() {
         int want = Math.max(2, Math.min(5, m / 100 + 1)), made = 0;
         List<int[]> placed = new ArrayList<>();
-        List<Line> side = new ArrayList<>();
-        for (Line l : lines) if (l.to() - l.from() > 14) side.add(l);
-        for (int tries = 0; made < want && tries < 300 && !side.isEmpty(); tries++) {
-            Line l = side.get(rng.nextInt(side.size()));
+        List<Line> longer = new ArrayList<>();
+        for (Line l : lines) if (l.to() - l.from() > 14) longer.add(l);
+        for (int tries = 0; made < want && tries < 300 && !longer.isEmpty(); tries++) {
+            Line l = longer.get(rng.nextInt(longer.size()));
             int u = l.from() + 6 + rng.nextInt(Math.max(1, l.to() - l.from() - 12));
             int s = rng.nextBoolean() ? 1 : -1;
             int x = l.x(u, l.at()), z = l.z(u, l.at());
