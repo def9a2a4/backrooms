@@ -55,7 +55,7 @@ final class CityHouses {
 
     /** How many of its own houses a city of this theme gets: none for Mace's themes. */
     static int count(MaceCity.Theme theme) {
-        return STYLES.containsKey(theme) ? 14 : 0;
+        return STYLES.containsKey(theme) ? 18 : 0;
     }
 
     /** The city's own houses, from its seed: the same city always gets the same ones. */
@@ -68,9 +68,7 @@ final class CityHouses {
         for (int i = 0; i < n; i++) {
             long seed = rng.nextLong();
             Map<String, String> names = restyle(st, rng);
-            // half as common as a cottage: these are most of a district's houses, not all of them
-            out.add(house(AlphaHouse.build(seed), names, plan.theme(), i, i % 2 == 0 ? "very common" : "common",
-                    rng.nextInt(2) == 0));
+            out.add(house(AlphaHouse.build(seed), names, plan.theme(), i, "very common", rng.nextInt(2) == 0));
         }
         return out;
     }
@@ -106,20 +104,32 @@ final class CityHouses {
     /** A grid as a city building: the ground layer, a path to the street, a square footprint. */
     private static MaceBuilding house(Grid g, Map<String, String> names, MaceCity.Theme theme, int i, String freq,
                                       boolean sign) {
-        int top = g.minY;
+        // Crop Level 101's wide border to the house and a block of ground around it (eaves included).
+        int top = g.minY, x0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, z1 = Integer.MIN_VALUE;
         for (int y = g.minY; y <= g.maxY(); y++) {
             for (int z = g.minZ; z <= g.maxZ(); z++) {
-                for (int x = g.minX; x <= g.maxX(); x++) if (g.solid(x, y, z)) top = y;
+                for (int x = g.minX; x <= g.maxX(); x++) {
+                    if (!g.solid(x, y, z)) continue;
+                    top = y;
+                    x0 = Math.min(x0, x);
+                    x1 = Math.max(x1, x);
+                    minZ = Math.min(minZ, z);
+                    z1 = Math.max(z1, z);
+                }
             }
         }
-        int w = g.sizeX, l = g.sizeZ, h = top - g.minY + 1;
+        x0 = Math.max(g.minX, x0 - 1);
+        x1 = Math.min(g.maxX(), x1 + 1);
+        minZ = Math.max(g.minZ, Math.min(minZ, -1) - 1);   // at least a step of path before the door
+        z1 = Math.min(g.maxZ(), z1 + 1);
+        int w = x1 - x0 + 1, l = z1 - minZ + 1, h = top - g.minY + 1;
         int side = Math.max(w, l);
         int dx = (side - w) / 2;                 // deeper than wide: ground both sides; wider: ground behind
         String[] states = new String[side * side * h];
         for (int y = 0; y < h; y++) {
             for (int z = 0; z < side; z++) {
                 for (int x = 0; x < side; x++) {
-                    int gx = x - dx + g.minX, gy = y + g.minY, gz = z + g.minZ;
+                    int gx = x - dx + x0, gy = y + g.minY, gz = z + minZ;
                     String s = x - dx >= 0 && x - dx < w && z < l ? g.get(gx, gy, gz) : null;
                     states[(y * side + z) * side + x] = s == null ? (y == 0 ? GROUND : AIR) : rename(s, names);
                 }
@@ -127,19 +137,19 @@ final class CityHouses {
         }
         // the front door's path, from the doorstep to the street edge
         int doorX = Integer.MIN_VALUE;
-        for (int x = g.minX; x <= g.maxX(); x++) {
+        for (int x = x0; x <= x1; x++) {
             String s = g.get(x, 0, 0);
             if (s == null || !s.contains("_door") || !s.contains("half=lower")) continue;
             if (doorX == Integer.MIN_VALUE) doorX = x;
-            for (int z = g.minZ; z < 0; z++) {
-                int idx = (z - g.minZ) * side + (x - g.minX + dx);
+            for (int z = minZ; z < 0; z++) {
+                int idx = (z - minZ) * side + (x - x0 + dx);
                 if (states[idx].equals(GROUND)) states[idx] = PATH;
             }
         }
         Map<Integer, String[]> signs = new HashMap<>();
         if (sign && doorX != Integer.MIN_VALUE) {   // a house name beside the door, on the wall
-            int sx = doorX - 1, wallIdx = ((1 - g.minY) * side + (0 - g.minZ)) * side + (sx - g.minX + dx);
-            int at = ((1 - g.minY) * side + (-1 - g.minZ)) * side + (sx - g.minX + dx);
+            int sx = doorX - 1, wallIdx = ((1 - g.minY) * side + (0 - minZ)) * side + (sx - x0 + dx);
+            int at = ((1 - g.minY) * side + (-1 - minZ)) * side + (sx - x0 + dx);
             String wall = states[wallIdx];
             if (at >= 0 && states[at].equals(AIR) && !wall.equals(AIR) && !wall.contains("glass") && !wall.contains("door")) {
                 String wood = names.get("oak_wall_sign");

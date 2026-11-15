@@ -305,7 +305,13 @@ public final class MuseumCatalogue {
                 case 2 -> lines(name, "Cast, plaster", "Original " + (r.nextBoolean() ? "lost" : "in situ"), "");
                 default -> lines(name, "Gift of", short15(collector(r)), "Reg. " + regNo(r));
             };
-            case POTS -> lines(name, "From " + short15(place(r)), "Excavated", yr(r));
+            case POTS -> switch (r.nextInt(5)) {
+                case 0 -> lines(name, "From " + short15(place(r)), "Excavated", yr(r));
+                case 1 -> lines(name, "Restored from", (8 + r.nextInt(300)) + " fragments", "");
+                case 2 -> lines(name, "Capacity", (2 + r.nextInt(400)) + " litres", "Reg. " + regNo(r));
+                case 3 -> lines(name, "Kiln unknown", "Made " + yr(r), "");
+                default -> lines(name, "Lent by", short15(collector(r)), "");
+            };
             case PAINTING -> switch (r.nextInt(4)) {
                 case 0 -> lines(paintingTitle(r), "Oil on canvas", yr(r), "");
                 case 1 -> lines(paintingTitle(r), "Attributed to", short15(collector(r)), "");
