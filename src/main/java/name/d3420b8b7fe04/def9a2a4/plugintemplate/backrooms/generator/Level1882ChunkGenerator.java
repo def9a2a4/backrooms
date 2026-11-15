@@ -592,7 +592,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         if (r.nextInt(5) < 3) {
             for (int s = 0; s < 4; s++) {
                 if (e[s] != ARCADE && s != feature) {
-                    MuseumExhibits.lectern(m, s, 10);
+                    MuseumExhibits.lectern(m, s, 9);   // between two case labels
                     break;
                 }
             }

@@ -233,9 +233,9 @@ final class AlphaMegastructures {
             default -> {
                 int scale, side;
                 switch (kind) {
-                    case FACE -> { scale = 6 + r.nextInt(3); side = 8 * scale; }
-                    case HEAD -> { scale = 4 + r.nextInt(2); side = 8 * scale; }
-                    default -> { scale = 2 + r.nextInt(2); side = 16 * scale; }
+                    case FACE -> { scale = portraitScale(r, 6); side = 8 * scale; }
+                    case HEAD -> { scale = portraitScale(r, 4); side = 8 * scale; }
+                    default -> { scale = portraitScale(r, 3); side = 16 * scale; }
                 }
                 int x0 = center(r, cellMinX, side / 2 + 1) - side / 2;
                 int z0 = center(r, cellMinZ, side / 2 + 1) - side / 2;
@@ -268,6 +268,16 @@ final class AlphaMegastructures {
     private double ramp(int cx, int cz) {
         double d = Math.sqrt((double) cx * cx + (double) cz * cz);
         return Math.min(1.0, 0.6 + (d - minDistance) / 1500.0);
+    }
+
+    /**
+     * Blocks per skin pixel: mostly one (a face 8 blocks across, a statue 32 high), two a quarter
+     * of the time, bigger rarely, up to {@code max}.
+     */
+    private static int portraitScale(Random r, int max) {
+        int roll = r.nextInt(100);
+        int scale = roll < 60 ? 1 : roll < 85 ? 2 : roll < 95 ? 3 : 4 + r.nextInt(Math.max(1, max - 3));
+        return Math.min(max, scale);
     }
 
     /** A center coordinate keeping {@code half} blocks of footprint plus the edge clearance inside the cell. */

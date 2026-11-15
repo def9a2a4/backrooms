@@ -6,10 +6,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Nearest alpha-era block for a skin pixel. Wool covers the saturated colours;
- * the earthy blocks (planks, dirt, sand, bricks, clay) cover skin tones, hair
- * and leather far better than wool alone. Colours are each block's average
- * texture colour. Matching is nearest in CIELAB.
+ * Nearest block for a skin pixel, from wool, concrete, terracotta and a few
+ * alpha-era blocks. Concrete covers the saturated colours, terracotta the
+ * muted and earthy ones (skin tones, hair, leather), wool sits between, and
+ * the alpha blocks fill in. Colours are each block's average texture colour.
+ * Matching is nearest in CIELAB.
  */
 public final class SkinPalette {
 
@@ -46,6 +47,41 @@ public final class SkinPalette {
             new Entry(Material.DIAMOND_BLOCK, 98, 237, 228),
             new Entry(Material.OBSIDIAN, 15, 11, 25),
             new Entry(Material.SNOW_BLOCK, 249, 254, 254),
+
+            new Entry(Material.WHITE_CONCRETE, 207, 213, 214),
+            new Entry(Material.ORANGE_CONCRETE, 224, 97, 0),
+            new Entry(Material.MAGENTA_CONCRETE, 169, 48, 159),
+            new Entry(Material.LIGHT_BLUE_CONCRETE, 35, 137, 198),
+            new Entry(Material.YELLOW_CONCRETE, 241, 175, 21),
+            new Entry(Material.LIME_CONCRETE, 94, 168, 24),
+            new Entry(Material.PINK_CONCRETE, 213, 101, 142),
+            new Entry(Material.GRAY_CONCRETE, 54, 57, 61),
+            new Entry(Material.LIGHT_GRAY_CONCRETE, 125, 125, 115),
+            new Entry(Material.CYAN_CONCRETE, 21, 119, 136),
+            new Entry(Material.PURPLE_CONCRETE, 100, 31, 156),
+            new Entry(Material.BLUE_CONCRETE, 44, 46, 143),
+            new Entry(Material.BROWN_CONCRETE, 96, 59, 31),
+            new Entry(Material.GREEN_CONCRETE, 73, 91, 36),
+            new Entry(Material.RED_CONCRETE, 142, 32, 32),
+            new Entry(Material.BLACK_CONCRETE, 8, 10, 15),
+
+            new Entry(Material.TERRACOTTA, 152, 94, 67),
+            new Entry(Material.WHITE_TERRACOTTA, 209, 178, 161),
+            new Entry(Material.ORANGE_TERRACOTTA, 161, 83, 37),
+            new Entry(Material.MAGENTA_TERRACOTTA, 149, 88, 108),
+            new Entry(Material.LIGHT_BLUE_TERRACOTTA, 113, 108, 137),
+            new Entry(Material.YELLOW_TERRACOTTA, 186, 133, 35),
+            new Entry(Material.LIME_TERRACOTTA, 103, 117, 52),
+            new Entry(Material.PINK_TERRACOTTA, 161, 78, 78),
+            new Entry(Material.GRAY_TERRACOTTA, 57, 42, 35),
+            new Entry(Material.LIGHT_GRAY_TERRACOTTA, 135, 106, 97),
+            new Entry(Material.CYAN_TERRACOTTA, 86, 91, 91),
+            new Entry(Material.PURPLE_TERRACOTTA, 118, 70, 86),
+            new Entry(Material.BLUE_TERRACOTTA, 74, 59, 91),
+            new Entry(Material.BROWN_TERRACOTTA, 77, 51, 35),
+            new Entry(Material.GREEN_TERRACOTTA, 76, 83, 42),
+            new Entry(Material.RED_TERRACOTTA, 143, 61, 46),
+            new Entry(Material.BLACK_TERRACOTTA, 37, 22, 16),
     };
 
     private static final Map<Integer, Material> CACHE = new ConcurrentHashMap<>();

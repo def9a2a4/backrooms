@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from buildings import CATALOG  # noqa: E402
 import buildings_extra  # noqa: E402,F401  (registers more kinds)
 import sky  # noqa: E402,F401  (registers more sky features)
+import buildings_more  # noqa: E402,F401  (registers a third set of kinds)
 from parts import STYLES  # noqa: E402
 from schem import Checker  # noqa: E402
 import words  # noqa: E402
