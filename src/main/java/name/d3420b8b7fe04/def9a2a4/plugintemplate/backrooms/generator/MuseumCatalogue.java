@@ -29,6 +29,7 @@ public final class MuseumCatalogue {
     public enum Topic {
         SPECIMEN, SKELETON, MONOLITH, POTS, PAINTING, ROOM, GUIDE, MURAL, TANK,
         LIBRARY,    // a scholarly book in a library
+        SHELFMARK,  // the label at the end of a bookcase
         LOG,        // an internal record, in staff-only rooms
         STAFF,      // the sign on a staff-only door
         CRATE,      // a label on something in a storeroom
@@ -276,6 +277,19 @@ public final class MuseumCatalogue {
                         : new String[]{"Gallery " + s.gallery(), t[0], t[1], ""};
             }
             case GUIDE -> new String[]{"", "Please do not", "touch the", "exhibits"};
+            case SHELFMARK -> {
+                String title = !name.isEmpty() ? name : s.theme().titles[r.nextInt(s.theme().titles.length)];
+                String cls = "" + (char) ('A' + r.nextInt(26)) + (char) ('A' + r.nextInt(26));
+                int n0 = 1 + r.nextInt(900), n1 = n0 + 1 + r.nextInt(400);
+                yield switch (r.nextInt(6)) {
+                    case 0 -> lines(cls + " " + n0, "to " + cls + " " + n1, "", title.length() <= LINE ? title : "");
+                    case 1 -> lines(title, cls + " " + n0 + "-" + n1, "", "");
+                    case 2 -> new String[]{cls + " " + n0 + "-" + n1, "Folios", "Ask at the desk", ""};
+                    case 3 -> lines(title, "Reference only", "", cls + " " + n0 + "-" + n1);
+                    case 4 -> new String[]{"Shelves " + (1 + r.nextInt(99)), "", "Do not reshelve", ""};
+                    default -> lines(title, "Periodicals", yr(r) + "-", "");
+                };
+            }
             case STAFF -> switch (r.nextInt(5)) {
                 case 0 -> new String[]{"", "STAFF ONLY", "", ""};
                 case 1 -> new String[]{"Store " + (1 + r.nextInt(60)), "", "Staff only", ""};

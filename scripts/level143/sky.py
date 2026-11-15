@@ -298,7 +298,7 @@ def galleon(rng, st):
         standing(b, x, deck + 5, z1 - 1, st.light)
     # masts and sails
     sail = rng.choice(("white_wool", "white_wool", "light_gray_wool"))
-    masts = [z0 + round((z1 - z0) * f) for f in ((0.3, 0.58) if L < 23 else (0.25, 0.47, 0.66))]
+    masts = [min(c0 - 2, z0 + round((z1 - z0) * f)) for f in ((0.3, 0.58) if L < 23 else (0.25, 0.47, 0.66))]
     for i, mz in enumerate(masts):
         mast(b, cx, mz, deck + 1, deck + 9, wood, sail, 3 if i == len(masts) - 1 or len(masts) == 2 else 2)
     # the balloon over it all
@@ -311,7 +311,7 @@ def galleon(rng, st):
             rope(b, inside, x, deck + 2, z)
     for mz in masts:
         rope(b, inside, cx, deck + 10, mz)
-    b.set(cx, deck + 2, z0 + 1, st.light, hanging="false", **NOWATER)
+    b.set(cx, deck + 1, z0 + 2, st.light, hanging="false", **NOWATER)
     return done(b)
 
 
@@ -321,7 +321,7 @@ def galleon(rng, st):
 def catamaran(rng, st):
     L = rng.randint(19, 22)
     W = 17
-    b = Build("Twin-Hull Airship", "sky_feature", W, L)
+    b = Build("Twin-Hull Airship", "sky_feature", W, L + 1)
     wood = pick(rng, st.woods)
     deck = SKY + 2
     acc = pick(rng, ACCENTS)
@@ -451,7 +451,7 @@ def cargo_airship(rng, st):
 @gen("liner", kind="sky_feature", freq="rare", n=3)
 def liner(rng, st):
     L = 25
-    W, cx = 15, 7
+    W, cx = 17, 8
     b = Build("Passenger Liner", "sky_feature", W, L)
     wood = pick(rng, st.woods)
     trim = pick(rng, st.woods)
@@ -493,8 +493,8 @@ def liner(rng, st):
     for s in (-1, 1):
         b.set(cx + 2 * s, gy + 1, g1 - 1, f"{trim}_stairs", facing="west" if s < 0 else "east",
               half="bottom", shape="straight", **NOWATER)
-    b.set(cx, gy + 1, g1 - 1, f"{trim}_fence", **NOWATER)
-    b.set(cx, gy + 2, g1 - 1, f"{trim}_pressure_plate", powered="false")
+    b.set(cx, gy + 1, g1 - 2, f"{trim}_fence", **NOWATER)
+    b.set(cx, gy + 2, g1 - 2, f"{trim}_pressure_plate", powered="false")
     if rng.random() < 0.5:
         b.chest(cx + 2, gy + 1, z + 1, "west", TREASURE)
     for zz in range(g0 + 2, g1, 3):
@@ -646,7 +646,7 @@ def derelict(rng, st):
                 break
     b.chest(cx, deck - 2, (z0 + z1) // 2, "north", TREASURE)
     b.set(cx, deck, (z0 + z1) // 2 + 1, "air")
-    hanging(b, cx + 1, deck + 3, z1 - 1, "soul_lantern") if rng.random() < 0.5 else None
+    hanging(b, cx + 1, deck + 3, z1 - 1, "soul_lantern")
     b.set(cx + 1, deck + 4, z1 - 1, f"{wood}_fence", **NOWATER) if b.get(cx + 1, deck + 3, z1 - 1) != "air" else None
     return done(b)
 
@@ -666,6 +666,7 @@ def balloon_cluster(rng, st):
     b.fill(c - 1, SKY, c - 1, c + 1, SKY, c + 1, f"{wood}_planks")
     b.ring(c - 1, c - 1, c + 1, c + 1, SKY + 1, SKY + 1, f"{wood}_fence", **NOWATER)
     b.set(c, SKY + 1, c, "barrel", facing="up", open="false")
+    standing(b, c - 1, SKY + 2, c - 1, st.light)
     knot = SKY + 6
     chain(b, c, SKY + 2, knot, c)
     n = rng.randint(4, 5)
@@ -771,6 +772,7 @@ def sky_island(rng, st):
     b.chest(hx + 3, top + 1, hz + 3, "west", TREASURE)
     b.set(hx + 3, top + 1, hz + 1, "crafting_table")
     hanging(b, hx + 2, top + 3, hz + 2, st.light)
+    chain(b, hx + 2, top + 4, top + 5, hz + 2)
     # a path to the edge, a tree, a fence and flowers
     for z in range(0, hz):
         if b.get(hx + 2, top, z).startswith("grass"):
@@ -823,6 +825,7 @@ def glider(rng, st):
     b.set(cx, SKY, mz, f"{wood}_trapdoor", facing="north", half="top", open="false", powered="false", **NOWATER)
     b.set(cx, SKY, mz + 1, f"{wood}_stairs", facing="south", half="top", shape="straight", **NOWATER)
     b.set(cx, SKY + 1, mz + 1, "air")
+    hanging(b, cx, wy - 1, 2, st.light)
     # a streamer tail
     for i in range(1, 3):
         b.set(cx, wy - 1 + (i % 2), L - 1 + i, "iron_chain", axis="z", **NOWATER)
@@ -940,4 +943,476 @@ def canvas_barge(rng, st):
         for x in (cx - 3, cx + 3):
             rope(b, inside, x, deck + 5, z)
     propeller(b, cx, deck + 1, z1 + 1, wood)
+    return done(b)
+
+
+# ── A whale-shaped blimp ──────────────────────────────────────────────────
+
+@gen("whale_blimp", kind="sky_feature", freq="average", n=3)
+def whale_blimp(rng, st):
+    """A blimp built as a whale: a blunt head, a pale belly, an eye and a mouth line, a harness
+    of the city's colour, flukes for a tail and a spout of glass from its blowhole."""
+    L = rng.randint(21, 23)
+    W, cx = 15, 7
+    b = Build("Whale Blimp", "sky_feature", W, L)
+    wood = pick(rng, st.woods)
+    back = pick(rng, ("gray_wool", "light_gray_wool", "cyan_wool", "blue_wool"))
+    cy = SKY + 12
+    ze = L - 5          # where the body ends, the flukes behind it
+    harness = (ze // 3, 2 * ze // 3)
+
+    def paint(x, y, z):
+        if z in harness:
+            return WOOL
+        if y <= cy - 2:
+            return "white_wool"
+        return back
+
+    inside = envelope(b, cx, cy, 0, ze, 4.8, 4.3, paint, nose=0.3, pf=3.4, pb=1.5)
+    # the tail stock and the flukes, flat either side
+    for z in range(ze, L):
+        b.set(cx, cy, z, back)
+    for k, (a, c) in enumerate(((1, 2), (2, 4), (3, 6), (5, 6))):
+        z = ze + 1 + k
+        if z >= L:
+            break
+        for d in range(a, c + 1):
+            for s in (-1, 1):
+                b.set(cx + s * d, cy, z, back if k < 3 else "white_wool")
+    # an eye each side, the mouth along the head
+    for s in (-1, 1):
+        x = cx + s * 5
+        while not inside(x, cy, 3) and x != cx:
+            x -= s
+        b.set(x, cy, 3, "black_wool")
+        b.set(x, cy + 1, 3, "white_wool")
+        for z in range(0, 6):
+            xx = cx + s * 5
+            while not inside(xx, cy - 2, z) and xx != cx:
+                xx -= s
+            if inside(xx, cy - 2, z):
+                b.set(xx, cy - 2, z, "black_wool")
+    # the spout
+    top = max(y for y in range(cy, TOP) if inside(cx, y, 4))
+    for i, s in enumerate(("light_blue_stained_glass", "light_blue_stained_glass", "white_stained_glass")):
+        b.set(cx, top + 1 + i, 4, s)
+    for dx in (-1, 1):
+        b.set(cx + dx, top + 3, 4, "white_stained_glass")
+    # the gondola slung under its middle
+    g0, g1 = 6, 6 + rng.randint(5, 6)
+    cabin(b, cx - 2, g0, cx + 2, g1, SKY, 3, f"{wood}_planks", f"{wood}_planks", "glass_pane",
+          corner=f"{wood}_log" if wood != "pale_oak" else "stripped_pale_oak_log", every=2)
+    b.door(cx, SKY + 1, g0, "south", wood)
+    b.fill(cx - 1, SKY, g0 - 1, cx + 1, SKY, g0 - 1, f"{wood}_slab", type="top", **NOWATER)   # a step-out porch
+    for x in (cx - 1, cx + 1):
+        b.set(x, SKY + 1, g0 - 1, f"{wood}_fence", **NOWATER)
+    hanging(b, cx, SKY + 3, (g0 + g1) // 2, st.light)
+    b.set(cx - 1, SKY + 1, g1 - 1, "lectern", facing="north", has_book="false", powered="false")
+    b.chest(cx + 1, SKY + 1, g1 - 1, "west", TREASURE) if rng.random() < 0.5 else b.barrel(cx + 1, SKY + 1, g1 - 1, [pick(rng, CARGO)])
+    stair(b, cx + 1, SKY + 1, g0 + 1, f"{wood}_stairs", "east")
+    for x in (cx - 2, cx + 2):
+        for z in (g0, g1):
+            rope(b, inside, x, SKY + 5, z)
+    for s in (-1, 1):   # pectoral fins as engines
+        engine(b, cx + s * 6, cy - 1, ze // 2 + 1, wood)
+    return done(b)
+
+
+def stair(b, x, y, z, name, facing, half="bottom"):
+    b.set(x, y, z, name, facing=facing, half=half, **NOWATER)
+
+
+# ── Sky lanterns ──────────────────────────────────────────────────────────
+
+LANTERN_COLOURS = ("orange", "red", "yellow", "white", "pink", "orange")
+
+
+def sky_lantern(b, x, y, z, colour, glow):
+    """A paper lantern: a glowing body under a coloured paper top, a candle-cup under it."""
+    b.set(x, y + 2, z, f"{colour}_wool")
+    b.set(x, y + 1, z, glow)
+    b.set(x, y, z, f"{colour}_stained_glass")
+
+
+@gen("lantern_festival", kind="sky_feature", freq="average", n=3)
+def lantern_festival(rng, st):
+    """A cloud of paper lanterns let go from a little raft, drifting up at every height."""
+    S = 21
+    c = S // 2
+    b = Build("Lantern Festival", "sky_feature", S, S)
+    wood = pick(rng, st.woods)
+    b.fill(c - 2, SKY, c - 2, c + 2, SKY, c + 2, f"{wood}_planks")
+    b.ring(c - 2, c - 2, c + 2, c + 2, SKY + 1, SKY + 1, f"{wood}_fence", **NOWATER)
+    b.set(c, SKY + 1, c - 2, f"{wood}_fence_gate", facing="north", in_wall="false", open="true", powered="false")
+    b.fill(c, SKY + 1, c, c, SKY + 3, c, f"{wood}_fence", **NOWATER)
+    b.set(c, SKY + 4, c, f"{wood}_slab", type="bottom", **NOWATER)
+    standing(b, c - 1, SKY + 1, c + 1, st.light)
+    b.barrel(c + 1, SKY + 1, c + 1, [("candle", rng.randint(8, 32))])
+    b.barrel(c + 1, SKY + 1, c - 1, [("paper", rng.randint(8, 32))])
+    glows = ("shroomlight", "ochre_froglight", "pearlescent_froglight", "glowstone") if st.key != "ashen" else \
+        ("shroomlight", "verdant_froglight", "glowstone", "sea_lantern")
+    placed = []
+    tries = 0
+    n = rng.randint(18, 26)
+    while len(placed) < n and tries < 400:
+        tries += 1
+        y = rng.randint(SKY + 3, TOP - 2)
+        r = 2 + (y - SKY) * 0.35   # the cloud widens as it rises
+        a = rng.random() * math.tau
+        d = rng.random() * min(r, c - 1)
+        x, z = round(c + d * math.cos(a)), round(c + d * math.sin(a))
+        if abs(x - c) <= 2 and abs(z - c) <= 2 and y < SKY + 6:
+            continue
+        if any(abs(x - px) <= 1 and abs(z - pz) <= 1 and abs(y - py) <= 3 for px, py, pz in placed):
+            continue
+        placed.append((x, y, z))
+        sky_lantern(b, x, y, z, pick(rng, LANTERN_COLOURS), pick(rng, glows))
+    return done(b)
+
+
+# ── A balloon race ────────────────────────────────────────────────────────
+
+def small_balloon(b, rng, x, y, z, r, colour, wood, stripe):
+    """A little hot-air balloon whose basket floor is at y, centred on (x, z)."""
+    ry = r + 1
+    cy = y + 4 + ry
+    inside = lambda xx, yy, zz: ((xx - x) / (r + 0.4)) ** 2 + ((yy - cy) / (ry + 0.4)) ** 2 + ((zz - z) / (r + 0.4)) ** 2 <= 1 \
+        and not (yy < cy - ry + 1 and abs(xx - x) + abs(zz - z) <= 0)
+    body(b, (x - r - 1, cy - ry - 1, z - r - 1, x + r + 1, cy + ry + 1, z + r + 1), inside,
+         lambda xx, yy, zz: stripe if (xx + zz) % 3 == 0 else colour)
+    b.fill(x - 1, y, z - 1, x + 1, y, z + 1, f"{wood}_planks")
+    b.ring(x - 1, z - 1, x + 1, z + 1, y + 1, y + 1, f"{wood}_fence", **NOWATER)
+    b.set(x, y + 1, z, "campfire", facing="north", lit="true", signal_fire="false", **NOWATER)
+    for xx, zz in ((x - 1, z - 1), (x + 1, z - 1), (x - 1, z + 1), (x + 1, z + 1)):
+        yy = y + 2
+        while yy < TOP and not inside(xx, yy + 1, zz) and b.empty(xx, yy, zz):
+            b.set(xx, yy, zz, "iron_chain", axis="y", **NOWATER)
+            yy += 1
+    return cy + ry
+
+
+@gen("balloon_race", kind="sky_feature", freq="common", n=3)
+def balloon_race(rng, st):
+    """Four or five little balloons strung out in a race, each its own colours, the leader lowest."""
+    S = 23
+    b = Build("Balloon Race", "sky_feature", S, S)
+    wood = pick(rng, st.woods)
+    n = rng.randint(4, 5)
+    spots = [(4, 4), (18, 5), (11, 11), (5, 18), (17, 17)]
+    rng.shuffle(spots)
+    colours = [WOOL] + [pick(rng, PARTY) for _ in range(n - 1)]
+    for i, ((x, z), col) in enumerate(zip(spots[:n], colours)):
+        r = 3 if i == 0 else rng.choice((2, 3))
+        y = SKY if i == 0 else rng.randint(SKY + 1, TOP - (2 * r + 7))
+        stripe = pick(rng, ("white_wool", "black_wool", "yellow_wool", "red_wool"))
+        small_balloon(b, rng, x, y, z, r, col, wood, stripe)
+    return done(b)
+
+
+# ── A lighthouse on a floating rock ───────────────────────────────────────
+
+@gen("sky_lighthouse", kind="sky_feature", freq="rare", n=3)
+def sky_lighthouse(rng, st):
+    """A banded lighthouse on a crag adrift in the sky: a gallery round its lamp, a keeper's door."""
+    S = 15
+    c = S // 2
+    b = Build("Sky Lighthouse", "sky_feature", S, S)
+    wood = pick(rng, st.woods)
+    top = SKY + 6
+    rock = ("stone", "andesite", "stone", "cobblestone", "tuff") if st.key != "ochre" else \
+        ("sandstone", "terracotta", "smooth_sandstone", "granite")
+    for d in range(top - SKY + 1):
+        y = top - d
+        R = 6.2 - d * 0.9 + rng.uniform(-0.3, 0.3)
+        for x in range(S):
+            for z in range(S):
+                if math.hypot(x - c, z - c) <= R:
+                    b.set(x, y, z, ("grass_block[snowy=false]" if st.key != "ochre" else "coarse_dirt") if d == 0
+                          else pick(rng, rock))
+    if b.empty(c, SKY, c):
+        b.set(c, SKY, c, pick(rng, rock))
+    band = pick(rng, (WOOL, "red_terracotta", "black_terracotta" if st.key == "ashen" else "red_terracotta"))
+    white = "white_terracotta" if st.key != "ashen" else "light_gray_terracotta"
+    t0, t1 = top + 1, top + 14
+    for y in range(t0, t1 + 1):
+        for dx, dz in circle_cells(2):
+            b.set(c + dx, y, c + dz, band if ((y - t0) // 3) % 2 else white)
+    for y in (t0 + 4, t0 + 8, t0 + 11):
+        b.set(c, y, c - 2, "glass_pane", **NOWATER)
+    for dx, dz in disc_cells(1):
+        b.set(c + dx, top, c + dz, f"{wood}_planks")
+    b.door(c, t0, c - 2, "south", wood)
+    for y in range(t0, t1 + 1):
+        b.set(c, y, c + 1, "ladder", facing="north", **NOWATER)
+    b.set(c - 1, t0 + 2, c, st.wall_torch, facing="east")
+    # the gallery and lamp room
+    g = t1 + 1
+    for dx, dz in disc_cells(3):
+        b.set(c + dx, g, c + dz, white)
+    for dx, dz in circle_cells(3):
+        b.set(c + dx, g + 1, c + dz, "iron_bars", **NOWATER)
+    b.set(c, g, c + 1, "air")
+    b.set(c, g, c + 1, "ladder", facing="north", **NOWATER)
+    b.set(c, g, c + 2, white)
+    for dx, dz in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+        b.fill(c + dx, g + 1, c + dz, c + dx, g + 2, c + dz, "iron_bars", **NOWATER)
+    for dx, dz in ((0, -1), (-1, 0), (1, 0)):
+        b.fill(c + dx, g + 1, c + dz, c + dx, g + 2, c + dz, "glass")
+    b.set(c, g + 1, c + 1, "air")
+    b.set(c, g + 2, c + 1, "glass")
+    b.set(c, g + 1, c, "sea_lantern" if st.key != "ashen" else "crying_obsidian")
+    b.set(c, g + 2, c, "glowstone" if st.key != "ashen" else "soul_campfire", **({} if st.key != "ashen" else
+          dict(facing="north", lit="true", signal_fire="false", waterlogged="false")))
+    m = pick(rng, st.roofs)
+    b.fill(c - 1, g + 3, c - 1, c + 1, g + 3, c + 1, m.block)
+    for d, (dx, dz) in (("south", (0, -2)), ("north", (0, 2)), ("east", (-2, 0)), ("west", (2, 0))):
+        stair(b, c + dx, g + 3, c + dz, m.stairs, d)
+    for dx, dz in ((-2, -2), (2, -2), (-2, 2), (2, 2), (-1, -2), (1, -2), (-1, 2), (1, 2), (-2, -1), (-2, 1), (2, -1), (2, 1)):
+        if abs(dx) == 2 and abs(dz) == 2:
+            continue
+        stair(b, c + dx, g + 3, c + dz, m.stairs, "south" if dz == -2 else "north" if dz == 2 else "east" if dx == -2 else "west")
+    stair(b, c, g + 4, c - 1, m.stairs, "south")
+    stair(b, c, g + 4, c + 1, m.stairs, "north")
+    stair(b, c - 1, g + 4, c, m.stairs, "east")
+    stair(b, c + 1, g + 4, c, m.stairs, "west")
+    b.set(c, g + 4, c, m.block)
+    b.set(c, g + 5, c, "lightning_rod", facing="up", powered="false", **NOWATER)
+    # the keeper's things on the rock: a path, a bench, a barrel of oil, a fence at the edge
+    for z in range(0, c - 2):
+        if b.get(c, top, z) not in ("air",):
+            b.set(c, top, z, "dirt_path" if st.key != "ochre" else "gravel")
+    b.barrel(c + 2, top + 1, c - 3, [("glowstone_dust", rng.randint(2, 9))])
+    standing(b, c - 2, top + 1, c - 3, st.light)
+    for x in range(S):
+        for z in range(S):
+            if b.get(x, top, z) not in ("air",) and b.empty(x, top + 1, z) and rng.random() < 0.15 \
+                    and math.hypot(x - c, z - c) > 3:
+                f = pick(rng, st.flowers)
+                if f != "brown_mushroom" and b.get(x, top, z).startswith("grass"):
+                    b.set(x, top + 1, z, f)
+    return done(b)
+
+
+def disc_cells(r):
+    rr = (r + 0.45) ** 2
+    return [(dx, dz) for dx in range(-r, r + 1) for dz in range(-r, r + 1) if dx * dx + dz * dz <= rr]
+
+
+def circle_cells(r):
+    inner = set(disc_cells(r - 1))
+    return [c for c in disc_cells(r) if c not in inner]
+
+
+# ── A tethered barrage balloon ────────────────────────────────────────────
+
+@gen("barrage_balloon", kind="sky_feature", freq="common", n=3)
+def barrage_balloon(rng, st):
+    """A fat silver balloon with three fat fins, its cable hanging straight down with a lamp on
+    the end, guy lines gathering to it from the belly."""
+    L = rng.randint(17, 19)
+    W, cx = 15, 7
+    b = Build("Barrage Balloon", "sky_feature", W, L)
+    silver = pick(rng, ("light_gray_wool", "white_wool", "gray_wool"))
+    cy = TOP - 5
+    inside = envelope(b, cx, cy, 0, L - 5, 4.6, 4.4, lambda x, y, z: WOOL if z in (2, 3) else silver,
+                      nose=0.42, pf=2.2, pb=1.7)
+    # three lobed fins: up and out to each side, swollen
+    ze = L - 5
+    for k in range(4):
+        z = ze + k - 1
+        for d in range(1, 5 - k // 2):
+            for sx, sy in ((0, 1), (-1, -1), (1, -1)):
+                x, y = cx + sx * d, cy + sy * d
+                if b.inside(x, z) and not inside(x, y, z) and y <= TOP:
+                    b.set(x, y, z, silver)
+                    if sy == -1:
+                        b.set(x, y + 1, z, silver) if not inside(x, y + 1, z) else None
+    # the cable: straight down from the belly
+    cz = (L - 5) // 2
+    bot = underside(inside, cx, cy, cz)
+    chain(b, cx, SKY + 1, bot - 1, cz)
+    hanging(b, cx, SKY, cz, st.light)
+    gy = bot - 3
+    for dx, dz in ((-3, -3), (3, -3), (-3, 3), (3, 3)):   # guy lines down to the cable
+        x, z = cx + dx, cz + dz
+        y = underside(inside, x, cy, z) - 1
+        while (x, z) != (cx, cz) and y > gy:
+            b.set(x, y, z, "iron_chain", axis="y", **NOWATER)
+            x += (cx > x) - (cx < x)
+            z += (cz > z) - (cz < z)
+            y -= 1
+    b.set(cx, gy, cz, "iron_block")
+    return done(b)
+
+
+# ── A sky market ──────────────────────────────────────────────────────────
+
+@gen("sky_market", kind="sky_feature", freq="rare", n=3)
+def sky_market(rng, st):
+    """A broad barge under a great envelope, its deck set out with stalls under striped awnings."""
+    L = rng.randint(21, 23)
+    W, cx = 15, 7
+    b = Build("Sky Market", "sky_feature", W, L)
+    wood = pick(rng, st.woods)
+    deck = SKY + 2
+    z0, z1 = 1, L - 2
+    widths = hull(b, cx, z0, z1, deck, 5, 2, wood)
+    goods = (("apple", 12), ("bread", 8), ("melon_slice", 16), ("cookie", 12), ("emerald", 2), ("string", 9),
+             ("paper", 12), ("leather", 6))
+    stalls = []
+    for z in range(z0 + 4, z1 - 3, 4):
+        for s in (-1, 1):
+            if widths[z] >= 4 and widths[z + 2] >= 4:
+                stalls.append((s, z))
+    for s, z in stalls:
+        xo = cx + s * (widths[z] - 1)
+        xi = cx + s * (widths[z] - 3)
+        for zz in (z, z + 2):
+            b.fill(xi, deck + 1, zz, xi, deck + 2, zz, f"{wood}_fence", **NOWATER)
+        for zz in range(z, z + 3):
+            for x in range(min(xo, xi), max(xo, xi) + 1):
+                b.set(x, deck + 3, zz, WOOL if zz % 2 else "white_wool")
+            b.barrel(xo, deck + 1, zz, [pick(rng, goods)]) if zz != z + 1 else b.set(xo, deck + 1, zz, f"{wood}_slab", type="top", **NOWATER)
+        g = pick(rng, ("cake", "melon", "pumpkin", "hay_block", "decorated_pot"))
+        props = {"cake": {"bites": "0"}, "hay_block": {"axis": "y"}, "decorated_pot": {"facing": "north", "cracked": "false", "waterlogged": "false"}}.get(g, {})
+        b.set(xo, deck + 2, z + 1, g, **props)
+        hanging(b, xo - s, deck + 2, z + 1, st.light)
+    # the middle aisle: a lamp post, a counting table
+    b.set(cx, deck + 1, z0 + 2, f"{wood}_fence", **NOWATER)
+    standing(b, cx, deck + 2, z0 + 2, st.light)
+    b.chest(cx, deck + 1, z1 - 2, "north", TREASURE) if rng.random() < 0.4 else b.barrel(cx, deck + 1, z1 - 2, [pick(rng, goods)])
+    cy = deck + 15
+
+    def paint(x, y, z):
+        if z <= 1 or z >= L - 2:
+            return "white_wool"
+        return WOOL if (x + z) % 4 < 2 else "white_wool"
+
+    inside = envelope(b, cx, cy, 0, L - 1, 6.0, 4.5, paint, nose=0.45, pf=2.4, pb=2.2)
+    for z in (z0 + 2, (z0 + z1) // 2, z1 - 2):
+        for x in (cx - widths[z], cx + widths[z]):
+            rope(b, inside, x, deck + 2, z)
+    for zz in range(z0 + 4, z1 - 2, 4):
+        rope(b, inside, cx, deck + 1, zz) if b.empty(cx, deck + 1, zz) else None
+    propeller(b, cx, deck + 1, z1 + 1, wood)
+    return done(b)
+
+
+# ── The mail dirigible ────────────────────────────────────────────────────
+
+@gen("mail_dirigible", kind="sky_feature", freq="average", n=3)
+def mail_dirigible(rng, st):
+    """A slim fast dirigible in the post's livery, its gondola full of mail sacks, a bag hung on a
+    hook below for pick-ups on the fly."""
+    L = rng.randint(19, 21)
+    W, cx = 13, 6
+    b = Build("Mail Dirigible", "sky_feature", W, L)
+    wood = pick(rng, st.woods)
+    cy = SKY + 13
+    livery = pick(rng, ("red_wool", "red_wool", "blue_wool"))
+
+    def paint(x, y, z):
+        if z <= 1:
+            return livery
+        if abs(y - cy) <= 0:
+            return livery
+        return WOOL if (z // 4) % 2 else "white_wool"
+
+    inside = envelope(b, cx, cy, 0, L - 1, 3.8, 3.6, paint, nose=0.38, pf=2.6, pb=1.7)
+    fins(b, inside, cx, cy, L - 1, 5, 6, livery)
+    g0, g1 = 5, 12
+    gy = SKY + 3
+    cabin(b, cx - 2, g0, cx + 2, g1, gy, 3, f"{wood}_planks", f"{wood}_planks", "glass_pane",
+          corner=f"{wood}_log" if wood != "pale_oak" else "stripped_pale_oak_log", every=2)
+    b.door(cx, gy + 1, g1, "south", wood)
+    for z in range(g0 + 1, g1 - 1):
+        b.barrel(cx - 1, gy + 1, z, [("paper", rng.randint(4, 32))], facing="east")
+        if z % 2:
+            b.barrel(cx - 1, gy + 2, z, [("paper", rng.randint(1, 9))], facing="east")
+    b.set(cx + 1, gy + 1, g0 + 1, "lectern", facing="west", has_book="false", powered="false")
+    b.set(cx + 1, gy + 1, g0 + 2, "cartography_table")
+    hanging(b, cx, gy + 3, (g0 + g1) // 2, st.light)
+    for x in (cx - 2, cx + 2):
+        for z in (g0, g1):
+            rope(b, inside, x, gy + 4, z)
+    # the hook and its bag
+    chain(b, cx, SKY + 1, gy - 1, g0 + 2)
+    b.set(cx, SKY, g0 + 2, "brown_wool")
+    b.sign(cx + 3, gy + 2, g0 + 2, "east", ["Air Mail~Next stop~[adjectives]~[roadtypes]", "", "", ""], wood)
+    b.sign(cx - 3, gy + 2, g0 + 2, "west", ["Air Mail", "", "", ""], wood)
+    b.fill(cx - 1, gy, g1 + 1, cx + 1, gy, g1 + 1, f"{wood}_slab", type="top", **NOWATER)   # the drop porch
+    for x in (cx - 1, cx + 1):
+        b.set(x, gy + 1, g1 + 1, f"{wood}_fence", **NOWATER)
+    for s in (-1, 1):
+        engine(b, cx + s * 5, cy - 1, L - 6, wood)
+    return done(b)
+
+
+# ── A wreck tangled in a balloon ──────────────────────────────────────────
+
+@gen("tangled_wreck", kind="sky_feature", freq="rare", n=3)
+def tangled_wreck(rng, st):
+    """The bow of a broken ship hanging nose down from a stray hot-air balloon that caught it,
+    rigging wound round the lot, the envelope sagging and torn."""
+    S = 17
+    c = S // 2
+    b = Build("Tangled Wreck", "sky_feature", S, S)
+    wood = pick(rng, ("dark_oak", "spruce", pick(rng, st.woods)))
+    # the balloon, slumped to one side
+    r, ry = 6, 5
+    cy = TOP - ry
+
+    def inside(x, y, z):
+        lean = (y - cy) * 0.25
+        return ((x - c - lean) / (r + 0.4)) ** 2 + ((y - cy) / (ry + 0.4)) ** 2 + ((z - c) / (r - 0.6)) ** 2 <= 1
+
+    def paint(x, y, z):
+        q = rng.random()
+        if q < 0.1:
+            return None
+        if q < 0.25:
+            return pick(rng, ("gray_wool", "light_gray_wool", "brown_wool"))
+        return WOOL if (x + z) % 4 < 2 else "white_wool"
+
+    body(b, (0, cy - ry - 1, 0, S - 1, TOP, S - 1), inside, paint)
+    # the bow, hanging nose down: each layer of the hull a step further over
+    top = underside(inside, c, cy, c) - 3
+    for i, y in enumerate(range(top, SKY - 1, -1)):
+        hw = max(0, 2 - i // 4)
+        zz = c + (i // 3)
+        for dx in range(-hw, hw + 1):
+            if abs(dx) == hw or i % 4 == 0:
+                if rng.random() < 0.85:
+                    b.set(c + dx, y, zz, f"{wood}_planks")
+            b.set(c + dx, y, zz - 1, f"{wood}_planks") if abs(dx) == hw and hw > 0 else None
+        if i == 2:
+            b.set(c, y, zz, f"{wood}_log", axis="y")
+    # the broken mast across it, a scrap of sail
+    my = top - 3
+    for k in range(-3, 4):
+        b.set(c + k, my, c - 1, f"{wood}_log", axis="x")
+    for k in range(-2, 3):
+        if rng.random() < 0.7:
+            b.set(c + k, my - 1, c - 2, pick(rng, ("white_wool", "light_gray_wool", "cobweb")))
+    # the rigging: chains from the balloon's skirt down to the wreck
+    for dx, dz in ((-3, -2), (3, -2), (-2, 3), (2, 2)):
+        x, z = c + dx, c + dz
+        y = underside(inside, x, cy, z) - 1
+        while y > top - 2 and b.empty(x, y, z):
+            b.set(x, y, z, "iron_chain", axis="y", **NOWATER)
+            y -= 1
+    for x in range(c - 2, c + 3):
+        b.set(x, top + 1, c, "iron_chain", axis="x", **NOWATER)
+    chain(b, c, top + 2, underside(inside, c, cy, c) - 1, c)
+    # what's left aboard
+    for _ in range(8):
+        x, y, z = c + rng.randint(-2, 2), rng.randint(SKY, top), c + rng.randint(-1, 4)
+        if b.empty(x, y, z):
+            b.set(x, y, z, "cobweb")
+    hy = top - 1
+    b.set(c, hy + 1, c + 0, f"{wood}_planks") if b.empty(c, hy + 1, c) else None
+    b.set(c - 1, top + 1, c + 1, f"{wood}_fence", **NOWATER)
+    hanging(b, c - 1, top, c + 1, "soul_lantern")
+    b.container(c + 1, top - 1, c, "chest", TREASURE, facing="north", type="single", waterlogged="false")
+    b.set(c + 1, top - 2, c, f"{wood}_planks")
     return done(b)

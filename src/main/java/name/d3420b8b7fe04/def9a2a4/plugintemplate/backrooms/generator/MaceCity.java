@@ -45,7 +45,8 @@ import java.util.Set;
  */
 final class MaceCity {
 
-    static final int HEIGHT = 128;
+    /** Buffer height: Level 142's cities, and Level 143's, whose airships fly higher. */
+    static final int HEIGHT = 128, HEIGHT_143 = 160, MAX_HEIGHT = HEIGHT_143;
     static final int EDGE = 8;                      // City.edgeLength
     private static final int MULTIPLIER = 5;        // mineshaft cells
     private static final int SPLIT_CHANCE = 7;
@@ -184,7 +185,7 @@ final class MaceCity {
     // ── The buffer ────────────────────────────────────────────────────────
 
     final Plan plan;
-    final int mapLength, farmLength;
+    final int mapLength, farmLength, height;
     final String name;
     private final int sizeX, sizeZ;                   // x 0..mapLength, z -farmLength..mapLength
     private final short[] cells;
@@ -197,17 +198,18 @@ final class MaceCity {
 
     // City.* options
     private final Random rng;
-    private final MaceLibrary lib;
-    private final Theme theme;
+    final MaceLibrary lib;
+    final Theme theme;
     private final boolean hasFarms, hasMoat, hasWalls, hasDrawbridges, hasGuardTowers, hasBuildings, hasPaths,
             hasMainStreets, hasMineshaft, hasEmblems, hasOutsideLights, hasTowerAddition, hasFlowers, hasSkyFeature,
             hasStreetLights, hasTorchesOnWalkways;
-    private String moatType, outsideLightType;
+    String moatType;
+    private String outsideLightType;
     private final String emblemType, towerAdditionType, streetLightType;
-    private final BlockData ground, wall;
-    private BlockData pathBlock;
-    private @Nullable BlockData pathAlternative;
-    private int pathExtends = 1;
+    final BlockData ground, wall;
+    BlockData pathBlock;
+    @Nullable BlockData pathAlternative;
+    int pathExtends = 1;
     private final int flowerPercent = 15;
     private final MaceBuilding.Fill fill;
     /** Houses drawn for this city alone (Level 143's themes; none for Mace's). */
@@ -219,9 +221,10 @@ final class MaceCity {
         this.theme = plan.theme();
         this.mapLength = plan.mapLength();
         this.farmLength = plan.farmLength();
+        this.height = height(theme);
         this.sizeX = mapLength + 1;
         this.sizeZ = mapLength + farmLength + 1;
-        this.cells = new short[sizeX * sizeZ * HEIGHT];
+        this.cells = new short[sizeX * sizeZ * height];
         palette.add(Material.AIR.createBlockData());
         paletteIndex.put(palette.get(0), (short) 0);
         this.rng = new Random(plan.seed());
@@ -252,6 +255,15 @@ final class MaceCity {
         ownHouses = CityHouses.make(plan);   // its own RNG: Mace's cities come out as before
     }
 
+    boolean hasMoat() {
+        return hasMoat;
+    }
+
+    /** The buffer height for a theme's cities. */
+    static int height(Theme theme) {
+        return Theme.LEVEL_143.contains(theme) ? HEIGHT_143 : HEIGHT;
+    }
+
     /** Builds the whole city. Slow (about a second); callers cache it. */
     static MaceCity build(Plan plan, MaceLibrary lib) {
         MaceCity c = new MaceCity(plan, lib);
@@ -259,15 +271,20 @@ final class MaceCity {
         if (c.hasWalls) c.makeWalls();
         if (c.hasDrawbridges && c.hasWalls) c.makeEntrances();
         if (c.hasMoat) c.makeMoat();
+        int[] entrance = {-1, -1};
         if (c.hasBuildings || c.hasPaths) {
             int[][] area = c.makePaths();
             if (c.hasBuildings) {
-                int[] entrance = c.makeInsideCity(area);
+                entrance = c.makeInsideCity(area);
                 if (c.hasMineshaft && entrance[0] >= 0) c.makeMineshaft(entrance);
             }
         }
         if (c.hasGuardTowers) c.makeGuardTowers();
         if (c.hasFarms) c.makeFarms();
+        if (Theme.LEVEL_143.contains(c.theme)) {   // their own RNGs: the city's sequence is untouched
+            if (c.hasMainStreets && c.hasPaths) new CityUnderground(c, c.hasMineshaft ? entrance : new int[]{-1, -1}).build();
+            if (c.hasSkyFeature) c.makeSkyFeatures();
+        }
         if (c.hasFlowers) c.makeFlowers();
         c.positionRails();
         c.connectFences();
@@ -312,21 +329,25 @@ final class MaceCity {
         return x >= 0 && x < sizeX && z >= -farmLength && z <= mapLength;
     }
 
+    boolean inside(int x, int y, int z) {
+        return contains(x, z) && y >= 0 && y < height;
+    }
+
     private int index(int x, int y, int z) {
         return (y * sizeZ + (z + farmLength)) * sizeX + x;
     }
 
     BlockData get(int x, int y, int z) {
-        if (!contains(x, z) || y < 0 || y >= HEIGHT) return palette.get(0);
+        if (!contains(x, z) || y < 0 || y >= height) return palette.get(0);
         return palette.get(cells[index(x, y, z)]);
     }
 
-    private Material type(int x, int y, int z) {
+    Material type(int x, int y, int z) {
         return get(x, y, z).getMaterial();
     }
 
-    private void set(int x, int y, int z, @Nullable BlockData b) {
-        if (!contains(x, z) || y < 0 || y >= HEIGHT) return;
+    void set(int x, int y, int z, @Nullable BlockData b) {
+        if (!contains(x, z) || y < 0 || y >= height) return;
         BlockData d = b == null ? palette.get(0) : b;
         Short i = paletteIndex.get(d);
         if (i == null) {
@@ -342,11 +363,11 @@ final class MaceCity {
         }
     }
 
-    private void set(int x, int y, int z, Material m) {
+    void set(int x, int y, int z, Material m) {
         set(x, y, z, data(m));
     }
 
-    private BlockData data(Material m) {
+    BlockData data(Material m) {
         return plain.computeIfAbsent(m, Material::createBlockData);
     }
 
@@ -774,10 +795,15 @@ final class MaceCity {
 
     // ── Paths: main streets, districts, and the buildings in them ─────────
 
-    private static final int BLOCK_START = EDGE + 13;
+    static final int BLOCK_START = EDGE + 13;
     private record District(int x1, int z1, int x2, int z2) {}
 
     private final List<District> districts = new ArrayList<>();
+    /**
+     * The side streets, as splitArea draws them, in area coordinates (add BLOCK_START): {1, x,
+     * z1, z2} for a street along z at x, {0, z, x1, x2} for one along x at z.
+     */
+    final List<int[]> splits = new ArrayList<>();
     private final Set<String> streetsUsed = new HashSet<>();
     private final List<MaceBuilding> allBuildings = new ArrayList<>();
     /** Building ids in the area arrays (100 + id), as in Mace. */
@@ -837,11 +863,13 @@ final class MaceCity {
         if (hasPaths && possible) {
             if (byX) {
                 int split = next(x1 + 20, x2 - 20);
+                splits.add(new int[]{1, split, z1, z2});
                 splitArea(area, x1, z1, split, z2);
                 splitArea(area, split, z1, x2, z2);
                 streetSign(split - 1, z1 + 1, split - 1, z2 - 1);
             } else {
                 int split = next(z1 + 20, z2 - 20);
+                splits.add(new int[]{0, split, x1, x2});
                 splitArea(area, x1, z1, x2, split);
                 splitArea(area, x1, split, x2, z2);
                 streetSign(x1 + 1, split - 1, x2 - 1, split - 1);
@@ -1067,8 +1095,11 @@ final class MaceCity {
                     List<MaceBuilding> sky = lib.ofType("sky_feature");   // Mace lists them in the Medieval theme only
                     if (hasSkyFeature && !sky.isEmpty()) {
                         MaceBuilding balloon = select(sky, BUILDING_FREQUENCY, "frequency");
-                        insert(balloon, x + (b.width - balloon.width) / 2, z + (b.length - balloon.length) / 2,
-                                BLOCK_START, area, -1, balloon.sourceY, false);
+                        int bx = x + (b.width - balloon.width) / 2, bz = z + (b.length - balloon.length) / 2;
+                        insert(balloon, bx, bz, BLOCK_START, area, -1, balloon.sourceY, false);
+                        int side = Math.max(balloon.width, balloon.length);
+                        skyBoxes.add(new int[]{BLOCK_START + bx, BLOCK_START + bz, BLOCK_START + bx + side - 1,
+                                BLOCK_START + bz + side - 1, balloon.sourceY, balloon.sourceY + balloon.height - 1});
                     }
                 }
                 int cx = x + b.width - 2, cz = z + b.length - 2;
@@ -1080,6 +1111,61 @@ final class MaceCity {
         return mine;
     }
 
+    // ── Level 143's airships: many, all over the sky ──────────────────────
+
+    private static final long SKY_SALT = 0x5C1F7E5L;
+    private static final int SKY_LOW = 96, SKY_GAP = 3;
+    /** Sky features placed so far: {x1, z1, x2, z2, y1, y2}, inclusive. */
+    private final List<int[]> skyBoxes = new ArrayList<>();
+
+    /**
+     * Balloons and airships all over the city's sky (and over its farms), about one for every
+     * three or four chunks, at heights from {@link #SKY_LOW} to the top of the buffer, none
+     * touching another or anything built below. Their own RNG, so the rest of the city is as before.
+     */
+    private void makeSkyFeatures() {
+        List<MaceBuilding> pool = lib.of(theme.file, "sky_feature");
+        if (pool.isEmpty()) pool = lib.ofType("sky_feature");
+        if (pool.isEmpty()) return;
+        Random r = new Random(plan.seed() ^ SKY_SALT);
+        int target = (int) Math.round(sizeX * (double) sizeZ / 256 / (3 + r.nextDouble()));
+        int placed = 0;
+        for (int tries = 0; placed < target && tries < target * 40; tries++) {
+            MaceBuilding b = MaceLibrary.select(pool, BUILDING_FREQUENCY, "frequency", r);
+            if (b == null) b = pool.get(r.nextInt(pool.size()));
+            int rot = r.nextInt(4);
+            boolean turned = rot == 1 || rot == 2;
+            int sx = turned ? b.length : b.width, sz = turned ? b.width : b.length;
+            int top = height - 1 - b.height;
+            if (sx >= sizeX || sz >= sizeZ || top < SKY_LOW) continue;
+            int x = r.nextInt(sizeX - sx), z = -farmLength + r.nextInt(sizeZ - sz), y = SKY_LOW + r.nextInt(top - SKY_LOW + 1);
+            int[] box = {x, z, x + sx - 1, z + sz - 1, y, y + b.height - 1};
+            if (!skyClear(box)) continue;
+            insert(b, x, z, 0, null, rot, y, true, r);
+            skyBoxes.add(box);
+            placed++;
+        }
+    }
+
+    /** Whether a sky feature fits in the box, a few blocks clear of the others and of what's below. */
+    private boolean skyClear(int[] box) {
+        int g = SKY_GAP;
+        for (int[] o : skyBoxes) {
+            if (box[0] - g <= o[2] && box[2] + g >= o[0] && box[1] - g <= o[3] && box[3] + g >= o[1]
+                    && box[4] - g <= o[5] && box[5] + g >= o[4]) {
+                return false;
+            }
+        }
+        for (int y = box[4] - g; y <= box[5] + g && y < height; y++) {
+            for (int z = box[1] - g; z <= box[3] + g; z++) {
+                for (int x = box[0] - g; x <= box[2] + g; x++) {
+                    if (!get(x, y, z).getMaterial().isAir()) return false;
+                }
+            }
+        }
+        return true;
+    }
+
     /**
      * SourceWorld.InsertBuilding: a building at area (x, z) + blockStart, facing the nearest
      * street ({@code rotation} -1), or turned 0-3 (none, quarter left, quarter right, half).
@@ -1088,6 +1174,12 @@ final class MaceCity {
      */
     private void insert(MaceBuilding b, int x1, int z1, int blockStart, int @Nullable [][] area, int rotation,
                         int yDest, boolean always) {
+        insert(b, x1, z1, blockStart, area, rotation, yDest, always, rng);
+    }
+
+    /** {@link #insert} drawing its choices from {@code rng}. */
+    private void insert(MaceBuilding b, int x1, int z1, int blockStart, int @Nullable [][] area, int rotation,
+                        int yDest, boolean always, Random rng) {
         int rot = rotation;
         if (rot < 0) {
             if (b.type.equals("mineshaft_section")) {
@@ -1841,7 +1933,7 @@ final class MaceCity {
     /** Chunks.PositionRails / BlockHelper.MakeRail: straights and corners from the neighbours. */
     private void positionRails() {
         Map<Long, Rail.Shape> shapes = new HashMap<>();
-        for (int y = 0; y < HEIGHT; y++) {
+        for (int y = 0; y < height; y++) {
             for (int z = -farmLength; z <= mapLength; z++) {
                 for (int x = 0; x < sizeX; x++) {
                     if (type(x, y, z) != Material.RAIL) continue;
@@ -1869,7 +1961,7 @@ final class MaceCity {
         boolean[] joins = new boolean[palette.size()];
         for (int i = 0; i < palette.size(); i++) joins[i] = palette.get(i) instanceof Fence;
         Map<Long, BlockData> updates = new HashMap<>();
-        for (int y = 1; y < HEIGHT; y++) {
+        for (int y = 1; y < height; y++) {
             for (int z = -farmLength; z <= mapLength; z++) {
                 for (int x = 0; x < sizeX; x++) {
                     short i = cells[index(x, y, z)];
@@ -1888,9 +1980,9 @@ final class MaceCity {
 
     // ── Reading the city out ──────────────────────────────────────────────
 
-    /** The palette index array is private; chunks copy columns through this. */
+    /** The palette index array is private; chunks copy columns ({@link #height} blocks) through this. */
     void column(int x, int z, BlockData[] out) {
-        for (int y = 0; y < HEIGHT; y++) out[y] = palette.get(cells[index(x, y, z)]);
+        for (int y = 0; y < height; y++) out[y] = palette.get(cells[index(x, y, z)]);
     }
 
     /** Where to stand on arrival: the middle of the main crossing. */

@@ -65,18 +65,6 @@ public final class Roof {
                     else if ((first + 2) % 4 == i) opposite = true;
                 }
                 Dir up = Dir.values()[first].opposite();
-                int y;
-                String block;
-                if (halfSlope) {
-                    int h = 2 * (baseY - 1) + 1 + d;      // in half blocks
-                    y = Math.floorDiv(h, 2);
-                    block = Blocks.slab(slabMat, Math.floorMod(h, 2) == 1);
-                } else {
-                    y = baseY - 1 + d;
-                    block = opposite ? Blocks.slab(slabMat, false) : Blocks.stairs(stairMat, up, false);
-                }
-                g.add(x, y, z, block);
-                top = Math.max(top, y);
                 // Wall up the ends (on the wall's own line) to meet the roof.
                 boolean onEnd = false;
                 for (int i = 0; i < 4; i++) {
@@ -85,15 +73,77 @@ public final class Roof {
                     int c = (i % 2 == 0) ? z : x;
                     if (c == line && x >= x0 && x <= x1 && z >= z0 && z <= z1) onEnd = true;
                 }
-                if (onEnd) for (int yy = baseY; yy < y; yy++) g.add(x, yy, z, Blocks.id(endMat));
+                int y;
+                String block;
+                boolean upper = false;   // a slab in the top half of its block
+                if (halfSlope) {
+                    int h = 2 * (baseY - 1) + 1 + d;      // in half blocks
+                    y = Math.floorDiv(h, 2);
+                    upper = Math.floorMod(h, 2) == 1;
+                    // on an end wall a top slab would leave a half block open under it
+                    block = upper && onEnd ? Blocks.id(slabMat) + "[type=double]" : Blocks.slab(slabMat, upper);
+                } else {
+                    y = baseY - 1 + d;
+                    block = opposite ? Blocks.slab(slabMat, false) : Blocks.stairs(stairMat, up, false);
+                }
+                cover(g, x, y, z, block, slabMat);
+                top = Math.max(top, y);
+                if (onEnd) for (int yy = baseY; yy < y; yy++) wall(g, x, yy, z, endMat);
+                // A shared side is walled by the other part only as high as that part's walls and
+                // roof go: where it is lower there (a hip or eave, fewer storeys, a flat roof), the
+                // end under this roof would stand open. Wall it up on the shared line too; whatever
+                // the other part already put there stays, but for the stairs and slabs of its eave
+                // (a stair's open quarter would still leave a gap).
+                for (int i = 0; i < 4; i++) {
+                    if ((shared & (1 << i)) == 0) continue;
+                    int edge = switch (i) { case 0 -> rz0; case 1 -> rx1; case 2 -> rz1; default -> rx0; };
+                    if (((i % 2 == 0) ? z : x) != edge) continue;
+                    int wx = x + (i == 1 ? 1 : i == 3 ? -1 : 0), wz = z + (i == 0 ? -1 : i == 2 ? 1 : 0);
+                    if (wx < x0 || wx > x1 || wz < z0 || wz > z1) continue;
+                    for (int yy = baseY; yy <= (upper ? y : y - 1); yy++) wall(g, wx, yy, wz, endMat);
+                }
             }
         }
-        if (!halfSlope) shapeStairs(g, rx0, baseY - 1, rz0, rx1, top, rz1);
+        // a block wider: the stairs of a roof built earlier next to this one may take new corners
+        shapeStairs(g, rx0 - 1, baseY - 1, rz0 - 1, rx1 + 1, top, rz1 + 1);
         return top;
     }
 
     private static int bit(Dir d) {
         return 1 << d.ordinal();
+    }
+
+    private static boolean isSlab(String s) {
+        return s.contains("_slab[");
+    }
+
+    /** A wall block under a roof: in place of another roof's stairs or slabs there, which leave gaps. */
+    private static void wall(Grid g, int x, int y, int z, String endMat) {
+        String there = g.get(x, y, z);
+        if (there != null && (Blocks.isStairs(there) || isSlab(there))) g.set(x, y, z, Blocks.id(endMat));
+        else g.add(x, y, z, Blocks.id(endMat));
+    }
+
+    /**
+     * A roof block where another part's roof may already be (an eave overhanging this one): the
+     * two together, as near as a block can: a top and a bottom slab make a double slab, a stair
+     * and a slab in its open half or two stairs facing apart a full block. Anything else that is
+     * there already stays.
+     */
+    private static void cover(Grid g, int x, int y, int z, String block, String slabMat) {
+        String there = g.get(x, y, z);
+        if (there == null) {
+            g.add(x, y, z, block);
+            return;
+        }
+        if (there.equals(block) || !(Blocks.isStairs(there) || isSlab(there))) return;
+        String full = Blocks.id(slabMat) + "[type=double]";
+        String tt = isSlab(there) ? Blocks.prop(there, "type") : null, nt = isSlab(block) ? Blocks.prop(block, "type") : null;
+        if ("double".equals(tt)) return;
+        if ("double".equals(nt) || tt != null && nt != null) g.set(x, y, z, full);   // top and bottom
+        else if (nt != null) { if (nt.equals("top")) g.set(x, y, z, full); }      // a bottom slab is in the stair
+        else if (tt != null) g.set(x, y, z, tt.equals("bottom") ? block : full);
+        else if (!Blocks.prop(there, "facing").equals(Blocks.prop(block, "facing"))) g.set(x, y, z, full);
     }
 
     /** Gives every stair in the box the shape the game would (StairBlock.getStairsShape). */
@@ -123,7 +173,7 @@ public final class Roof {
                             }
                         }
                     }
-                    if (!shape.equals("straight")) {
+                    if (!shape.equals(Blocks.prop(s, "shape"))) {   // set, or no longer right
                         g.set(x, y, z, Blocks.stairs(Blocks.material(s), f, half.equals("top"), shape));
                     }
                 }

@@ -114,6 +114,13 @@ class Style:
     buttress: float = 0.0      # how many stone houses have buttresses
     grille: float = 0.0        # how many houses have iron grilles on the ground floor windows
     pots: tuple = ("potted_red_tulip", "potted_azure_bluet", "potted_fern", "potted_oxeye_daisy")
+    dormers: float = 0.0       # how many gables get dormers on the front slope
+    gambrel: float = 0.0       # how many gables break into a steep lower and a gentle upper slope
+    porch: float = 0.2         # how many houses with a front yard get a porch
+    bay: float = 0.2           # ... a bay window beside the door
+    balcony: float = 0.15      # ... a balcony upstairs
+    earth: tuple = ("dirt", "stone", "stone", "andesite", "gravel")   # what a cellar is dug into
+    cellar: tuple = ("cobblestone", "stone_bricks")                     # its walls
 
 
 TIMBER = Style(
@@ -131,7 +138,8 @@ TIMBER = Style(
     beds=("red", "blue", "green", "brown", "white"),
     crops=("wheat", "carrots", "potatoes", "beetroots"),
     shutter_woods=("spruce", "dark_oak", "oak"), shutter=0.45, sills=0.65,
-    jetty=0.6, half_hip=0.25, cross=0.45, hip=0.12,
+    jetty=0.6, half_hip=0.25, cross=0.45, hip=0.12, dormers=0.35, gambrel=0.12, porch=0.3, bay=0.35, balcony=0.15,
+    earth=("dirt", "stone", "stone", "andesite", "gravel", "tuff"), cellar=("cobblestone", "stone_bricks", "mossy_cobblestone"),
     pots=("potted_red_tulip", "potted_poppy", "potted_dandelion", "potted_cornflower", "potted_oxeye_daisy",
           "potted_azure_bluet", "potted_pink_tulip"),
 )
@@ -151,7 +159,8 @@ OCHRE = Style(
     beds=("orange", "yellow", "red", "white", "cyan"),
     crops=("wheat", "carrots", "potatoes", "beetroots"),
     shutter_woods=("warped", "jungle", "acacia", "warped"), shutter=0.75, sills=0.6,
-    half_hip=0.0, cross=0.2, hip=0.45, grille=0.45,
+    half_hip=0.0, cross=0.2, hip=0.45, grille=0.45, dormers=0.05, porch=0.35, bay=0.1, balcony=0.45,
+    earth=("dirt", "stone", "granite", "terracotta", "sandstone"), cellar=("mud_bricks", "smooth_sandstone", "packed_mud"),
     pots=("potted_flowering_azalea_bush", "potted_azalea_bush", "potted_cactus", "potted_orange_tulip",
           "potted_allium", "potted_red_tulip", "potted_dead_bush"),
 )
@@ -171,7 +180,9 @@ ASHEN = Style(
     beds=("black", "gray", "purple", "red"),
     crops=("wheat", "potatoes", "beetroots"),
     shutter_woods=("dark_oak", "spruce"), shutter=0.15, sills=0.35,
-    jetty=0.35, half_hip=0.15, cross=0.5, hip=0.1, lancet=0.8, buttress=0.6,
+    jetty=0.35, half_hip=0.15, cross=0.5, hip=0.1, lancet=0.8, buttress=0.6, dormers=0.3, gambrel=0.2, porch=0.15,
+    bay=0.25, balcony=0.2, earth=("deepslate", "deepslate", "tuff", "stone", "gravel"),
+    cellar=("cobbled_deepslate", "deepslate_bricks", "polished_blackstone_bricks"),
     pots=("potted_wither_rose", "potted_fern", "potted_dead_bush", "potted_brown_mushroom", "potted_closed_eyeblossom"),
 )
 
@@ -532,39 +543,85 @@ def roof_levels(x0, z0, x1, z1, kind="gable", along="x", over=1, end_over=1, cli
     return out
 
 
-def draw_roof(b, levels, yb, m, pitch=1, fill=None, walls=()):
+def draw_roof(b, levels, yb, m, pitch=1, fill=None, walls=(), curve=None):
     """Draws a roof from its courses: stairs facing up the slope, slabs on the ridge and peaks,
-    with `pitch` blocks of rise per course (the steps under steep ones filled with m.block).
-    Under it, the outline of each wall rectangle is filled with `fill` up to the roof.
-    Returns the highest y drawn."""
+    full blocks in the valleys, with `pitch` blocks of rise per course (the steps under steep
+    ones filled with m.block); or with `curve(L)` the rise of course L (a gambrel's steep lower
+    slope and gentle upper one). Under it, the outline of each wall rectangle is filled with `fill`
+    up to the roof. Where another roof is already drawn (a wing's, a porch's), the two are
+    merged rather than one cut into the other (see roof_block). Returns the highest y drawn."""
     def lv(x, z):
         return levels.get((x, z), -1)
 
     top = yb
     order = ("north", "south", "west", "east")
+    rise = curve or (lambda L: pitch * L)
     for (x, z), L in levels.items():
-        y = yb + pitch * L
+        y = yb + rise(L)
         nb = {d: lv(x + STEP[d][0], z + STEP[d][1]) for d in order}
         higher = [d for d in order if nb[d] > L]
         lower = [d for d in order if nb[d] < L]
-        if higher:
+        if len(higher) >= 3 or any(OPPOSITE[d] in higher for d in higher):
+            # a valley between slopes rising both ways (row houses' gables side by side, a wing
+            # running into the main roof): a stair would close only one side of it
+            roof_block(b, x, y, z, m.block, {}, m)
+        elif higher:
             f = max(higher, key=lambda d: nb[d])
-            b.set(x, y, z, m.stairs, facing=f, half="bottom", waterlogged="false")
+            roof_block(b, x, y, z, m.stairs, dict(facing=f, half="bottom", waterlogged="false"), m)
         elif len(lower) == 1 or (len(lower) == 2 and lower[0] != OPPOSITE[lower[1]]):
-            b.set(x, y, z, m.stairs, facing=OPPOSITE[lower[0]], half="bottom", waterlogged="false")
+            roof_block(b, x, y, z, m.stairs, dict(facing=OPPOSITE[lower[0]], half="bottom", waterlogged="false"), m)
         else:
-            b.set(x, y, z, m.slab, type="bottom", waterlogged="false")
+            roof_block(b, x, y, z, m.slab, dict(type="bottom", waterlogged="false"), m)
         if L > 0:
-            for yy in range(y - pitch + 1, y):
+            for yy in range(yb + rise(L - 1) + 1, y):
                 b.set(x, yy, z, m.block)
         top = max(top, y)
     if fill:
         for rect in walls:
-            gable_fill(b, levels, yb, pitch, rect, fill)
+            gable_fill(b, levels, yb, pitch, rect, fill, curve)
     return top
 
 
-def gable_fill(b, levels, yb, pitch, rect, fill):
+def _quarters(name, props):
+    """Which eighths of a block a stair or slab fills, as a set of (i, j, k) (x, y, z halves);
+    None for anything else."""
+    if name.endswith("_slab"):
+        t = props.get("type", "bottom")
+        js = (0, 1) if t == "double" else (0,) if t == "bottom" else (1,)
+        return {(i, j, k) for i in (0, 1) for j in js for k in (0, 1)}
+    if not name.endswith("_stairs"):
+        return None
+    f = props.get("facing", "north")
+    base, up = (0, 1) if props.get("half", "bottom") == "bottom" else (1, 0)
+    dx, dz = STEP[f]
+    out = {(i, base, k) for i in (0, 1) for k in (0, 1)}
+    out |= {(i, up, k) for i in (0, 1) for k in (0, 1)
+            if (dx and i == (1 if dx > 0 else 0)) or (dz and k == (1 if dz > 0 else 0))}
+    return out
+
+
+def roof_block(b, x, y, z, state, props, m):
+    """Sets one roof block, merged with a stair or slab already there (another roof's eave, a
+    wing's ridge): a top and a bottom slab make a double slab; a stair over a bottom slab stays
+    the stair; anything the two together fill more of than either alone becomes a full block.
+    A full block there (a wall the roof runs into) stays.
+    Without this, the later roof cut the earlier one and left a quarter or half block open."""
+    old = b.blocks.get((x, y, z))
+    new_q = _quarters(state, props)
+    old_q = _quarters(*old) if old else None
+    if old_q is None and old and solid(b, x, y, z):
+        return   # a wall the roof runs into (a wing's roof into the main house): it stays whole
+    if old_q is None or new_q is None or old_q <= new_q:
+        b.set(x, y, z, state, **props)
+    elif new_q <= old_q:
+        return
+    elif old[0].endswith("_slab") and state.endswith("_slab"):
+        b.set(x, y, z, m.slab, type="double", waterlogged="false")
+    else:
+        b.set(x, y, z, m.block)
+
+
+def gable_fill(b, levels, yb, pitch, rect, fill, curve=None):
     """Fills the outline of the walls rect = (x0, z0, x1, z1) from yb up to the roof drawn from
     `levels`: the gables."""
     x0, z0, x1, z1 = rect
@@ -572,11 +629,11 @@ def gable_fill(b, levels, yb, pitch, rect, fill):
               {(x, z) for z in range(z0, z1 + 1) for x in (x0, x1)}
     for x, z in outline:
         L = levels.get((x, z), -1)
-        for yy in range(yb + 1, yb + pitch * L - pitch + 1):
+        for yy in range(yb + 1, yb + ((curve(L - 1) if curve else pitch * (L - 1)) if L > 0 else 0) + 1):
             b.set(x, yy, z, fill)
 
 
-def gable(b, x0, z0, x1, z1, yb, m, along="x", fill=None, pitch=1, over=1, end_over=1, clip=0, extra=()):
+def gable(b, x0, z0, x1, z1, yb, m, along="x", fill=None, pitch=1, over=1, end_over=1, clip=0, extra=(), curve=None):
     """A ridged roof over the walls x0..x1, z0..z1 whose top course is at yb: eaves at yb hanging
     `over` past the long walls, gables filled with `fill`. `clip` hips back the top courses at
     the ends (a half-hip); `extra` are more roof_levels to join (cross gables, dormers).
@@ -585,7 +642,13 @@ def gable(b, x0, z0, x1, z1, yb, m, along="x", fill=None, pitch=1, over=1, end_o
     for e in extra:
         for k, v in e.items():
             levels[k] = max(levels.get(k, -1), v)
-    return draw_roof(b, levels, yb, m, pitch, fill, walls=[(x0, z0, x1, z1)])
+    return draw_roof(b, levels, yb, m, pitch, fill, walls=[(x0, z0, x1, z1)], curve=curve)
+
+
+def gambrel(steep=2, knee=2):
+    """A curve for draw_roof: `knee` courses rising `steep` each, then one each (a barn's or a
+    Dutch house's broken roof)."""
+    return lambda L: steep * L if L <= knee else steep * knee + (L - knee)
 
 
 def _xyz(at, a, y, c):
@@ -679,20 +742,48 @@ def cornice(b, s, stairs, y, every=1):
                 b.set(x + dx, y, z + dz, stairs, facing=OPPOSITE[out], half="top", waterlogged="false")
 
 
-def shed(b, x0, z0, x1, z1, yb, m, high="south", over=1):
-    """A lean-to: one slope rising towards `high`, a stair then a top slab per half block."""
+def shed(b, x0, z0, x1, z1, yb, m, high="south", over=1, fill=None):
+    """A lean-to over the walls x0..x1, z0..z1: one slope rising towards `high`, a stair then a
+    top slab per half block. The high wall and the two ends are walled up under the slope with
+    `fill` (by default the block the wall is made of, wherever there is a wall under them), and
+    a top slab right over a wall is a double slab: otherwise the space under the slope stands
+    open at the sides, and a half block open under every top slab. Returns the top y."""
     vertical = high in ("north", "south")
     cs = list(range(z0 - over, z1 + over + 1)) if vertical else list(range(x0 - over, x1 + over + 1))
     if high in ("north", "west"):
         cs.reverse()
     span = range(x0 - over, x1 + over + 1) if vertical else range(z0 - over, z1 + over + 1)
+    roof_at = {}
     for i, c in enumerate(cs):
         for a in span:
             x, z = (a, c) if vertical else (c, a)
+            y = yb + i // 2
+            roof_at[(x, z)] = (y, i % 2 == 1)
             if i % 2 == 0:
-                b.set(x, yb + i // 2, z, m.stairs, facing=high, half="bottom", waterlogged="false")
+                b.set(x, y, z, m.stairs, facing=high, half="bottom", waterlogged="false")
             else:
-                b.set(x, yb + i // 2, z, m.slab, type="top", waterlogged="false")
+                b.set(x, y, z, m.slab, type="top", waterlogged="false")
+    hx, hz = STEP[high]
+    for x in range(x0, x1 + 1):
+        for z in range(z0, z1 + 1):
+            if not (x in (x0, x1) or z in (z0, z1)) or (x, z) not in roof_at:
+                continue
+            y, upper = roof_at[(x, z)]
+            low_wall = (vertical and z == (z0 if hz > 0 else z1)) or (not vertical and x == (x0 if hx > 0 else x1))
+            under = None
+            for yy in range(y - 1, yb - 3, -1):   # the wall's top under the roof
+                if not b.empty(x, yy, z):
+                    under = yy
+                    break
+            if under is None or not solid(b, x, under, z):
+                continue
+            if not low_wall:
+                state = fill or b.blocks[(x, under, z)][0]
+                props = {} if fill else dict(b.blocks[(x, under, z)][1])
+                for yy in range(under + 1, y):
+                    b.set(x, yy, z, state, **props)
+            if upper and solid(b, x, y - 1, z):
+                b.set(x, y, z, m.slab, type="double", waterlogged="false")
     return yb + len(cs) // 2
 
 
@@ -710,6 +801,12 @@ def roof_kind(rng, st, s):
         return "cross"
     if rng.random() < st.half_hip and max(w, d) >= 6:
         return "half_hip"
+    # drawn after the old choices, so those keep their seeds
+    r = rng.random()
+    if r < st.gambrel and min(w, d) >= 7:
+        return "gambrel"
+    if r < st.gambrel + st.dormers and w >= 7 and w >= d - 1:
+        return "dormer"
     return "gable"
 
 
@@ -731,6 +828,9 @@ def roof(b, rng, st, s, lk, m=None, kind=None, along=None, hatch=None, pitch=Non
         return top
     along = along or ("x" if w >= d else "z")
     extra = ()
+    curve = None
+    if kind == "gambrel":
+        curve = gambrel(2, 2 if min(w, d) >= 9 else 1)
     if kind == "cross" and along == "x":
         span = d + 1
         lmax = span // 2
@@ -741,12 +841,35 @@ def roof(b, rng, st, s, lk, m=None, kind=None, along=None, hatch=None, pitch=Non
             zc = s.z0 + (d - 1) // 2
             lv = roof_levels(cx0, s.z0, cx0 + cw - 1, zc, "gable", "z", 1, 1, ends=(True, False))
             extra = ({k: v for k, v in lv.items() if k[1] <= zc},)
+    dormers = []
+    if kind == "dormer" and along == "x":
+        # little gables on the front slope, each over a window in the wall's top course
+        cw = 3 if w < 11 or rng.random() < 0.5 else 5
+        n = 1 if w < 9 else 2 if w < 14 else 3
+        xs = [s.x0 + round((i + 1) * (w - 1) / (n + 1)) for i in range(n)]
+        lv_all = {}
+        for cx in xs:
+            dx0 = cx - cw // 2
+            if dx0 <= s.x0 or dx0 + cw - 1 >= s.x1:
+                continue
+            ld = (cw + 1) // 2
+            lv = roof_levels(dx0, s.z0, dx0 + cw - 1, s.z0 + ld, "gable", "z", 1, 1, ends=(True, False))
+            for k, v in lv.items():
+                if k[1] <= s.z0 + ld:
+                    lv_all[k] = max(lv_all.get(k, -1), v)
+            dormers.append(cx)
+        if lv_all:
+            extra = (lv_all,)
     clip = 0
     if kind == "half_hip":
         clip = 2 if pitch == 1 and min(w, d) >= 7 else 1
     top = gable(b, s.x0, s.z0, s.x1, s.z1, s.top, m, along=along, fill=lk.infill, pitch=pitch, clip=clip,
-                extra=extra)
-    if extra:   # a window in the front gable
+                extra=extra, curve=curve)
+    for cx in dormers:   # the dormers' windows
+        ys = [y for y in range(s.top + 1, top) if b.get(cx, y, s.z0) == lk.infill]
+        if ys:
+            b.set(cx, ys[0], s.z0, lk.pane if lk.pane != "air" else "glass_pane", waterlogged="false")
+    if extra and kind == "cross":   # a window in the front gable
         cx = (s.x0 + s.x1) // 2
         ys = [y for y in range(s.top + 1, top) if b.get(cx, y, s.z0) == lk.infill]
         if len(ys) >= 2:
@@ -796,10 +919,166 @@ def eaves(b, s, lk, timber=True, stone=True):
                 b.set(ox, y, oz, f"{lk.trim}_stairs", facing=OPPOSITE[out], half="top", waterlogged="false")
 
 
-def chimney(b, x, z, y0, y1, block, smoke=True):
+def chimney(b, x, z, y0, y1, block, smoke=True, cap=None):
+    """A stack from y0 to y1, smoking. `cap`: None (the fire on top), "slab" (a slab lid
+    over the fire), "wall" (a pot of the stack's wall) or "band" (a course of the trim's stairs
+    round the top, upside down)."""
     b.fill(x, y0, z, x, y1, z, block)
+    if cap == "wall":
+        b.set(x, y1 + 1, z, wall_of(block, "brick_wall"), waterlogged="false")
+        return
     if smoke:
         b.set(x, y1 + 1, z, "campfire", facing="north", lit="true", signal_fire="false", waterlogged="false")
+    if cap == "slab" and smoke:
+        b.set(x, y1 + 2, z, slab_of(block, "brick_slab"), type="bottom", waterlogged="false")
+    elif cap == "band":
+        for d, (dx, dz) in STEP.items():
+            if b.empty(x + dx, y1, z + dz):
+                b.set(x + dx, y1, z + dz, stairs_of(block, "brick_stairs"), facing=OPPOSITE[d], half="top",
+                      waterlogged="false")
+
+
+# ── Wings, porches, bays, balconies ──────────────────────────────────────
+
+def wing(b, rng, st, main, lk, side, length, depth, offset=0, floors=1, m=None, pitch=1, h=None):
+    """A wing against the main house's `side` wall ("south": behind it, "east", "west"),
+    `length` along that wall from `offset`, `depth` out from it, `floors` storeys: walls,
+    windows, and a gable roof whose ridge runs out from the house, its end on the shared wall
+    walled up to the roof and its slopes merged into whatever roof is there. The shared wall
+    stays the main house's; the caller cuts the doorways. Draw it after the main house's roof.
+    Returns the wing's Shell."""
+    h = h or main.h
+    if side == "south":
+        w = Shell(main.x0 + offset, main.z1, main.x0 + offset + length - 1, main.z1 + depth - 1, floors, h)
+        along, ends, out = "z", (False, True), ("south", "east", "west")
+        line = [(x, main.z1) for x in range(w.x0, w.x1 + 1)]
+    elif side == "east":
+        w = Shell(main.x1, main.z0 + offset, main.x1 + depth - 1, main.z0 + offset + length - 1, floors, h)
+        along, ends, out = "x", (False, True), ("east", "north", "south")
+        line = [(main.x1, z) for z in range(w.z0, w.z1 + 1)]
+    else:
+        w = Shell(main.x0 - depth + 1, main.z0 + offset, main.x0, main.z0 + offset + length - 1, floors, h)
+        along, ends, out = "x", (True, False), ("west", "north", "south")
+        line = [(main.x0, z) for z in range(w.z0, w.z1 + 1)]
+    keep = {(x, y, z): v for (x, y, z), v in b.blocks.items() if (x, z) in line and v[0] != "air"}
+    ents = {k: v for k, v in b.entities.items() if (k[0], k[2]) in line}
+    shell(b, w, lk)
+    for k, v in keep.items():   # the main house's wall stays as it was
+        b.blocks[k] = v
+    b.entities.update(ents)
+    windows(b, w, lk, sides=out)
+    m = m or pick(rng, st.roofs)
+    levels = roof_levels(w.x0, w.z0, w.x1, w.z1, "gable", along, 1, 1, ends=ends)
+    draw_roof(b, levels, w.top, m, pitch, lk.infill, walls=[(w.x0, w.z0, w.x1, w.z1)])
+    return w
+
+
+def doorway(b, lk, cells, y=1):
+    """Opens the first of `cells` ((x, z) in a wall) with room to walk through either side:
+    returns it, or None."""
+    for x, z in cells:
+        ns = [(x, z - 1), (x, z + 1)] if b.get(x - 1, y, z) not in ("air",) and b.get(x + 1, y, z) not in ("air",) \
+            else [(x - 1, z), (x + 1, z)]
+        if all(b.empty(nx, yy, nz) for nx, nz in ns for yy in (y, y + 1)) and \
+                all(b.get(nx, yy, nz) != "ladder" for nx, nz in ns for yy in (y - 1, y)):
+            b.clear(x, y, z, x, y + 1, z)
+            b.set(x, y - 1, z, lk.floor)
+            return x, z
+    return None
+
+
+def porch(b, rng, st, s, lk, x0, x1, depth=2, m=None, door_x=None):
+    """A porch along the front from x0 to x1, `depth` deep: a deck, posts and a railing, a
+    lean-to roof against the wall, a lantern and a bench. Clears what the door had there."""
+    zf = s.z0 - depth
+    if zf < 0:
+        return False
+    b.clear(x0, 1, zf, x1, 3, s.z0 - 1)
+    for x in range(x0, x1 + 1):
+        for z in range(zf, s.z0):
+            b.set(x, 0, z, lk.floor)
+    posts = sorted({x0, x1} | set(range(x0 + 3, x1 - 1, 3)))
+    for x in posts:
+        b.fill(x, 1, zf, x, 2, zf, f"{lk.wood}_fence", waterlogged="false")
+    for x in range(x0 + 1, x1):
+        if x not in posts and x != door_x:
+            b.set(x, 1, zf, f"{lk.wood}_fence", waterlogged="false")
+    for z in range(zf + 1, s.z0):
+        for x in (x0, x1):
+            b.set(x, 1, z, f"{lk.wood}_fence", waterlogged="false")
+    m = m or (mat(lk.wood) if st.key == "timber" else pick(rng, st.roofs))
+    shed(b, x0, zf, x1, s.z0 - 1, 3, m, high="south", over=0)
+    if door_x is not None:
+        b.path(door_x, 0, door_x, zf - 1)
+        hx = door_x + (2 if door_x + 2 < x1 else -2)
+    else:
+        hx = (x0 + x1) // 2
+    if b.get(hx, 3, s.z0 - 1).endswith("_slab"):
+        b.set(hx, 2, s.z0 - 1, st.light, hanging="true", waterlogged="false")
+    bx = x1 - 1 if door_x is None or door_x < x1 - 2 else x0 + 1
+    if b.empty(bx, 1, s.z0 - 1) and depth >= 2:
+        b.set(bx, 1, s.z0 - 1, f"{lk.wood}_stairs", facing="south", half="bottom", waterlogged="false")
+    return True
+
+
+def bay_window(b, s, lk, cx, m=None):
+    """A bay window on the front's ground floor, three wide at cx, a block out: a stone knee
+    wall, glass, a little roof of stairs. Opens the wall behind into the room."""
+    z = s.z0 - 1
+    if z < 0:
+        return False
+    pane = lk.pane if lk.pane != "air" else "glass_pane"
+    for x in range(cx - 1, cx + 2):
+        b.set(x, 0, z, lk.found)
+        b.set(x, 1, z, lk.found)
+        for y in range(2, s.h):
+            b.set(x, y, z, pane, waterlogged="false")
+            b.set(x, y, s.z0, "air")
+        b.set(x, 0, s.z0, lk.floor)
+        b.set(x, 1, s.z0, f"{trim_of(lk.found)}_slab", type="top", waterlogged="false")   # a seat in the bay
+        st_ = (m.stairs if m else f"{trim_of(lk.found)}_stairs")
+        b.set(x, s.h, z, st_, facing="south", half="bottom", waterlogged="false")
+    for x in (cx - 2, cx + 2):   # shutters and boxes the windows had there
+        for y in range(1, s.h):
+            if b.get(x, y, z).endswith("_trapdoor"):
+                b.set(x, y, z, "air")
+    return True
+
+
+def balcony(b, s, lk, cx, k=1):
+    """A balcony on storey k of the front at cx: three wide, two deep, on brackets, railed,
+    with a door out of the room behind."""
+    y = k * s.h
+    z0 = s.z0
+    if z0 - 2 < 0:
+        return False
+    for x in range(cx - 1, cx + 2):
+        for z in (z0 - 1, z0 - 2):
+            b.set(x, y, z, f"{lk.wood}_slab", type="top", waterlogged="false")
+            b.clear(x, y + 1, z, x, y + 2, z)
+        b.set(x, y + 1, z0 - 2, f"{lk.wood}_fence", waterlogged="false")
+    for x in (cx - 1, cx + 1):
+        b.set(x, y + 1, z0 - 1, f"{lk.wood}_fence", waterlogged="false")
+        b.set(x, y - 1, z0 - 1, f"{lk.wood}_stairs", facing="south", half="top", waterlogged="false")
+    b.set(cx, y, z0, lk.floor)
+    b.door(cx, y + 1, z0, "south", lk.wood)
+    return True
+
+
+def bury(b, st):
+    """Fills whatever of the footprint below ground is left unset with the style's earth: a
+    building's whole box is written into the city, air included, so a cellar would otherwise
+    dig a pit the size of the lot. Air drawn on purpose (a cellar, a shaft) stays."""
+    lo = min((y for (_, y, _), v in b.blocks.items() if v[0] != "air"), default=0)
+    if lo >= 0:
+        return
+    earth = st.earth
+    for x in range(b.w):
+        for z in range(b.l):
+            for y in range(lo, 0):
+                if (x, y, z) not in b.blocks:
+                    n = earth[(x * 73 + y * 19 + z * 31 + (x // 3) * 7 + (z // 3) * 5) % len(earth)]
+                    b.set(x, y, z, "dirt" if y == -1 and st.key != "ashen" else n)
 
 
 # ── Furniture ────────────────────────────────────────────────────────────

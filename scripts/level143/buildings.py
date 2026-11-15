@@ -3,10 +3,12 @@ returns a schem.Build facing north (its front at z = 0, on the street); the city
 CATALOG lists them with their Mace type, frequency and how many of each to draw per style.
 """
 
+import random
 from dataclasses import dataclass
 
-from parts import (FULL, LEAF, Mat, Room, Shell, bench, buttresses, chimney, cornice, door_dress, edge_points, flat,
-                   furnish, front_door, gable, hang, hang_chain, hip, ladder, lamp_post, look, mat, pick, roof,
+from parts import (FULL, LEAF, Mat, Room, Shell, balcony, bay_window, bench, bury, buttresses, chimney, cornice, doorway,
+                   door_dress, edge_points, flat, furnish, front_door, gable, hang, hang_chain, hip, ladder, lamp_post,
+                   look, mat, pick, porch, roof, wing,
                    roof_kind, roof_levels, draw_roof, gable_fill, shell, shed, slab_of, solid, spire, stairs_of, table, terrace,
                    tree, trim_of, wall_of, window_dress, windows)
 from schem import GROUND, LEFT, OPPOSITE, PATH, RIGHT, STEP, TREASURE, WALL, WOOL, Build
@@ -29,7 +31,15 @@ CATALOG = []
 
 def gen(name, kind="city", freq="common", n=3, unique=False, styles=(), **extra):
     def deco(f):
-        CATALOG.append(Entry(name, kind, f, freq, n, unique, styles, extra))
+        def made(rng, st):
+            b = f(rng, st)
+            if b.kind in ("city", "farm", "city_entrance", "mineshaft_entrance") and \
+                    any(y < 0 and v[0] != "air" for (_, y, _), v in b.blocks.items()):
+                b.square()   # what build_pack would do; then the earth under the padding too
+                bury(b, st)
+            return b
+        made.__name__, made.__doc__ = f.__name__, f.__doc__
+        CATALOG.append(Entry(name, kind, made, freq, n, unique, styles, extra))
         return f
     return deco
 
@@ -55,9 +65,14 @@ def yard_cells(b, z_max):
 
 # ── Houses ────────────────────────────────────────────────────────────────
 
-def house_body(b, rng, st, s, lk, items_by_floor, sign=None, cellar=False, kind=None, door_x=None):
+def house_body(b, rng, st, s, lk, items_by_floor, sign=None, cellar=False, kind=None, door_x=None, plan=None,
+               extras=True, cellar_kind=None):
     """A whole house in the shell: walls, door, windows, ladder, rooms, roof, chimney. A
-    timbered house with a yard in front may overhang the street upstairs (a jetty)."""
+    timbered house with a yard in front may overhang the street upstairs (a jetty). With
+    `extras`, the style's porches, bay windows and balconies, a partition on a deep ground
+    floor, and chimneys of a few kinds. `plan`: wings from house_wings (L, T, U or a side wing),
+    drawn against the walls before the rooms are furnished. `cellar`: a cellar under it
+    (`cellar_kind`, see under)."""
     jetty = lk.jetty and lk.timbered and s.floors >= 2 and s.z0 >= 2
     if s.x1 - s.x0 <= 7:   # narrow fronts: windows close enough that the street side gets some
         lk.window_every = min(lk.window_every, 2)
@@ -82,12 +97,73 @@ def house_body(b, rng, st, s, lk, items_by_floor, sign=None, cellar=False, kind=
     door_dress(b, rng, st, lk, dx, 1, s.z0, torches=not sign)
     if lk.buttress:
         buttresses(b, s, lk, sides=("east", "west"))
+    # ── the extras, from their own draws so the choices above keep their seeds
+    xr = random.Random(rng.random())
+    m = pick(xr, st.roofs)
+    keep0 = {(dx, s.z0 + 1), (lx, lz), (lx, lz - 1)}
+    keep_up = {(lx, lz), (lx, lz - 1)}
+    w = s.x1 - s.x0 + 1
+    porch_on = bay_x = balc_x = None
+    if extras and not jetty:
+        if s.z0 >= 2 and xr.random() < st.porch:
+            if w <= 7 or xr.random() < 0.5:
+                px0, px1 = s.x0, s.x1
+            else:
+                px0, px1 = max(s.x0, dx - 2), min(s.x1, dx + 2)
+            if porch(b, xr, st, s, lk, px0, px1, depth=2, door_x=dx):
+                porch_on = (px0, px1)
+        spots = [x for x in range(s.x0 + 2, s.x1 - 1) if abs(x - dx) >= 3 and
+                 (porch_on is None or not porch_on[0] - 1 <= x <= porch_on[1] + 1)]
+        if spots and s.z0 >= 1 and xr.random() < st.bay:
+            bay_x = pick(xr, spots)
+            bay_window(b, s, lk, bay_x, m)
+            keep0 |= {(x, s.z0 + 1) for x in range(bay_x - 1, bay_x + 2)}
+        spots = [x for x in range(s.x0 + 2, s.x1 - 1) if bay_x is None or abs(x - bay_x) >= 3]
+        if s.floors >= 2 and spots and s.z0 >= 2 and xr.random() < st.balcony:
+            balc_x = pick(xr, spots)
+            balcony(b, s, lk, balc_x, 1)
+            keep_up |= {(balc_x, s.z0 + 1), (balc_x - 1, s.z0 + 1), (balc_x + 1, s.z0 + 1)}
+    wings = []
+    if plan:
+        for side, length, depth, offset, floors in house_wings(xr, s, plan):
+            wg = wing(b, xr, st, up, lk, side, length, depth, offset, floors, m=m)
+            line = ([(x, s.z1) for x in range(wg.x0 + 1, wg.x1)] if side == "south" else
+                    [(s.x1 if side == "east" else s.x0, z) for z in range(wg.z0 + 1, wg.z1)])
+            line.sort(key=lambda c: abs(c[0] - (wg.x0 + wg.x1) // 2) + abs(c[1] - (wg.z0 + wg.z1) // 2))
+            line = [c for c in line if c not in ((lx, lz + 1), (lx, lz - 1)) and abs(c[0] - lx) + abs(c[1] - lz) > 1]
+            door = doorway(b, lk, line)
+            wings.append((wg, door))
+    hatch = set()
+    if cellar:
+        hatch = under(b, rng, s, lk, st=st, kind=cellar_kind, keep=keep0) or set()
+        keep0 |= hatch
+    # a partition across a deep ground floor: a front room and a back one
+    part_z = None
+    if extras and s.z1 - s.z0 >= 7 and w >= 6 and xr.random() < 0.5:
+        zp = s.z0 + (s.z1 - s.z0) // 2
+        doors = [x for x in range(s.x0 + 1, s.x1) if (x, zp - 1) not in keep0 and (x, zp + 1) not in keep0
+                 and abs(x - lx) > 1 and all(b.empty(x, y, z) for y in (1, 2) for z in (zp - 1, zp, zp + 1))]
+        cells_free = all(b.empty(x, y, zp) or b.get(x, y, zp) == "ladder" for x in range(s.x0 + 1, s.x1) for y in (1, 2))
+        if doors and cells_free and zp not in (lz, lz - 1):
+            part_z = zp
+            for x in range(s.x0 + 1, s.x1):
+                b.fill(x, 1, zp, x, s.h - 1, zp, lk.infill if not lk.infill.endswith("terracotta") else f"{lk.wood}_planks")
+            px = pick(xr, doors)
+            b.door(px, 1, zp, "south", lk.wood)
+            keep0 |= {(px, zp - 1), (px, zp + 1)}
     for k in range(s.floors):
         y = k * s.h + 1
         r = s if k == 0 else up
-        keep = {(dx, s.z0 + 1), (lx, lz), (lx, lz - 1)}
-        room = Room(b, r.x0 + 1, r.z0 + 1, r.x1 - 1, r.z1 - 1, y, keep)
+        keep = set(keep0) if k == 0 else set(keep_up)
         items = items_by_floor[min(k, len(items_by_floor) - 1)]
+        if k == 0 and part_z is not None:
+            front = Room(b, r.x0 + 1, r.z0 + 1, r.x1 - 1, part_z - 1, y, keep)
+            back = Room(b, r.x0 + 1, part_z + 1, r.x1 - 1, r.z1 - 1, y, keep)
+            furnish(front, rng, st, lk, items[:len(items) // 2 + 1] + ["plant"],
+                    carpet=pick(rng, st.beds) if rng.random() < 0.4 else None)
+            furnish(back, rng, st, lk, items[len(items) // 2 + 1:] + pick(xr, BACK_ROOMS))
+            continue
+        room = Room(b, r.x0 + 1, r.z0 + 1, r.x1 - 1, r.z1 - 1, y, keep)
         if k == 0 and s.x1 - s.x0 >= 6 and s.z1 - s.z0 >= 5:
             tx, tz = (s.x0 + s.x1) // 2, (s.z0 + s.z1) // 2 + 1
             if room.free(tx, tz) and (tx, tz) not in keep and abs(tx - lx) + abs(tz - lz) > 2:
@@ -95,16 +171,61 @@ def house_body(b, rng, st, s, lk, items_by_floor, sign=None, cellar=False, kind=
                 for c in ((tx, tz), (tx - 1, tz), (tx + 1, tz)):
                     room.keep_out(*c)
         furnish(room, rng, st, lk, items, carpet=pick(rng, st.beds) if rng.random() < 0.4 else None)
-    top = roof(b, rng, st, up, lk, kind=kind, hatch=(lx, lz) if flat_roof else None)
+    for wg, door in wings:
+        keepw = {door} if door else set()
+        if door:
+            keepw |= {(door[0] + a, door[1] + c) for a in (-1, 0, 1) for c in (-1, 0, 1)}
+        furnish(Room(b, wg.x0 + 1, wg.z0 + 1, wg.x1 - 1, wg.z1 - 1, 1, keepw), xr, st, lk, pick(xr, WING_ROOMS))
+        for k in range(1, wg.floors):
+            furnish(Room(b, wg.x0 + 1, wg.z0 + 1, wg.x1 - 1, wg.z1 - 1, k * wg.h + 1, set()), xr, st, lk,
+                    pick(xr, HOUSE_UPPER))
+    top = roof(b, rng, st, up, lk, m=m, kind=kind, hatch=(lx, lz) if flat_roof else None)
     if rng.random() < 0.6:
         cx = s.x1 - 1 if lx == s.x0 + 1 else s.x0 + 1
-        chimney(b, cx, s.z1, 1, top + 1, pick(rng, ("bricks", lk.found)))
-    if cellar:
-        under(b, rng, s, lk)
+        block = pick(rng, ("bricks", lk.found))
+        where = xr.random()
+        cap = pick(xr, (None, None, "slab", "band", "wall"))
+        if where < 0.25 and kind not in ("flat", "hip") and s.z1 - s.z0 >= 5:   # up a side wall, outside
+            sx = s.x0 - 1 if lx != s.x0 + 1 else s.x1 + 1
+            zc = (s.z0 + s.z1) // 2
+            if b.inside(sx, zc) and all(b.get(sx, 0, z) == GROUND for z in (zc,)) and \
+                    all(b.empty(sx, y, zc) for y in range(1, top + 2)):
+                chimney(b, sx, zc, 1, top + 1, block, cap=cap)
+            else:
+                chimney(b, cx, s.z1, 1, top + 1, block, cap=cap)
+        else:
+            chimney(b, cx, s.z1, 1, top + 1, block, cap=cap)
+            if where > 0.85 and s.x1 - s.x0 >= 8 and up.floors >= 2:   # a second stack at the other end
+                chimney(b, s.x1 - 1 if cx == s.x0 + 1 else s.x0 + 1, s.z1, 1, top + 1, block, cap=cap)
     if sign:
         sx = dx + 1 if solid(b, dx + 1, 2, s.z0) else dx - 1
         b.sign(sx, 2, s.z0 - 1, "north", sign, lk.wood)
     return dx
+
+
+def house_wings(rng, s, plan):
+    """The wings for a plan, as (side, length, depth, offset, floors): "L" one behind at a
+    corner, "T" one behind in the middle, "U" one behind at each corner, "side" one off the
+    east or west wall, set back from the front. Their storeys: one less than the house, at
+    least one."""
+    w, d = s.x1 - s.x0 + 1, s.z1 - s.z0 + 1
+    fl = max(1, s.floors - 1) if s.floors > 1 and rng.random() < 0.8 else s.floors
+    out = []
+    if plan in ("L", "T"):
+        length = min(w - 2, rng.randint(5, 7))
+        depth = rng.randint(4, 6)
+        off = (w - length) // 2 if plan == "T" else (0 if rng.random() < 0.5 else w - length)
+        out.append(("south", length, depth, off, fl))
+    elif plan == "U":
+        length = min((w - 1) // 2 - 1, rng.randint(4, 5))
+        depth = rng.randint(4, 6)
+        if length >= 4:
+            out += [("south", length, depth, 0, fl), ("south", length, depth, w - length, fl)]
+    elif plan in ("east", "west", "side"):
+        side = plan if plan != "side" else pick(rng, ("east", "west"))
+        length = min(d - 1, rng.randint(5, 7))
+        out.append((side, length, rng.randint(4, 6), d - length, fl))
+    return out
 
 
 def jetty_front(b, s, up, lk):
@@ -124,31 +245,137 @@ def jetty_front(b, s, up, lk):
         b.set(x, s.h, z, lk.log, axis="x")
 
 
-def under(b, rng, s, lk):
-    """A cellar under the house, down a ladder by the door."""
+CELLARS = ("storage", "storage", "wine", "workshop", "coal")
+
+
+def under(b, rng, s, lk, st=None, kind=None, keep=(), stairs=None, depth=None):
+    """A cellar under the house: walls of the style's cellar stone, a floor four or five blocks
+    down, lanterns under the joists. Down a flight of stairs along a side wall where the
+    ground floor has room for it (with `stairs` None, most of the time), else a ladder under a
+    hatch by the door. `kind`: storage (barrels of food, chests, sacks), wine (racks of casks,
+    a tasting table), workshop (benches and tools) or coal (a heap of coal by a chute, the
+    coal merchant's barrels). Returns the ground floor cells to keep clear, or None if there
+    was no room for a way down."""
     x0, z0, x1, z1 = s.x0, s.z0, s.x1, s.z1
-    hx, hz = x0 + 1, z0 + 1
-    if not b.empty(hx, 1, hz) or not b.empty(hx, 2, hz) or b.get(hx + 1, 1, hz).endswith("_door"):
-        hx = x1 - 1
-        if not b.empty(hx, 1, hz) or not b.empty(hx, 2, hz) or b.get(hx - 1, 1, hz).endswith("_door"):
-            return
-    b.fill(x0, -4, z0, x1, -1, z1, lk.found)
-    b.clear(x0 + 1, -3, z0 + 1, x1 - 1, -1, z1 - 1)
-    ladder(b, hx, hz, -3, -1, "south")
-    b.set(hx, 0, hz, f"{lk.wood}_trapdoor", facing="north", half="top", open="false", powered="false",
-          waterlogged="false")
-    for x in range(x0 + 2, x1):
-        if (x + z1) % 2 == 0:
-            b.barrel(x, -3, z1 - 1, [(pick(rng, ("potato", "carrot", "apple", "beetroot", "wheat")), rng.randint(4, 16))])
-    b.chest(x1 - 1 if hx == x0 + 1 else x0 + 1, -3, z0 + 1, "west" if hx == x0 + 1 else "east")
-    b.set((x0 + x1) // 2, -1, (z0 + z1) // 2, "lantern", hanging="true", waterlogged="false")
+    keep = set(keep)
+    xr = random.Random(rng.random())
+    kind = kind or pick(xr, CELLARS)
+    depth = depth or xr.choice((4, 4, 5))
+    wall = pick(xr, st.cellar) if st else lk.found
+    floor = {"timber": "cobblestone", "ochre": "packed_mud", "ashen": "cobbled_deepslate"}.get(st.key if st else "", wall)
+    fy, y = -depth, -depth + 1          # the cellar's floor, and the layer standing on it
+
+    def clear_above(x, z, n=2):
+        return all(b.empty(x, yy, z) for yy in range(1, 1 + n)) and (x, z) not in keep and \
+            not any(b.get(x + a, 1, z + c).endswith("_door") for a, c in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+
+    way = None
+    if stairs is not False and (stairs or xr.random() < 0.65):
+        n = depth - 1                   # steps from y = -1 down to y
+        for sx, out in ((x0 + 1, x0 + 2), (x1 - 1, x1 - 2)):
+            for za in range(z1 - n, z0 + 1, -1):
+                cells = [(sx, z) for z in range(za - 1, za + 3)] + [(out, za), (out, za + 1)]
+                if za - 1 <= z0 or za + 2 >= z1 or not all(clear_above(x, z) for x, z in cells):
+                    continue
+                way = ("stairs", sx, za, out)
+                break
+            if way:
+                break
+    if way is None:
+        for hx in (x0 + 1, x1 - 1):
+            if clear_above(hx, z0 + 1) and (hx, z0 + 1) not in keep:
+                way = ("ladder", hx, z0 + 1, None)
+                break
+    if way is None:
+        return None
+    b.fill(x0, fy, z0, x1, -1, z1, wall)
+    b.clear(x0 + 1, y, z0 + 1, x1 - 1, -1, z1 - 1)
+    b.fill(x0 + 1, fy, z0 + 1, x1 - 1, fy, z1 - 1, floor)
+    held = set()
+    if way[0] == "stairs":
+        _, sx, za, out = way
+        for i in range(depth - 1):
+            b.set(sx, -1 - i, za + i, stairs_of(wall, "cobblestone_stairs"), facing="north", half="bottom",
+                  waterlogged="false")
+            if -1 - i - 1 >= fy + 1:
+                b.set(sx, -2 - i, za + i, wall)   # solid under the step
+            held.add((sx, za + i))
+        held |= {(sx, za + depth - 1), (sx, za + depth)}
+        b.clear(sx, 0, za, sx, 0, za + 1)           # the opening in the floor
+        for z in (za, za + 1):
+            b.set(out, 1, z, f"{lk.wood}_fence", waterlogged="false")
+        b.set(sx, 1, za + 2, f"{lk.wood}_fence", waterlogged="false")
+        ground = {(sx, z) for z in range(za - 1, za + 3)} | {(out, za), (out, za + 1)}
+    else:
+        _, hx, hz, _ = way
+        ladder(b, hx, hz, y, -1, "south")
+        b.set(hx, 0, hz, f"{lk.wood}_trapdoor", facing="north", half="top", open="false", powered="false",
+              waterlogged="false")
+        held |= {(hx, hz), (hx, hz + 1)}
+        ground = {(hx, hz)}
+    room = Room(b, x0 + 1, z0 + 1, x1 - 1, z1 - 1, y, held)
+    food = ("potato", "carrot", "apple", "beetroot", "wheat", "bread", "dried_kelp", "pumpkin_pie")
+
+    def rack(bb, x, yy, z, f):            # casks on their sides, two high
+        for k in (0, 1):
+            bb.barrel(x, yy + k, z, [("glass_bottle", xr.randint(1, 6))] if xr.random() < 0.3 else [],
+                      facing=LEFT[f])
+
+    def heap(bb, x, yy, z, f):            # a heap of coal against the wall
+        bb.set(x, yy, z, "coal_block")
+        if xr.random() < 0.6:
+            bb.set(x, yy + 1, z, "coal_block")
+
+    if kind == "wine":
+        items = [rack] * 8 + ["chest"]
+    elif kind == "workshop":
+        items = ["crafting_table", "smithing_table", "grindstone", "anvil", "chest", "barrel", "stonecutter", "loom"]
+    elif kind == "coal":
+        items = [heap] * 4 + ["chest", "barrel", "barrel"]
+    else:
+        items = ["barrel", "barrel", "chest", "barrel", "hay_block", "barrel", "chest", "composter"]
+    furnish(room, xr, st, lk, items, light=False) if st else None
+    if kind in ("storage", "coal"):
+        for (bx, by, bz), (n, _) in list(b.blocks.items()):
+            if by == y and n == "barrel" and (bx, by, bz) in b.entities:
+                stock = [("coal", xr.randint(8, 32))] if kind == "coal" else [(pick(xr, food), xr.randint(4, 16))]
+                b.barrel(bx, by, bz, stock)
+    if kind == "wine" and x1 - x0 >= 6 and z1 - z0 >= 5:
+        tx, tz = (x0 + x1) // 2, (z0 + z1) // 2
+        if all(b.empty(tx + a, y, tz) for a in (-1, 0, 1)) and (tx, tz) not in held:
+            table(b, tx, y, tz, lk.wood, chairs=("east", "west"), plate=False)
+            b.set(tx, y + 1, tz, "brewing_stand", has_bottle_0="true", has_bottle_1="false", has_bottle_2="true")
+    if kind == "coal":   # the chute: a hatch in the street wall's foot, light falling on the heap
+        cx = (x0 + x1) // 2
+        if b.empty(cx, -1, z0 + 1):
+            b.set(cx, -1, z0, "iron_trapdoor", facing="south", half="top", open="false", powered="false",
+                  waterlogged="false")
+    light = st.light if st else "lantern"
+    for lx_ in sorted({x0 + 2, (x0 + x1) // 2, x1 - 2}):
+        lz_ = (z0 + z1) // 2
+        if b.empty(lx_, -1, lz_) and (lx_, lz_) not in held and b.empty(lx_, -2, lz_):
+            b.set(lx_, -1, lz_, light, hanging="true", waterlogged="false")
+    return ground
 
 
 HOUSE_GROUND = [["crafting_table", "furnace", "barrel", "chest", "plant"],
                 ["furnace", "barrel", "crafting_table", "chest", "shelf"],
                 ["smoker", "barrel", "chest", "plant", "crafting_table"]]
 HOUSE_UPPER = [["bed", "chest", "shelf", "plant"], ["bed", "bed", "chest", "plant"], ["bed", "chest", "shelf", "barrel"]]
-HOUSE_ONE = [["bed", "chest", "crafting_table", "furnace", "plant"], ["bed", "furnace", "chest", "barrel", "shelf"]]
+HOUSE_ONE = [["bed", "chest", "crafting_table", "furnace", "plant"], ["bed", "furnace", "chest", "barrel", "shelf"],
+             ["bed", "smoker", "barrel", "shelf", "plant", "loom"], ["bed", "bed", "chest", "furnace", "crafting_table"]]
+HOUSE_GROUND += [["smoker", "furnace", "barrel", "barrel", "crafting_table", "composter"],
+                 ["shelf", "shelf", "lectern", "chest", "plant", "furnace"],
+                 ["loom", "crafting_table", "chest", "barrel", "smoker", "plant"]]
+HOUSE_UPPER += [["bed", "shelf", "shelf", "lectern", "chest"], ["bed", "bed", "bed", "chest", "barrel"],
+                ["bed", "loom", "chest", "plant", "shelf"]]
+BACK_ROOMS = [["smoker", "barrel", "composter"], ["barrel", "barrel", "chest"], ["crafting_table", "grindstone", "barrel"],
+              ["shelf", "lectern"]]
+WING_ROOMS = [["smoker", "furnace", "barrel", "crafting_table", "composter"],        # a kitchen
+              ["bed", "chest", "plant", "shelf"],                                    # a bedroom
+              ["crafting_table", "grindstone", "smithing_table", "barrel", "chest"],  # a workshop
+              ["shelf", "shelf", "lectern", "plant", "chest"],                       # a study
+              ["barrel", "barrel", "hay_block", "chest", "composter"]]               # a store
 
 
 @gen("cottage", freq="very common", n=5)

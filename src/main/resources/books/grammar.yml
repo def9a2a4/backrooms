@@ -968,11 +968,11 @@ genres:
     title: ["Menu", "Canteen Menu", "Today's Specials", "This Week's Menu", "Cafeteria", "Staff Canteen"]
     author: ["The Kitchen", "Catering", "#dept#", "Chef"]
     opening:
-      - "CANTEEN\nMenu for Day #day#\n\n#menu_day#\n#menu_item# — #menu_price#\n#menu_item# — #menu_price#"
+      - "CANTEEN\nMenu for Day #day#\n\n#menu_day#\n#menu_item.cap# — #menu_price#\n#menu_item.cap# — #menu_price#"
       - "TODAY'S SPECIALS\n\n#menu_item.cap# — #menu_price#\n#menu_item.cap# — #menu_price#\n#menu_item.cap# — #menu_price#"
     body:
-      - "#menu_day#\n#menu_item# — #menu_price#\n#menu_item# — #menu_price#\n#menu_item# — #menu_price#"
-      - "#menu_day#\nClosed.\n\n#menu_day#\n#menu_item# — #menu_price#"
+      - "#menu_day#\n#menu_item.cap# — #menu_price#\n#menu_item.cap# — #menu_price#\n#menu_item.cap# — #menu_price#"
+      - "#menu_day#\nClosed.\n\n#menu_day#\n#menu_item.cap# — #menu_price#"
     body_pages: [1, 3]
     closing:
       - "Kitchen closes at #time#.\nNobody has seen the kitchen open."

@@ -53,10 +53,10 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
     private static final int LARGE = 768, MEDIUM = 384, SMALL = 192;   // region sides
     private static final int LARGE_PERCENT = 33, MEDIUM_PERCENT = 55;
     private static final double COVER = 0.45;        // target share of a region for its city and farms (~40% after rounding)
-    private static final int MAX_CHUNKS = 29;        // a 29-chunk city's buffer is ~67 MB
+    private static final int MAX_CHUNKS = 29;        // a 29-chunk city's buffer is ~67 MB (~84 MB for Level 143's, 160 high)
     private static final int MARGIN = 12;            // countryside at least this wide around a city
     private static final int GROUND = 63;            // Mace's ground layer
-    private static final long CACHE_CELLS = 80_000_000L;   // ~160 MB of city buffers
+    private static final long CACHE_CELLS = 100_000_000L;   // ~200 MB of city buffers: two of the largest
     private static final int TREE_CELL = 11;
     private static final long TREE_SALT = 0x7EE5L, FLOWER_SALT = 0xF10L, SITE_SALT = 0x5173L,
             LARGE_SALT = 0x1A26EL, MEDIUM_SALT = 0x3ED1L, CITY_SALT = 0xC17EL;
@@ -68,7 +68,7 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
     private record Site(Region region, MaceCity.Plan plan, int x0, int z0) {
         /** Buffer cells, for the cache's budget. */
         long cells() {
-            return (long) (plan.mapLength() + 1) * (plan.mapLength() + plan.farmLength() + 1) * MaceCity.HEIGHT;
+            return (long) (plan.mapLength() + 1) * (plan.mapLength() + plan.farmLength() + 1) * MaceCity.height(plan.theme());
         }
 
         int minX() { return x0; }
@@ -204,14 +204,15 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
         data.setRegion(0, minY + 1, 0, 16, 0, 16, Material.STONE);
 
         // Up to four regions meet in a chunk; each column belongs to one.
-        BlockData[] column = new BlockData[MaceCity.HEIGHT];
+        BlockData[] column = new BlockData[MaceCity.MAX_HEIGHT];
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
                 int wx = baseX + x, wz = baseZ + z;
                 Site site = siteAt(seed, wx, wz);
                 if (site.contains(wx, wz)) {
-                    city(site).column(wx - site.x0(), wz - site.z0(), column);
-                    for (int y = 0; y < MaceCity.HEIGHT; y++) {
+                    MaceCity city = city(site);
+                    city.column(wx - site.x0(), wz - site.z0(), column);
+                    for (int y = 0; y < city.height; y++) {
                         if (!column[y].getMaterial().isAir()) data.setBlock(x, y, z, column[y]);
                     }
                 } else {

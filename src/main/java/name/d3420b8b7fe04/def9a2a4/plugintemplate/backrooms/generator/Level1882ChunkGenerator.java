@@ -100,6 +100,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         int hmx, hmz, sizeX, sizeZ;
         int stairEnd;           // 0: the grand staircase is at the hall's low end, 1: the high end
         int skeleton;           // 0 whale, 1 sauropod, 2 dragon, 3 theropod, 4 mammoth
+        boolean library;        // the hall is a library instead
         long hallSeed;
 
         Plan(int ddx, int ddz) {
@@ -167,6 +168,7 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
         }
         for (int i = 0; i < D * D; i++) p.roomSeed[i] = r.nextLong();
         for (int f = 0; f < FLOORS; f++) maze(p, f, r);
+        p.library = (ddx != 0 || ddz != 0) && r.nextInt(100) < (p.pal.name.equals("library") ? 50 : 15);
         return p;
     }
 
@@ -319,14 +321,15 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
             }
         }
         if (hall) {
-            hallInterior(c, p);
+            if (p.library) libraryHall(c, p, seed);
+            else hallInterior(c, p);
         } else {
             for (int f = 0; f < FLOORS; f++) room(c, seed, p, gmx, gmz, f, e[f], st[f]);
         }
         // the vault and gables stand on the hall's wall belts too, which are in the rooms around it
         if (x0 + 15 >= p.hx0() - 1 && x0 <= p.hx1() + 1 && z0 + 15 >= p.hz0() - 1 && z0 <= p.hz1() + 1) {
             if (c.data != null) hallRoof(c, p);
-            if (hall) hallSkeleton(c, p);
+            if (hall && !p.library) hallSkeleton(c, p);
         }
     }
 
@@ -524,12 +527,10 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
             return;
         }
         if (kind == Kind.LIBRARY) {
-            MuseumExhibits.library(m, r.nextBoolean());
+            String name = MuseumExhibits.library(m, r.nextBoolean());
             chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 9);
             chandelier(c, p.pal, ox + 15, F + STORY - 3, oz + 22);
-            String[] t = st.theme().titles;
-            String[] names = {"Reading Room", "Library of " + t[0], t[r.nextInt(t.length)] + " Library", "Reading Room, " + t[0]};
-            titles(m, st, staff, names[r.nextInt(names.length)]);
+            titles(m, st, staff, name);
             return;
         }
 
@@ -831,6 +832,169 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
                     }
                 }
             }
+        }
+    }
+
+    // ── The library hall ─────────────────────────────────────────────────
+
+    /** Whether the hall's wall nearest (x, z), a long wall or an end wall, has an opening (and its jambs) there on floor f. */
+    private static boolean wallOpen(long seed, Plan p, int x, int z, int f, boolean longWall) {
+        boolean northSouth = longWall == p.alongX;
+        int gmx = Math.floorDiv(x, M), gmz = Math.floorDiv(z, M);
+        byte type;
+        int t;
+        if (northSouth) {
+            boolean north = z - p.hz0() < p.hz1() - z;
+            type = northEdge(seed, p, f, gmx, north ? gmz : gmz + 1);
+            t = Math.floorMod(x, M);
+        } else {
+            boolean west = x - p.hx0() < p.hx1() - x;
+            type = westEdge(seed, p, f, west ? gmx : gmx + 1, gmz);
+            t = Math.floorMod(z, M);
+        }
+        return type != CLOSED && arch(p.pal.arch, type, t, 1) != 0;
+    }
+
+    /**
+     * A hall fitted out as a library, after the Long Room at Trinity College Dublin: bookcases up
+     * both storeys of the walls, stacks standing out between the arcade's piers with desks in
+     * the alcoves and a bust at the end of each, a gallery high under the vault reached by
+     * ladders, glass-topped tables of treasures down the nave, chandeliers on long chains.
+     */
+    private void libraryHall(MuseumCanvas c, Plan p, long seed) {
+        MuseumPalette pal = p.pal;
+        Theme theme = p.themes[0];
+        MuseumExhibits.Fittings fit = MuseumExhibits.fittings(theme);
+        BlockData planks = fit.planks(), rail = fit.fence(), shelf = Material.BOOKSHELF.createBlockData();
+        int F1 = FLOOR0 + STORY;
+        int across = (p.alongX ? p.sizeZ : p.sizeX) * M - 2, len = (p.alongX ? p.sizeX : p.sizeZ) * M - 2;
+        int gallery = MuseumCatalogue.gallery(p.hallSeed);
+        Subject shelved = new Subject("", Topic.LIBRARY, Rarity.COMMON, gallery, theme, 0);
+        double full = 0.6 + 0.35 * new Random(p.hallSeed).nextDouble();
+        BlockFace down = downHall(p);
+        int tablesFrom = BAL + FLIGHT + 8, tablesTo = len - 10;
+        Material[] heads = {Material.PLAYER_HEAD, Material.PLAYER_HEAD, Material.SKELETON_SKULL, Material.ZOMBIE_HEAD,
+                Material.CREEPER_HEAD, Material.PIGLIN_HEAD, Material.WITHER_SKELETON_SKULL};
+        String[] headNames = {"Bust, unknown scholar", "Bust, a benefactor", "Bust, Skeleton", "Bust, Zombie",
+                "Bust, Creeper", "Bust, Piglin", "Bust, Wither Skeleton"};
+        for (int x = Math.max(c.x0, p.hx0() + 1); x <= Math.min(c.x0 + 15, p.hx1() - 1); x++) {
+            for (int z = Math.max(c.z0, p.hz0() + 1); z <= Math.min(c.z0 + 15, p.hz1() - 1); z++) {
+                HallPos h = hallPos(p, x, z);
+                Random r = new Random(AlphaMegastructures.hash(x, z, p.hallSeed, 0xB00C));
+                int dLong = (int) Math.floor(across / 2.0 - Math.abs(h.o())), dEnd = Math.min(h.aLow(), h.aHigh());
+                boolean longWall = dLong < dEnd;
+                BlockFace toMid = p.alongX ? (h.o() > 0 ? BlockFace.NORTH : BlockFace.SOUTH) : (h.o() > 0 ? BlockFace.WEST : BlockFace.EAST);
+                BlockFace toMidEnd = p.alongX ? (h.aLow() < h.aHigh() ? BlockFace.EAST : BlockFace.WEST)
+                        : (h.aLow() < h.aHigh() ? BlockFace.SOUTH : BlockFace.NORTH);
+                BlockFace in = longWall ? toMid : toMidEnd;
+                int m8 = Math.floorMod(p.alongX ? x : z, 8);
+                boolean bay = dEnd >= 8;     // clear of the end walls
+                boolean open0 = wallOpen(seed, p, x, z, 0, longWall), open1 = wallOpen(seed, p, x, z, 1, longWall);
+                boolean open0Long = wallOpen(seed, p, x, z, 0, true), open1Long = wallOpen(seed, p, x, z, 1, true);
+                boolean corner = dLong == dEnd;
+
+                // the walls, two deep, both storeys
+                if (h.dWall() <= 1) {
+                    for (int f = 0; f < FLOORS; f++) {
+                        if (f == 0 ? open0 : open1) continue;
+                        int y0 = f == 0 ? FLOOR0 + 1 : F1 + 1, y1 = f == 0 ? F1 - 3 : ROOF - 1;
+                        for (int y = y0; y <= y1; y++) {
+                            // plain where nothing can reach it: behind, at corners, behind the gallery and the stacks
+                            boolean behind = longWall && bay && m8 <= 1 && (f == 0 ? !open0 && y <= F1 - 3 : y <= F1 + 9);
+                            if (h.dWall() == 0 || corner || y == F1 + 11 || behind) c.set(x, y, z, shelf);
+                            else MuseumExhibits.books(c, r, x, y, z, in, full, shelved);
+                        }
+                    }
+                    continue;
+                }
+                // the high gallery all round, railed, with ladders up from the balcony
+                if (h.dWall() <= 3) {
+                    c.set(x, F1 + 11, z, planks);
+                    if (h.dWall() == 3) c.set(x, F1 + 12, z, rail);
+                }
+                if (longWall && bay && dLong == 2 && Math.floorMod(p.alongX ? x : z, 32) == 4 && !open1) {
+                    org.bukkit.block.data.type.Ladder ladder = (org.bukkit.block.data.type.Ladder) Material.LADDER.createBlockData();
+                    ladder.setFacing(toMid);
+                    for (int y = F1 + 1; y <= F1 + 11; y++) c.set(x, y, z, ladder);
+                    continue;
+                }
+                if (!longWall || !bay) continue;
+                boolean stack = m8 <= 1;
+                BlockFace face = m8 == 0 ? down.getOppositeFace() : down;
+                if (p.stairEnd == 1) face = face.getOppositeFace();
+                // stacks between the balcony's piers on the gallery level
+                if (stack && dLong <= 3 && !open1Long) {
+                    for (int y = F1 + 1; y <= F1 + 8; y++) MuseumExhibits.books(c, r, x, y, z, face, full, shelved);
+                    c.set(x, F1 + 9, z, planks);
+                }
+                if (open0Long) continue;
+                if (stack) {
+                    // a stack out from the wall through the arcade's pier; a bust at its end
+                    if (dLong <= 3) {
+                        for (int y = FLOOR0 + 1; y <= F1 - 3; y++) MuseumExhibits.books(c, r, x, y, z, face, full, shelved);
+                    } else if (dLong >= BAL && dLong <= 13) {
+                        for (int y = FLOOR0 + 1; y <= FLOOR0 + 9; y++) MuseumExhibits.books(c, r, x, y, z, face, full, shelved);
+                        c.set(x, FLOOR0 + 10, z, planks);
+                    } else if (dLong == 14 && m8 == 0) {
+                        c.set(x, FLOOR0 + 1, z, pal.trim);
+                        c.set(x, FLOOR0 + 2, z, pal.carved);
+                        int k = r.nextInt(heads.length);
+                        BlockData head = heads[k].createBlockData();
+                        if (head instanceof org.bukkit.block.data.Rotatable rot) rot.setRotation(toMid.getOppositeFace());
+                        c.set(x, FLOOR0 + 3, z, head);
+                        c.sign(x + toMid.getModX(), FLOOR0 + 1, z + toMid.getModZ(), toMid,
+                                new Subject(headNames[k], Topic.MONOLITH, Rarity.UNCOMMON, gallery, theme, 0));
+                    }
+                } else if (m8 >= 3 && m8 <= 6) {
+                    // a desk in the alcove, its chair, a candle
+                    if (dLong == 2) {
+                        c.set(x, FLOOR0 + 1, z, fit.topSlab());
+                        if (m8 == 4 + (r.nextInt(2))) c.set(x, FLOOR0 + 2, z, fit.litCandle(r));
+                    } else if (dLong == 3 && (m8 == 3 || m8 == 6)) {
+                        Stairs chair = (Stairs) fit.stairs().createBlockData();
+                        chair.setFacing(toMid);
+                        c.set(x, FLOOR0 + 1, z, chair);
+                    }
+                }
+            }
+        }
+        // down the nave: glass-topped tables of the library's treasures, with labels and lecterns
+        Specimen[] pool = MuseumCatalogue.pool(theme);
+        String[] shows = {"Treasures of the Library", "Recent acquisitions", "Bindings", "Manuscripts", "Early printed books",
+                "Atlases", "Herbals", "Letters and papers"};
+        for (int fe = tablesFrom; fe + 8 <= tablesTo; fe += 14) {
+            Random r = new Random(AlphaMegastructures.hash(fe, 0, p.hallSeed, 0x7AB));
+            for (int k = 0; k < 9; k++) {
+                for (int o = -2; o <= 1; o++) {
+                    int[] q = hallPoint(p, fe + k, o);
+                    c.set(q[0], FLOOR0 + 1, q[1], planks);
+                    c.set(q[0], FLOOR0 + 3, q[1], GLASS);
+                    if ((k + o & 1) != 0 || k == 0 || k == 8) continue;
+                    Specimen sp = r.nextInt(5) == 0 ? MuseumExhibits.pot(r) : pool[r.nextInt(pool.length)];
+                    MuseumExhibits.put(c, q[0], FLOOR0 + 2, q[1], sp, down.getOppositeFace(),
+                            new Subject(MuseumCatalogue.name(sp), Topic.SPECIMEN, sp.rarity(), gallery, theme, 0));
+                }
+            }
+            int[] s = hallPoint(p, fe - 1, 0);
+            c.sign(s[0], FLOOR0 + 1, s[1], down.getOppositeFace(),
+                    new Subject(shows[r.nextInt(shows.length)], Topic.SHELFMARK, Rarity.COMMON, gallery, theme, 0));
+            int[] l = hallPoint(p, fe + 9, -1);
+            c.lectern(l[0], FLOOR0 + 1, l[1], down, new Subject("", Topic.LIBRARY, Rarity.COMMON, gallery, theme, p.hallSeed + fe));
+        }
+        // a label and a guide by the foot of the staircase
+        int[] post = hallPoint(p, BAL + FLIGHT + 5, 4);
+        c.set(post[0], FLOOR0 + 1, post[1], pal.carved);
+        BlockFace back = down.getOppositeFace();
+        c.sign(post[0] + back.getModX(), FLOOR0 + 1, post[1] + back.getModZ(), back,
+                new Subject(new String[]{"The Long Room", "Library of " + theme.titles[0], "The Old Library"}[(int) Math.floorMod(p.hallSeed, 3L)],
+                        Topic.ROOM, Rarity.COMMON, gallery, theme, 0));
+        int[] lec = hallPoint(p, BAL + FLIGHT + 5, -4);
+        c.lectern(lec[0], FLOOR0 + 1, lec[1], back, new Subject("", Topic.GUIDE, Rarity.COMMON, gallery, theme, p.hallSeed));
+        // chandeliers on long chains from the vault
+        for (int fe = BAL + FLIGHT + 4; fe < len - 6; fe += 16) {
+            int[] q = hallPoint(p, fe, 0);
+            for (int y = F1 + 6; y <= ROOF + 36; y++) c.set(q[0], y, q[1], CHAIN);
+            chandelier(c, pal, q[0], F1 + 5, q[1]);
         }
     }
 

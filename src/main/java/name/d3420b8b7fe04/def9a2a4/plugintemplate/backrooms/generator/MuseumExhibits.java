@@ -1070,9 +1070,30 @@ final class MuseumExhibits {
     // ── Libraries ────────────────────────────────────────────────────────
 
     /** A library's fittings, by what it collects: its wood, carpet and candles, and what stands on the stalls. */
-    private record Fittings(String wood, Material carpet, Material candle, Material... deco) {}
+    record Fittings(String wood, Material carpet, Material candle, Material... deco) {
+        BlockData planks() { return Material.valueOf(wood + "_PLANKS").createBlockData(); }
+        BlockData fence() { return Material.valueOf(wood + "_FENCE").createBlockData(); }
+        Material stairs() { return Material.valueOf(wood + "_STAIRS"); }
 
-    private static Fittings fittings(Theme t) {
+        BlockData post() {
+            return (wood.equals("CRIMSON") ? STRIPPED_CRIMSON_STEM : Material.valueOf("STRIPPED_" + wood + "_LOG")).createBlockData();
+        }
+
+        BlockData topSlab() {
+            org.bukkit.block.data.type.Slab s = (org.bukkit.block.data.type.Slab) Material.valueOf(wood + "_SLAB").createBlockData();
+            s.setType(org.bukkit.block.data.type.Slab.Type.TOP);
+            return s;
+        }
+
+        BlockData litCandle(Random r) {
+            org.bukkit.block.data.type.Candle candle = (org.bukkit.block.data.type.Candle) this.candle.createBlockData();
+            candle.setLit(true);
+            candle.setCandles(1 + r.nextInt(3));
+            return candle;
+        }
+    }
+
+    static Fittings fittings(Theme t) {
         return switch (t) {
             case MINERALS -> new Fittings("SPRUCE", GRAY_CARPET, WHITE_CANDLE, AMETHYST_CLUSTER, LARGE_AMETHYST_BUD, CALCITE, RAW_IRON_BLOCK);
             case FOSSILS -> new Fittings("DARK_OAK", BROWN_CARPET, BROWN_CANDLE, SKELETON_SKULL, BONE_BLOCK, SKELETON_SKULL);
@@ -1094,7 +1115,7 @@ final class MuseumExhibits {
         };
     }
 
-    /** One of a library's ornaments on top of a stall, its face (if it has one) toward {@code f}. */
+    /** An ornament on top of a bookcase, its face (if it has one) toward {@code f}. */
     private static void ornament(Room m, int x, int y, int z, Material mt, BlockFace f) {
         if (mt == DECORATED_POT) {
             m.c().pot(x, y, z, f, m.subject("Pot", Topic.POTS, Rarity.COMMON));
@@ -1105,31 +1126,79 @@ final class MuseumExhibits {
         m.c().set(x, y, z, b);
     }
 
-    /** A bookcase block: a chiseled shelf of books facing {@code f}, now and then a plain one. */
-    private static void books(Room m, int x, int y, int z, BlockFace f, Subject s) {
-        if (m.r().nextInt(10) == 0) m.c().set(x, y, z, BOOKSHELF);
-        else m.c().shelf(x, y, z, f, 0.8, m.r(), s);
+    /** A bookcase block: a chiseled shelf facing {@code f}, its slots filled with chance {@code full}; now and then a plain one. */
+    static void books(MuseumCanvas c, Random r, int x, int y, int z, BlockFace f, double full, Subject s) {
+        if (r.nextInt(10) == 0) c.set(x, y, z, BOOKSHELF);
+        else c.shelf(x, y, z, f, full, r, s);
+    }
+
+    /** One library room being fitted out: its fittings, the subject its books are on, how full its shelves are. */
+    private record Lib(Room m, boolean alongX, Fittings fit, Subject shelved, double full) {
+        void books(int x, int y, int z, BlockFace f) {
+            MuseumExhibits.books(m.c(), m.r(), x, y, z, f, full, shelved);
+        }
+
+        void at(int a, int y, int b, BlockData d) {
+            MuseumExhibits.at(m, alongX, a, y, b, d);
+        }
+
+        Material deco() {
+            return fit.deco()[m.r().nextInt(fit.deco().length)];
+        }
+
+        void lectern(int a, int b, BlockFace f) {
+            m.c().lectern(X(m, alongX, a, b), m.F() + 1, Z(m, alongX, a, b), f,
+                    new Subject("", Topic.LIBRARY, Rarity.COMMON, m.gallery(), m.theme(), m.seed() + a * 31L + b));
+        }
+
+        void shelfmark(int a, int y, int b, BlockFace f) {
+            m.c().sign(X(m, alongX, a, b), y, Z(m, alongX, a, b), f, m.subject("", Topic.SHELFMARK, Rarity.COMMON));
+        }
     }
 
     /**
-     * A reading room after Duke Humfrey's Library, fitted out for its subject: bookcases two deep up
-     * the walls with a gallery and ladders over the closed ones, stalls of bookcases standing out
-     * into the room with desks and candles between, carpet down the aisles, a glass-topped table of
-     * things from the collection, and lecterns with learned books. The shelves are chiseled, their
-     * books facing the reader.
+     * A library, fitted out for its subject, in one of five arrangements: stalls after Duke
+     * Humfrey's Library, a rotunda, the stacks, a reading room of long tables under two galleries,
+     * or a map room. Returns what the sign over the door calls it.
      */
-    static void library(Room m, boolean alongX) {
-        MuseumCanvas c = m.c();
+    static String library(Room m, boolean alongX) {
         Random r = m.r();
+        Lib L = new Lib(m, alongX, fittings(m.theme()),
+                new Subject("", Topic.LIBRARY, Rarity.COMMON, m.gallery(), m.theme(), 0), 0.55 + r.nextDouble() * 0.4);
+        String[] t = m.theme().titles;
+        int roll = r.nextInt(10);
+        if (roll < 3) {
+            stalls(L);
+            return name(r, "Reading Room", "Library of " + t[0], t[r.nextInt(t.length)] + " Library");
+        } else if (roll < 5) {
+            rotunda(L);
+            return name(r, "The Rotunda", "Round Reading Room", "Rotunda, " + t[0]);
+        } else if (roll < 7) {
+            stacks(L);
+            return name(r, "The Stacks", "Book Stack " + (1 + r.nextInt(30)), "Reserve Collection", t[0] + " Stack");
+        } else if (roll < 9) {
+            tables(L);
+            return name(r, "Reading Room", "Upper Reading Room", "Reading Room, " + t[0], "Students' Room");
+        }
+        mapRoom(L);
+        return name(r, "Map Room", "Map Room, " + t[0], "Atlases and Charts");
+    }
+
+    private static String name(Random r, String... names) {
+        return names[r.nextInt(names.length)];
+    }
+
+    /**
+     * Bookcases two deep up the walls to {@code top}, plain behind and chiseled in front, with
+     * posts every six blocks and a cornice; over the closed walls a gallery at each of
+     * {@code galleries} (the first three deep, the rest two), railed, with ladders up.
+     */
+    private static void wallBooks(Lib L, int top, int... galleries) {
+        Room m = L.m();
+        MuseumCanvas c = m.c();
         int F = m.F();
         byte[] e = m.e();
-        Fittings fit = fittings(m.theme());
-        BlockData planks = Material.valueOf(fit.wood() + "_PLANKS").createBlockData(),
-                rail = Material.valueOf(fit.wood() + "_FENCE").createBlockData(),
-                carpet = fit.carpet().createBlockData(), glass = Material.GLASS.createBlockData();
-        Material stairs = Material.valueOf(fit.wood() + "_STAIRS");
-        Subject shelved = new Subject("", Topic.LIBRARY, Rarity.COMMON, m.gallery(), m.theme(), 0);
-
+        BlockData post = L.fit().post(), planks = L.fit().planks(), rail = L.fit().fence();
         for (int side = 0; side < 4; side++) {
             byte k = e[side];
             if (k == Level1882ChunkGenerator.ARCADE) continue;
@@ -1139,102 +1208,308 @@ final class MuseumExhibits {
                 for (int t = run[0]; t <= run[1]; t++) {
                     int x1 = sx(m.ox(), side, 1, t), z1 = sz(m.oz(), side, 1, t);
                     int x2 = sx(m.ox(), side, 2, t), z2 = sz(m.oz(), side, 2, t);
-                    for (int y = F + 1; y <= F + 12; y++) {
-                        if (y == F + 12) {
+                    boolean pilaster = (t - 2) % 6 == 3;
+                    for (int y = F + 1; y <= top; y++) {
+                        if (y == top) {
                             c.set(x1, y, z1, m.pal().trim);
                             c.set(x2, y, z2, m.pal().trim);
                             continue;
                         }
                         c.set(x1, y, z1, BOOKSHELF);
-                        // the corners are shared with the next wall; the gallery's floor hides the row behind it
-                        if (t == 2 || t == 29 || (closed && y == F + 6)) c.set(x2, y, z2, BOOKSHELF);
-                        else books(m, x2, y, z2, INTO_ROOM[side], shelved);
+                        boolean hidden = t == 2 || t == 29;     // shared with the next wall
+                        // behind a gallery's floor, or the end of the next wall's gallery
+                        for (int g : galleries) hidden |= closed && y == g || (t <= 5 || t >= 26) && (y == g || y == g + 1);
+                        if (pilaster) c.set(x2, y, z2, post);
+                        else if (hidden) c.set(x2, y, z2, BOOKSHELF);
+                        else L.books(x2, y, z2, INTO_ROOM[side]);
                     }
                 }
             }
             if (!closed) continue;
-            // the gallery: a walkway two wide with a railing, and a ladder up to it
             int lo = side < 2 ? 2 : 0, hi = side < 2 ? 3 : 1;   // the walls at either end of this one
             boolean loC = e[lo] == Level1882ChunkGenerator.CLOSED, hiC = e[hi] == Level1882ChunkGenerator.CLOSED;
-            for (int t = 3; t <= 28; t++) {
-                for (int d = 3; d <= 5; d++) c.set(sx(m.ox(), side, d, t), F + 6, sz(m.oz(), side, d, t), planks);
-                if (t >= (loC ? 5 : 3) && t <= (hiC ? 26 : 28)) c.set(sx(m.ox(), side, 5, t), F + 7, sz(m.oz(), side, 5, t), rail);
-                if ((t == 3 && e[lo] == Level1882ChunkGenerator.ARCADE) || (t == 28 && e[hi] == Level1882ChunkGenerator.ARCADE)) {
-                    for (int d = 3; d <= 4; d++) c.set(sx(m.ox(), side, d, t), F + 7, sz(m.oz(), side, d, t), rail);
+            for (int gi = 0; gi < galleries.length; gi++) {
+                int g = galleries[gi], d1 = gi == 0 ? 5 : 4;
+                for (int t = 3; t <= 28; t++) {
+                    for (int d = 3; d <= d1; d++) c.set(sx(m.ox(), side, d, t), g, sz(m.oz(), side, d, t), planks);
+                    if (t >= (loC ? d1 : 3) && t <= (hiC ? M() - 1 - d1 : 28)) {
+                        c.set(sx(m.ox(), side, d1, t), g + 1, sz(m.oz(), side, d1, t), rail);
+                    }
+                    if ((t == 3 && e[lo] == Level1882ChunkGenerator.ARCADE) || (t == 28 && e[hi] == Level1882ChunkGenerator.ARCADE)) {
+                        for (int d = 3; d < d1; d++) c.set(sx(m.ox(), side, d, t), g + 1, sz(m.oz(), side, d, t), rail);
+                    }
                 }
+                org.bukkit.block.data.type.Ladder ladder = (org.bukkit.block.data.type.Ladder) LADDER.createBlockData();
+                ladder.setFacing(INTO_ROOM[side]);
+                int t = gi % 2 == 0 ? 6 : 25, from = gi == 0 ? F + 1 : galleries[gi - 1] + 1;
+                for (int y = from; y <= g; y++) c.set(sx(m.ox(), side, 3, t), y, sz(m.oz(), side, 3, t), ladder);
             }
-            org.bukkit.block.data.type.Ladder ladder = (org.bukkit.block.data.type.Ladder) LADDER.createBlockData();
-            ladder.setFacing(INTO_ROOM[side]);
-            for (int y = F + 1; y <= F + 6; y++) c.set(sx(m.ox(), side, 3, 6), y, sz(m.oz(), side, 3, 6), ladder);
         }
+    }
 
-        // carpet down the aisles
+    private static int M() {
+        return Level1882ChunkGenerator.M;
+    }
+
+    /** Carpet over the floor from (a0, b0) to (a1, b1). */
+    private static void carpet(Lib L, int a0, int a1, int b0, int b1) {
+        BlockData carpet = L.fit().carpet().createBlockData();
+        for (int a = a0; a <= a1; a++) for (int b = b0; b <= b1; b++) L.at(a, L.m().F() + 1, b, carpet);
+    }
+
+    /** A glass-topped table of things from the collection, a ≤ a0..a1, b ≤ b0..b1, labelled at (la, lb) facing {@code f}. */
+    private static void vitrine(Lib L, int a0, int a1, int b0, int b1, int la, int lb, BlockFace f) {
+        Room m = L.m();
+        int F = m.F();
+        Specimen[] pool = MuseumCatalogue.pool(m.theme());
+        BlockData planks = L.fit().planks(), glass = Material.GLASS.createBlockData();
+        Specimen first = null;
+        for (int a = a0; a <= a1; a++) {
+            for (int b = b0; b <= b1; b++) {
+                L.at(a, F + 1, b, planks);
+                L.at(a, F + 3, b, glass);
+                if ((a + b) % 2 != 0) continue;
+                Specimen sp = m.r().nextInt(100) < potChance(m.theme()) ? pot(m.r()) : pool[m.r().nextInt(pool.length)];
+                if (first == null) first = sp;
+                put(m.c(), X(m, L.alongX(), a, b), F + 2, Z(m, L.alongX(), a, b), sp, f, label(m, sp));
+            }
+        }
+        if (first != null) m.c().sign(X(m, L.alongX(), la, lb), F + 1, Z(m, L.alongX(), la, lb), f, label(m, first));
+    }
+
+    /**
+     * Duke Humfrey's: stalls of bookcases two deep standing out from the walls, desks with candles
+     * between them, carpet down the aisles, glass-topped tables in the cross aisle, a gallery.
+     */
+    private static void stalls(Lib L) {
+        Room m = L.m();
+        MuseumCanvas c = m.c();
+        Random r = m.r();
+        int F = m.F();
+        boolean alongX = L.alongX();
+        wallBooks(L, F + 12, F + 6);
         for (int a = 6; a <= 25; a++) {
             for (int b = 6; b <= 25; b++) {
-                if ((b >= 14 && b <= 17) || (a >= 14 && a <= 17)) c.set(X(m, alongX, a, b), F + 1, Z(m, alongX, a, b), carpet);
+                if ((b >= 14 && b <= 17) || (a >= 14 && a <= 17)) L.at(a, F + 1, b, L.fit().carpet().createBlockData());
             }
         }
-        // stalls: bookcases two deep across the room, shelved on both faces, things on top
+        int h = r.nextBoolean() ? 3 : 5;
+        BlockData planks = L.fit().planks();
         for (int s : new int[]{6, 12, 18, 24}) {
             for (int b = 6; b <= 25; b++) {
                 if (b > 11 && b < 20) continue;
                 for (int k = 0; k <= 1; k++) {
                     int x = X(m, alongX, s + k, b), z = Z(m, alongX, s + k, b);
-                    for (int y = F + 1; y <= F + 3; y++) books(m, x, y, z, facing(!alongX, k == 1), shelved);
-                    c.set(x, F + 4, z, planks);
+                    for (int y = F + 1; y <= F + h; y++) L.books(x, y, z, facing(!alongX, k == 1));
+                    c.set(x, F + h + 1, z, planks);
                 }
             }
             for (int b : new int[]{7, 10, 21, 24}) {
                 if (r.nextInt(3) == 0) continue;
                 int a = s + r.nextInt(2);
-                ornament(m, X(m, alongX, a, b), F + 5, Z(m, alongX, a, b), fit.deco()[r.nextInt(fit.deco().length)],
-                        facing(alongX, b < 16));
+                ornament(m, X(m, alongX, a, b), F + h + 2, Z(m, alongX, a, b), L.deco(), facing(alongX, b < 16));
             }
+            // the stall's shelfmark, toward the aisle
+            L.shelfmark(s, F + 1, 12, facing(alongX, true));
+            L.shelfmark(s + 1, F + 1, 19, facing(alongX, false));
         }
-        // desks between the stalls, a chair either side, a candle
-        org.bukkit.block.data.type.Slab top = (org.bukkit.block.data.type.Slab) Material.valueOf(fit.wood() + "_SLAB").createBlockData();
-        top.setType(org.bukkit.block.data.type.Slab.Type.TOP);
         for (int a0 : new int[]{8, 20}) {
             for (int b0 : new int[]{6, 20}) {
                 for (int b = b0 + 1; b <= b0 + 4; b++) {
-                    at(m, alongX, a0 + 1, F + 1, b, top);
-                    at(m, alongX, a0 + 2, F + 1, b, top);
-                    Stairs chair = (Stairs) stairs.createBlockData();
+                    L.at(a0 + 1, F + 1, b, L.fit().topSlab());
+                    L.at(a0 + 2, F + 1, b, L.fit().topSlab());
+                    Stairs chair = (Stairs) L.fit().stairs().createBlockData();
                     chair.setFacing(facing(!alongX, false));
-                    at(m, alongX, a0, F + 1, b, chair);
-                    Stairs chair2 = (Stairs) stairs.createBlockData();
+                    L.at(a0, F + 1, b, chair);
+                    Stairs chair2 = (Stairs) L.fit().stairs().createBlockData();
                     chair2.setFacing(facing(!alongX, true));
-                    at(m, alongX, a0 + 3, F + 1, b, chair2);
+                    L.at(a0 + 3, F + 1, b, chair2);
                 }
-                org.bukkit.block.data.type.Candle candle = (org.bukkit.block.data.type.Candle) fit.candle().createBlockData();
-                candle.setLit(true);
-                candle.setCandles(1 + r.nextInt(3));
-                at(m, alongX, a0 + 1 + r.nextInt(2), F + 2, b0 + 2 + r.nextInt(2), candle);
+                L.at(a0 + 1 + r.nextInt(2), F + 2, b0 + 2 + r.nextInt(2), L.fit().litCandle(r));
             }
         }
-        // glass-topped tables of things from the collection in the cross aisle, labelled toward the middle
-        Specimen[] pool = MuseumCatalogue.pool(m.theme());
-        for (int[] q : new int[][]{{7, 10, 11}, {21, 24, 20}}) {
-            BlockFace f = facing(alongX, q[2] == 11);
-            Specimen first = null;
-            for (int a = 15; a <= 16; a++) {
-                for (int b = q[0]; b <= q[1]; b++) {
-                    at(m, alongX, a, F + 1, b, planks);
-                    at(m, alongX, a, F + 3, b, glass);
-                    if ((a + b) % 2 != 0) continue;
-                    Specimen sp = pool[r.nextInt(pool.length)];
-                    if (first == null) first = sp;
-                    put(c, X(m, alongX, a, b), F + 2, Z(m, alongX, a, b), sp, f, label(m, sp));
+        vitrine(L, 15, 16, 7, 10, 15, 11, facing(alongX, true));
+        vitrine(L, 15, 16, 21, 24, 15, 20, facing(alongX, false));
+        for (int a : new int[]{5, 26}) if (r.nextInt(3) > 0) L.lectern(a, 16, facing(!alongX, a < 16));
+    }
+
+    /**
+     * A rotunda: a ring of low bookcases round a round reading table, broken by four aisles,
+     * carpet inside the ring, the walls lined behind.
+     */
+    private static void rotunda(Lib L) {
+        Room m = L.m();
+        MuseumCanvas c = m.c();
+        Random r = m.r();
+        int F = m.F();
+        wallBooks(L, F + 12, r.nextBoolean() ? new int[]{F + 6} : new int[0]);
+        BlockData planks = L.fit().planks(), carpet = L.fit().carpet().createBlockData(), table = L.fit().topSlab();
+        double r0 = 8.6, r1 = 10.6, mid = 9.6;
+        for (int lx = 3; lx <= 28; lx++) {
+            for (int lz = 3; lz <= 28; lz++) {
+                double dx = lx + 0.5 - 16, dz = lz + 0.5 - 16, d = Math.hypot(dx, dz);
+                int x = m.ox() + lx, z = m.oz() + lz;
+                if (d >= r0 && d < r1 && Math.abs(dx) >= 2.5 && Math.abs(dz) >= 2.5) {
+                    BlockFace out = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? BlockFace.EAST : BlockFace.WEST)
+                            : (dz > 0 ? BlockFace.SOUTH : BlockFace.NORTH);
+                    BlockFace f = d < mid ? out.getOppositeFace() : out;
+                    double fx = dx + f.getModX(), fz = dz + f.getModZ(), fd = Math.hypot(fx, fz);
+                    boolean blocked = fd >= r0 && fd < r1 && Math.abs(fx) >= 2.5 && Math.abs(fz) >= 2.5;
+                    for (int y = F + 1; y <= F + 4; y++) {
+                        if (blocked) c.set(x, y, z, BOOKSHELF);
+                        else L.books(x, y, z, f);
+                    }
+                    c.set(x, F + 5, z, planks);
+                    if (r.nextInt(12) == 0) ornament(m, x, F + 6, z, L.deco(), out);
+                } else if (d < 2.6) {
+                    c.set(x, F + 1, z, table);
+                } else if (d < 3.6) {
+                    BlockFace out = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? BlockFace.EAST : BlockFace.WEST)
+                            : (dz > 0 ? BlockFace.SOUTH : BlockFace.NORTH);
+                    Stairs chair = (Stairs) L.fit().stairs().createBlockData();
+                    chair.setFacing(out);
+                    c.set(x, F + 1, z, chair);
+                } else if (d < r0) {
+                    c.set(x, F + 1, z, carpet);
                 }
             }
-            c.sign(X(m, alongX, 15, q[2]), F + 1, Z(m, alongX, 15, q[2]), f, label(m, first));
         }
-        // lecterns at the ends of the aisle
-        for (int a : new int[]{5, 26}) {
-            if (r.nextInt(3) == 0) continue;
-            c.lectern(X(m, alongX, a, 16), F + 1, Z(m, alongX, a, 16), facing(!alongX, a < 16),
-                    new Subject("", Topic.LIBRARY, Rarity.COMMON, m.gallery(), m.theme(), m.seed() + a));
+        c.set(m.ox() + 15, F + 2, m.oz() + 15, L.fit().litCandle(r));
+        c.set(m.ox() + 16, F + 2, m.oz() + 16, L.fit().litCandle(r));
+        // lecterns on the carpet, readers on the side toward the table
+        c.lectern(m.ox() + 10, F + 1, m.oz() + 10, BlockFace.EAST,
+                new Subject("", Topic.LIBRARY, Rarity.COMMON, m.gallery(), m.theme(), m.seed() + 1));
+        c.lectern(m.ox() + 21, F + 1, m.oz() + 21, BlockFace.WEST,
+                new Subject("", Topic.LIBRARY, Rarity.COMMON, m.gallery(), m.theme(), m.seed() + 2));
+    }
+
+    /**
+     * The stacks: tall bookcases two deep in close rows either side of a carpeted corridor, a
+     * shelfmark at the end of each row.
+     */
+    private static void stacks(Lib L) {
+        Room m = L.m();
+        MuseumCanvas c = m.c();
+        Random r = m.r();
+        int F = m.F();
+        boolean alongX = L.alongX();
+        wallBooks(L, F + 12);
+        carpet(L, 3, 28, 14, 17);
+        int h = 6 + r.nextInt(3);
+        BlockData planks = L.fit().planks();
+        for (int s = 5; s <= 25; s += 4) {
+            for (int b = 6; b <= 25; b++) {
+                if (b > 13 && b < 18) continue;
+                for (int k = 0; k <= 1; k++) {
+                    int x = X(m, alongX, s + k, b), z = Z(m, alongX, s + k, b);
+                    for (int y = F + 1; y <= F + h; y++) L.books(x, y, z, facing(!alongX, k == 1));
+                    c.set(x, F + h + 1, z, planks);
+                }
+            }
+            L.shelfmark(s, F + 2, 14, facing(alongX, true));
+            L.shelfmark(s + 1, F + 2, 17, facing(alongX, false));
+            if (r.nextInt(4) == 0) ornament(m, X(m, alongX, s, 7), F + h + 2, Z(m, alongX, s, 7), L.deco(), facing(alongX, true));
         }
+        // a desk at a closed end of the corridor
+        for (int end : new int[]{0, 1}) {
+            int side = alongX ? end : 2 + end;
+            if (m.e()[side] != Level1882ChunkGenerator.CLOSED) continue;
+            int a = end == 0 ? 3 : 28;
+            L.lectern(a, 15, facing(!alongX, end == 0));
+            L.at(a, F + 1, 16, L.fit().planks());
+            L.at(a, F + 2, 16, L.fit().litCandle(r));
+            break;
+        }
+    }
+
+    /** A reading room: three long tables with lamps and chairs, under two galleries of bookcases. */
+    private static void tables(Lib L) {
+        Room m = L.m();
+        Random r = m.r();
+        int F = m.F();
+        boolean alongX = L.alongX();
+        wallBooks(L, F + 13, F + 6, F + 10);
+        carpet(L, 6, 25, 6, 25);
+        boolean lanterns = r.nextBoolean();
+        for (int b0 : new int[]{8, 15, 22}) {
+            for (int a = 6; a <= 25; a++) {
+                if (a == 15 || a == 16) continue;
+                L.at(a, F + 1, b0, L.fit().topSlab());
+                L.at(a, F + 1, b0 + 1, L.fit().topSlab());
+                Stairs chair = (Stairs) L.fit().stairs().createBlockData();
+                chair.setFacing(facing(alongX, false));
+                if (a % 2 == 0) L.at(a, F + 1, b0 - 1, chair);
+                Stairs chair2 = (Stairs) L.fit().stairs().createBlockData();
+                chair2.setFacing(facing(alongX, true));
+                if (a % 2 == 0) L.at(a, F + 1, b0 + 2, chair2);
+                if (a % 4 == 1) {
+                    BlockData lamp = lanterns ? LANTERN.createBlockData() : L.fit().litCandle(r);
+                    L.at(a, F + 2, b0 + (a % 8 == 1 ? 0 : 1), lamp);
+                }
+            }
+        }
+        L.lectern(5, 12, facing(!alongX, true));
+        L.lectern(26, 19, facing(!alongX, false));
+        if (r.nextBoolean()) vitrine(L, 15, 16, 4, 5, 15, 6, facing(alongX, true));
+    }
+
+    /**
+     * A map room: low map cases round the walls with charts hung above, a great table of
+     * cartography tables, globes on stands in the corners, plan chests, lecterns.
+     */
+    private static void mapRoom(Lib L) {
+        Room m = L.m();
+        MuseumCanvas c = m.c();
+        Random r = m.r();
+        int F = m.F();
+        boolean alongX = L.alongX();
+        wallBooks(L, F + 5);
+        for (int s = 0; s < 4; s++) {
+            byte e = m.e()[s];
+            if (e == Level1882ChunkGenerator.ARCADE) continue;
+            int[] slots = e == Level1882ChunkGenerator.DOOR ? new int[]{6, 25} : new int[]{8, 15, 23};
+            for (int t : slots) {
+                c.painting(sx(m.ox(), s, 1, t), F + 9, sz(m.oz(), s, 1, t), INTO_ROOM[s], m.subject("", Topic.PAINTING, Rarity.COMMON), 4, 3);
+            }
+        }
+        carpet(L, 4, 27, 4, 27);
+        for (int a = 12; a <= 19; a++) for (int b = 13; b <= 18; b++) L.at(a, F + 1, b, CARTOGRAPHY_TABLE.createBlockData());
+        // plan chests, two high, their drawers toward the table
+        for (int[] run : new int[][]{{6, 11}, {20, 25}}) {
+            for (int a = run[0]; a <= run[1]; a++) {
+                for (int b : new int[]{9, 22}) {
+                    BlockFace f = facing(alongX, b < 16);
+                    for (int y = F + 1; y <= F + 2; y++) {
+                        c.chest(X(m, alongX, a, b), y, Z(m, alongX, a, b), BARREL, f,
+                                new Subject("", Topic.CHEST, Rarity.COMMON, m.gallery(), m.theme(), 0));
+                    }
+                    L.at(a, F + 3, b, L.fit().topSlab());
+                }
+            }
+        }
+        // globes, terrestrial and celestial
+        long seed = r.nextLong();
+        for (int[] g : new int[][]{{6, 6}, {6, 25}, {25, 6}, {25, 25}}) {
+            boolean celestial = r.nextInt(3) == 0;
+            int gx = m.ox() + g[0], gz = m.oz() + g[1];
+            c.set(gx, F + 1, gz, m.pal().carved);
+            c.set(gx, F + 2, gz, L.fit().fence());
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (dx * dx + dy * dy + dz * dz > 2) continue;
+                        double n = SimplexNoise.noise3(seed, (gx + dx) * 0.6, dy * 0.6, (gz + dz) * 0.6);
+                        Material mt = celestial ? (n > 0.45 ? GOLD_BLOCK : BLUE_CONCRETE)
+                                : n > 0.15 ? (n > 0.45 ? LIME_TERRACOTTA : GREEN_TERRACOTTA) : (n < -0.4 ? BLUE_CONCRETE : LIGHT_BLUE_CONCRETE);
+                        c.set(gx + dx, F + 4 + dy, gz + dz, mt.createBlockData());
+                    }
+                }
+            }
+            BlockFace f = g[1] < 16 ? BlockFace.SOUTH : BlockFace.NORTH;
+            c.sign(gx, F + 1, gz + f.getModZ(), f, m.subject(celestial ? "Globe, celestial" : "Globe, terrestrial", Topic.SPECIMEN, Rarity.RARE));
+        }
+        L.lectern(15, 11, facing(alongX, false));
+        L.lectern(16, 20, facing(alongX, true));
     }
 
     // ── Storerooms ───────────────────────────────────────────────────────

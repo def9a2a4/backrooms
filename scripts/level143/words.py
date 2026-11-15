@@ -90,6 +90,21 @@ WORDS = {
     ],
     "guild": ["Weavers'", "Masons'", "Coopers'", "Chandlers'", "Glovers'", "Drapers'", "Surveyors'", "Lamplighters'",
               "Clockmakers'", "Locksmiths'", "Mapmakers'", "Bellfounders'"],
+    # buildings_more.py
+    "lockup": [
+        "Lock-up~Currently~vacant", "Cells to let~by the~night", "Visiting hours~never", "Keys with~the keeper~(absent)",
+        "No one has~been held~here yet", "Lock-up~Please knock",
+    ],
+    "post": [
+        "Last post~collected~yesterday", "Letters~for~no one", "Post here.~It will~arrive.", "Addressed to~the occupant",
+        "Collection~every hour~on the hour", "Return to~sender~(unknown)",
+    ],
+    "lift": [
+        "~Lift~Ring for~service", "Lift~Seven levels~down", "Mind the~gap", "Lift~Capacity~one", "Going down",
+    ],
+    "court": [
+        "Court of~the City", "Court in~session~(always)", "All rise", "Justice~is blind~and patient",
+    ],
     "shrine": [
         "Keep the~flame lit~for those~yet to come", "Light one~for the~household~expected",
         "The fire~is tended~by someone", "Warm your~hands. It~is always~cold here.",
