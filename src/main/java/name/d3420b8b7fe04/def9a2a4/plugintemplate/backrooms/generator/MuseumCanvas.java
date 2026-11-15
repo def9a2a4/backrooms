@@ -19,9 +19,12 @@ final class MuseumCanvas {
 
     enum Kind { SIGN, LECTERN, POT, PAINTING }
 
-    /** What a label describes; the catalogue writes its text from this and the label's own seed. */
+    /**
+     * What a label describes. The catalogue writes its text from this and a seed: {@code seed} if
+     * it isn't 0 (so a gallery's books agree), else one hashed from the label's position.
+     */
     record Subject(String name, MuseumCatalogue.Topic topic, MuseumCatalogue.Rarity rarity, int gallery,
-                   MuseumCatalogue.Theme theme) {}
+                   MuseumCatalogue.Theme theme, long seed) {}
 
     /** A block entity to fill in: at (x, y, z), facing {@code face}; paintings up to w×h blocks. */
     record Label(int x, int y, int z, Kind kind, BlockFace face, Subject subject, int w, int h) {}

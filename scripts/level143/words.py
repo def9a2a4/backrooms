@@ -66,6 +66,32 @@ WORDS = {
         "Wells are~deep. Do not~count the~rungs.",
         "Have you~seen the~edge of town?",
     ],
+    # buildings_extra.py
+    "barracks": [
+        "Garrison~at full~strength~(0)", "Recruits~wanted.~Any at all.", "Night watch~rota:~to be filled",
+        "No drill~today.~Or yesterday.", "Lights out~at dusk~for everyone",
+    ],
+    "clock": [
+        "Correct~time kept~here", "The clock~is right~twice a day~somewhere", "Please do not~set your watch~by this",
+        "Wound daily~by the~keeper", "It is later~than the~clock says",
+    ],
+    "playbill": [
+        "Tonight:~The Arrival~All seats~free", "Now showing:~An Empty Room~in Three Acts",
+        "Tonight:~The Tenants~(postponed)", "Rehearsal~in progress~Do not~applaud",
+        "Matinee daily~Audience~wanted", "Tonight:~A Full House~(a fantasy)",
+    ],
+    "school": [
+        "Lessons begin~when the~children~arrive", "Register:~0 present~0 absent", "Today's lesson:~counting~the houses",
+        "School~House~Enrolment open", "Quiet please~Class~in session",
+    ],
+    "lamplighter": [
+        "Lamps lit~at dusk.~Every one.", "Lamplighter~Out on~rounds", "Oil, wicks~and patience",
+        "The lamps~are never~out", "Rounds~begin at~the Square",
+    ],
+    "shrine": [
+        "Keep the~flame lit~for those~yet to come", "Light one~for the~household~expected",
+        "The fire~is tended~by someone", "Warm your~hands. It~is always~cold here.",
+    ],
 }
 
 # Emblems over the north gate: rows top to bottom; "#" the city's precious block, letters below.

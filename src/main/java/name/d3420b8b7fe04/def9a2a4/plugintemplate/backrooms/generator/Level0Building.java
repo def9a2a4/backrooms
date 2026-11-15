@@ -30,9 +30,11 @@ import java.util.function.Supplier;
  * sides and stairs at their far end; the back wing sometimes an auditorium;
  * taller roof parts with stair houses.
  *
- * <p>Storeys are 5 blocks (a floor and 4 of room), lined up with the lobby so
- * one storey's floor is the lobby floor (y64) and the next's is its ceiling
- * (y69). A building either stands free in a hall dug down and raised up round
+ * <p>Storeys are 6 blocks: a floor, 4 of room, and a ceiling with the lights
+ * set in it, so no light shows in a floor. They line up with the lobby: one
+ * storey's floor is the lobby floor (y64) and its ceiling the lobby's (y69).
+ * Each building rolls its own materials, from its walls and floors to its
+ * lights, glass, furniture and carpet. A building either stands free in a hall dug down and raised up round
  * it, reached by a bridge at lobby level and stairs down to the hall floor, or
  * is embedded in the slab: only its lobby storey shows, the rest of it above
  * and below, windows onto solid terracotta.
@@ -43,7 +45,8 @@ import java.util.function.Supplier;
  */
 final class Level0Building {
 
-    static final int STOREY = 5;
+    static final int STOREY = 6;             // floor, ROOM of room, ceiling
+    private static final int ROOM = 4;
     private static final int GAP = 6;        // free-standing: hall floor round the plot
     private static final int APRON = 2;      // lobby kept clear round the hall or building
     private static final int LOBBY_FLOOR_Y = Level0ChunkGenerator.AIR_MIN_Y - 1;
@@ -58,7 +61,8 @@ final class Level0Building {
     private static final int SL = 6;         // a core stairwell, across (with its back wall)
     private static final int VG = 3;         // the hall each side of the control room
     private static final int FY = 2;         // the entrance canopy's depth
-    private static final int SW = 9;         // a wing's stairwell, along it
+    private static final int SW = 11;        // a stairwell, along it: end walls round 9 of lanes
+    private static final int LANE = 9;
     private static final int WING_MIN = 14;
 
     private enum Kind { OFFICE, MEETING, SERVER, RECORDS, BREAK, TOILETS, CONFERENCE, CAFETERIA }
@@ -106,8 +110,9 @@ final class Level0Building {
     private boolean okL, okR, okB, aud;
 
     // Materials.
-    private short wallOut, post, inner, floor, roof, light, riser;
-    private Material bandLog;
+    private short wallOut, post, inner, floor, ceiling, roof, light, riser;
+    private Material bandLog, glass, desk, table, chair, stairMat, fence, carpet;
+    private int carpetMask;   // which storeys are carpeted
 
     private Level0Building(long hash, int maxSide) {
         rng = new Random(hash);
@@ -125,7 +130,7 @@ final class Level0Building {
         // The core as big as fits, under a rolled cap so the plot often leaves room for wings.
         CRX = clamp(pw - SL - SR - 2 * VG - 2 * M, 5, Math.max(5, Math.min(randInt(11, 34), pw / 2)));
         CRY = clamp(pd - FY - 2 * M, 5, Math.max(5, Math.min(randInt(9, 26), pd / 2)));
-        CBY = Math.max(CRY, 9);
+        CBY = Math.max(CRY, SW);
         CRS = clamp((int) Math.round(Math.min(CRX, CRY) / (double) STOREY), 2, 3);
         tiered = CRY >= 10 && CRX >= 11;
         MX = CRX + SL + SR + 2 * VG + 2 * M;
@@ -136,7 +141,7 @@ final class Level0Building {
         E0 = randInt(0, 2);
         E2 = stairs >= 2 ? randInt(0, 2) : 0;
         B = randInt(1, Math.min(3, NM - 1));
-        while (NM + Math.max(E0, E2) + 1 - B > 6) {
+        while (NM + Math.max(E0, E2) + 1 - B > 5) {
             if (E0 >= E2 && E0 > 0) E0--;
             else if (E2 > 0) E2--;
             else NM--;
@@ -395,32 +400,110 @@ final class Level0Building {
         return Math.max(lo, Math.min(hi, x));
     }
 
-    private void chooseMaterials() {
-        // Outside walls: oak in four framings, the last a glass curtain wall.
-        int pick = rng.nextInt(8);
-        glassCurtain = pick == 7;
-        Material wall, postLog;
-        if (pick < 3 || glassCurtain) {
-            wall = Material.OAK_PLANKS;
-            postLog = Material.STRIPPED_OAK_LOG;
-        } else if (pick < 5) {
-            wall = Material.STRIPPED_OAK_WOOD;
-            postLog = Material.OAK_LOG;
-        } else {
-            wall = Material.OAK_PLANKS;
-            postLog = Material.DARK_OAK_LOG;
+    /** A weighted pick from (material, weight) pairs. */
+    private Material weighted(Object... pairs) {
+        int total = 0;
+        for (int i = 1; i < pairs.length; i += 2) total += (Integer) pairs[i];
+        int roll = rng.nextInt(total);
+        for (int i = 0; i < pairs.length; i += 2) {
+            roll -= (Integer) pairs[i + 1];
+            if (roll < 0) return (Material) pairs[i];
         }
+        return (Material) pairs[pairs.length - 2];
+    }
+
+    private void chooseMaterials() {
+        Material wall = weighted(
+                Material.OAK_PLANKS, 4, Material.STRIPPED_OAK_WOOD, 2, Material.SPRUCE_PLANKS, 2,
+                Material.BIRCH_PLANKS, 2, Material.DARK_OAK_PLANKS, 1, Material.CHERRY_PLANKS, 1,
+                Material.BRICKS, 2, Material.STONE_BRICKS, 1, Material.MUD_BRICKS, 1,
+                Material.SMOOTH_SANDSTONE, 1, Material.WHITE_TERRACOTTA, 1, Material.LIGHT_GRAY_CONCRETE, 1);
+        boolean masonry = !wall.name().contains("PLANKS") && !wall.name().contains("WOOD");
+        Object[] logs = {
+                Material.OAK_LOG, 2, Material.STRIPPED_OAK_LOG, 2, Material.DARK_OAK_LOG, 2,
+                Material.SPRUCE_LOG, 1, Material.STRIPPED_SPRUCE_LOG, 1, Material.BIRCH_LOG, 1,
+                Material.STRIPPED_DARK_OAK_LOG, 1 };
+        Object[] pillars = { Material.QUARTZ_PILLAR, 1, Material.POLISHED_BASALT, 1, Material.STRIPPED_OAK_LOG, 1 };
+        Material postMat = weighted(masonry && rng.nextBoolean() ? pillars : logs);
+        glassCurtain = rng.nextInt(8) == 0;
         wallOut = block(wall);
-        post = log(postLog, Axis.Y);
-        bandLog = postLog;
-        inner = block(wall == Material.STRIPPED_OAK_WOOD ? Material.OAK_PLANKS : Material.STRIPPED_OAK_WOOD);
-        floor = block(Material.OAK_PLANKS);
-        roof = block(Material.DARK_OAK_PLANKS);
-        riser = block(Material.OAK_PLANKS);
-        light = block(Material.OCHRE_FROGLIGHT);
+        post = log(postMat, Axis.Y);
+        bandLog = rng.nextInt(3) == 0 ? weighted(logs) : postMat;
+
+        Material in;
+        do {
+            in = weighted(
+                    Material.STRIPPED_OAK_WOOD, 3, Material.OAK_PLANKS, 2, Material.BIRCH_PLANKS, 2,
+                    Material.STRIPPED_BIRCH_WOOD, 1, Material.WHITE_TERRACOTTA, 1, Material.SMOOTH_QUARTZ, 1,
+                    Material.CALCITE, 1, Material.WHITE_CONCRETE, 1, Material.SMOOTH_SANDSTONE, 1,
+                    Material.BAMBOO_PLANKS, 1, Material.MUSHROOM_STEM, 1);
+        } while (in == wall);
+        inner = block(in);
+        floor = block(weighted(
+                Material.OAK_PLANKS, 3, Material.SPRUCE_PLANKS, 2, Material.DARK_OAK_PLANKS, 2,
+                Material.BIRCH_PLANKS, 1, Material.JUNGLE_PLANKS, 1, Material.CHERRY_PLANKS, 1,
+                Material.POLISHED_ANDESITE, 1, Material.SMOOTH_STONE, 1, Material.STRIPPED_OAK_WOOD, 1));
+        ceiling = block(weighted(
+                Material.SMOOTH_STONE, 2, Material.BIRCH_PLANKS, 2, Material.OAK_PLANKS, 2,
+                Material.WHITE_CONCRETE, 1, Material.MUSHROOM_STEM, 1, Material.SMOOTH_QUARTZ, 1,
+                Material.CALCITE, 1, Material.STRIPPED_BIRCH_WOOD, 1, Material.SPRUCE_PLANKS, 1));
+        roof = block(weighted(
+                Material.DARK_OAK_PLANKS, 3, Material.SPRUCE_PLANKS, 2, Material.DEEPSLATE_TILES, 1,
+                Material.SMOOTH_STONE, 1, Material.MOSS_BLOCK, 1, Material.STONE, 1));
+        light = block(weighted(
+                Material.OCHRE_FROGLIGHT, 3, Material.SEA_LANTERN, 3, Material.PEARLESCENT_FROGLIGHT, 2,
+                Material.GLOWSTONE, 1, Material.SHROOMLIGHT, 1, Material.VERDANT_FROGLIGHT, 1));
+        glass = weighted(
+                Material.GLASS_PANE, 5, Material.LIGHT_GRAY_STAINED_GLASS_PANE, 1,
+                Material.BROWN_STAINED_GLASS_PANE, 1, Material.GRAY_STAINED_GLASS_PANE, 1,
+                Material.YELLOW_STAINED_GLASS_PANE, 1);
+
+        Object[] slabs = {
+                Material.OAK_SLAB, 3, Material.SPRUCE_SLAB, 2, Material.BIRCH_SLAB, 2, Material.DARK_OAK_SLAB, 2,
+                Material.CHERRY_SLAB, 1, Material.SMOOTH_STONE_SLAB, 1 };
+        desk = weighted(slabs);
+        table = weighted(slabs);
+        chair = weighted(
+                Material.SPRUCE_STAIRS, 3, Material.DARK_OAK_STAIRS, 2, Material.OAK_STAIRS, 2,
+                Material.BIRCH_STAIRS, 1, Material.MANGROVE_STAIRS, 1, Material.ACACIA_STAIRS, 1);
+        fence = weighted(Material.OAK_FENCE, 2, Material.SPRUCE_FENCE, 1, Material.DARK_OAK_FENCE, 1, Material.BIRCH_FENCE, 1);
+
+        // Stairs and the risers they climb, as a matched pair.
+        Material[][] flights = {
+                { Material.OAK_STAIRS, Material.OAK_PLANKS }, { Material.SPRUCE_STAIRS, Material.SPRUCE_PLANKS },
+                { Material.DARK_OAK_STAIRS, Material.DARK_OAK_PLANKS }, { Material.BIRCH_STAIRS, Material.BIRCH_PLANKS },
+                { Material.STONE_BRICK_STAIRS, Material.STONE_BRICKS },
+                { Material.POLISHED_ANDESITE_STAIRS, Material.POLISHED_ANDESITE } };
+        Material[] flight = flights[rng.nextInt(flights.length)];
+        stairMat = flight[0];
+        riser = block(flight[1]);
+
+        // Office carpet, on some storeys (always the lobby's).
+        carpetMask = rng.nextInt();
+        carpet = rng.nextInt(100) < 55 ? null : weighted(
+                Material.GRAY_CARPET, 2, Material.LIGHT_GRAY_CARPET, 2, Material.BROWN_CARPET, 2,
+                Material.GREEN_CARPET, 1, Material.BLUE_CARPET, 1, Material.CYAN_CARPET, 1, Material.RED_CARPET, 1);
+    }
+
+    /** A pressure plate of the same wood as the tables' fence. */
+    private Material plate() {
+        return Material.valueOf(fence.name().replace("FENCE", "PRESSURE_PLATE"));
     }
 
     private static int floorY(int k) { return STOREY * k; }
+
+    /** A storey's floor, its room cleared (carpeted on some storeys), its ceiling. */
+    private void slabs(Frame f, int a0, int a1, int b0, int b1, int k) {
+        int y0 = floorY(k);
+        rect(f, a0, a1, b0, b1, y0, y0, floor);
+        rect(f, a0, a1, b0, b1, y0 + 1, y0 + ROOM, AIR);
+        if (carpet != null && carpetedStorey(k)) rect(f, a0, a1, b0, b1, y0 + 1, y0 + 1, block(carpet));
+        rect(f, a0, a1, b0, b1, y0 + ROOM + 1, y0 + ROOM + 1, ceiling);
+    }
+
+    private boolean carpetedStorey(int k) {
+        return ((carpetMask >>> k) & 1) == 0 || k == B;
+    }
 
     // ---------------------------------------------------------------
     //  Hall (free-standing) and apron (embedded)
@@ -440,11 +523,11 @@ final class Level0Building {
                     continue;
                 }
                 roles[v * width + u] = ROLE_APRON;
-                for (int y = lobby + 1; y < lobby + STOREY; y++) put(pu, pv, y, AIR);
+                for (int y = lobby + 1; y <= lobby + ROOM; y++) put(pu, pv, y, AIR);
                 if (ring == APRON - 1) {
                     // The hall's sides lined in wall material, a parapet round the rim.
                     for (int y = 1; y < lobby; y++) put(pu, pv, y, WALL);
-                    for (int y = lobby + STOREY; y < height - 1; y++) put(pu, pv, y, WALL);
+                    for (int y = lobby + ROOM + 1; y < height - 1; y++) put(pu, pv, y, WALL);
                     put(pu, pv, lobby + 1, WALL);
                 }
             }
@@ -456,7 +539,7 @@ final class Level0Building {
         int lobby = floorY(B);
         int rim = APRON - off;   // plot v of the hall's front row
         int u0 = LZ + 1 + R + PF;
-        short fence = joined(Material.OAK_FENCE, BlockFace.NORTH, BlockFace.SOUTH);
+        short rail = joined(fence, BlockFace.NORTH, BlockFace.SOUTH);
         for (int v = rim - 1; v < FY; v++) {
             for (int u = u0; u <= u0 + 2; u++) {
                 put(u, v, lobby, floor);
@@ -466,19 +549,19 @@ final class Level0Building {
             if (v >= rim && v < 0) {
                 put(u0 - 1, v, lobby, floor);
                 put(u0 + 3, v, lobby, floor);
-                put(u0 - 1, v, lobby + 1, fence);
-                put(u0 + 3, v, lobby + 1, fence);
+                put(u0 - 1, v, lobby + 1, rail);
+                put(u0 + 3, v, lobby + 1, rail);
             }
         }
 
         int su = APRON - off;    // plot u of the hall's west column
-        short step = stairs(Material.OAK_STAIRS, BlockFace.NORTH);
+        short step = stairs(stairMat, BlockFace.NORTH);
         for (int u = su; u <= su + 2; u++) {
             put(u, rim - 1, lobby + 1, AIR);   // gap in the parapet
             setBare(u, rim - 1);
-            for (int i = 0; i <= lobby - 2; i++) {
+            for (int i = 0; i < lobby; i++) {
                 setBare(u, rim + i);
-                int y = lobby - 1 - i;
+                int y = lobby - i;
                 put(u, rim + i, y, step);
                 for (int fy = 1; fy < y; fy++) put(u, rim + i, fy, WALL);
             }
@@ -493,7 +576,7 @@ final class Level0Building {
                 if (built[v * width + u] != ROLE_BUILT) continue;
                 // Only columns that reach the lobby storey show in the lobby.
                 boolean shows = false;
-                for (int y = lobby; y <= lobby + STOREY && !shows; y++) {
+                for (int y = lobby; y <= lobby + ROOM + 1 && !shows; y++) {
                     shows = cells[(y * depth + v) * width + u] != UNSET;
                 }
                 if (!shows) roles[v * width + u] = ROLE_APRON;
@@ -509,7 +592,7 @@ final class Level0Building {
                         int n = nv * width + nu;
                         if (roles[n] == ROLE_BUILT || built[n] == ROLE_BUILT) continue;
                         roles[n] = ROLE_APRON;
-                        for (int y = lobby + 1; y < lobby + STOREY; y++) {
+                        for (int y = lobby + 1; y <= lobby + ROOM; y++) {
                             cells[(y * depth + nv) * width + nu] = AIR;
                         }
                     }
@@ -530,14 +613,15 @@ final class Level0Building {
     private void outerWall(Frame w, int len, int k, int open) {
         int y0 = floorY(k);
         short band = log(bandLog, w.axis(1, 0));
-        short pane = joined(Material.GLASS_PANE, w.face(1, 0), w.face(-1, 0));
+        short pane = joined(glass, w.face(1, 0), w.face(-1, 0));
         int bay = WWIN + 2;
         for (int a = 0; a < len; a++) {
             if (a == 0 || a == len - 1) {
-                column(w, a, 0, y0, y0 + 4, post);
+                column(w, a, 0, y0, y0 + ROOM + 1, post);
                 continue;
             }
             put(w, a, 0, y0, band);
+            put(w, a, 0, y0 + ROOM + 1, band);
             int pos = (a - 1) % bay;
             boolean full = a - pos + bay - 1 <= len - 1;
             column(w, a, 0, y0 + 1, y0 + 4, pos == 0 ? post : wallOut);
@@ -621,7 +705,7 @@ final class Level0Building {
         } else {
             column(f, mid, deep - 1, y0 + 1, y0 + 2, AIR);
         }
-        lights.add(new int[]{ f.u(mid, (deep - 2) / 2), f.v(mid, (deep - 2) / 2), y0 + STOREY });
+        lights.add(new int[]{ f.u(mid, (deep - 2) / 2), f.v(mid, (deep - 2) / 2), y0 + ROOM + 1 });
         things(f.at(a0, 0), a1 - a0 + 1, deep - 1, y0 + 1, kind);
     }
 
@@ -631,8 +715,8 @@ final class Level0Building {
         int mid = w / 2;
         switch (kind) {
             case OFFICE -> {
-                put(r, mid, 1, y, topSlab(Material.OAK_SLAB));
-                put(r, mid, 2, y, stairs(Material.SPRUCE_STAIRS, r.face(0, 1)));
+                put(r, mid, 1, y, topSlab(desk));
+                put(r, mid, 2, y, stairs(chair, r.face(0, 1)));
                 if (d > 3) {
                     put(r, 0, 3, y, block(Material.BARREL));
                     put(r, 0, 3, y + 1, block(Material.BARREL));
@@ -640,9 +724,9 @@ final class Level0Building {
             }
             case MEETING -> {
                 for (int b = 1; b <= d - 2; b++) {
-                    put(r, mid, b, y, topSlab(Material.DARK_OAK_SLAB));
-                    if (mid - 1 >= 0) put(r, mid - 1, b, y, stairs(Material.SPRUCE_STAIRS, r.face(-1, 0)));
-                    if (mid + 1 < w) put(r, mid + 1, b, y, stairs(Material.SPRUCE_STAIRS, r.face(1, 0)));
+                    put(r, mid, b, y, topSlab(table));
+                    if (mid - 1 >= 0) put(r, mid - 1, b, y, stairs(chair, r.face(-1, 0)));
+                    if (mid + 1 < w) put(r, mid + 1, b, y, stairs(chair, r.face(1, 0)));
                 }
             }
             case SERVER, RECORDS -> {
@@ -672,9 +756,9 @@ final class Level0Building {
                 }
                 int bm = d / 2;
                 for (int x = 1; x <= w - 4; x++) {
-                    put(r, x, bm, y, topSlab(Material.DARK_OAK_SLAB));
-                    put(r, x, bm - 1, y, stairs(Material.SPRUCE_STAIRS, r.face(0, -1)));
-                    if (bm + 1 < d) put(r, x, bm + 1, y, stairs(Material.SPRUCE_STAIRS, r.face(0, 1)));
+                    put(r, x, bm, y, topSlab(table));
+                    put(r, x, bm - 1, y, stairs(chair, r.face(0, -1)));
+                    if (bm + 1 < d) put(r, x, bm + 1, y, stairs(chair, r.face(0, 1)));
                 }
                 put(r, w - 2, bm, y, facing(Material.LECTERN, r.face(-1, 0)));
                 for (int b = bm - 1; b <= bm + 1; b++) {
@@ -689,8 +773,8 @@ final class Level0Building {
     }
 
     private void table(Frame r, int x, int b, int y) {
-        put(r, x, b, y, block(Material.OAK_FENCE));
-        put(r, x, b, y + 1, block(Material.OAK_PRESSURE_PLATE));
+        put(r, x, b, y, block(fence));
+        put(r, x, b, y + 1, block(plate()));
     }
 
     /** Small tables, one to each 4x4 now and then none, one to four chairs round each. */
@@ -702,7 +786,7 @@ final class Level0Building {
                 table(r, cx, cb, y);
                 int[][] around = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } };
                 for (int[] o : around) {
-                    if (rng.nextInt(5) < 3) put(r, cx + o[0], cb + o[1], y, stairs(Material.OAK_STAIRS, r.face(o[0], o[1])));
+                    if (rng.nextInt(5) < 3) put(r, cx + o[0], cb + o[1], y, stairs(stairMat, r.face(o[0], o[1])));
                 }
             }
         }
@@ -715,14 +799,14 @@ final class Level0Building {
             for (int b = b0 + 1; b < b1; b++) {
                 if (skip != null && a >= skip[0] - 1 && a <= skip[1] + 1 && b >= skip[2] - 1 && b <= skip[3] + 1) continue;
                 int da = (a - a0 - 1) % 3, db = (b - b0 - 1) % 3;
-                if (da == 0 && db == 0) put(f, a, b, y, topSlab(Material.OAK_SLAB));
-                else if (da == 0 && db == 1) put(f, a, b, y, stairs(Material.SPRUCE_STAIRS, f.face(0, 1)));
+                if (da == 0 && db == 0) put(f, a, b, y, topSlab(desk));
+                else if (da == 0 && db == 1) put(f, a, b, y, stairs(chair, f.face(0, 1)));
             }
         }
         for (int a = a0 + 3; a < a1; a += 6) {
             for (int b = b0 + 3; b < b1; b += 6) {
                 if (skip != null && a >= skip[0] - 1 && a <= skip[1] + 1 && b >= skip[2] - 1 && b <= skip[3] + 1) continue;
-                lights.add(new int[]{ f.u(a, b), f.v(a, b), floorY(k) + STOREY });
+                lights.add(new int[]{ f.u(a, b), f.v(a, b), floorY(k) + ROOM + 1 });
             }
         }
     }
@@ -730,8 +814,10 @@ final class Level0Building {
     /**
      * A stairwell, one storey: a along it with end walls at 0 and len - 1; b
      * across: lanes at 0 and 1, a walkway, the door wall at wid - 1. Flights of
-     * 4 stairs up 5 (switching lanes each storey) for storeys below {@code top},
-     * the floor left open over the flight that comes up into it.
+     * six stairs up a storey (switching lanes each storey) for storeys below
+     * {@code top}, the top step set in the floor above so it is level with the
+     * landing; that floor and the ceiling under it are left open over the
+     * flight for headroom.
      */
     private void stairwell(Frame f, int len, int wid, int k, int top) {
         int y0 = floorY(k);
@@ -744,19 +830,26 @@ final class Level0Building {
         for (int a = 1; a < len - 1; a++) column(f, a, wid - 1, y0 + 1, y0 + 4, inner);
         column(f, am, wid - 1, y0 + 1, y0 + 2, AIR);
 
-        int x0 = 1 + (len - 2 - 7) / 2;
+        int x0 = 1 + (len - 2 - LANE) / 2;
         if (k > 0) {
+            // Open the floor and the ceiling under it over the flight coming up,
+            // then put that flight back (its top step is in this floor).
             int lane = (k - 1) % 2;
-            for (int x = 1; x <= 4; x++) put(f, x0 + x + lane, lane, y0, AIR);
+            for (int x = 1; x <= 5; x++) put(f, x0 + (lane == 0 ? x : 8 - x), lane, y0, AIR);
+            for (int x = 1; x <= 4; x++) put(f, x0 + (lane == 0 ? x : 8 - x), lane, y0 - 1, AIR);
+            flight(f, x0, lane, floorY(k - 1));
         }
-        if (k < top) {
-            int lane = k % 2;
-            for (int i = 0; i < 4; i++) {
-                int x = lane == 0 ? 1 + i : 5 - i;
-                put(f, x0 + x, lane, y0 + 1 + i, stairs(Material.OAK_STAIRS, f.face(lane == 0 ? 1 : -1, 0)));
-            }
+        if (k < top) flight(f, x0, k % 2, y0);
+        lights.add(new int[]{ f.u(am, 2), f.v(am, 2), y0 + ROOM + 1 });
+    }
+
+    /** Lane 0 climbs +a from x 1 to 6 (foot at 0, landing at 7); lane 1 climbs -a from 7 to 2. */
+    private void flight(Frame f, int x0, int lane, int y0) {
+        short step = stairs(stairMat, f.face(lane == 0 ? 1 : -1, 0));
+        for (int i = 0; i < STOREY; i++) {
+            int x = lane == 0 ? 1 + i : 7 - i;
+            put(f, x0 + x, lane, y0 + 1 + i, step);
         }
-        lights.add(new int[]{ f.u(am, 2), f.v(am, 2), y0 + STOREY });
     }
 
     // ---------------------------------------------------------------
@@ -781,7 +874,7 @@ final class Level0Building {
         if (free) {
             // The entrance canopy.
             int u0 = 1 + R + PF;
-            rect(mf, u0, u0 + 2, -FY, -1, 4, 4, topSlab(Material.DARK_OAK_SLAB));
+            rect(mf, u0, u0 + 2, -FY, -1, 4, 4, topSlab(table));
         }
     }
 
@@ -800,8 +893,7 @@ final class Level0Building {
         outerWall(new Frame(LZ, FY + MY - 1, 1, 0, 0, 1), MX, k, backWay ? CB - LZ : -1);
         outerWall(new Frame(LZ, FY, 0, 1, -1, 0), MY, k, leftWay ? CL : -1);
 
-        rect(mf, 1, MX - 2, 1, MY - 2, y0, y0, floor);
-        rect(mf, 1, MX - 2, 1, MY - 2, y0 + 1, y0 + 4, AIR);
+        slabs(mf, 1, MX - 2, 1, MY - 2, k);
 
         int lenX = MX - 2 - 2 * R, lenY = MY - 2 - 2 * R;
         band(new Frame(LZ + 1 + R, FY + 1, 1, 0, 0, 1), lenX, R, k, entranceStorey(k) ? PF : -1);
@@ -812,7 +904,7 @@ final class Level0Building {
             // Behind the control room: an open observation hall with a cafe.
             cafe(back, 0, lenX - 1, 0, R - 1, y0 + 1);
             if (backP >= 0) rect(back, backP, backP + 2, 0, R - 1, y0 + 1, y0 + 1, AIR);
-            for (int a = 3; a < lenX; a += 6) lights.add(new int[]{ back.u(a, R / 2), back.v(a, R / 2), y0 + STOREY });
+            for (int a = 3; a < lenX; a += 6) lights.add(new int[]{ back.u(a, R / 2), back.v(a, R / 2), y0 + ROOM + 1 });
         } else {
             band(back, lenX, R, k, backP);
         }
@@ -823,17 +915,17 @@ final class Level0Building {
         // The corridor ring's lights, and the observation seats behind the control room.
         for (int u = R + 2; u <= MX - 3 - R; u++) {
             if (u % 6 != 0) continue;
-            lights.add(new int[]{ mf.u(u, R + 2), mf.v(u, R + 2), y0 + STOREY });
-            lights.add(new int[]{ mf.u(u, MY - 3 - R), mf.v(u, MY - 3 - R), y0 + STOREY });
+            lights.add(new int[]{ mf.u(u, R + 2), mf.v(u, R + 2), y0 + ROOM + 1 });
+            lights.add(new int[]{ mf.u(u, MY - 3 - R), mf.v(u, MY - 3 - R), y0 + ROOM + 1 });
         }
         for (int v = R + 2; v <= MY - 3 - R; v++) {
             if (v % 6 != 0) continue;
-            lights.add(new int[]{ mf.u(R + 2, v), mf.v(R + 2, v), y0 + STOREY });
-            lights.add(new int[]{ mf.u(MX - 3 - R, v), mf.v(MX - 3 - R, v), y0 + STOREY });
+            lights.add(new int[]{ mf.u(R + 2, v), mf.v(R + 2, v), y0 + ROOM + 1 });
+            lights.add(new int[]{ mf.u(MX - 3 - R, v), mf.v(MX - 3 - R, v), y0 + ROOM + 1 });
         }
         if (k >= 1 && k < CRS) {
             for (int u = M + 2; u <= MX - M - 3; u++) {
-                if ((u - M - 2) % 4 != 3) put(mf, u, MY - R - 3, y0 + 1, stairs(Material.SPRUCE_STAIRS, BlockFace.SOUTH));
+                if ((u - M - 2) % 4 != 3) put(mf, u, MY - R - 3, y0 + 1, stairs(chair, BlockFace.SOUTH));
             }
         }
 
@@ -841,8 +933,8 @@ final class Level0Building {
         if (SR > 0) coreStairs(mf, k, 1, NM + E2);
         int ur = M + SL + 2 * VG + CRX;
         for (int v = M + 2; v < M + CBY; v += 6) {
-            lights.add(new int[]{ mf.u(M + SL + 1, v), mf.v(M + SL + 1, v), y0 + STOREY });
-            lights.add(new int[]{ mf.u(ur - 2, v), mf.v(ur - 2, v), y0 + STOREY });
+            lights.add(new int[]{ mf.u(M + SL + 1, v), mf.v(M + SL + 1, v), y0 + ROOM + 1 });
+            lights.add(new int[]{ mf.u(ur - 2, v), mf.v(ur - 2, v), y0 + ROOM + 1 });
         }
         if (k >= CRS) {
             int u0c = M + SL + VG, v0c = M + (CBY - CRY) / 2;
@@ -879,10 +971,10 @@ final class Level0Building {
             int mu = (u0 + u1) / 2, mv = (v0 + v1) / 2;
             boolean frontRow = v0 == 1;
             int toWindow = frontRow ? -1 : 1;
-            put(mf, mu, mv + toWindow, y0 + 1, topSlab(Material.OAK_SLAB));
-            put(mf, mu, mv, y0 + 1, stairs(Material.SPRUCE_STAIRS, frontRow ? BlockFace.SOUTH : BlockFace.NORTH));
+            put(mf, mu, mv + toWindow, y0 + 1, topSlab(desk));
+            put(mf, mu, mv, y0 + 1, stairs(chair, frontRow ? BlockFace.SOUTH : BlockFace.NORTH));
             put(mf, u0 == 1 ? u0 : u1, mv - toWindow, y0 + 1, block(Material.POTTED_FERN));
-            lights.add(new int[]{ mf.u(mu, mv), mf.v(mu, mv), y0 + STOREY });
+            lights.add(new int[]{ mf.u(mu, mv), mf.v(mu, mv), y0 + ROOM + 1 });
         }
     }
 
@@ -909,8 +1001,7 @@ final class Level0Building {
             outerWall(new Frame(mf.u(u1, 0), mf.v(u1, 0), 0, 1, 1, 0), MY, k, -1);
             outerWall(new Frame(mf.u(u0, MY - 1), mf.v(u0, MY - 1), 1, 0, 0, 1), u1 - u0 + 1, k, -1);
             outerWall(new Frame(mf.u(u0, 0), mf.v(u0, 0), 0, 1, -1, 0), MY, k, -1);
-            rect(mf, u0 + 1, u1 - 1, 1, MY - 2, y0, y0, floor);
-            rect(mf, u0 + 1, u1 - 1, 1, MY - 2, y0 + 1, y0 + 4, AIR);
+            slabs(mf, u0 + 1, u1 - 1, 1, MY - 2, k);
             openPlan(mf, u0, u1, 0, MY - 1, k, stairBox);
             coreStairs(mf, k, side, top);
         }
@@ -920,6 +1011,7 @@ final class Level0Building {
         }
         // The stair house: the stairwell's last storey, roofed.
         coreStairs(mf, top, side, top);
+        rect(mf, stairBox[0], stairBox[1], stairBox[2], stairBox[3], floorY(top) + ROOM + 1, floorY(top) + ROOM + 1, ceiling);
         rect(mf, stairBox[0], stairBox[1], stairBox[2], stairBox[3], floorY(top + 1), floorY(top + 1), roof);
     }
 
@@ -929,7 +1021,7 @@ final class Level0Building {
 
     private void controlRoom(Frame mf) {
         int u0 = M + SL + VG, v0 = M + (CBY - CRY) / 2;
-        int topY = floorY(CRS) - 1;
+        int topY = floorY(CRS) - 2;   // under the ceiling of its top storey
         for (int u = u0; u < u0 + CRX; u++) {
             for (int v = v0; v < v0 + CRY; v++) {
                 boolean edge = u == u0 || u == u0 + CRX - 1 || v == v0 || v == v0 + CRY - 1;
@@ -940,7 +1032,7 @@ final class Level0Building {
         Frame in = new Frame(mf.u(u0 + 1, v0 + 1), mf.v(u0 + 1, v0 + 1), 1, 0, 0, 1);
         int w = CRX - 2, d = CRY - 2;
         for (int a = 2; a < w; a += 6) {
-            for (int b = 2; b < d; b += 6) lights.add(new int[]{ in.u(a, b), in.v(a, b), floorY(CRS) });
+            for (int b = 2; b < d; b += 6) lights.add(new int[]{ in.u(a, b), in.v(a, b), floorY(CRS) - 1 });
         }
 
         // Side doors near the front.
@@ -948,7 +1040,7 @@ final class Level0Building {
         column(mf, u0 + CRX - 1, v0 + 2, 1, 2, AIR);
 
         // The gallery window in the back wall, from the observation row on storey 1.
-        short pane = joined(Material.GLASS_PANE, BlockFace.EAST, BlockFace.WEST);
+        short pane = joined(glass, BlockFace.EAST, BlockFace.WEST);
         for (int u = u0 + 2; u <= u0 + CRX - 3; u++) column(mf, u, v0 + CRY - 1, STOREY + 2, STOREY + 4, pane);
 
         short screenDead = block(Material.BLACK_CONCRETE), screenLit = block(Material.LIGHT_BLUE_CONCRETE);
@@ -968,9 +1060,9 @@ final class Level0Building {
         }
         int n = (d - 7) / 2;
         int hPrev = 0;
-        short seat = stairs(Material.SPRUCE_STAIRS, BlockFace.SOUTH);
+        short seat = stairs(chair, BlockFace.SOUTH);
         short console = facing(Material.OBSERVER, BlockFace.SOUTH);
-        short aisleStep = stairs(Material.OAK_STAIRS, BlockFace.SOUTH);
+        short aisleStep = stairs(stairMat, BlockFace.SOUTH);
         for (int i = 0; i < n; i++) {
             int h = Math.min(i, 2 * CRS - 2);
             boolean boss = n > 2 && i == n - 1;
@@ -987,7 +1079,7 @@ final class Level0Building {
                 }
                 if (boss) {
                     if (a == 2) put(in, a, b, h + 1, console);
-                    else if (a >= 3 && a <= 5) put(in, a, b, h + 1, topSlab(Material.DARK_OAK_SLAB));
+                    else if (a >= 3 && a <= 5) put(in, a, b, h + 1, topSlab(table));
                     else if (a == 6) put(in, a, b, h + 1, facing(Material.LECTERN, BlockFace.SOUTH));
                     if (a == 4) put(in, a, b + 1, h + 1, seat);
                 } else {
@@ -1014,7 +1106,7 @@ final class Level0Building {
                         int a = edge + dir * (1 + j);
                         int top = STOREY - j + 1;
                         if (top - 1 >= 1) column(in, a, b, 1, top - 1, riser);
-                        put(in, a, b, top, stairs(Material.OAK_STAIRS, in.face(-dir, 0)));
+                        put(in, a, b, top, stairs(stairMat, in.face(-dir, 0)));
                     }
                 }
                 column(mf, u0, v0 + 1 + b, STOREY + 1, STOREY + 2, AIR);
@@ -1052,8 +1144,7 @@ final class Level0Building {
             outerWall(new Frame(f.u(0, 0), f.v(0, 0), f.bu(), f.bv(), -f.au(), -f.av()), len, k, -1);
             outerWall(new Frame(f.u(ww - 1, 0), f.v(ww - 1, 0), f.bu(), f.bv(), f.au(), f.av()), len, k, -1);
             outerWall(new Frame(f.u(0, len - 1), f.v(0, len - 1), f.au(), f.av(), f.bu(), f.bv()), ww, k, -1);
-            rect(f, 1, ww - 2, 0, len - 2, y0, y0, floor);
-            rect(f, 1, ww - 2, 0, len - 2, y0 + 1, y0 + 4, AIR);
+            slabs(f, 1, ww - 2, 0, len - 2, k);
 
             Frame left = new Frame(f.u(1, 0), f.v(1, 0), f.bu(), f.bv(), f.au(), f.av());
             Frame right = new Frame(f.u(ww - 2, 0), f.v(ww - 2, 0), f.bu(), f.bv(), -f.au(), -f.av());
@@ -1062,7 +1153,7 @@ final class Level0Building {
             if (stairs) {
                 stairwell(new Frame(f.u(1, stairB), f.v(1, stairB), f.bu(), f.bv(), f.au(), f.av()), SW, rd, k, ws - 1);
             }
-            for (int b = 3; b < len - 1; b += 6) lights.add(new int[]{ f.u(rd + 2, b), f.v(rd + 2, b), y0 + STOREY });
+            for (int b = 3; b < len - 1; b += 6) lights.add(new int[]{ f.u(rd + 2, b), f.v(rd + 2, b), y0 + ROOM + 1 });
         }
         rect(f, 0, ww - 1, 0, len - 1, floorY(ws), floorY(ws), roof);
         if (free) {
@@ -1087,7 +1178,8 @@ final class Level0Building {
             outerWall(new Frame(f.u(0, len - 1), f.v(0, len - 1), f.au(), f.av(), f.bu(), f.bv()), ww, k, -1);
         }
         rect(f, 1, ww - 2, 0, len - 2, 0, 0, floor);
-        rect(f, 1, ww - 2, 0, len - 2, 1, 2 * STOREY - 1, AIR);
+        rect(f, 1, ww - 2, 0, len - 2, 1, 2 * STOREY - 2, AIR);
+        rect(f, 1, ww - 2, 0, len - 2, 2 * STOREY - 1, 2 * STOREY - 1, ceiling);
         rect(f, 0, ww - 1, 0, len - 1, 2 * STOREY, 2 * STOREY, roof);
         if (free) {
             for (int b = 0; b < len; b++) {
@@ -1101,8 +1193,8 @@ final class Level0Building {
         rect(f, 1, ww - 2, 0, 2, 1, STOREY, riser);
         int stageB = len - 2 - 5;
         int n = Math.max(0, (stageB - 3) / 2);
-        short seat = stairs(Material.SPRUCE_STAIRS, f.face(0, -1));
-        short step = stairs(Material.OAK_STAIRS, f.face(0, -1));
+        short seat = stairs(chair, f.face(0, -1));
+        short step = stairs(stairMat, f.face(0, -1));
         int hPrev = STOREY;
         for (int i = 0; i < n; i++) {
             int h = Math.max(0, STOREY - 1 - i);
@@ -1125,7 +1217,7 @@ final class Level0Building {
         put(f, ww / 2, stageB + 1, 2, facing(Material.LECTERN, f.face(0, -1)));
         rect(f, 3, ww - 4, len - 2, len - 2, 3, 8, block(Material.WHITE_WOOL));
         for (int a = 3; a < ww - 1; a += 6) {
-            for (int b = 3; b < len - 1; b += 6) lights.add(new int[]{ f.u(a, b), f.v(a, b), 2 * STOREY });
+            for (int b = 3; b < len - 1; b += 6) lights.add(new int[]{ f.u(a, b), f.v(a, b), 2 * STOREY - 1 });
         }
     }
 }

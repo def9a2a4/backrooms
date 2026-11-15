@@ -17,7 +17,7 @@ final class MuseumPalette {
 
     final String name;
     final BlockData wall, trim, carved, band, accent, tileA, tileB, edge, wood, roof, dais, daisTop, lantern;
-    final Material sign;
+    final Material sign, stairs;
     final Arch arch;
     final int weight;
 
@@ -37,6 +37,21 @@ final class MuseumPalette {
         this.edge = edge.createBlockData();
         this.wood = wood.createBlockData();
         this.sign = sign;
+        this.stairs = switch (name) {
+            case "marble" -> QUARTZ_STAIRS;
+            case "brick" -> STONE_BRICK_STAIRS;
+            case "gothic" -> POLISHED_DEEPSLATE_STAIRS;
+            case "mudbrick" -> MUD_BRICK_STAIRS;
+            case "red sandstone" -> SMOOTH_RED_SANDSTONE_STAIRS;
+            case "calcite" -> POLISHED_DIORITE_STAIRS;
+            case "prismarine" -> PRISMARINE_BRICK_STAIRS;
+            case "white" -> SMOOTH_QUARTZ_STAIRS;
+            case "blackstone" -> POLISHED_BLACKSTONE_BRICK_STAIRS;
+            case "end stone" -> END_STONE_BRICK_STAIRS;
+            case "library" -> DARK_OAK_STAIRS;
+            case "copper" -> WAXED_CUT_COPPER_STAIRS;
+            default -> SMOOTH_SANDSTONE_STAIRS;
+        };
         this.roof = DEEPSLATE_TILES.createBlockData();
         this.dais = dais.createBlockData();
         this.daisTop = daisTop.createBlockData();

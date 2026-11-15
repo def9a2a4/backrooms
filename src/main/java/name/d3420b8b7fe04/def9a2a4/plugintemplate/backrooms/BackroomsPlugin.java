@@ -40,6 +40,8 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level101Sig
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level142Listener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1WaterDripListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level0LecternListener;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.ProceduralBooks;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Disc11JukeboxListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1GardenEffectListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LobbyBookshelfListener;
@@ -212,7 +214,10 @@ public class BackroomsPlugin {
         //    catch the spawn-chunk ChunkLoadEvents fired during world creation.
         Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin, loadLobbyBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new ServerRoomLecternListener(plugin), plugin);
-        Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, loadLibraryBookConfig()), plugin);
+        Level64637ChunkGenerator.BookConfig libraryBooks = loadLibraryBookConfig();
+        Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, libraryBooks), plugin);
+        Bukkit.getPluginManager().registerEvents(
+                new Level0LecternListener(plugin, new ProceduralBooks(libraryBooks)), plugin);
         Bukkit.getPluginManager().registerEvents(
                 new Level101SignListener(plugin, loadLevel101SignConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new Level142Listener(plugin), plugin);

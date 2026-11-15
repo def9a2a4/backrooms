@@ -219,11 +219,12 @@ final class Level0Features {
 
         if (r.stepped()) return;
 
-        // A 3-wide flight down one wall, solid underneath.
+        // A 3-wide flight down one wall, solid underneath; its top step is level
+        // with the rim, so climbing out never needs a jump.
         BlockFace up = stairUp(r.stairDir());
         int floorY = FLOOR_TOP_Y - r.depth();
-        for (int k = 1; k < r.depth(); k++) {
-            int y = FLOOR_TOP_Y - k;
+        for (int k = 1; k <= r.depth(); k++) {
+            int y = FLOOR_TOP_Y - k + 1;
             for (int v = 0; v < 3; v++) {
                 int[] p = stairPos(f, r.stairDir(), k - 1, v);
                 int x = c.lx(p[0]), z = c.lz(p[1]);
@@ -298,13 +299,14 @@ final class Level0Features {
             }
         }
 
-        // Flights of PIT_FLIGHT steps between 3x3 corner landings, each step one lower.
+        // Flights of PIT_FLIGHT steps between 3x3 corner landings, each step one
+        // lower: a flight's first step is level with the landing above it, and
+        // the landing below is one under its last, so it climbs without jumps.
         int y = FLOOR_TOP_Y;
         int corner = startCorner;
         placeLanding(c, f, corner, y, set[0]);
         while (true) {
-            for (int u = 0; u < PIT_FLIGHT; u++) {
-                y--;
+            for (int u = 0; u < PIT_FLIGHT; u++, y--) {
                 if (FLOOR_TOP_Y - y > maxDrop) return;
                 for (int v = 0; v < PIT_BAND; v++) {
                     int[] p = flightPos(corner, u, v);
@@ -315,7 +317,6 @@ final class Level0Features {
                             stairs(set[1], up.getOppositeFace(), Stairs.Half.TOP));
                 }
             }
-            y--;
             if (FLOOR_TOP_Y - y > maxDrop) return;
             corner = (corner + 1) % 4;
             placeLanding(c, f, corner, y, set[0]);
