@@ -6,12 +6,43 @@ facing north (its front at z = 0, on the street), with a ground margin for roof 
 
 import math
 
-from buildings import HOUSE_GROUND, HOUSE_ONE, HOUSE_UPPER, farmland, flowers, gen, new, yard_cells  # noqa: F401
+import functools
+
+from buildings import HOUSE_GROUND, HOUSE_ONE, HOUSE_UPPER, farmland, flowers, new, yard_cells  # noqa: F401
+from buildings import gen as _gen
 from parts import (FULL, Room, Shell, chimney, flat, front_door, furnish, gable, hang, hip, ladder, lamp_post,
-                   look, mat, pick, posts, shed, shell, table, tree, windows)
+                   look, mat, pick, posts, shed, shell, table, tree, wall_cells, windows)
 from schem import GROUND, OPPOSITE, PATH, STEP, TREASURE, WOOL
 
 WL = dict(waterlogged="false")
+_FLIMSY = ("air", "cave_air", "glass_pane", "iron_bars")
+
+
+def mounts(b):
+    """Wall signs and torches need something solid behind them: a window pane or bars that ended
+    up there (a window cut beside a door) is walled up again with the block under it."""
+    for (x, y, z), (n, p) in list(b.blocks.items()):
+        if n.endswith(("wall_sign", "wall_torch")):
+            dx, dz = STEP[OPPOSITE[p["facing"]]]
+            back = b.get(x + dx, y, z + dz)
+            if back in _FLIMSY or back.endswith("_pane"):
+                under = b.get(x + dx, y - 1, z + dz)
+                if under in _FLIMSY or under.endswith(("_pane", "_door", "stairs", "slab")):
+                    under = "stone_bricks"
+                b.set(x + dx, y, z + dz, under, **b.props(x + dx, y - 1, z + dz) if b.get(x + dx, y - 1, z + dz) == under else {})
+
+
+def gen(*args, **kw):
+    """buildings.gen, with mounts() run over what the generator draws."""
+    def deco(f):
+        @functools.wraps(f)
+        def make(rng, st):
+            b = f(rng, st)
+            mounts(b)
+            return b
+        _gen(*args, **kw)(make)
+        return f
+    return deco
 LEAF = dict(persistent="true", distance="1", waterlogged="false")
 
 
@@ -455,14 +486,15 @@ def granary(rng, st):
                 b.set(cx + dx, y, cz + dz, "iron_bars", **WL)
         for y in range(1, 4):   # grain inside
             for dx, dz in disc(r - 1):
-                if (dx, dz) != (0, -r + 1) and rng.random() < (0.9 if y < 3 else 0.5):
+                if (dx, dz) != (0, -r + 1) and rng.random() < (0.9 if y < 3 else 0.5) \
+                        and (y == 1 or b.get(cx + dx, y - 1, cz + dz) == "hay_block"):
                     b.set(cx + dx, y, cz + dz, "hay_block", axis="y")
         b.door(cx, 1, cz - r, "south", pick(rng, st.woods))
         b.path(cx, 0, cx, cz - r - 1)
         b.set(cx, 3, cz - r - 1, st.wall_torch, facing="north")
         cone(b, cx, cz, h + 1, r + 1, pick(rng, st.roofs))
-        b.set(cx, h - 1, cz, st.light, hanging="true", **WL)
         b.fill(cx - r + 1, h, cz - r + 1, cx + r - 1, h, cz + r - 1, "air")
+        hanging(b, cx, h, cz, st)
         # the lean-to on its east side
         lk = look(rng, st)
         sx0, sx1 = cx + r, W - 2
@@ -504,7 +536,7 @@ def granary(rng, st):
                 if rng.random() < 0.4:
                     b.set(x, 5, z, "hay_block", axis="z")
     b.barrel(x0 + 1, 4, z0 + 1, [("wheat", rng.randint(8, 40))])
-    hang(b, mx, (z0 + z1) // 2, 4, st, height=3)
+    light(b, x0 + 1, 5, z0 + 1, st)   # on the barrel
     for z in range(z0 + 1, z1, 2):
         b.set(x0, 5, z, f"{lk.wood}_trapdoor", facing="west", half="bottom", open="true", powered="false", **WL)
         b.set(x1, 5, z, f"{lk.wood}_trapdoor", facing="east", half="bottom", open="true", powered="false", **WL)
@@ -543,6 +575,7 @@ def dovecote(rng, st):
     if roundish:
         top = cone(b, c, c, h + 1, 3, m)
     else:
+        b.fill(c - 2, h + 1, c - 2, c + 2, h + 1, c + 2, f"{pick(rng, st.woods)}_planks")
         top = hip(b, c - 2, c - 2, c + 2, c + 2, h + 1, m)
     b.fill(c, top + 1, c, c, top + 1, c, f"{pick(rng, st.woods)}_fence", **WL)
     b.set(c, top + 2, c, "lightning_rod", facing="up", powered="false", **WL)
@@ -788,7 +821,7 @@ def stables(rng, st):
     b.set(tx + 1, 2, s.z0, "glass_pane")
     tack = Room(b, tx + 1, s.z0 + 1, s.x1 - 1, s.z1 - 1, 1, {(tx + 2, s.z0 + 1)})
     furnish(tack, rng, st, lk, ["chest", "barrel", "anvil", "barrel", "crafting_table"], light=False)
-    hang(b, tx + 2, s.z0 + 3, 1, st, height=s.h - 1)
+    hanging(b, tx + 2, s.top - 1, s.z0 + 3, st)
     # stalls: fence partitions, a manger of hay and a trough at the back, a gate at the front
     for i in range(n):
         x0 = s.x0 + 4 * i
@@ -804,7 +837,7 @@ def stables(rng, st):
             b.set(x0 + 1, 1, s.z1 - 1, "hay_block", axis="y")
             b.set(x0 + 3, 1, s.z1 - 1, "water_cauldron", level="3")
             b.set(x0 + 2, 1, s.z1 - 1, "composter", level=str(rng.randint(0, 6)))
-            hang(b, x0 + 2, s.z0 + 3, 1, st, height=s.h - 1)
+            hanging(b, x0 + 2, s.top - 1, s.z0 + 3, st)
             b.path(x0 + 2, 0, x0 + 2, s.z0 - 1)
     # the hay loft under the roof
     for x in range(s.x0 + 1, s.x1):
@@ -899,7 +932,7 @@ def coaching_inn(rng, st):
     chimney(b, x0, front.z0 + 2, 1, front.top + 5, "bricks", smoke=True)
     for x in range(x0 + 2, mx - 2, 3):
         hang(b, x, front.z0 + 3, 1, st)
-    kitchen = Room(b, mx + 3, front.z0 + 1, x1 - 1, front.z1 - 1, 1)
+    kitchen = Room(b, mx + 3, front.z0 + 1, x1 - 1, front.z1 - 1, 1, {(mx + 3, front.z1 - 1)})
     furnish(kitchen, rng, st, lk, ["smoker", "furnace", "barrel", "barrel", "crafting_table", "chest", "barrel"])
     b.set(mx + 3, 1, front.z1, "air")   # into the yard
     b.door(mx + 3, 1, front.z1, "north", lk.wood)
@@ -928,7 +961,7 @@ def coaching_inn(rng, st):
     for x, z in ((cx - 1, cz - 1), (cx + 1, cz + 1)):
         b.fill(x, 2, z, x, 3, z, f"{lk.wood}_fence", **WL)
     hip(b, cx - 1, cz - 1, cx + 1, cz + 1, 4, m, over=0)
-    b.set(cx, 3, cz, st.light, hanging="true", **WL)
+    hanging(b, cx, 4, cz, st)
     b.set(west.x1 + 2, 1, z1 - 2, "hay_block", axis="x")
     b.set(west.x1 + 3, 1, z1 - 2, "hay_block", axis="x")
     b.sign(tdx + 1, 2, front.z0 - 1, "north", ["2The [tavernadj]~[tavernnoun]~Coaching Inn", "", "", ""], lk.wood)
@@ -1139,10 +1172,9 @@ def theatre(rng, st):
                 b.fill(x, 1, z, x, 8, z, wall)
                 if (dx + dz) % 3 == 0:
                     b.set(x, 9, z, wall)
-    for dx in range(-10, 11, 5):   # lamps on the top row
-        dz = int(math.sqrt(max(0, 100 - dx * dx)))
-        if 0 < dz:
-            light(b, cx + dx, 8, cz + dz, st)
+    for (x, y, z), (n, _) in list(b.blocks.items()):   # lamps along the top of the outer wall
+        if y == 8 and n == wall and (x - cx) % 5 == 0 and z > sz1 + 1 and b.empty(x, 9, z):
+            light(b, x, 9, z, st)
     # the stage
     for x in range(cx - 6, cx + 7):
         for z in range(sz0, sz1 + 1):
@@ -1155,7 +1187,8 @@ def theatre(rng, st):
     b.ring(hx0, hz0, hx1, hz1, 1, 10, wall)
     b.fill(hx0 + 1, 5, hz0 + 1, hx1 - 1, 5, hz1 - 1, f"{pick(rng, st.woods)}_planks")
     for x in range(hx0, hx1 + 1, 3):   # pilasters on the front, columns on the stage side
-        b.fill(x, 1, hz0 - 1, x, 9, hz0 - 1, trim)
+        if abs(x - cx) % 4:
+            b.fill(x, 1, hz0 - 1, x, 9, hz0 - 1, trim)
         b.fill(x, 1, hz1, x, 9, hz1, trim)
     for x in range(hx0 + 1, hx1):
         if (x - hx0) % 3:
@@ -1426,6 +1459,7 @@ def mausoleum(rng, st):
     for x in (x0, x0 + 2, x1 - 2, x1):   # the porch columns
         b.fill(x, 2, 2, x, 5, 2, "polished_basalt", axis="y")
     b.fill(x0, 6, 2, x1, 6, z0, trim)
+    b.fill(x0 + 1, 6, z0 + 1, x1 - 1, 6, z1 - 1, wall)
     gable(b, x0, 2, x1, z1, 6, mat_of(wall), along="z", fill=wall, pitch=1, over=1, end_over=0)
     b.door(mx, 2, z0, "south", material="iron_door")
     b.fill(mx - 1, 2, z0 - 1, mx + 1, 2, z0 - 1, "air")
@@ -1449,17 +1483,16 @@ def mausoleum(rng, st):
     b.fill(x0, -5, z0, x1, -1, z1, wall)
     b.clear(x0 + 1, -4, z0 + 1, x1 - 1, -1, z1 - 1)
     b.fill(x0 + 1, 0, z0 + 1, x1 - 1, 1, z1 - 1, trim)
-    hx, hz = mx, z0 + 2
+    hx, hz = x0 + 1, z0 + 1
     b.set(hx, 1, hz, "air")
     b.set(hx, 2, hz, "dark_oak_trapdoor", facing="south", half="bottom", open="false", powered="false", **WL)
-    ladder(b, hx, hz, -4, 1, "north")
-    b.set(hx, -4, hz - 1, wall)
+    ladder(b, hx, hz, -4, 1, "south")
     for z in range(z0 + 2, z1, 2):   # niches
         for x in (x0, x1):
             b.set(x, -3, z, "air")
             candle(b, x, -3, z, rng.randint(1, 4))
     b.chest(mx, -4, z1 - 1, "north", TREASURE if rng.random() < 0.5 else 3)
-    hanging(b, mx, -2, (z0 + z1) // 2 + 1, st)
+    hanging(b, mx, -1, (z0 + z1) // 2 + 1, st)
     return b
 
 
@@ -1698,9 +1731,470 @@ def olive_press(rng, st):
         if rng.random() < 0.5:
             b.barrel(sx0 + 1, 1, z, [("honey_bottle", rng.randint(1, 4))] if rng.random() < 0.3 else [])
     b.set(sx0 + 1, 1, sz1 - 1, "water_cauldron", level="3")
-    hanging(b, (sx0 + sx1) // 2, 3, (sz0 + sz1) // 2, st)
+    wall_torch(b, sx1 - 1, 3, (sz0 + sz1) // 2, st, "west")
     tree(b, rng, 3, 3, "olive")
     tree(b, rng, 2, D - 3, "olive")
     b.sign(9, 2, 1, "north", ["2[surnames]~Oil Press", "", "", ""], wood, wall=False)
     flowers(b, rng, st, [(x, z) for x in range(2, W - 2) for z in range(2, D - 2)], 0.15)
+    return b
+
+
+# ── Timber ────────────────────────────────────────────────────────────────
+
+@gen("guildhall", freq="rare", n=3, styles=("timber",))
+def guildhall(rng, st):
+    """A guild's hall: a tall stone undercroft, two timber-framed storeys jettied out on all sides
+    above it, banners on the front, a row of gables to the street."""
+    W, D = rng.choice((13, 15)), rng.choice((9, 11))
+    yard = 3
+    b = new("Guildhall", "city", W + 4, yard + D + 2)
+    lk = look(rng, st, timbered=True)
+    base = look(rng, st, timbered=False)
+    base.infill = pick(rng, st.stone)
+    base.wood, base.floor = lk.wood, lk.floor
+    x0, x1, z0, z1 = 2, W + 1, yard, yard + D - 1
+    s = Shell(x0, z0, x1, z1, 1, h=5)
+    shell(b, s, base)
+    mx = (x0 + x1) // 2
+    front_door(b, s, base, mx, wide=True)
+    b.set(mx, 4, z0, base.infill)
+    b.set(mx + 1, 4, z0, base.infill)
+    for x in range(x0 + 2, x1 - 1, 2):
+        if abs(x - mx - 0.5) > 1.5:
+            b.fill(x, 2, z0, x, 3, z0, "glass_pane")
+    windows(b, s, base, sides=("east", "west", "south"), every=2)
+    # the jettied storeys
+    ux0, uz0, ux1, uz1 = x0 - 1, z0 - 1, x1 + 1, z1 + 1
+    for y in (5, 9):
+        storey(b, ux0, uz0, ux1, uz1, y, y + 4, lk)
+    for x in range(ux0, ux1 + 1, 2):
+        bracket(b, x, 4, uz0, lk.wood, "south")
+        bracket(b, x, 4, uz1, lk.wood, "north")
+    for z in range(uz0 + 1, uz1, 2):
+        bracket(b, ux0, 4, z, lk.wood, "east")
+        bracket(b, ux1, 4, z, lk.wood, "west")
+    upper = Shell(ux0, uz0, ux1, uz1, 3, 4)
+    for k, y in ((1, 5), (2, 9)):
+        for side in ("north", "south", "east", "west"):
+            for xx, zz in wall_cells(upper, side)[0]:
+                if (xx + zz) % 2 == 0 and b.get(xx, y + 2, zz) == lk.infill:
+                    b.set(xx, y + 2, zz, "glass_pane")
+                    if y == 5:
+                        b.set(xx, y + 3, zz, "glass_pane")
+    # banners on the front
+    for x in (ux0 + 2, ux1 - 2):
+        b.fill(x, 10, uz0 - 1, x, 12, uz0 - 1, WOOL)
+    # inside: the hall below, the guild's room and the archive above
+    tz = (z0 + z1) // 2
+    for x in range(x0 + 3, x1 - 2):
+        slab(b, x, 1, tz, f"{lk.wood}_slab", "top")
+        stair(b, x, 1, tz - 1, f"{lk.wood}_stairs", "north")
+        stair(b, x, 1, tz + 1, f"{lk.wood}_stairs", "south")
+    stair(b, x0 + 2, 1, tz, f"{lk.wood}_stairs", "west")
+    b.set(x1 - 2, 1, tz, "lectern", facing="west", has_book="false", powered="false")
+    hall = Room(b, x0 + 1, z0 + 1, x1 - 1, z1 - 1, 1, {(mx, z0 + 1), (mx + 1, z0 + 1), (x0 + 1, z1 - 1), (x0 + 1, z1 - 2)})
+    furnish(hall, rng, st, lk, ["chest", "shelf", "shelf", WOOL, WOOL, "plant", "plant"], light=False)
+    for x in range(x0 + 2, x1 - 1, 4):
+        hang(b, x, tz, 1, st, height=4)
+    b.fill(x0 + 1, 6, z1, x0 + 1, 9, z1, lk.infill)   # backing for the ladder above the undercroft
+    ladder(b, x0 + 1, z1 - 1, 1, 9, "north")
+    up1 = Room(b, ux0 + 1, uz0 + 1, ux1 - 1, uz1 - 1, 6, {(x0 + 1, z1 - 1), (x0 + 1, z1 - 2)})
+    furnish(up1, rng, st, lk, ["shelf", "shelf", "lectern", "chest", "cartography_table", "shelf", "chest", "plant"])
+    up2 = Room(b, ux0 + 1, uz0 + 1, ux1 - 1, uz1 - 1, 10, {(x0 + 1, z1 - 1), (x0 + 1, z1 - 2)})
+    furnish(up2, rng, st, lk, ["bed", "chest", "barrel", "bed", "shelf", "plant"])
+    for x in range(ux0 + 3, ux1 - 2, 4):
+        hang(b, x, (uz0 + uz1) // 2, 6, st)
+    # the roof: a long ridge and gables to the street
+    m = pick(rng, st.roofs)
+    gable(b, ux0, uz0, ux1, uz1, 13, m, along="x", fill=lk.infill, pitch=2)
+    ridge = 13 + 2 * ((uz1 - uz0 + 2) // 2)
+    for x in (ux0 + 2, ux1 - 2):   # a pair of finials on the ridge
+        b.set(x, ridge + 1, (uz0 + uz1) // 2, f"{lk.wood}_fence", **WL)
+        b.set(x, ridge + 2, (uz0 + uz1) // 2, "lightning_rod", facing="up", powered="false", **WL)
+    chimney(b, ux1 - 1, uz1 - 1, 13, 20, "bricks")
+    b.sign(mx, 6, uz0 - 1, "north", ["2Hall of the~[guild]~Guild", "", "", ""], lk.wood)
+    for x in (mx - 1, mx + 2):
+        wall_torch(b, x, 3, z0 - 1, st, "north")
+    return b
+
+
+@gen("brewery", freq="average", n=3, styles=("timber",))
+def brewery(rng, st):
+    """A brewhouse: copper kettles over a fire, a cooling floor, casks stacked to the beams,
+    a hop yard of poles beside it."""
+    W, D = rng.choice((9, 11)), rng.choice((8, 9))
+    yard = 2
+    hw = 5
+    b = new("Brewery", "city", W + 2 + hw, yard + D + 1)
+    lk = look(rng, st)
+    s = Shell(1, yard, W, yard + D - 1, 2, h=4)
+    shell(b, s, lk)
+    b.fill(s.x0 + 1, s.h, s.z0 + 1, s.x0 + 4, s.h, s.z1 - 1, "air")   # the kettles rise through both floors
+    dx = front_door(b, s, lk, s.x1 - 2, wide=False)
+    windows(b, s, lk, skip={(dx, s.z0)}, every=2)
+    # kettles: copper over a fire, a chimney through the roof
+    kx, kz = s.x0 + 2, (s.z0 + s.z1) // 2
+    for dz in (-1, 1):
+        b.set(kx, 1, kz + dz, "blast_furnace", facing="east", lit="true")
+        b.fill(kx, 2, kz + dz, kx, 3, kz + dz, pick(rng, ("copper_block", "exposed_copper", "cut_copper")))
+        b.set(kx, 4, kz + dz, "water_cauldron", level="3")
+    b.set(kx + 1, 1, kz, "water_cauldron", level="3")
+    b.set(kx + 1, 2, kz, "iron_chain", axis="y", **WL)
+    chimney(b, s.x0 + 1, kz, 1, s.top + 6, "bricks")
+    b.set(s.x0 + 1, 1, kz, "air")
+    b.set(s.x0, 1, kz, "bricks")
+    # casks along the far wall, lying down, three high
+    for z in range(s.z0 + 1, s.z1):
+        for y in (1, 2, 3):
+            if z == s.z0 + 1 or b.get(s.x1 - 1, y, z) != "air":
+                continue
+            b.barrel(s.x1 - 1, y, z, [("honey_bottle", rng.randint(1, 4))] if rng.random() < 0.2 else [], facing="west")
+    b.set(s.x1 - 1, 1, s.z0 + 1, "air")
+    lx = s.x1 - 2
+    ladder(b, lx, s.z1 - 1, 1, s.h, "north")
+    up = Room(b, s.x0 + 5, s.z0 + 1, s.x1 - 1, s.z1 - 1, s.h + 1, {(lx, s.z1 - 1), (lx, s.z1 - 2)})
+    for x in range(s.x0 + 5, s.x1):   # the malting floor
+        for z in range(s.z0 + 1, s.z1):
+            if up.free(x, z) and rng.random() < 0.4:
+                if rng.random() < 0.3:
+                    b.set(x, s.h + 1, z, "hay_block", axis="y")
+                else:
+                    b.set(x, s.h + 1, z, "yellow_carpet")
+    furnish(up, rng, st, lk, ["bed", "chest", "composter"])
+    hang(b, kx + 2, kz, 1, st, height=7)
+    hang(b, s.x1 - 3, s.z0 + 2, 1, st)
+    m = pick(rng, st.roofs)
+    gable(b, s.x0, s.z0, s.x1, s.z1, s.top, m, along="x", fill=lk.infill, pitch=2 if rng.random() < st.pitch2 else 1)
+    # the hop yard
+    hx0 = s.x1 + 2
+    for x in range(hx0, b.w - 1, 2):
+        for z in range(yard, s.z1 + 1, 2):
+            b.fill(x, 1, z, x, 4, z, f"{lk.wood}_fence", **WL)
+            if rng.random() < 0.8:
+                b.set(x, 5, z, "azalea_leaves", **LEAF)
+            for y in (2, 3, 4):   # hop bines climbing the poles
+                if rng.random() < 0.6:
+                    b.set(x + 1, y, z, "vine", west="true", north="false", south="false", east="false", up="false", **{})
+            b.set(x, 0, z, "coarse_dirt")
+    b.sign(dx - 1, 2, s.z0 - 1, "north", ["2[surnames]~Brewery", "", "", ""], lk.wood)
+    b.barrel(dx + 1, 1, s.z0 - 1, [], facing="north")
+    return b
+
+
+# ── Farms ─────────────────────────────────────────────────────────────────
+
+@gen("rice_terraces", kind="farm", freq="common", n=3, styles=("ochre",))
+def rice_terraces(rng, st):
+    """Paddies stepping up the slope behind a mud wall each, water held on every step, a stair
+    up one side and a little shrine of a hut at the top."""
+    W = rng.randint(11, 15)
+    steps = rng.randint(3, 4)
+    band = 3
+    D = steps * band + 4
+    b = new("Terraced Paddies", "farm", W, D)
+    wallb = pick(rng, ("mud_bricks", "packed_mud", "mud_bricks"))
+    crop = pick(rng, ("wheat", "wheat", "beetroots"))
+    for i in range(steps):
+        y = i + 1
+        za, zb = 1 + i * band, 1 + (i + 1) * band - 1
+        if y > 1:
+            b.fill(1, 1, za, W - 2, y - 1, D - 2, "dirt")
+        for x in range(1, W - 1):
+            b.set(x, y, za, wallb)
+            for z in range(za + 1, zb + 1):
+                if x == 1:
+                    b.set(x, y, z, wallb)
+                elif (x + z) % 4 == 0 or z == zb:
+                    b.set(x, y, z, "water", level="0")
+                else:
+                    b.set(x, y, z, "farmland", moisture="7")
+                    b.set(x, y + 1, z, crop, age=str(rng.randint(3, 7) if crop == "wheat" else rng.randint(1, 3)))
+    # the stair up the east side
+    for i in range(steps):
+        stair(b, W - 2, i + 1, 1 + i * band, "mud_brick_stairs", "south")
+        for z in range(1 + i * band + 1, 1 + (i + 1) * band):
+            b.set(W - 2, i + 1, z, PATH if i == 0 else "packed_mud")
+    b.path(W - 2, 0, W - 2, 0)
+    ty = steps
+    tz0 = 1 + steps * band
+    b.fill(1, 1, tz0, W - 2, ty, D - 2, "dirt")
+    b.fill(1, ty, tz0, W - 2, ty, D - 2, "packed_mud")
+    # a shade hut at the top
+    for x, z in ((2, tz0), (5, tz0), (2, D - 2), (5, D - 2)):
+        b.fill(x, ty + 1, z, x, ty + 2, z, "bamboo_fence", **WL)
+    b.fill(1, ty + 3, tz0 - 1, 6, ty + 3, D - 1, "bamboo_mosaic_slab", type="bottom", **WL)
+    b.barrel(3, ty + 1, D - 2, [("wheat", rng.randint(4, 20))])
+    b.set(4, ty + 1, D - 2, "composter", level="5")
+    hanging(b, 3, ty + 2, tz0 + 1, st)
+    return b
+
+
+@gen("sheep_fold", kind="farm", freq="common", n=3)
+def sheep_fold(rng, st):
+    """A round fold of dry stone wall, a thatched shelter against it, a trough and a shearing bench."""
+    S = rng.choice((13, 15))
+    b = new("Sheep Fold", "farm", S, S)
+    c = S // 2
+    r = c - 1
+    wallb = pick(rng, ("cobblestone_wall", "mossy_cobblestone_wall", "cobbled_deepslate_wall" if st.key == "ashen" else "sandstone_wall" if st.key == "ochre" else "stone_brick_wall"))
+    for dx, dz in circle(r):
+        b.set(c + dx, 1, c + dz, wallb, **WL)
+        if rng.random() < 0.3:
+            b.set(c + dx, 2, c + dz, wallb, **WL)
+    b.set(c, 1, c - r, "oak_fence_gate" if st.key == "timber" else f"{pick(rng, st.woods)}_fence_gate",
+          facing="north", in_wall="false", open="false", powered="false")
+    b.set(c, 2, c - r, "air")
+    b.path(c, 0, c, c - r)
+    for dx, dz in disc(r - 1):
+        if rng.random() < 0.25:
+            b.set(c + dx, 1, c + dz, "short_grass" if st.key != "ochre" else "short_dry_grass")
+        elif rng.random() < 0.1:
+            b.set(c + dx, 0, c + dz, "coarse_dirt")
+    # the shelter: a lean-to of hay bales roofed with slabs
+    wood = pick(rng, st.woods)
+    for x in range(c - 2, c + 3):
+        b.set(x, 1, c + r - 2, "air")
+        for y in (1, 2):
+            b.set(x, y, c + r - 1, "hay_block", axis="x")
+    for x in (c - 2, c + 2):
+        b.fill(x, 1, c + r - 3, x, 2, c + r - 3, f"{wood}_fence", **WL)
+    shed(b, c - 2, c + r - 3, c + 2, c + r - 1, 3, mat(wood), high="south", over=0)
+    for i in range(3):
+        if i == 1:
+            b.set(c - r + 2 + i, 1, c, "water_cauldron", level="3")
+        else:
+            slab(b, c - r + 2 + i, 1, c, f"{wood}_slab")
+    b.set(c + r - 2, 1, c - 1, f"{wood}_slab", type="top", **WL)
+    b.set(c + r - 2, 1, c, f"{wood}_slab", type="top", **WL)
+    b.set(c + r - 2, 2, c, "white_carpet")
+    for _ in range(3):
+        x, z = c + rng.randint(-2, 2), c + rng.randint(-2, 1)
+        if b.empty(x, 1, z):
+            b.set(x, 1, z, "hay_block", axis="y")
+    for x in (c - 1, c + 1):   # lamps either side of the gate
+        if b.get(x, 1, c - r).endswith("wall"):
+            b.set(x, 2, c - r, wallb, **WL)
+            light(b, x, 3, c - r, st)
+    return b
+
+
+@gen("chicken_coop", kind="farm", freq="common", n=3)
+def chicken_coop(rng, st):
+    """A henhouse up on legs with a ramp, nest boxes inside, a wired run round it."""
+    S, T = rng.choice((11, 12)), rng.choice((10, 11))
+    b = new("Chicken Coop", "farm", S, T)
+    wood = pick(rng, st.woods)
+    for x in range(S):
+        for z in range(T):
+            if x in (1, S - 2) and 1 <= z <= T - 2 or z in (1, T - 2) and 1 <= x <= S - 2:
+                b.set(x, 1, z, f"{wood}_fence", **WL)
+            elif 1 < x < S - 2 and 1 < z < T - 2 and rng.random() < 0.35:
+                b.set(x, 0, z, "coarse_dirt")
+    b.set(S // 2, 1, 1, f"{wood}_fence_gate", facing="north", in_wall="false", open="false", powered="false")
+    b.path(S // 2, 0, S // 2, 1)
+    # the coop on legs
+    x0, z0, x1, z1 = S - 7, T - 7, S - 3, T - 3
+    for x, z in ((x0, z0), (x1, z0), (x0, z1), (x1, z1)):
+        b.fill(x, 1, z, x, 1, z, f"{wood}_fence", **WL)
+    b.fill(x0, 2, z0, x1, 2, z1, f"{wood}_planks")
+    b.ring(x0, z0, x1, z1, 3, 4, f"{wood}_planks")
+    for x, z in ((x0, z0), (x1, z0), (x0, z1), (x1, z1)):
+        b.fill(x, 2, z, x, 4, z, f"{wood}_log", axis="y")
+    b.set(x0 + 2, 4, z0, f"{wood}_trapdoor", facing="north", half="bottom", open="true", powered="false", **WL)
+    b.set(x0 + 2, 3, z0, "air")
+    for i, (y, z) in enumerate(((2, z0 - 1), (1, z0 - 2))):
+        stair(b, x0 + 2, y, z, f"{wood}_stairs", "south")
+    for x in range(x0 + 1, x1):   # nest boxes
+        b.set(x, 3, z1 - 1, "hay_block", axis="x")
+        b.set(x, 3, z1 - 2, "air")
+    b.set(x1 - 1, 3, z0 + 1, "composter", level="7")
+    gable(b, x0, z0, x1, z1, 5, mat(wood), along="x", fill=f"{wood}_planks", pitch=1, over=1)
+    light(b, x0 + 1, 3, z0 + 1, st)
+    # feed and water in the run
+    b.set(2, 1, 2, "composter", level="4")
+    b.set(3, 1, 2, "water_cauldron", level="3")
+    for x in range(2, S - 2):
+        for z in range(T - 3, T - 2):
+            if b.empty(x, 1, z) and b.get(x, 0, z) != "coarse_dirt" and x < x0 - 1:
+                farmland(b, x, z, "wheat", rng)
+    for x in range(2, x0 - 1):
+        b.set(x, 1, T - 2, f"{wood}_fence", **WL)
+    return b
+
+
+@gen("root_cellar", kind="farm", freq="average", n=3)
+def root_cellar(rng, st):
+    """A cellar dug into a turfed mound: a stone face and door, barrels of roots inside."""
+    W, D = rng.choice((9, 11)), rng.choice((9, 10))
+    b = new("Root Cellar", "farm", W, D)
+    lk = look(rng, st, timbered=False)
+    face = pick(rng, st.found)
+    cx = W // 2
+    # the mound
+    for x in range(1, W - 1):
+        for z in range(2, D - 1):
+            h = 3 - max(0, int(max(abs(x - cx) - (W // 2 - 3), abs(z - (D + 1) // 2) - (D // 2 - 3))))
+            if h > 0:
+                b.fill(x, 1, z, x, h, z, "dirt")
+                b.set(x, h, z, "grass_block" if st.key != "ochre" else "coarse_dirt", **({"snowy": "false"} if st.key != "ochre" else {}))
+                f = pick(rng, st.flowers)
+                if rng.random() < 0.25 and b.empty(x, h + 1, z) and f != "brown_mushroom":
+                    b.set(x, h + 1, z, f)
+    # the cellar inside
+    b.fill(cx - 2, -3, 3, cx + 2, 0, D - 3, face)
+    b.clear(cx - 1, -2, 4, cx + 1, 2, D - 4)
+    b.fill(cx - 2, 3, 3, cx + 2, 3, D - 3, "dirt")
+    b.fill(cx - 1, -3, 4, cx + 1, -3, D - 4, "packed_mud" if st.key == "ochre" else "coarse_dirt")
+    for z in range(4, D - 3):
+        for x in (cx - 1, cx + 1):
+            for y in (-2, -1):
+                if rng.random() < 0.7:
+                    b.barrel(x, y, z, [(pick(rng, ("potato", "carrot", "beetroot", "apple")), rng.randint(4, 24))])
+    b.chest(cx, -2, D - 4, "north")
+    hanging(b, cx, 1, (D) // 2, st)
+    b.fill(cx - 2, 1, 2, cx + 2, 3, 2, face)
+    b.fill(cx - 2, 4, 2, cx + 2, 4, 2, mat_of(face, "stone_brick").slab, type="bottom", **WL)
+    b.set(cx, 0, 2, face)
+    b.set(cx, 0, 3, "air")
+    b.door(cx, 1, 2, "south", lk.wood)
+    stair(b, cx, 0, 4, mat_of(face, "stone_brick").stairs, "north")
+    stair(b, cx, -1, 5, mat_of(face, "stone_brick").stairs, "north")
+    b.set(cx, 0, 3, lk.floor)
+    b.fill(cx, 1, 3, cx, 2, 5, "air")
+    b.set(cx, 0, 5, "air")
+    for x in (cx - 1, cx + 1):
+        wall_torch(b, x, 2, 1, st, "north")
+    b.path(cx, 0, cx, 1)
+    return b
+
+
+@gen("flower_nursery", kind="farm", freq="average", n=3)
+def flower_nursery(rng, st):
+    """A glasshouse of potted flowers on benches, raised beds outside it."""
+    W, D = rng.choice((7, 9)), rng.choice((9, 11))
+    b = new("Flower Nursery", "farm", W + 6, D + 3)
+    wood = pick(rng, st.woods)
+    x0, z0, x1, z1 = 1, 2, W, D + 1
+    b.fill(x0, 0, z0, x1, 0, z1, "coarse_dirt")
+    b.ring(x0, z0, x1, z1, 0, 0, pick(rng, st.found))
+    b.ring(x0, z0, x1, z1, 1, 1, pick(rng, st.found))
+    b.ring(x0, z0, x1, z1, 2, 3, "glass")
+    for x, z in ((x0, z0), (x1, z0), (x0, z1), (x1, z1)):
+        b.fill(x, 1, z, x, 4, z, f"{wood}_log", axis="y")
+    # a glass roof on a timber ridge
+    mx = (x0 + x1) // 2
+    for i in range(0, (x1 - x0) // 2 + 1):
+        for z in range(z0, z1 + 1):
+            b.set(x0 + i, 4 + i, z, "glass")
+            b.set(x1 - i, 4 + i, z, "glass")
+    for z in range(z0, z1 + 1):
+        b.set(mx, 4 + (x1 - x0) // 2, z, f"{wood}_log", axis="z")
+    for i in range(1, (x1 - x0) // 2):
+        for z in (z0, z1):
+            if x0 + i + 1 <= x1 - i - 1:
+                b.fill(x0 + i + 1, 4, z, x1 - i - 1, 4 + i, z, "glass")
+    b.clear(mx, 1, z0, mx, 2, z0)
+    b.door(mx, 1, z0, "south", wood)
+    b.set(mx, 0, z0, f"{wood}_planks")
+    b.path(mx, 0, mx, z0 - 1)
+    # benches of pots
+    for x in (x0 + 1, x1 - 1):
+        for z in range(z0 + 1, z1):
+            slab(b, x, 1, z, f"{wood}_slab", "top")
+            b.set(x, 2, z, potted(rng) if rng.random() < 0.8 else "flower_pot")
+    for z in range(z0 + 2, z1 - 1):
+        if W >= 9:
+            b.set(mx - 1, 1, z, pick(rng, ("moss_block", "rooted_dirt")))
+            b.set(mx - 1, 2, z, pick(rng, ("azalea", "flowering_azalea")))
+    b.set(mx, 1, z1 - 1, "water_cauldron", level="3")
+    for z in range(z0 + 2, z1 - 1, 3):
+        hanging(b, mx, 3 + (x1 - x0) // 2, z, st)
+    # raised beds outside
+    for bx in (x1 + 2, x1 + 4):
+        for z in range(z0, z1 + 1):
+            if z in (z0, z1):
+                b.set(bx, 1, z, f"{wood}_planks")
+            else:
+                b.set(bx, 1, z, "grass_block", snowy="false")
+                b.set(bx, 2, z, pick(rng, ("poppy", "dandelion", "allium", "cornflower", "oxeye_daisy", "azure_bluet",
+                                           "red_tulip", "orange_tulip", "pink_tulip", "lily_of_the_valley")))
+    return b
+
+
+@gen("compost_yard", kind="farm", freq="common", n=2)
+def compost_yard(rng, st):
+    """Bays of compost behind board walls, heaps of earth, a tool shed."""
+    W, D = rng.choice((11, 13)), rng.choice((9, 10))
+    b = new("Compost Yard", "farm", W, D)
+    wood = pick(rng, st.woods)
+    lk = look(rng, st)
+    for x in range(1, W - 1):
+        for z in range(1, D - 1):
+            if rng.random() < 0.5:
+                b.set(x, 0, z, pick(rng, ("coarse_dirt", "podzol" if st.key != "ochre" else "coarse_dirt", "rooted_dirt")))
+    # bays along the back
+    bz = D - 4
+    for i, x in enumerate(range(1, W - 4, 3)):
+        b.fill(x, 1, bz, x, 2, D - 2, f"{wood}_planks")
+        b.fill(x, 1, D - 2, x + 3, 2, D - 2, f"{wood}_planks")
+        for xx in (x + 1, x + 2):
+            for z in range(bz, D - 2):
+                b.set(xx, 1, z, "composter", level=str(rng.randint(2, 8) if rng.random() < 0.5 else 8))
+    # heaps
+    for _ in range(2):
+        hx, hz = rng.randint(2, W - 6), rng.randint(2, bz - 2)
+        for dx, dz in disc(1):
+            b.set(hx + dx, 1, hz + dz, pick(rng, ("dirt", "coarse_dirt", "rooted_dirt")))
+        b.set(hx, 2, hz, "coarse_dirt")
+    # the tool shed
+    s = Shell(W - 4, 1, W - 2, 4, 1, h=3)
+    shell(b, s, lk)
+    b.door(s.x0 + 1, 1, s.z0, "south", lk.wood)
+    b.path(s.x0 + 1, 0, s.x0 + 1, 0)
+    b.barrel(s.x0 + 1, 1, s.z1 - 1, [("bone_meal", rng.randint(4, 16))])
+    shed(b, s.x0, s.z0, s.x1, s.z1, s.top, pick(rng, st.roofs), high="south")
+    b.set(2, 1, 1, "water_cauldron", level="2")
+    lamp_post(b, 1, 1, st, wood, h=2)
+    return b
+
+
+@gen("mushroom_grove", kind="farm", freq="average", n=3, styles=("ashen",))
+def mushroom_grove(rng, st):
+    """Huge mushrooms grown on dark mycelium beds under a few dead trees, a picker's hut."""
+    S = rng.choice((13, 15))
+    b = new("Mushroom Grove", "farm", S, S)
+    for x in range(1, S - 1):
+        for z in range(1, S - 1):
+            b.set(x, 0, z, pick(rng, ("mycelium", "podzol", "mycelium")), snowy="false")
+            if rng.random() < 0.15:
+                b.set(x, 1, z, pick(rng, ("brown_mushroom", "red_mushroom")))
+    sides = dict(north="true", south="true", east="true", west="true", up="true", down="false")
+    spots = [(3, 4), (S - 4, 4), (S // 2, S - 4)]
+    for i, (x, z) in enumerate(spots):
+        red = rng.random() < 0.5
+        h = rng.randint(4, 6)
+        b.fill(x, 1, z, x, h, z, "mushroom_stem", **{**sides, "up": "false"})
+        if red:
+            for y in range(h - 1, h + 2):
+                r = 2 if y < h + 1 else 1
+                for dx in range(-r, r + 1):
+                    for dz in range(-r, r + 1):
+                        if (y < h + 1 and max(abs(dx), abs(dz)) == r and abs(dx) + abs(dz) < 2 * r) or y == h + 1:
+                            b.set(x + dx, y, z + dz, "red_mushroom_block", **sides)
+        else:
+            for dx in range(-2, 3):
+                for dz in range(-2, 3):
+                    if abs(dx) + abs(dz) < 4:
+                        b.set(x + dx, h + 1, z + dz, "brown_mushroom_block", **sides)
+    # the picker's hut
+    lk = look(rng, st)
+    s = Shell(1, S - 6, 5, S - 2, 1, h=3)
+    shell(b, s, lk)
+    b.door(3, 1, s.z0, "south", lk.wood)
+    b.path(3, 0, 3, s.z0 - 1)
+    b.barrel(2, 1, s.z1 - 1, [("brown_mushroom", rng.randint(4, 20))])
+    b.barrel(4, 1, s.z1 - 1, [("red_mushroom", rng.randint(4, 20))])
+    hanging(b, 3, 2, s.z0 + 2, st)
+    shed(b, s.x0, s.z0, s.x1, s.z1, s.top, pick(rng, st.roofs), high="south")
+    lamp_post(b, S // 2, 1, st, lk.wood, h=2)
     return b

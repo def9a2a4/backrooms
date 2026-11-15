@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.book.BookGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level0ChunkGenerator;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -32,12 +33,17 @@ public class LobbyBookshelfListener implements Listener {
 
     private static final int AIR_MIN_Y = Level0ChunkGenerator.AIR_MIN_Y;
 
+    /** Of the books that aren't curated multi-page ones, how many come from the grammar. */
+    private static final double PROCEDURAL_CHANCE = 0.75;
+
     private final JavaPlugin plugin;
     private final LobbyBookConfig config;
+    private final BookGenerator generator;
 
-    public LobbyBookshelfListener(JavaPlugin plugin, LobbyBookConfig config) {
+    public LobbyBookshelfListener(JavaPlugin plugin, LobbyBookConfig config, BookGenerator generator) {
         this.plugin = plugin;
         this.config = config;
+        this.generator = generator;
     }
 
     public record LobbyBookConfig(
@@ -153,7 +159,18 @@ public class LobbyBookshelfListener implements Listener {
             return createMultiPageBook(template);
         }
 
-        // Default: random title + author + 1-3 random pages
+        if (generator != null && rng.nextDouble() < PROCEDURAL_CHANCE) {
+            BookGenerator.Book b = generator.generate("lobby", rng);
+            ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
+            BookMeta meta = (BookMeta) book.getItemMeta();
+            meta.setTitle(b.title());
+            meta.setAuthor(b.author());
+            setPagesWithEnding(meta, b.pages());
+            book.setItemMeta(meta);
+            return book;
+        }
+
+        // Otherwise: random title + author + 1-3 pages from the hand-written pools
         ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) book.getItemMeta();
         if (meta != null) {

@@ -1,0 +1,406 @@
+# ─── Procedural book grammar ───
+# Read by BookGenerator for Level 0's desk shelves (voice "lobby"), its office
+# buildings' lecterns ("office") and the Library's shelves ("library").
+#
+# Syntax (see book/Grammar.java):
+#   #rule#            a random alternative of a rule, or a variable bound with [..]
+#   #rule.mod#        modifiers: cap caps lower title a s initial
+#   #~name#           generated text: ~gibberish ~syllabic ~word ~salad ~tally
+#   [var:template]    expand once and remember (prints nothing)
+#   {a|b|c}           inline choice      {n:3-90}  a number      {?30:text}  30% of the time
+#   {+name}           a counter: 1, 2, 3... through the book (numbered lists across pages)
+#   \n new line, \f new page. Keep every string in double quotes ('#' starts a YAML comment).
+#
+# A genre: voices, weight (how often), decay (0..1: how badly its pages tend
+# to rot), setup (bound once per book), title, author, opening (first page),
+# body (repeated body_pages [min, max] times), closing (last page).
+
+rules:
+  # Bound for every book, so any genre can refer back to them.
+  setup:
+    - "[writerfirst:#first#][writerlast:#last#][writer:{#writerfirst# #writerlast#|#writerfirst# #writerlast#|#writerfirst# #writerlast.initial#.|#writerfirst.initial#. #writerlast#}][day:{n:2-999}][place:#room#][other:#fullname#][obj1:#obj#][num:{n:3-97}]"
+
+  first: ["Dana", "Marcus", "Priya", "Tom", "Ellen", "Wes", "Ruth", "Kenji", "Alma", "Gus", "Noor", "Lyle", "Bea", "Otto", "Inez", "Carl", "June", "Sami", "Hal", "Vera", "Ted", "Iris", "Mo", "Pat", "Leon", "Greta", "Abe", "Rosa", "Dev", "Nell"]
+  last: ["Fisk", "Okafor", "Lindqvist", "Ruiz", "Hale", "Brandt", "Moreau", "Pak", "Abernathy", "Voss", "Kowalski", "Tran", "Quill", "Harlow", "Mercer", "Dobbs", "Sato", "Fenwick", "Ames", "Castell", "Nakamura", "Oyelaran", "Petrov", "Lund"]
+  fullname: ["#first# #last#", "#first# #last#", "#first# #last.initial#.", "#first.initial#. #last#", "Mr. #last#", "Ms. #last#"]
+  dept: ["Accounting", "Facilities", "Human Resources", "Records", "Night Shift", "Maintenance", "Level Planning", "Compliance", "Sub-Level 0 Operations", "Lighting", "Mapping", "Reception", "the department with no name"]
+  room: ["Room {n:2-99}", "the break room", "Conference B", "Hallway C", "the copy room", "Sub-Level 0", "the east stairwell", "the room with two doors", "the room with no doors", "Room 3", "the storage closet", "the long hallway", "the yellow room", "Accounting", "the mail room", "the room where the carpet changes", "the office with the window", "the server closet", "the second lobby", "Corridor {n:9-40}-{A|B|C|D}"]
+  obj: ["stapler", "carpet tile", "ceiling tile", "fluorescent tube", "water cooler", "swivel chair", "extension cord", "desk lamp", "filing cabinet", "fax machine", "coffee mug", "name badge", "exit sign", "keycard", "clipboard", "door handle", "power outlet", "vending machine", "potted plant", "fire extinguisher", "rubber stamp", "box of paperclips", "landline phone", "wall clock", "umbrella", "lanyard", "sandwich", "map", "flashlight", "calculator"]
+  sound: ["the hum", "a fax tone", "a phone ringing in another room", "footsteps on wet carpet", "a door closing somewhere", "someone typing", "a buzz like a dying tube", "my own name", "a printer warming up", "laughter through the wall", "nothing at all", "a chair rolling", "a radio between stations", "someone counting", "a lift that isn't there"]
+  smell: ["wet carpet", "old almonds", "ozone", "burnt coffee", "mildew", "new paint", "copier toner", "warm dust", "rain, somehow", "someone's lunch", "pennies"]
+  colour: ["yellow", "mono-yellow", "beige", "the colour of old paper", "off-white", "a yellow that isn't yellow", "manila", "nicotine yellow", "mustard"]
+  light_state: ["flickering", "buzzing", "too bright", "off in one corner", "humming a half-step flat", "on", "all on, every one of them", "dimmer than yesterday", "pulsing slowly", "brighter when I walk away"]
+  carpet_state: ["damp", "dry for once", "squelching", "warm", "a different shade here", "newer than the walls", "soaked near the pillars", "humming too", "pulled up in one place, and there is more carpet underneath"]
+  thing: ["something tall", "a coworker I don't recognise", "the thing behind the drywall", "a man in a lanyard", "a shape at the end of the hall", "somebody wearing my badge", "the night janitor", "a person with no face", "whatever moves the walls", "a woman holding a clipboard", "someone who looked like me", "the manager"]
+  feeling: ["calm", "watched", "late for something", "almost happy", "very tired", "like I've done this before", "sure someone called my name", "hungry", "fine. I am fine", "lighter", "smaller than yesterday", "like the walls are listening"]
+  stamp: ["{n:1-12}:{n:10-59}", "{n:1-12}:{n:10-59}", "{n:1-12}:{n:10-59}", "{n:1-12}:{n:10-59}", "??:??"]
+  time: ["{n:1-12}:{n:10-59}", "{n:1-12}:{n:10-59}", "half past something", "the same time as yesterday", "??:??", "after the lights changed"]
+  ordinal: ["second", "third", "fourth", "fifth", "ninth", "twelfth", "fortieth", "hundredth", "last"]
+  direction: ["left", "right", "straight on", "back the way you came", "down", "through the door that wasn't there before", "left, then left again", "toward the hum"]
+  landmark: ["the third pillar", "the damp patch", "the water cooler", "the outlet with no wires", "the desk with the bookshelf", "the place where the carpet changes", "the stain shaped like a hand", "the exit sign", "the flickering light", "the wall with the wrong paint", "the chair facing the wall", "#place#"]
+  office_word: ["synergy", "deliverables", "Q3", "onboarding", "the Henderson account", "headcount", "quarterly targets", "the merger", "alignment", "bandwidth", "the new policy", "the audit", "wellness week", "the floor plan", "the restructure", "the lighting budget", "continuity"]
+  memo_topic: ["the lights", "carpet moisture", "the hum", "missing staff", "the break room", "unauthorised doors", "the new hallway", "printer usage", "#office_word#", "badge policy", "the stairwell", "overtime", "hallway numbering", "the noise from Room 3", "exits (clarification)"]
+  backrooms_truth: ["the walls move when nobody is looking", "the exits are on a timer", "there is no outside", "the rooms are being added faster than we can map them", "the hum is a voice", "sleeping is how you go further in", "every desk is the same desk", "the lights are watching for movement", "the carpet remembers where you walked", "we were hired, all of us, on the same day", "the building is larger on the inside every morning", "the stairs only go the way they want"]
+  rule: ["Do not run", "Do not follow the hum", "Never sleep under a light that flickers", "Do not answer the phone", "Keep the carpet dry", "Count the doors twice", "Do not open doors that are warm", "If you hear your name, keep walking", "Never trust a staircase that only goes down", "Stay out of rooms with no lights", "Do not eat anything that is still warm", "If a wall is new, do not touch it", "Never write your real name", "Do not sit in a chair that is facing the wall", "Never take the last #obj#", "If the lights go out, stand still and count to {n:20-200}", "Do not help the man with the clipboard", "Stay where the carpet is dry", "Report to #place# at #time#", "Do not read the last page", "Write everything down"]
+  journal_line:
+    - "The lights are #light_state# again."
+    - "I passed #landmark# for the #ordinal# time."
+    - "I heard #sound#."
+    - "It smells like #smell# near #room#."
+    - "I found #obj.a#. It was warm."
+    - "I think I saw #thing#."
+    - "I feel #feeling#."
+    - "#backrooms_truth.cap#. I'm sure of it now."
+    - "I counted {n:40-900} rooms today."
+    - "The carpet is #carpet_state#."
+    - "I tried to sleep in #room#."
+    - "There was a note on #obj.a#. It said '#rule#.'"
+    - "#other# was here. I'm sure of it. #obj1.a.cap# was moved."
+    - "I walked #direction# until I stopped wanting to."
+    - "I ate the last of my food. It tasted like #smell#."
+    - "The walls are #colour# here. They were #colour# yesterday."
+    - "I wrote my name on the wall at #landmark#. Today it was spelled differently."
+    - "Nothing happened today. I don't trust it."
+    - "{n:2-9} hours walking. The same desk, the same lamp, the same #obj#."
+  dream: ["a window", "my mother's kitchen, but the walls were #colour#", "an exit sign that kept stepping back", "carpet up to my knees", "my desk, and I was already sitting at it", "a phone that rang and rang and was my own voice", "rain on a roof", "the outside. I don't remember what it looked like, only that it was there", "#other#, who told me the way out and I forgot it", "a staircase going up, for once"]
+  addressee: ["Mum", "Dad", "Sarah", "whoever is reading", "#other.title#", "Margaret", "my replacement", "future me", "the next one", "Facilities"]
+  letter_line:
+    - "I'm still at work. I know how that sounds."
+    - "They said the shift would end at #time#. It has been #time# for a long time."
+    - "I'm eating well enough. There's always #obj.a# somewhere, and sometimes a vending machine that works."
+    - "Please water the plants. Please tell #other# I'm sorry about the #obj#."
+    - "The building goes on further than I thought. #backrooms_truth.cap#."
+    - "I met #other#. They've been here longer. They don't remember their surname any more."
+    - "If you get this, don't come looking. The door I came in through is a wall now."
+    - "I think about the sky a lot."
+    - "I have started to like the hum, and that worries me."
+    - "I'm writing this in #place#. It's quiet. Mostly."
+  letter_close: ["Love", "Yours", "Always", "See you soon, I hope", "Don't wait up", "Still here", "Sorry"]
+  maint_task: ["Replaced fluorescent tube", "Mopped standing water", "Inspected outlet (no wires)", "Re-laid carpet", "Painted over handprints", "Checked thermostat (reads #colour#)", "Sealed door", "Counted chairs", "Removed #obj.a#", "Investigated noise", "Patched drywall", "Reset breaker", "Unclogged drain that leads nowhere"]
+  maint_result: ["OK.", "Done.", "Done. Again.", "Came back by morning.", "Could not locate.", "Light still flickers.", "Wall is warmer than before.", "Do not reassign.", "Fixed itself.", "Noise stopped when I stopped.", "Carpet still damp.", "There is now one more door.", "See previous entry.", "Not my problem any more."]
+  severity: ["Low", "Moderate", "High", "Ongoing", "Unknown", "Do Not File", "Please Advise", "{n:1-5} / 5", "Resolved (not resolved)"]
+  incident:
+    - "#other# reported #sound# from #place#. On inspection the room was #carpet_state# and the lights were #light_state#."
+    - "An employee walked #direction# at #landmark# and did not return. Their #obj# was found at their desk, still warm."
+    - "#thing.cap# was seen in #place# at #time#. It did not respond to its name. It did respond to mine."
+    - "A new hallway appeared between #room# and #room#. It has been added to the floor plan. It is already wrong."
+    - "#obj.a.cap# was found in #place#. Nobody brought it in. Every desk has one now."
+    - "The lights in #place# went out for {n:3-90} seconds. Headcount afterwards was {n:2-40}. Headcount before was not recorded."
+  action: ["None.", "Room sealed.", "Carpet replaced.", "Logged and filed.", "Staff advised to keep walking.", "Under review.", "Lights left on.", "We moved the desks.", "Please see attached (nothing attached).", "Escalated to #dept#.", "The hallway was asked to leave."]
+  dir_step: ["Go #direction# at #landmark#.", "Walk until the carpet is dry. Then #direction#.", "Pass {n:3-30} pillars. Do not count out loud.", "Take the door with the #obj# beside it.", "If the hum gets louder, you are close. If it stops, you are lost.", "At #landmark#, close your eyes and walk {n:5-40} steps.", "Ignore the stairs.", "Follow the exit signs only if they are lit.", "Turn #direction#. Turn #direction#. Turn #direction#."]
+  transcript_a: ["Did you hear that?", "Which way did we come in?", "Read me the floor plan again.", "Is that #other#?", "How long have we been walking?", "Your badge says a different name.", "Don't look at the light.", "Stop. Count the doors.", "The carpet's wet here.", "I think this is #place#."]
+  transcript_b: ["No.", "Keep walking.", "That's not on the plan.", "I don't know anyone called #other#.", "{n:2-60} hours. Or minutes.", "So does yours.", "[inaudible]", "There's one more than last time.", "It's always wet here.", "We were in #place# an hour ago. This can't be it.", "Who are you talking to?"]
+  form_answer: ["#writer#", "N/A", "I don't remember", "#day# days", "Yes", "No", "See back of form", "_______", "#backrooms_truth#", "I was told not to say", "{n:2-40} years", "Here"]
+  poem_line: ["the lights hum a hymn in #colour#", "the carpet drinks the footsteps in", "a door, a door, a door, a wall", "I counted every chair but one", "the exit sign forgets its word", "#smell# where the morning was", "nobody clocks out, nobody clocks in", "the hallway folds like a letter", "and the hum, and the hum, and the hum", "I left my name at #landmark#", "there is a window somewhere, they say", "the walls are listening, so am I"]
+  agenda_item: ["Welcome", "Introductions", "#office_word.cap#", "Review of #memo_topic#", "Minutes of the last meeting", "#office_word.cap# (cont.)", "Any other business", "Headcount", "Updates from #dept#", "The floor plan", "Close"]
+  wrong_item: ["Item {n:3-9} has been removed", "Do not look at the screens", "Count the doors", "Introduce yourself (again)", "Lunch (there is no lunch)", "The lights", "A minute of silence for #place#", "Who let you in", "Return to your desk", "Questions (there are no answers)", "Find the stairs that go up", "Agree with the speaker", "Read this page again", "Leave the way you came", "#other# (in memoriam)", "Vote on whether to stay (motion carried)"]
+  speaker_note: ["Pause here for questions. There won't be any.", "Smile. Make eye contact with the back row.", "Do NOT mention #memo_topic#.", "Click to the next slide. If it is the same slide, click again.", "If the lights flicker, keep talking.", "They will ask about #office_word#. Say it is on track.", "Thank #other# for their work on #office_word#. (Is #other# still here?)", "Slide {n:4-80}: graph goes up. Nobody knows what it measures.", "Remind everyone: #rule#.", "Wait for the hum to pass before the next point.", "Read this part slowly: #backrooms_truth#."]
+  review_line: ["Punctuality: #rating#.", "Teamwork: #rating#.", "Communication: #rating#. Often heard talking to the walls.", "Attendance: #rating#. Has not left the building.", "Initiative: #rating#. Opened a door we told everyone not to open.", "Areas for growth: #memo_topic#.", "Comments: #writerfirst# is a valued member of the team. #writerfirst# is a valued member of the team. #writerfirst# is"]
+  rating: ["Exceeds expectations", "Meets expectations", "Needs improvement", "Unclear", "Present", "N/A", "{n:1-5} out of 5", "We are not sure who this is"]
+  shelf_mark: ["{n:100-999}.{n:10-99} #~word.caps#", "Q{n:10-99}.{n:100-999}", "{n:0-9}{n:0-9}{n:0-9}.{n:0-9}{n:0-9} / #~word.caps#", "R-{n:1000-9999}", "?{n:10-99}.?", "{n:100-999} {A|B|C|D|E}{n:10-99}"]
+  book_name: ["#~word.title# #~word.title#", "The #~word.title# of #~word.title#", "On #~word.title#", "A History of #room.title#", "Collected #~word.title#", "The Book of Doors", "The Index of Lost Floors", "Notes Toward an Exit", "#~word.title#, Vol. {n:2-99}", "The Same Book Again"]
+  shelf_note: ["Water damage.", "Pages {n:2-90} missing.", "Returned overdue ({n:2-900} years).", "Do not shelve.", "Annotated heavily.", "Contains a pressed #obj#.", "Last borrowed by #writer#.", "Spine reads differently each visit.", "Found inside another book.", "Mis-shelved on purpose.", "Reader advised.", "Copy {n:2-9} of 1."]
+  margin: ["no", "this is wrong", "they knew", "I was here", "LIES", "see p. {n:2-400}", "#writerfirst# was right", "don't", "keep reading", "it's about us", "who wrote this", "the next shelf", "ha", "again?"]
+  library_line:
+    - "The shelves went on past where the light reached."
+    - "I found a copy of #book_name# with my name on the borrowing card. I have never been here before."
+    - "Every aisle ends in another aisle."
+    - "The index lists #~word# under #~word#. Neither is a word."
+    - "Someone has been reshelving behind me."
+    - "The books on this shelf are all the same book, but the endings differ."
+    - "I read for what felt like {n:2-90} hours. The candle did not get shorter."
+    - "The Librarian left a note in the margin. It said '#margin#'."
+    - "Shelf {n:2-900}, row {n:2-90}. I have stopped counting the rows."
+    - "The quiet here has a texture."
+
+genres:
+
+  # ─── Lobby: what people leave in desks ───
+
+  journal:
+    voices: [lobby, library]
+    weight: 5
+    decay: 0.7
+    title: ["Day #day#", "Journal", "#writerfirst#'s journal", "Log (do not take)", "Notes", "Still here", "Day #day# (I think)", "Untitled", "Things I know"]
+    author: ["#writer#", "#writerfirst#", "Me", "??"]
+    opening:
+      - "Day #day#.\n\n#journal_line# #journal_line#\n\n#journal_line#"
+      - "#time#.\n\n#journal_line# #journal_line# #journal_line#"
+      - "If found, return to #writer#, #dept#.\n\nDay #day#. #journal_line#"
+      - "Day #day#. Or #day#. #journal_line#\n\n#journal_line#"
+    body:
+      - "Later.\n\n#journal_line# #journal_line#"
+      - "Day ??\n\n#journal_line# #journal_line# #journal_line#"
+      - "#time#. #journal_line#\n\n#journal_line#"
+      - "Next day. #journal_line# {?40:#journal_line#} #journal_line#"
+      - "I dreamed of #dream#.\n\n#journal_line#"
+    body_pages: [1, 4]
+    closing:
+      - "#journal_line#\n\nI'm going to try #direction# at #landmark#.\n\nIf this is the last entry, #backrooms_truth#."
+      - "#journal_line# #journal_line#\n\nI'll keep writing."
+      - "Day #day#.\n\nSame as yesterday."
+      - "#journal_line#\n\n#writerfirst#"
+
+  memo:
+    voices: [lobby, office]
+    weight: 4
+    decay: 0.4
+    setup: "[topic:#memo_topic#]"
+    title: ["Memo: RE: #topic.title#", "RE: RE: #topic.title#", "FW: #topic.title#", "Memo #num#", "URGENT: #topic.title#", "Reminder: #topic.title#"]
+    author: ["#writer#", "#dept#", "Management", "#writer#, #dept#"]
+    opening:
+      - "TO: All Staff\nFROM: #writer#, #dept#\nRE: #topic.cap#\n\nIt has come to our attention that #backrooms_truth#. Please keep this in mind regarding #topic#."
+      - "TO: #other#\nCC: Everyone\nRE: #topic.cap#\n\nPer our conversation, #topic# is no longer our concern. #rule#."
+      - "MEMO\n\nEffective immediately: #rule.lower#.\n\nThis applies to all staff on all floors, including floors not yet built."
+    body:
+      - "Staff are reminded:\n\n- #rule#.\n- #rule#.\n- #rule#."
+      - "Several employees have reported #sound# near #place#. This is normal. #rule#."
+      - "Regarding #office_word#: progress is on track. The track is longer than expected."
+    body_pages: [0, 2]
+    closing:
+      - "Thank you for your cooperation.\n\n#writer#\n#dept#"
+      - "Questions may be directed to #place#.\n\n(Nobody is in #place#.)"
+      - "This memo will self-file.\n\n- Management"
+
+  rules:
+    voices: [lobby, library, office]
+    weight: 3
+    decay: 0.5
+    title: ["RULES", "The Rules", "House Rules", "Read First", "What I Know", "Rules (revised)", "Rules (revised again)"]
+    author: ["#writer#", "Someone Who Stayed", "Management", "Unknown", "Whoever was here before you"]
+    opening: ["{RULES|THE RULES|READ THIS FIRST|WHAT I KNOW|HOUSE RULES}\n\n{+r}. #rule#.\n{+r}. #rule#.\n{+r}. #rule#.\n{+r}. #rule#."]
+    body: ["{+r}. #rule#.\n{+r}. #rule#.\n{+r}. #rule#.{?50:\n{+r}. #rule#.}", "{+r}. #rule#.\n{+r}. #rule#.\n{n:40-99}. #rule#.\n{+r}. #rule#."]
+    body_pages: [0, 2]
+    closing: ["Last rule: #rule.lower#.", "There used to be more rules.", "Do not add to this list.", "{n:40-99}. #rule#.\n\n(I don't know who wrote that one.)"]
+
+  letter:
+    voices: [lobby]
+    weight: 3
+    decay: 0.4
+    setup: "[to:#addressee#]"
+    title: ["Letter to #to#", "Unsent", "For #to#", "Letter (unsent)", "Please deliver", "Dear #to#"]
+    author: ["#writer#", "#writerfirst#", "Your #writerfirst#"]
+    opening: ["Dear #to#,\n\n#letter_line# #letter_line#"]
+    body: ["#letter_line# #letter_line#\n\n#letter_line#", "#letter_line#\n\nI dreamed of #dream#."]
+    body_pages: [0, 2]
+    closing: ["#letter_line#\n\n#letter_close#,\n#writerfirst#", "#letter_close#,\n#writerfirst#\n\nP.S. #rule#."]
+
+  maintenance_log:
+    voices: [lobby, office]
+    weight: 2
+    decay: 0.5
+    title: ["Maintenance Log", "Work Orders", "Facilities Log #num#", "Log — #place.title#", "Jobs"]
+    author: ["#writer#", "Facilities", "Night Shift", "#writerfirst# (maint.)"]
+    opening: ["MAINTENANCE LOG\n#place.title#\n\n#stamp# #maint_task#. #maint_result#\n#stamp# #maint_task#. #maint_result#"]
+    body: ["#stamp# #maint_task# in #room#. #maint_result#\n#stamp# #maint_task#. #maint_result#\n#stamp# #maint_task#. #maint_result#"]
+    body_pages: [1, 3]
+    closing: ["#stamp# #maint_task#. #maint_result#\n\nEnd of shift.", "#stamp# Clocked out.\n#stamp# Clocked out.\n#stamp# Clocked out."]
+
+  incident_report:
+    voices: [lobby, office]
+    weight: 2
+    decay: 0.5
+    title: ["Incident Report #num#", "Incident #{n:100-999}", "Report (Do Not File)", "Incident: #place.title#"]
+    author: ["#writer#", "#dept#", "Witness"]
+    opening: ["INCIDENT REPORT\n\nLocation: #place.cap#\nTime: #time#\nReported by: #writer#\nSeverity: #severity#"]
+    body: ["Description:\n#incident#", "Witness statement (#other#):\n'#transcript_a#' '#transcript_b#'"]
+    body_pages: [1, 2]
+    closing: ["Action taken: #action#\n\nSigned, #writer#", "Action taken: #action#\nFollow-up: #action#"]
+
+  directions:
+    voices: [lobby, library]
+    weight: 3
+    decay: 0.6
+    title: ["Way Out", "Directions", "How to get out", "Map (sort of)", "This way", "Don't trust this"]
+    author: ["#writer#", "Someone who left", "A friend", "Unknown"]
+    opening: ["To get out:\n\n{+d}. #dir_step#\n{+d}. #dir_step#\n{+d}. #dir_step#"]
+    body: ["{+d}. #dir_step#\n{+d}. #dir_step#\n{+d}. #dir_step#", "If you reach #landmark#, you went wrong. Go back to #landmark# and #dir_step.lower#"]
+    body_pages: [0, 2]
+    closing: ["If you end up back here, start again.", "It worked for me.\n\n(It didn't.)", "The last step changes. I'm sorry.", "Good luck.\n#writerfirst#"]
+
+  transcript:
+    voices: [lobby, office]
+    weight: 2
+    decay: 0.6
+    title: ["Transcript", "Recording #num#", "Tape {n:2-40} (partial)", "Overheard"]
+    author: ["#writer#", "Records", "Unknown"]
+    opening: ["TRANSCRIPT (partial)\n\nA: #transcript_a#\nB: #transcript_b#\nA: #transcript_a#\nB: #transcript_b#"]
+    body: ["A: #transcript_a#\nB: #transcript_b#\nA: #transcript_a#\nB: [{inaudible|laughter|the hum}]\nA: #transcript_a#"]
+    body_pages: [0, 2]
+    closing: ["A: #transcript_a#\nB: ...\nA: Hello?\n\n[END OF TAPE]", "[recording continues for {n:2-9} hours with no speech]"]
+
+  lost_and_found:
+    voices: [lobby]
+    weight: 1
+    decay: 0.3
+    title: ["Lost & Found", "LOST", "FOUND", "Has anyone seen"]
+    author: ["#writer#", "Reception"]
+    opening: ["LOST: #obj.a# (#colour#). Last seen near #landmark#.\n\nIf found, return to #place#.\n\nREWARD: #obj.a#"]
+    body: ["FOUND: #obj.a#, #obj.a#, and #other#'s #obj#. Claim at #place#.", "ALSO LOST: #other#. Last seen walking #direction#."]
+    body_pages: [0, 2]
+    closing: []
+
+  form:
+    voices: [lobby, office]
+    weight: 2
+    decay: 0.4
+    title: ["Form #num#-{A|B|C}", "Application", "Exit Request", "Timesheet", "Questionnaire"]
+    author: ["#dept#", "HR", "#writer#"]
+    opening: ["FORM #num#-{A|B|C}\n\nName: #form_answer#\nDepartment: #dept#\nHow long have you been here: #form_answer#\nDescribe the exit: #form_answer#"]
+    body: ["Have you seen #thing#? #form_answer#\nDo you hear the hum? #form_answer#\nDo you hear it now? #form_answer#", "Reason for request:\n#form_answer#\n\nApproved by: ________\nDenied by: #other#"]
+    body_pages: [0, 2]
+    closing: ["Signature: #writer#\n\nPlease return to #place#. Please return to #place#. Please return."]
+
+  dream_log:
+    voices: [lobby, library]
+    weight: 1
+    decay: 0.6
+    title: ["Dreams", "What I dream", "Sleep Log"]
+    author: ["#writer#", "#writerfirst#"]
+    opening: ["I dreamed of #dream#.\n\nWhen I woke up the lights were #light_state#."]
+    body: ["I dreamed of #dream#.", "No dream. Just #sound#.", "I dreamed I was writing this."]
+    body_pages: [1, 3]
+    closing: ["I dreamed of #dream#. When I woke up I was somewhere else."]
+
+  poem:
+    voices: [lobby, library]
+    weight: 2
+    decay: 0.5
+    title: ["Poem", "Untitled", "Hymn", "Song for the Hum", "#colour.title#", "Lines"]
+    author: ["#writer#", "Anonymous", "#writerfirst#"]
+    opening: ["#poem_line#,\n#poem_line#;\n#poem_line#,\n#poem_line#.\n\n#poem_line#,\n#poem_line#."]
+    body: ["#poem_line#,\n#poem_line#,\n#poem_line#.\n\n#poem_line#."]
+    body_pages: [0, 1]
+    closing: []
+
+  tally:
+    voices: [lobby, library]
+    weight: 1
+    decay: 0.3
+    title: ["Count", "Days", "Doors", "Rooms", "Lights", "Days (?)"]
+    author: ["#writer#", "Me"]
+    opening: ["#~tally#\n\n#~tally#"]
+    body: ["#~tally#\n#~tally#\n#~tally#", "#~tally#\n\nlost count here"]
+    body_pages: [1, 3]
+    closing: ["#~tally#\n\n{n:100-9999}?"]
+
+  # ─── Office: lecterns in the office buildings ───
+
+  agenda:
+    voices: [office]
+    weight: 5
+    decay: 0.45
+    title: ["Agenda", "Agenda (Revised)", "Agenda (Revised) (2)", "All-Hands", "Orientation, Day #day#", "Quarterly Review", "Q{n:5-9} Results", "Presentation FINAL final", "Welcome Back"]
+    author: ["#writer#", "The Speaker", "Management", "#dept#", "HR", "You"]
+    opening:
+      - "AGENDA\n\n1. #agenda_item#\n2. #agenda_item#\n3. #wrong_item#\n4. #agenda_item#\n5. #agenda_item#"
+      - "AGENDA\n\n1. #agenda_item#\n2. #agenda_item#\n2. #agenda_item#\n3. #agenda_item#\n4. #wrong_item#"
+      - "AGENDA\n\n1. #wrong_item#\n2. #agenda_item#\n3. #agenda_item#\n4. #agenda_item#\n{n:6-99}. #agenda_item#"
+    body: ["Speaker notes:\n\n#speaker_note#\n\n#speaker_note#", "#speaker_note#\n\n#speaker_note# #speaker_note#"]
+    body_pages: [1, 3]
+    closing: ["Close. Thank everyone for coming.\n\nCount them on the way out.", "Thank you. Same time tomorrow.\n\nSame time tomorrow.", "Questions?"]
+
+  minutes:
+    voices: [office, lobby]
+    weight: 3
+    decay: 0.5
+    title: ["Minutes", "Meeting Minutes (Undated)", "Minutes of the Next Meeting", "Minutes, #place.title#"]
+    author: ["#writer#", "Records", "The Secretary"]
+    opening: ["MINUTES\n#place.cap#, #time#\n\nPresent: #writer#, #other#, #fullname#, #fullname#\nApologies: #other#"]
+    body:
+      - "#writer# opened the meeting. #agenda_item# was discussed. #other# raised #memo_topic#. Motion to #rule.lower#: carried."
+      - "The lights #light_state#. Meeting paused for {n:2-40} minutes. On resuming, #other# was not present."
+      - "#other# asked where the exit was. Moved to any other business."
+    body_pages: [1, 3]
+    closing: ["Next meeting: #time#, #place#.\n\nMeeting closed. Meeting closed.", "Meeting adjourned. Nobody left."]
+
+  speaker_notes:
+    voices: [office]
+    weight: 3
+    decay: 0.55
+    title: ["Speaker Notes", "Do Not Read Aloud", "Notes for Whoever Is Next", "Talking Points", "Slides {n:1-9}-{n:10-99}"]
+    author: ["The Speaker", "#writer#", "Whoever Was Here"]
+    opening: ["#speaker_note#\n\n#speaker_note#"]
+    body: ["#speaker_note#\n\n#speaker_note#", "Slide {n:2-99}.\n\n#speaker_note#"]
+    body_pages: [1, 4]
+    closing: ["If you are reading these notes out loud, stop.", "End of notes. Begin again from slide 1.", "#speaker_note#\n\nThank you."]
+
+  performance_review:
+    voices: [office]
+    weight: 2
+    decay: 0.5
+    title: ["Review: #writer#", "Performance Review", "Annual Review (Year #day#)", "Probation Report"]
+    author: ["#other#", "HR", "Management"]
+    opening: ["PERFORMANCE REVIEW\nEmployee: #writer#\nDepartment: #dept#\nYears of service: {n:2-400}\n\n#review_line#"]
+    body: ["#review_line#\n#review_line#\n#review_line#"]
+    body_pages: [1, 2]
+    closing: ["Overall: #rating#.\n\nRecommended action: #action#"]
+
+  safety_notice:
+    voices: [office, lobby]
+    weight: 1
+    decay: 0.3
+    title: ["SAFETY NOTICE", "Evacuation Procedure", "Fire Drill Schedule", "In Case of Emergency"]
+    author: ["Facilities", "#dept#"]
+    opening: ["IN CASE OF EMERGENCY\n\n1. Remain calm.\n2. #rule#.\n3. Proceed to the nearest exit.\n4. If there is no nearest exit, return to step 1."]
+    body: ["Fire drills will be held at #time# every day. There has never been a fire. There has never been a drill."]
+    body_pages: [0, 1]
+    closing: ["Assembly point: #place#.\n\nHeadcount will be taken. Headcount will be taken again."]
+
+  # ─── Library ───
+
+  catalogue:
+    voices: [library]
+    weight: 5
+    decay: 0.5
+    setup: "[bk:#book_name#]"
+    title: ["Catalogue #shelf_mark#", "Card Index", "Accession Register", "#bk#"]
+    author: ["The Librarian", "Cataloguing", "#writer#"]
+    opening: ["#bk#\n#shelf_mark#\n\n#shelf_note#\n\nSee also: #book_name#"]
+    body: ["#book_name#\n#shelf_mark#\n#shelf_note#\n\n#book_name#\n#shelf_mark#\n#shelf_note#"]
+    body_pages: [1, 4]
+    closing: ["End of drawer {n:2-900}.\nContinued in drawer {n:2-900}.", "#book_name#\n#shelf_mark#\n\nThis card refers to itself."]
+
+  marginalia:
+    voices: [library]
+    weight: 4
+    decay: 0.7
+    title: ["#book_name#", "#book_name# (annotated)", "A Reader's Copy"]
+    author: ["#~word.title# #~word.title#", "Anonymous", "#writer#"]
+    opening: ["#~salad.cap#.\n\n§7[#margin#]§0\n\n#~salad.cap#."]
+    body: ["#~syllabic.cap#. #~salad#.\n\n§7[#margin#]§0", "#library_line#\n\n§7[#margin#]§0\n\n#~salad.cap#."]
+    body_pages: [1, 4]
+    closing: ["§7[#margin#]\n[#margin#]\n[#margin#]"]
+
+  index:
+    voices: [library]
+    weight: 2
+    decay: 0.5
+    title: ["Index", "Index (Vol. {n:2-99})", "Index of Indexes", "Concordance"]
+    author: ["The Librarian", "Indexing"]
+    opening: ["INDEX\n\n#~word.cap#, {n:2-900}\n#~word.cap#, {n:2-900}\n#room.cap#, {n:2-900}\n#~word.cap#, see #~word.cap#\nExit, see Exit"]
+    body: ["#~word.cap#, {n:2-900}-{n:2-900}\n#obj.cap#, {n:2-900}\n#~word.cap#, passim\n#writer#, {n:2-900}\n#~word.cap#, see #~word.cap#"]
+    body_pages: [1, 3]
+    closing: ["Yourself, {n:2-900}\nYourself, {n:2-900}\nYourself, this page"]
+
+  errata:
+    voices: [library]
+    weight: 1
+    decay: 0.4
+    title: ["Errata", "Corrections", "Erratum"]
+    author: ["The Publisher", "The Librarian"]
+    opening: ["ERRATA\n\np. {n:2-400}: for '#~word#' read '#~word#'.\np. {n:2-400}: for 'exit' read 'wall'.\np. {n:2-400}: for '#writer#' read 'you'."]
+    body: ["p. {n:2-400}: the last line should not be read.\np. {n:2-400}: for 'outside' read '#~word#'."]
+    body_pages: [0, 2]
+    closing: []
+
+  librarian_journal:
+    voices: [library]
+    weight: 2
+    decay: 0.6
+    title: ["Shelving Log", "Librarian's Day Book", "Day #day# in the stacks"]
+    author: ["#writer#", "The Assistant Librarian"]
+    opening: ["Day #day#.\n\n#library_line# #library_line#"]
+    body: ["#library_line#\n\n#library_line# #library_line#", "Later.\n\n#library_line#"]
+    body_pages: [1, 3]
+    closing: ["#library_line#\n\nI am going to shelve myself."]

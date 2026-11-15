@@ -532,7 +532,7 @@ def roof_levels(x0, z0, x1, z1, kind="gable", along="x", over=1, end_over=1, cli
     return out
 
 
-def draw_roof(b, levels, yb, m, pitch=1, fill=None, walls=(), keep_fill=()):
+def draw_roof(b, levels, yb, m, pitch=1, fill=None, walls=()):
     """Draws a roof from its courses: stairs facing up the slope, slabs on the ridge and peaks,
     with `pitch` blocks of rise per course (the steps under steep ones filled with m.block).
     Under it, the outline of each wall rectangle is filled with `fill` up to the roof.
@@ -559,17 +559,21 @@ def draw_roof(b, levels, yb, m, pitch=1, fill=None, walls=(), keep_fill=()):
                 b.set(x, yy, z, m.block)
         top = max(top, y)
     if fill:
-        for (x0, z0, x1, z1) in walls:
-            outline = {(x, z) for x in range(x0, x1 + 1) for z in (z0, z1)} | \
-                      {(x, z) for z in range(z0, z1 + 1) for x in (x0, x1)}
-            for x, z in outline:
-                L = lv(x, z)
-                if L <= 0:
-                    continue
-                for yy in range(yb + 1, yb + pitch * L - pitch + 1):
-                    if (x, yy, z) not in keep_fill:
-                        b.set(x, yy, z, fill)
+        for rect in walls:
+            gable_fill(b, levels, yb, pitch, rect, fill)
     return top
+
+
+def gable_fill(b, levels, yb, pitch, rect, fill):
+    """Fills the outline of the walls rect = (x0, z0, x1, z1) from yb up to the roof drawn from
+    `levels`: the gables."""
+    x0, z0, x1, z1 = rect
+    outline = {(x, z) for x in range(x0, x1 + 1) for z in (z0, z1)} | \
+              {(x, z) for z in range(z0, z1 + 1) for x in (x0, x1)}
+    for x, z in outline:
+        L = levels.get((x, z), -1)
+        for yy in range(yb + 1, yb + pitch * L - pitch + 1):
+            b.set(x, yy, z, fill)
 
 
 def gable(b, x0, z0, x1, z1, yb, m, along="x", fill=None, pitch=1, over=1, end_over=1, clip=0, extra=()):
@@ -893,14 +897,19 @@ def inside_room(room, x, z):
 
 
 def hang(b, x, z, y_floor, st, height=3):
-    """A lantern hanging under the ceiling over (x, z), if there's a ceiling. Returns whether."""
-    top = y_floor + height
-    if b.empty(x, top, z) or b.get(x, top, z) in ("ladder",) or b.get(x, top, z).endswith(("_trapdoor", "_pane")):
-        return False
-    if not b.empty(x, top - 1, z):
-        return False
-    b.set(x, top - 1, z, st.light, hanging="true", waterlogged="false")
-    return True
+    """A lantern hanging under the ceiling over (x, z), if there's a ceiling within a few blocks
+    of y_floor + height. Returns whether."""
+    for top in range(y_floor + height, y_floor + height + 3):
+        n = b.get(x, top, z)
+        if b.empty(x, top, z):
+            continue
+        if n == "ladder" or n.endswith(("_trapdoor", "_pane", "_bed", "_carpet")) or n == "iron_bars":
+            return False
+        if not b.empty(x, top - 1, z):
+            return False
+        b.set(x, top - 1, z, st.light, hanging="true", waterlogged="false")
+        return True
+    return False
 
 
 def hang_chain(b, x, z, y, light, longest=16):

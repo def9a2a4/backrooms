@@ -10,10 +10,12 @@ enter_title: "§f1882"
 enter_subtitle: "§7The Collections"
 enter_message: "§7§oThe museum keeps going. So do the collections."
 
-# Hintze Hall's museum without end (Level1882ChunkGenerator): two floors of terracotta galleries
-# joined by tall arches, display cases, skeletons, fossils, minerals and plants, in a maze of
-# 32-block rooms. Every 256 blocks a vaulted central hall with a balcony, a grand staircase and a
-# whale or sauropod skeleton. Spawn is at the foot of the first hall's staircase.
+# Hintze Hall's museum without end (Level1882ChunkGenerator): two floors of galleries joined by
+# tall arches in a maze of 32-block rooms, each 256-block district in its own architecture
+# (MuseumPalette), each gallery with its own subject and exhibits (MuseumExhibits, MuseumSkeletons)
+# and catalogue labels and books (MuseumCatalogue, filled in by Level1882Listener). Every 256 blocks
+# a vaulted central hall with a balcony, a grand staircase and a giant skeleton. Spawn is at the
+# foot of the first hall's staircase.
 
 exit_triggers:
   # Placeholder: nothing leads here yet, and leaving is just walking far enough.

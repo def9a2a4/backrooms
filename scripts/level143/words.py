@@ -88,6 +88,8 @@ WORDS = {
         "Lamps lit~at dusk.~Every one.", "Lamplighter~Out on~rounds", "Oil, wicks~and patience",
         "The lamps~are never~out", "Rounds~begin at~the Square",
     ],
+    "guild": ["Weavers'", "Masons'", "Coopers'", "Chandlers'", "Glovers'", "Drapers'", "Surveyors'", "Lamplighters'",
+              "Clockmakers'", "Locksmiths'", "Mapmakers'", "Bellfounders'"],
     "shrine": [
         "Keep the~flame lit~for those~yet to come", "Light one~for the~household~expected",
         "The fire~is tended~by someone", "Warm your~hands. It~is always~cold here.",

@@ -167,7 +167,8 @@ public final class MuseumCatalogue {
         StringBuilder b = new StringBuilder();
         for (String w : n.toLowerCase(Locale.ROOT).split("_")) {
             if (b.length() > 0) b.append(' ');
-            b.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
+            boolean small = b.length() > 0 && (w.equals("of") || w.equals("the") || w.equals("and") || w.equals("on"));
+            b.append(small ? w : Character.toUpperCase(w.charAt(0)) + w.substring(1));
         }
         String out = b.toString();
         if (m.name().startsWith("POTTED_")) out += ", potted";
@@ -232,7 +233,7 @@ public final class MuseumCatalogue {
 
     // ── Signs ───────────────────────────────────────────────────────────
 
-    private static final int LINE = 15;
+    private static final int LINE = 16;
 
     /** Four lines of a label for {@code s}. */
     static String[] sign(MuseumCanvas.Subject s, Random r) {
@@ -258,7 +259,7 @@ public final class MuseumCatalogue {
                 case 0 -> lines(name, "From " + short15(place(r)), "Removed " + year(r), "");
                 case 1 -> lines(name, "Inscription", "not yet", "translated");
                 case 2 -> lines(name, "Cast, plaster", "Original " + (r.nextBoolean() ? "lost" : "in situ"), "");
-                default -> lines(name, "Reg. " + regNo(r), "Gift of", short15(collector(r)));
+                default -> lines(name, "Gift of", short15(collector(r)), "Reg. " + regNo(r));
             };
             case POTS -> lines(name, "From " + short15(place(r)), "Excavated", String.valueOf(year(r)));
             case PAINTING -> switch (r.nextInt(4)) {
@@ -272,7 +273,7 @@ public final class MuseumCatalogue {
             default -> switch (r.nextInt(9)) {
                 case 0, 1 -> lines(name, "Collected " + year(r), "by " + short15(collector(r)), rarity);
                 case 2 -> lines(name, "From " + short15(place(r)), String.valueOf(year(r)), "");
-                case 3 -> lines(name, "Reg. " + regNo(r), "Gift of", short15(collector(r)));
+                case 3 -> lines(name, "Gift of", short15(collector(r)), "Reg. " + regNo(r));
                 case 4 -> lines(name, rarity, "", "");
                 case 5 -> lines("", name, "", "");
                 case 6 -> lines(name, "On loan from", short15(collector(r)), "");
@@ -302,8 +303,22 @@ public final class MuseumCatalogue {
         return new String[]{s.substring(0, cut).replaceAll(",$", ""), short15(s.substring(cut + 1))};
     }
 
+    /**
+     * A sign line that fits: drop a leading "From", "by" or "Coll.", then a collector's title,
+     * then whole words from the end.
+     */
     private static String short15(String s) {
-        return s.length() <= LINE ? s : s.substring(0, LINE - 1) + ".";
+        for (String pre : new String[]{"From ", "by ", "Coll. ", "Reg. "}) {
+            if (s.length() > LINE && s.startsWith(pre)) s = s.substring(pre.length());
+        }
+        for (String t : TITLES) {
+            if (s.length() > LINE && !t.isEmpty() && s.startsWith(t)) s = s.substring(t.length());
+        }
+        for (String art : new String[]{"the ", "a ", "an "}) {
+            if (s.length() > LINE && s.startsWith(art)) s = s.substring(art.length());
+        }
+        while (s.length() > LINE && s.lastIndexOf(' ') > 0) s = s.substring(0, s.lastIndexOf(' '));
+        return s.length() > LINE ? s.substring(0, LINE) : s;
     }
 
     private static final String[] PAINT_A = {"View of", "Study of", "Evening,", "Morning,", "Storm over",
@@ -346,13 +361,16 @@ public final class MuseumCatalogue {
                     }
                     pages.add(b.toString().trim());
                 }
-                return new Book("Catalogue of " + cut(subject, 18) + ", Vol. " + ROMAN[r.nextInt(ROMAN.length)],
-                        collector(r), pages);
+                String vol = ", Vol. " + ROMAN[r.nextInt(ROMAN.length)];
+                String title = "Catalogue of " + subject;
+                if (title.length() + vol.length() > 32) title = subject;
+                if (title.length() + vol.length() > 32) title = "Catalogue";
+                return new Book(title + vol, collector(r), pages);
             }
             case 2 -> {
                 // a gallery guide
-                pages.add("Gallery " + s.gallery() + " contains part of the collection of " + subject.toLowerCase(Locale.ROOT)
-                        + ". The cases are arranged by place of origin, then by date of collection.");
+                pages.add("Gallery " + s.gallery() + " holds part of the collections of " + t.titles[0]
+                        + " (" + subject + "). The cases are arranged by place of origin, then by date of collection.");
                 pages.add("The specimens in the wall cases were collected between " + (1830 + r.nextInt(40)) + " and "
                         + (1890 + r.nextInt(60)) + ", chiefly from " + place(r) + " and " + place(r) + ".");
                 pages.add("Visitors are asked not to lean on the cases. Further specimens may be seen by appointment"
@@ -377,12 +395,19 @@ public final class MuseumCatalogue {
             }
             case 4 -> {
                 // notes on the arrangement
+                String[] order = {"by kind rather than by donor", "by place of collection", "in order of acquisition",
+                        "by size, the largest at the back", "by colour, at the request of the Keeper"};
                 pages.add("Notes on the Arrangement of " + subject + ".\n\nThe collection was rearranged in "
-                        + year(r) + ". Specimens are now shown by kind rather than by donor.");
-                pages.add("Labels in black are original. Labels in red were added when a specimen was identified"
-                        + " again. Some labels have not yet been replaced.");
-                pages.add("Specimens marked Reserve are stored in the basement and may be seen by students on"
-                        + " written application.");
+                        + year(r) + ". Specimens are now shown " + order[r.nextInt(order.length)] + ".");
+                String[] notes = {
+                        "Labels in black are original. Labels in red were added when a specimen was identified again.",
+                        "Some labels have not yet been replaced. Where two labels disagree, the newer is to be preferred.",
+                        "Specimens marked Reserve are stored in the basement and may be seen by students on written application.",
+                        "Duplicates have been exchanged with other museums. A list is kept in the Keeper's office.",
+                        "The cases were relined in green baize in " + year(r) + ". The old lining is in store.",
+                        "Measurements are given in blocks. Weights were not recorded before " + year(r) + ".",
+                        "Casts are marked with a white spot. Original material is unmarked."};
+                for (int k = 0, n = 2 + r.nextInt(3); k < n; k++) pages.add(notes[r.nextInt(notes.length)]);
                 return new Book("Notes on " + cut(subject, 22), collector(r), pages);
             }
             default -> {

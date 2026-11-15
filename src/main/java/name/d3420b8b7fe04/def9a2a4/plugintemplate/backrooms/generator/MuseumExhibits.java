@@ -82,7 +82,7 @@ final class MuseumExhibits {
             case MARINE -> pick(r, Center.AQUARIUM, 3, Center.HANGING, 3, Center.AMMONITE, 1, Center.CASES, 1, Center.SKELETON, 1);
             case ARCHAEOLOGY -> pick(r, Center.MONOLITH, 4, Center.POTS, 3, Center.PEDESTALS, 2, Center.CASES, 1);
             case NETHER -> pick(r, Center.SKELETON, 3, Center.HANGING, 2, Center.PEDESTALS, 2, Center.METEORITE, 1, Center.CASES, 1);
-            case END -> pick(r, Center.SKELETON, 2, Center.HANGING, 2, Center.PEDESTALS, 2, Center.MONOLITH, 1, Center.CRYSTALS, 1);
+            case END -> pick(r, Center.SKELETON, 1, Center.HANGING, 2, Center.PEDESTALS, 3, Center.MONOLITH, 2, Center.CRYSTALS, 2, Center.CASES, 2);
             case CURIOSITIES -> pick(r, Center.PEDESTALS, 4, Center.CASES, 3, Center.BENCHES, 1);
             case ART -> pick(r, Center.PAINTINGS, 6, Center.POTS, 1, Center.MONOLITH, 1);
             case ZOOLOGY -> pick(r, Center.SKELETON, 4, Center.CASES, 2, Center.PEDESTALS, 1, Center.HANGING, 1);
@@ -95,14 +95,14 @@ final class MuseumExhibits {
             case FOSSILS -> new Kind[]{Kind.PTEROSAUR, Kind.ICHTHYOSAUR, Kind.PLESIOSAUR};
             case MARINE -> new Kind[]{Kind.WHALE, Kind.ICHTHYOSAUR, Kind.SQUID, Kind.PLESIOSAUR};
             case NETHER -> new Kind[]{Kind.GHAST};
-            case END -> new Kind[]{Kind.DRAGON};
-            case ZOOLOGY -> new Kind[]{Kind.BAT, Kind.PTEROSAUR};
+            case END -> new Kind[]{Kind.DRAGON, Kind.PHANTOM};
+            case ZOOLOGY -> new Kind[]{Kind.BAT, Kind.PTEROSAUR, Kind.PHANTOM};
             default -> new Kind[]{Kind.GHAST, Kind.BAT, Kind.DRAGON};
         } : switch (t) {
             case FOSSILS -> new Kind[]{Kind.THEROPOD, Kind.MAMMOTH, Kind.SAUROPOD, Kind.TRILOBITE, Kind.TURTLE};
             case MARINE -> new Kind[]{Kind.TURTLE};
             case NETHER -> new Kind[]{Kind.HOGLIN, Kind.STRIDER, Kind.PIGLIN, Kind.WITHER};
-            case END -> new Kind[]{Kind.ENDERMAN};
+            case END -> new Kind[]{Kind.ENDERMAN, Kind.WITHER, Kind.SPIDER};
             case ZOOLOGY -> new Kind[]{Kind.PIG, Kind.COW, Kind.HORSE, Kind.WOLF, Kind.CAMEL, Kind.SNIFFER, Kind.GOAT, Kind.CHICKEN};
             default -> new Kind[]{Kind.CREEPER, Kind.SKELETON, Kind.ZOMBIE, Kind.ENDERMAN, Kind.SPIDER, Kind.VILLAGER,
                     Kind.PIGLIN, Kind.WITHER, Kind.HOGLIN, Kind.SNIFFER, Kind.HORSE, Kind.CHICKEN};
@@ -196,7 +196,7 @@ final class MuseumExhibits {
 
     static void skeleton(Room m, boolean alongX, Kind kind) {
         int al = switch (kind) {
-            case PTEROSAUR, BAT, CREEPER, SKELETON, ZOMBIE, ENDERMAN, PIGLIN, VILLAGER, WITHER, CHICKEN, STRIDER -> 4;
+            case PTEROSAUR, BAT, PHANTOM, CREEPER, SKELETON, ZOMBIE, ENDERMAN, PIGLIN, VILLAGER, WITHER, CHICKEN, STRIDER -> 4;
             case SPIDER, TURTLE, TRILOBITE, PIG, WOLF -> 8;
             default -> 10;
         };

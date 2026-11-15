@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.book.BookGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level64637ChunkGenerator.BookConfig;
 import net.kyori.adventure.text.Component;
@@ -37,13 +38,18 @@ public class LibraryBookshelfListener implements Listener {
     private static final double CHISELED_CHANCE = 0.12;
 
     private final JavaPlugin plugin;
+    /** Of the ordinary (not pre-written, not entry) books, how many come from the grammar. */
+    private static final double GRAMMAR_CHANCE = 0.5;
+
     private final BookConfig config;
     private final ProceduralBooks books;
+    private final BookGenerator generator;
 
-    public LibraryBookshelfListener(JavaPlugin plugin, BookConfig config) {
+    public LibraryBookshelfListener(JavaPlugin plugin, BookConfig config, BookGenerator generator) {
         this.plugin = plugin;
         this.config = config;
         this.books = new ProceduralBooks(config);
+        this.generator = generator;
     }
 
     @EventHandler
@@ -162,6 +168,16 @@ public class LibraryBookshelfListener implements Listener {
                 && rng.nextDouble() < config.preWrittenChance()) {
             return buildFixedBook(
                     config.preWrittenBooks().get(rng.nextInt(config.preWrittenBooks().size())));
+        }
+        if (generator != null && rng.nextDouble() < GRAMMAR_CHANCE) {
+            BookGenerator.Book b = generator.generate("library", rng);
+            ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
+            BookMeta meta = (BookMeta) book.getItemMeta();
+            meta.setTitle(b.title());
+            meta.setAuthor(b.author());
+            for (String page : b.pages()) meta.addPage(page);
+            book.setItemMeta(meta);
+            return book;
         }
         return books.create(rng);
     }

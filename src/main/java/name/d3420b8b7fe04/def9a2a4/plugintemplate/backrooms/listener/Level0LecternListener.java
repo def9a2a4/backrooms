@@ -1,5 +1,6 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.book.BookGenerator;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.ChunkSnapshot;
@@ -21,35 +22,23 @@ import java.util.Random;
 /**
  * Puts a book on every lectern in Level 0's office buildings (conference
  * rooms, the control room's back row, auditorium stages) when their chunk is
- * first generated: mostly an agenda that has gone wrong, followed by speaker
- * notes in the Library's procedural styles; now and then a Library book
- * outright.
+ * first generated: mostly office papers from the book grammar ({@link
+ * BookGenerator}'s "office" voice: agendas, minutes, speaker notes, memos,
+ * reviews), now and then a Library book outright.
  */
 public class Level0LecternListener implements Listener {
 
     private static final String WORLD = "bkrms_0";
     private static final int MIN_Y = 40, MAX_Y = 100;   // Level0Building's storeys
 
-    private static final List<String> TITLES = List.of(
-            "Agenda", "Agenda (Revised)", "Agenda (Revised) (2)", "Minutes", "Minutes of the Next Meeting",
-            "Speaker Notes", "Quarterly Review", "Orientation, Day 1", "Orientation, Day 1 (again)",
-            "Fire Drill Procedure", "Projections", "All-Hands", "Welcome Back", "Do Not Read Aloud",
-            "Presentation FINAL final", "Notes for Whoever Is Next", "Item 7", "Q5 Results");
-    private static final List<String> AUTHORS = List.of(
-            "The Speaker", "Facilities", "Management", "Whoever Was Here", "HR", "You", "Room 3");
-    private static final List<String> WRONG_ITEMS = List.of(
-            "Item 4 has been removed", "Do not look at the screens", "Count the doors",
-            "Introduce yourself (again)", "Lunch (there is no lunch)", "The lights",
-            "A minute of silence for Room 3", "Who let you in", "Return to your desk",
-            "Questions (there are no answers)", "Find the stairs that go up",
-            "Agree with the speaker", "Read this page again", "Leave the way you came");
-
     private final JavaPlugin plugin;
     private final ProceduralBooks books;
+    private final BookGenerator generator;
 
-    public Level0LecternListener(JavaPlugin plugin, ProceduralBooks books) {
+    public Level0LecternListener(JavaPlugin plugin, ProceduralBooks books, BookGenerator generator) {
         this.plugin = plugin;
         this.books = books;
+        this.generator = generator;
     }
 
     @EventHandler
@@ -89,40 +78,13 @@ public class Level0LecternListener implements Listener {
     }
 
     private ItemStack book(Random rng) {
-        if (rng.nextInt(100) < 25) return books.create(rng);
-
+        if (generator == null || rng.nextInt(100) < 20) return books.create(rng);
+        BookGenerator.Book b = generator.generate("office", rng);
         ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
         BookMeta meta = (BookMeta) book.getItemMeta();
-        meta.setTitle(TITLES.get(rng.nextInt(TITLES.size())));
-        meta.setAuthor(rng.nextInt(3) == 0
-                ? books.generateSyllabicWord(rng, 2) + " " + books.generateSyllabicWord(rng, 3)
-                : AUTHORS.get(rng.nextInt(AUTHORS.size())));
-
-        // An agenda: numbered items of word salad, one of them wrong, the numbers not quite right.
-        StringBuilder agenda = new StringBuilder("AGENDA\n\n");
-        int items = 4 + rng.nextInt(3);
-        int wrong = rng.nextInt(items);
-        int number = 1;
-        for (int i = 0; i < items; i++) {
-            String item = i == wrong
-                    ? WRONG_ITEMS.get(rng.nextInt(WRONG_ITEMS.size()))
-                    : books.generateWordSalad(rng, 2 + rng.nextInt(3));
-            agenda.append(number).append(". ").append(item).append('\n');
-            if (rng.nextInt(6) != 0) number++;   // now and then a number comes round twice
-        }
-        meta.addPage(agenda.toString().trim());
-
-        // Speaker notes.
-        int notes = 1 + rng.nextInt(2);
-        for (int p = 0; p < notes; p++) {
-            ProceduralBooks.GenerationMode mode = books.pickMode(rng);
-            String text = books.generateContent(rng, mode, 10 + rng.nextInt(16));
-            List<String> cursed = books.config().cursedSnippets();
-            if (!cursed.isEmpty() && rng.nextInt(3) == 0) {
-                text = text + " " + cursed.get(rng.nextInt(cursed.size()));
-            }
-            meta.addPage(text);
-        }
+        meta.setTitle(b.title());
+        meta.setAuthor(b.author());
+        for (String page : b.pages()) meta.addPage(page);
         book.setItemMeta(meta);
         return book;
     }

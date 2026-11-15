@@ -43,6 +43,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1Water
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LibraryBookshelfListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level0LecternListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.ProceduralBooks;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.book.BookGenerator;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Disc11JukeboxListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.Level1GardenEffectListener;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener.LobbyBookshelfListener;
@@ -213,12 +214,16 @@ public class BackroomsPlugin {
 
         // 6. Register chunk-load listeners BEFORE creating worlds so they
         //    catch the spawn-chunk ChunkLoadEvents fired during world creation.
-        Bukkit.getPluginManager().registerEvents(new LobbyBookshelfListener(plugin, loadLobbyBookConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new ServerRoomLecternListener(plugin), plugin);
         Level64637ChunkGenerator.BookConfig libraryBooks = loadLibraryBookConfig();
-        Bukkit.getPluginManager().registerEvents(new LibraryBookshelfListener(plugin, libraryBooks), plugin);
+        ProceduralBooks procedural = new ProceduralBooks(libraryBooks);
+        BookGenerator bookGenerator = loadBookGenerator(procedural);
         Bukkit.getPluginManager().registerEvents(
-                new Level0LecternListener(plugin, new ProceduralBooks(libraryBooks)), plugin);
+                new LobbyBookshelfListener(plugin, loadLobbyBookConfig(), bookGenerator), plugin);
+        Bukkit.getPluginManager().registerEvents(
+                new LibraryBookshelfListener(plugin, libraryBooks, bookGenerator), plugin);
+        Bukkit.getPluginManager().registerEvents(
+                new Level0LecternListener(plugin, procedural, bookGenerator), plugin);
         Bukkit.getPluginManager().registerEvents(
                 new Level101SignListener(plugin, loadLevel101SignConfig()), plugin);
         Bukkit.getPluginManager().registerEvents(new Level142Listener(plugin), plugin);
@@ -385,6 +390,21 @@ public class BackroomsPlugin {
         // Extract default levels from jar if needed, then load
         extractDefaultLevels();
         loadLevels();
+    }
+
+    /** The book grammar (books/grammar.yml in the jar); null, and books fall back to the old pools, if it won't load. */
+    private BookGenerator loadBookGenerator(ProceduralBooks procedural) {
+        try (java.io.InputStream in = plugin.getResource("books/grammar.yml")) {
+            if (in == null) {
+                plugin.getLogger().warning("books/grammar.yml missing; procedural books disabled");
+                return null;
+            }
+            return BookGenerator.load(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8),
+                    procedural::external);
+        } catch (java.io.IOException | RuntimeException e) {
+            plugin.getLogger().warning("Could not load books/grammar.yml: " + e.getMessage());
+            return null;
+        }
     }
 
     private Level64637ChunkGenerator.BookConfig loadLibraryBookConfig() {

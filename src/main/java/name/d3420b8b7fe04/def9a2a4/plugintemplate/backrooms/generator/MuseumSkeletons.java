@@ -36,7 +36,7 @@ final class MuseumSkeletons {
     enum Kind {
         THEROPOD, MAMMOTH, SAUROPOD, PTEROSAUR(true), ICHTHYOSAUR(true), PLESIOSAUR(true), TURTLE, TRILOBITE,
         CREEPER, SKELETON, ZOMBIE, ENDERMAN, PIGLIN, VILLAGER, WITHER, SPIDER, GHAST(true), DRAGON(true),
-        PIG, COW, HORSE, WOLF, CAMEL, SNIFFER, HOGLIN, GOAT, CHICKEN, STRIDER, SQUID(true), WHALE(true), BAT(true);
+        PIG, COW, HORSE, WOLF, CAMEL, SNIFFER, HOGLIN, GOAT, CHICKEN, STRIDER, SQUID(true), WHALE(true), BAT(true), PHANTOM(true);
 
         final boolean hangs;
         Kind() { this(false); }
@@ -188,7 +188,7 @@ final class MuseumSkeletons {
         double len = switch (kind) {
             case THEROPOD, SAUROPOD, DRAGON, ICHTHYOSAUR, PLESIOSAUR, WHALE -> 20;
             case MAMMOTH -> 16;
-            case PTEROSAUR, BAT -> 10;
+            case PTEROSAUR, BAT, PHANTOM -> 10;
             case TURTLE, TRILOBITE -> 14;
             case SPIDER -> 14;
             case PIG, WOLF -> 13;
@@ -206,19 +206,20 @@ final class MuseumSkeletons {
             case SAUROPOD -> sauropod(b, len);
             case PTEROSAUR -> flyer(new Body(c, cx - ux * 3, hangY, cz - uz * 3, ux, uz), 8, 11, 0.12, 0.05, 2.5, true);
             case BAT -> flyer(new Body(c, cx - ux * 2, hangY, cz - uz * 2, ux, uz), 5, 9, 0.05, 0.1, 1.0, false);
+            case PHANTOM -> flyer(new Body(c, cx - ux * 4, hangY, cz - uz * 4, ux, uz), 9, 10, 0.0, 0.35, 1.5, false);
             case DRAGON -> flyer(b, len, 12, 0.3, 0.4, 2.2, false);
             case ICHTHYOSAUR -> swimmer(b, len, 0.0, 3.5, true);
             case PLESIOSAUR -> swimmer(b, len, 0.4, 1.2, false);
             case WHALE -> whale(b, len, 9);
             case TURTLE -> turtle(mid, 1.2);
             case TRILOBITE -> trilobite(b, len);
-            case CREEPER -> creeper(mid, 0.5);
-            case SKELETON -> humanoid(mid, 0.45, 0);
-            case ZOMBIE -> humanoid(mid, 0.45, 1);
-            case ENDERMAN -> humanoid(mid, 0.3, 2);
-            case PIGLIN -> humanoid(mid, 0.45, 3);
-            case VILLAGER -> humanoid(mid, 0.45, 4);
-            case WITHER -> wither(mid, 0.45);
+            case CREEPER -> creeper(mid, 0.45, 0.75);
+            case SKELETON -> humanoid(mid, 0.38, 0.65, 0);
+            case ZOMBIE -> humanoid(mid, 0.38, 0.65, 1);
+            case ENDERMAN -> humanoid(mid, 0.27, 0.6, 2);
+            case PIGLIN -> humanoid(mid, 0.38, 0.65, 3);
+            case VILLAGER -> humanoid(mid, 0.38, 0.65, 4);
+            case WITHER -> wither(mid, 0.42, 0.65);
             case SPIDER -> spider(b, 1.1);
             case GHAST -> ghast(mid, 0.45);
             case CHICKEN -> chicken(mid, 0.9);
@@ -452,62 +453,71 @@ final class MuseumSkeletons {
 
     // ── Minecraft's mobs ─────────────────────────────────────────────────
 
-    /** A creeper: four short legs, an upright spine in rings, a cube skull with the face; k blocks per model pixel. */
-    static void creeper(Body b, double k) {
+    /**
+     * A creeper: four short legs, an upright spine in rings, a cube skull with the face. Heights
+     * are {@code k} blocks per model pixel, widths and the head {@code w} (wider, so the bones
+     * stay apart at room scale).
+     */
+    static void creeper(Body b, double k, double w) {
         for (int fa = -1; fa <= 1; fa += 2) {
             for (int sd = -1; sd <= 1; sd += 2) {
-                b.bone(fa * 4 * k, sd * 2 * k, 0, fa * 3 * k, sd * 2 * k, 6 * k, Math.max(0.5, k));
+                b.bone(fa * 3 * w, sd * 2 * w, 0, fa * 2 * w, sd * 2 * w, 6 * k, 0.8);
             }
         }
-        b.bone(-3 * k, 0, 6 * k, 3 * k, 0, 6 * k, 0.6);
-        b.bone(0, 0, 6 * k, 0, 0, 18 * k, Math.max(0.6, 0.8 * k));
-        for (double v = 8 * k; v <= 16 * k; v += 2) b.ring(0, v, 4 * k, 2 * k);
-        b.skull(-4 * k, 8 * k, 8 * k, 18 * k, 8 * k, FACE_CREEPER, false);
+        b.bone(-2 * w, -2 * w, 6 * k, 2 * w, 2 * w, 6 * k, 0.5);
+        b.bone(-2 * w, 2 * w, 6 * k, 2 * w, -2 * w, 6 * k, 0.5);
+        b.bone(0, 0, 6 * k, 0, 0, 18 * k, 0.8);
+        for (double v = 8 * k; v <= 17 * k; v += 2) b.ring(0, v, 3.5 * w, 1.8 * w);
+        b.skull(-4 * w, 8 * w, 8 * w, 18 * k, 8 * w, FACE_CREEPER, false);
     }
 
     /**
      * A biped mob's skeleton in Minecraft's proportions: 0 skeleton, 1 zombie (arms out), 2
      * enderman (long and thin), 3 piglin (snout and tusks), 4 villager (nose, arms folded).
+     * Heights are {@code k} blocks per model pixel, widths and the head {@code w}.
      */
-    static void humanoid(Body b, double k, int type) {
-        double legs = (type == 2 ? 30 : 12) * k, torso = 12 * k, arm = (type == 2 ? 30 : 12) * k, head = 8 * k;
-        double r = type == 2 ? 0.5 : Math.max(0.5, 0.6 * k);
-        for (int sd = -1; sd <= 1; sd += 2) b.bone(0, sd * 2 * k, 0, 0, sd * 2 * k, legs, r);
-        b.bone(0, -2.5 * k, legs, 0, 2.5 * k, legs, 0.5);
-        b.bone(0, 0, legs, 0, 0, legs + torso, Math.max(0.5, 0.7 * k));
-        for (double v = legs + 3 * k; v < legs + torso - 1; v += 2) b.ring(0, v, 3.5 * k, 1.8 * k);
-        double sh = legs + torso - 1;
-        b.bone(0, -6 * k, sh, 0, 6 * k, sh, 0.5);
+    static void humanoid(Body b, double k, double w, int type) {
+        double legs = (type == 2 ? 30 : 12) * k, torso = 12 * k, arm = (type == 2 ? 30 : 12) * k, head = 8 * w;
+        double r = type == 2 ? 0.5 : 0.6;
         for (int sd = -1; sd <= 1; sd += 2) {
-            if (type == 1) b.bone(0, sd * 6 * k, sh, -arm, sd * 6 * k, sh, r);              // zombie: arms out in front
-            else if (type == 4) b.bone(0, sd * 6 * k, sh, -3 * k, -sd * 3 * k, sh - 5 * k, r); // villager: folded
-            else b.bone(0, sd * 6 * k, sh, 0, sd * 6.5 * k, sh - arm, r);
+            b.bone(0, sd * 2 * w, 0, 0, sd * 2 * w, legs, r);
+            b.bone(0, sd * 2 * w, 0, -1.5, sd * 2 * w, 0, 0.5);   // feet
         }
-        double hv = legs + torso;
+        b.bone(0, -2.5 * w, legs, 0, 2.5 * w, legs, 0.6);
+        b.bone(0, 0, legs, 0, 0, legs + torso, 0.6);
+        for (double v = legs + 2; v < legs + torso - 1; v += 1.5) b.ring(0, v, 3.2 * w, 1.6 * w);
+        double sh = legs + torso - 0.5;
+        b.bone(0, -6 * w, sh, 0, 6 * w, sh, 0.5);
+        for (int sd = -1; sd <= 1; sd += 2) {
+            if (type == 1) b.bone(0, sd * 6 * w, sh, -arm, sd * 6 * w, sh, r);                 // zombie: arms out in front
+            else if (type == 4) b.bone(0, sd * 6 * w, sh, -2.5 * w, -sd * 3 * w, sh - 4, r);    // villager: folded
+            else b.bone(0, sd * 6 * w, sh, 0, sd * 6.5 * w, sh - arm, r);
+        }
+        double hv = legs + torso + 0.5;
         String[] face = type == 2 ? FACE_ENDERMAN : type == 3 ? FACE_SNOUT : FACE_SKELETON;
-        double hw = type == 3 ? 10 * k : head;
+        double hw = type == 3 ? 10 * w : head;
         b.skull(-head / 2, head, hw, hv, head, face, false);
         if (type == 3) {   // piglin snout and tusks
-            b.skull(-head / 2 - 2 * k, 2 * k, 4 * k, hv + 1 * k, 3 * k, null, false);
-            for (int sd = -1; sd <= 1; sd += 2) b.put(-head / 2 - 1, sd * 2.5 * k, hv, IVORY);
+            b.skull(-head / 2 - 2, 2, 4 * w, hv + 1, 3 * w, null, false);
+            for (int sd = -1; sd <= 1; sd += 2) b.put(-head / 2 - 1, sd * 2.5 * w, hv, IVORY);
         }
-        if (type == 4) b.skull(-head / 2 - 2 * k, 2 * k, 2 * k, hv + k, 4 * k, null, false);   // nose
+        if (type == 4) b.skull(-head / 2 - 2, 2, 2 * w, hv + 1, 4 * w, null, false);   // nose
     }
 
     /** The wither: three skulls on a shoulder beam over a spine and ribs, no legs. */
-    static void wither(Body b, double k) {
+    static void wither(Body b, double k, double w) {
         b.bone(0, 0, 0, 0, 0, 3 * k, 0.6);
-        b.bone(0, 0, 3 * k, 1.5 * k, 0, 10 * k, 0.6);
-        b.bone(1.5 * k, 0, 10 * k, 0, 0, 22 * k, Math.max(0.6, 0.7 * k));
-        for (double v = 13 * k; v < 21 * k; v += 2) b.ring(0, v, 4 * k, 2 * k);
+        b.bone(0, 0, 3 * k, 1.5 * w, 0, 10 * k, 0.6);
+        b.bone(1.5 * w, 0, 10 * k, 0, 0, 22 * k, 0.7);
+        for (double v = 13 * k; v < 21 * k; v += 1.5) b.ring(0, v, 3.5 * w, 1.8 * w);
         double sh = 22 * k;
-        b.bone(0, -10 * k, sh, 0, 10 * k, sh, Math.max(0.5, 0.6 * k));
-        b.skull(-4 * k, 8 * k, 8 * k, sh + 1, 8 * k, FACE_SKELETON, false);
-        // side skulls, shifted out along the beam
-        Body left = new Body(b.c(), b.x(0, 7 * k), b.hy(), b.z(0, 7 * k), b.ux(), b.uz());
-        Body right = new Body(b.c(), b.x(0, -7 * k), b.hy(), b.z(0, -7 * k), b.ux(), b.uz());
-        left.skull(-3 * k, 6 * k, 6 * k, sh, 6 * k, FACE_SKELETON, false);
-        right.skull(-3 * k, 6 * k, 6 * k, sh, 6 * k, FACE_SKELETON, false);
+        b.bone(0, -10 * w, sh, 0, 10 * w, sh, 0.6);
+        b.skull(-4 * w, 8 * w, 8 * w, sh + 1, 8 * w, FACE_SKELETON, false);
+        // side skulls, out along the beam
+        for (int sd = -1; sd <= 1; sd += 2) {
+            Body side = new Body(b.c(), b.x(0, sd * 7.5 * w), b.hy(), b.z(0, sd * 7.5 * w), b.ux(), b.uz());
+            side.skull(-3 * w, 6 * w, 6 * w, sh, 6 * w, FACE_SKELETON, false);
+        }
     }
 
     /** A spider: a ribbed abdomen and thorax, an eight-eyed skull, eight jointed legs. */

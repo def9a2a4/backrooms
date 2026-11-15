@@ -29,6 +29,17 @@ public final class ProceduralBooks {
         return config;
     }
 
+    /** Generated text for the book grammar's {@code #~name#} symbols. */
+    public String external(String name, Random rng) {
+        return switch (name) {
+            case "word" -> generateSyllabicWord(rng, 1 + rng.nextInt(3));
+            case "syllabic" -> generateContent(rng, GenerationMode.SYLLABIC, 6 + rng.nextInt(12));
+            case "salad" -> generateWordSalad(rng, 5 + rng.nextInt(10));
+            case "gibberish" -> generateContent(rng, GenerationMode.GIBBERISH, 3 + rng.nextInt(4));
+            default -> "";
+        };
+    }
+
     /** Text generation style for procedural books. Ratio is 5:2:1 (GIBBERISH:SYLLABIC:WORD_SALAD). */
     public enum GenerationMode {
         GIBBERISH, SYLLABIC, WORD_SALAD
