@@ -51,8 +51,16 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
     static final String PACK = MaceLibrary.PACK;
 
     private static final int LARGE = 768, MEDIUM = 384, SMALL = 192;   // region sides
-    private static final int LARGE_PERCENT = 33, MEDIUM_PERCENT = 55;
-    private static final double COVER = 0.45;        // target share of a region for its city and farms (~40% after rounding)
+    /**
+     * How a level's world is cut up and filled: the percent of 768 squares kept whole, the percent
+     * of the rest's 384 quarters kept whole (the others split into 192 sixteenths), and a city's
+     * target share of its region, {@code cover * (low + spread * random)}, rounded down to whole
+     * chunks.
+     */
+    protected record Layout(int largePercent, int mediumPercent, double cover, double low, double spread) {}
+
+    /** Level 142's: mostly small towns by count, about 40% of the land in cities. */
+    static final Layout MACE_LAYOUT = new Layout(33, 55, 0.45, 0.85, 0.3);
     private static final int MAX_CHUNKS = 29;        // a 29-chunk city's buffer is ~67 MB (~84 MB for Level 143's, 160 high)
     private static final int MARGIN = 12;            // countryside at least this wide around a city
     private static final int GROUND = 63;            // Mace's ground layer
@@ -88,18 +96,20 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
     /** Built cities, least recently used first, kept within CACHE_CELLS. */
     private final Map<Site, CompletableFuture<MaceCity>> cities = new LinkedHashMap<>(16, 0.75f, true);
     private final String pack;
+    private final Layout layout;
     private final List<MaceCity.Theme> themes;
     /** Trees fill their ground layer with the theme's ground. */
     private final Map<MaceCity.Theme, MaceBuilding.Fill> treeFills = new EnumMap<>(MaceCity.Theme.class);
     private volatile @Nullable Map<MaceCity.Theme, List<MaceBuilding>> trees;
 
     public Level142ChunkGenerator(NamespacedKey biomeKey) {
-        this(biomeKey, PACK, MaceCity.Theme.MACE);
+        this(biomeKey, PACK, MaceCity.Theme.MACE, MACE_LAYOUT);
     }
 
     /** Cities of {@code themes}, built from the buildings in {@code pack}. */
-    protected Level142ChunkGenerator(NamespacedKey biomeKey, String pack, List<MaceCity.Theme> themes) {
+    protected Level142ChunkGenerator(NamespacedKey biomeKey, String pack, List<MaceCity.Theme> themes, Layout layout) {
         super(biomeKey);
+        this.layout = layout;
         this.pack = pack;
         this.themes = themes;
         for (MaceCity.Theme t : themes) {
@@ -121,25 +131,25 @@ public class Level142ChunkGenerator extends BackroomsChunkGenerator {
     }
 
     /** The region holding (x, z): a whole 768 square, one of its 384 quarters, or a 192 sixteenth. */
-    private static Region regionAt(long seed, int x, int z) {
+    private Region regionAt(long seed, int x, int z) {
         int lx = Math.floorDiv(x, LARGE), lz = Math.floorDiv(z, LARGE);
-        if (Math.floorMod(hash(seed, LARGE_SALT, lx, lz), 100L) < LARGE_PERCENT) return new Region(lx * LARGE, lz * LARGE, LARGE);
+        if (Math.floorMod(hash(seed, LARGE_SALT, lx, lz), 100L) < layout.largePercent()) return new Region(lx * LARGE, lz * LARGE, LARGE);
         int mx = Math.floorDiv(x, MEDIUM), mz = Math.floorDiv(z, MEDIUM);
-        if (Math.floorMod(hash(seed, MEDIUM_SALT, mx, mz), 100L) < MEDIUM_PERCENT) return new Region(mx * MEDIUM, mz * MEDIUM, MEDIUM);
+        if (Math.floorMod(hash(seed, MEDIUM_SALT, mx, mz), 100L) < layout.mediumPercent()) return new Region(mx * MEDIUM, mz * MEDIUM, MEDIUM);
         return new Region(Math.floorDiv(x, SMALL) * SMALL, Math.floorDiv(z, SMALL) * SMALL, SMALL);
     }
 
     /**
      * The region's city: the biggest Mace city (odd chunk counts, 5 and up) whose footprint,
-     * farms included, is within about 45% of the region (give or take 15%, for variety; rounding
-     * down to whole chunks brings it to about 40%), placed
-     * anywhere in the region that leaves a margin of countryside.
+     * farms included, is within the layout's share of the region (Level 142: about 45%, give or
+     * take 15%, which rounding down to whole chunks brings to about 40%), placed anywhere in the
+     * region that leaves a margin of countryside.
      */
     private Site site(long seed, Region r) {
         long h = hash(seed, CITY_SALT, r.x(), r.z());
         MaceCity.Plan theme = MaceCity.Plan.of(h, 5, themes);
         Random rng = new Random(h ^ SITE_SALT);
-        double target = COVER * r.size() * r.size() * (0.85 + 0.3 * rng.nextDouble());
+        double target = layout.cover() * r.size() * r.size() * (layout.low() + layout.spread() * rng.nextDouble());
         int chunks = 5;
         for (int c = MAX_CHUNKS; c > 5; c -= 2) {
             int w = c * 16 + 2 * MaceCity.EDGE + 1, l = w + theme.farmLength();

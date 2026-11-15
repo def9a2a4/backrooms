@@ -17,7 +17,14 @@ public class Level143ChunkGenerator extends Level142ChunkGenerator {
 
     static final String PACK = "level143";
 
+    /**
+     * Bigger cities, and every size: most squares stay whole or split only once, and a city takes
+     * anywhere from a fifth to three fifths of its region, so cities run from 5 to 29 chunks with
+     * few gaps, a fifth of them small towns (about 35% of the land).
+     */
+    static final Layout LAYOUT = new Layout(55, 92, 1.0, 0.20, 0.42);
+
     public Level143ChunkGenerator(NamespacedKey biomeKey) {
-        super(biomeKey, PACK, MaceCity.Theme.LEVEL_143);
+        super(biomeKey, PACK, MaceCity.Theme.LEVEL_143, LAYOUT);
     }
 }

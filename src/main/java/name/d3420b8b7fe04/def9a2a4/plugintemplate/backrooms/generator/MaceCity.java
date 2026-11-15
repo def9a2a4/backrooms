@@ -1123,8 +1123,8 @@ final class MaceCity {
     private final List<int[]> skyBoxes = new ArrayList<>();
 
     /**
-     * Balloons and airships all over the city's sky (and over its farms), about one for every
-     * seven chunks, at heights from {@link #SKY_LOW} to the top of the buffer, none
+     * Balloons and airships over the city's sky (and over its farms), about one for every
+     * twenty chunks, at heights from {@link #SKY_LOW} to the top of the buffer, none
      * touching another or anything built below. Their own RNG, so the rest of the city is as before.
      */
     private void makeSkyFeatures() {
@@ -1132,7 +1132,7 @@ final class MaceCity {
         if (pool.isEmpty()) pool = lib.ofType("sky_feature");
         if (pool.isEmpty()) return;
         Random r = new Random(plan.seed() ^ SKY_SALT);
-        int target = Math.max(2, (int) Math.round(sizeX * (double) sizeZ / 256 / (6 + 2 * r.nextDouble())));
+        int target = Math.max(1, (int) Math.round(sizeX * (double) sizeZ / 256 / (18 + 6 * r.nextDouble())));
         int placed = 0;
         for (int tries = 0; placed < target && tries < target * 40; tries++) {
             MaceBuilding b = MaceLibrary.select(pool, BUILDING_FREQUENCY, "frequency", r);
