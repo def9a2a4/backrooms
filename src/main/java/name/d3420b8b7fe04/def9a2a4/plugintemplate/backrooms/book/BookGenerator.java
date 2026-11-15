@@ -133,7 +133,7 @@ public final class BookGenerator {
     /** Tidies what expansion leaves behind: doubled spaces, spaces before punctuation, blank-line runs. */
     private static String clean(String s) {
         return s.replaceAll("[ \\t]+", " ")
-                .replaceAll(" ([.,;:!?])", "$1")
+                .replaceAll(" ([.,;:!?])(?=\\s|$)", "$1")
                 .replaceAll(" *\n *", "\n")
                 .replaceAll("\n{4,}", "\n\n\n")
                 .trim();
@@ -150,8 +150,11 @@ public final class BookGenerator {
             StringBuilder page = new StringBuilder();
             int lines = 1, col = 0;
             for (String line : chunk.split("\n", -1)) {
+                // A line that won't fit what is left of the page starts the next one, whole.
+                int need = Math.max(1, (visible(line) + LINE_WIDTH - 1) / LINE_WIDTH);
+                boolean fitsEmpty = need <= PAGE_LINES && line.length() < PAGE_CHARS;
                 if (page.length() > 0) {
-                    if (lines + 1 > PAGE_LINES) {
+                    if (lines + need > PAGE_LINES && fitsEmpty || lines + 1 > PAGE_LINES) {
                         pages.add(page.toString().trim());
                         page.setLength(0);
                         lines = 1;

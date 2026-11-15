@@ -309,7 +309,7 @@ genres:
     opening: ["MINUTES\n#place.cap#, #time#\n\nPresent: #writer#, #other#, #fullname#, #fullname#\nApologies: #other#"]
     body:
       - "#writer# opened the meeting. #agenda_item# was discussed. #other# raised #memo_topic#. Motion to #rule.lower#: carried."
-      - "The lights #light_state#. Meeting paused for {n:2-40} minutes. On resuming, #other# was not present."
+      - "The lights were #light_state#. Meeting paused for {n:2-40} minutes. On resuming, #other# was not present."
       - "#other# asked where the exit was. Moved to any other business."
     body_pages: [1, 3]
     closing: ["Next meeting: #time#, #place#.\n\nMeeting closed. Meeting closed.", "Meeting adjourned. Nobody left."]

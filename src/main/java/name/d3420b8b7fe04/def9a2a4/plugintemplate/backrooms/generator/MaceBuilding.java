@@ -161,6 +161,40 @@ final class MaceBuilding {
         }
     }
 
+    /**
+     * A building made at runtime rather than read from a pack (see {@link CityHouses}): block
+     * states in schematic order (x + z*width + y*width*length), layer 0 at world y {@code sourceY}.
+     * Signs carry template text like a pack's ("[house]"); {@code lootChests} get house loot.
+     */
+    MaceBuilding(String name, String type, int width, int height, int length, int sourceY, Map<String, String> meta,
+                 String[] states, Map<Integer, String[]> signs, Set<Integer> lootChests) {
+        this.name = name;
+        this.type = type;
+        this.width = width;
+        this.height = height;
+        this.length = length;
+        this.sourceY = sourceY;
+        this.mace.putAll(meta);
+        Map<String, Integer> index = new HashMap<>();
+        List<BlockData> pal = new ArrayList<>();
+        blocks = new int[states.length];
+        for (int i = 0; i < states.length; i++) {
+            blocks[i] = index.computeIfAbsent(states[i], st -> {
+                BlockData data;
+                try {
+                    data = Bukkit.createBlockData(st);
+                } catch (IllegalArgumentException ex) {
+                    data = Material.AIR.createBlockData();
+                }
+                pal.add(data);
+                return pal.size() - 1;
+            });
+        }
+        palette = pal.toArray(BlockData[]::new);
+        this.signs.putAll(signs);
+        for (int i : lootChests) this.containers.put(i, List.of(new Item(0, Material.PAPER, 3)));
+    }
+
     /** Reads a gzipped Sponge v3 schematic. */
     static MaceBuilding load(InputStream in) throws IOException {
         return new MaceBuilding(Nbt.readGzipped(in));

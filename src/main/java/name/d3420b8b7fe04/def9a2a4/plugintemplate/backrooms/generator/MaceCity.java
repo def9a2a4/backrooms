@@ -210,6 +210,8 @@ final class MaceCity {
     private int pathExtends = 1;
     private final int flowerPercent = 15;
     private final MaceBuilding.Fill fill;
+    /** Houses drawn for this city alone (Level 143's themes; none for Mace's). */
+    private final List<MaceBuilding> ownHouses;
 
     private MaceCity(Plan plan, MaceLibrary lib) {
         this.plan = plan;
@@ -247,6 +249,7 @@ final class MaceCity {
         }
         fill = new MaceBuilding.Fill(ground, pathBlock, wall, hasTorchesOnWalkways, name,
                 lib.words.forCity(new Random(rng.nextLong())), true, new HashSet<>());
+        ownHouses = CityHouses.make(plan);   // its own RNG: Mace's cities come out as before
     }
 
     /** Builds the whole city. Slow (about a second); callers cache it. */
@@ -268,6 +271,8 @@ final class MaceCity {
         if (c.hasFlowers) c.makeFlowers();
         c.positionRails();
         c.connectFences();
+        long own = c.allBuildings.stream().filter(c.ownHouses::contains).count();   // DEBUG
+        Bukkit.getLogger().info("DEBUG " + c.name + " " + plan.theme() + ": " + c.allBuildings.size() + " buildings, " + own + " own houses");
         return c;
     }
 
@@ -853,7 +858,8 @@ final class MaceCity {
         int[][] district = new int[sx][sz];
         int[][] best = new int[sx][sz];
         int wasted = sx * sz, attempts = 15;
-        List<MaceBuilding> pool = lib.of(theme.file, "city");
+        List<MaceBuilding> pool = new ArrayList<>(lib.of(theme.file, "city"));
+        pool.addAll(ownHouses);
         List<MaceBuilding> mineEntrances = lib.of(theme.file, "mineshaft_entrance");
         List<MaceBuilding> accepted = new ArrayList<>();
         do {

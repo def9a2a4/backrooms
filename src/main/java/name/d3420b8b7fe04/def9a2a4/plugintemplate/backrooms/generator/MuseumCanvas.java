@@ -17,7 +17,7 @@ import java.util.List;
  */
 final class MuseumCanvas {
 
-    enum Kind { SIGN, LECTERN, POT, PAINTING, CHEST }
+    enum Kind { SIGN, LECTERN, POT, PAINTING, CHEST, SHELF }
 
     /**
      * What a label describes. The catalogue writes its text from this and a seed: {@code seed} if
@@ -103,6 +103,24 @@ final class MuseumCanvas {
         d.setFacing(face);
         set(x, y, z, d);
         label(x, y, z, Kind.POT, face, s, 0, 0);
+    }
+
+    /**
+     * A chiseled bookshelf whose slots open toward {@code face}, each filled with chance
+     * {@code full}; the books go in when the chunk loads.
+     */
+    void shelf(int x, int y, int z, BlockFace face, double full, java.util.Random r, Subject s) {
+        org.bukkit.block.data.type.ChiseledBookshelf b =
+                (org.bukkit.block.data.type.ChiseledBookshelf) Material.CHISELED_BOOKSHELF.createBlockData();
+        b.setFacing(face);
+        boolean any = false;
+        for (int i = 0; i < 6; i++) {
+            boolean in = r.nextDouble() < full;
+            b.setSlotOccupied(i, in);
+            any |= in;
+        }
+        set(x, y, z, b);
+        if (any) label(x, y, z, Kind.SHELF, face, s, 0, 0);
     }
 
     /** A painting up to w×h blocks hung on the wall behind (x, y, z), centered there. */
