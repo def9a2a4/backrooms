@@ -2,6 +2,7 @@ package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator;
 
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.book.ShelfBooks;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCanvas.Label;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCanvas.Subject;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.MuseumCatalogue.Rarity;
@@ -30,6 +31,7 @@ import org.bukkit.entity.Painting;
 import org.bukkit.generator.WorldInfo;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1079,13 +1081,13 @@ public class Level1882ChunkGenerator extends BackroomsChunkGenerator {
                 case SHELF -> {
                     if (!(b.getState() instanceof org.bukkit.block.ChiseledBookshelf shelf)
                             || !(b.getBlockData() instanceof org.bukkit.block.data.type.ChiseledBookshelf slots)) continue;
+                    // plain books stand in until someone takes one: ShelfBooks.shelve swaps in the real texts
                     org.bukkit.inventory.Inventory inv = shelf.getSnapshotInventory();
                     for (int i = 0; i < 6; i++) {
-                        if (!slots.isSlotOccupied(i)) continue;
-                        int roll = r.nextInt(60);
-                        inv.setItem(i, roll == 0 ? book(MuseumCatalogue.treatise(s, r))
-                                : new ItemStack(roll < 4 ? Material.WRITABLE_BOOK : Material.BOOK));
+                        if (slots.isSlotOccupied(i)) inv.setItem(i, new ItemStack(Material.BOOK));
                     }
+                    shelf.getPersistentDataContainer().set(ShelfBooks.SHELVED, PersistentDataType.STRING,
+                            s.theme() != null ? s.theme().name() : ShelfBooks.ANY);
                     shelf.update(true, false);
                 }
                 case CHEST -> {

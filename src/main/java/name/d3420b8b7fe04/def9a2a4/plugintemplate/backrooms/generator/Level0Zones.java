@@ -140,7 +140,10 @@ final class Level0Zones {
         int m = (b - 4) % 6;           // 1 bench, 2 table, 3 bench, others aisle
         boolean gap = (a - 4) % 9 == 8;
         if (m == 2 && !gap) {
-            c.data.setBlock(x, Y0, z, slab(Material.SMOOTH_STONE_SLAB, Slab.Type.TOP));
+            int t = (a - 4) % 9;
+            c.data.setBlock(x, Y0, z, t == 0 ? leg(Material.SMOOTH_QUARTZ_SLAB, face(flip, -1, 0))
+                    : t == 7 || a == 43 ? leg(Material.SMOOTH_QUARTZ_SLAB, face(flip, 1, 0))
+                    : slab(Material.SMOOTH_QUARTZ_SLAB, Slab.Type.TOP));
         } else if ((m == 1 || m == 3) && !gap) {
             c.data.setBlock(x, Y0, z, slab(Material.OAK_SLAB, Slab.Type.BOTTOM));
         } else if (m == 5 && a % 12 == 7) {
@@ -161,7 +164,7 @@ final class Level0Zones {
         if (db == 0) {
             c.data.setBlock(x, Y0, z, da == 1 && pick(dh, 8, 100) < 10
                     ? Material.BOOKSHELF.createBlockData()   // LobbyBookshelfListener fills it
-                    : slab(Material.BIRCH_SLAB, Slab.Type.TOP));
+                    : leg(Material.BIRCH_SLAB, face(flip, da == 0 ? -1 : 1, 0)));
         } else if (da == 0 && pick(dh, 16, 100) >= 10) {
             c.data.setBlock(x, Y0, z, stairs(Material.SPRUCE_STAIRS,
                     pick(dh, 24, 100) < 15 ? CW[pick(dh, 32, 4)] : face(flip, 0, 1), Stairs.Half.BOTTOM));
@@ -253,7 +256,8 @@ final class Level0Zones {
             case OFFICE -> {
                 boolean second = pick(rh, 48, 100) < 35;
                 if ((v == 2 || second && v == 5) && u >= 3 && u <= 5) {
-                    c.data.setBlock(x, Y0, z, slab(desk, Slab.Type.TOP));
+                    c.data.setBlock(x, Y0, z, u == 4 ? slab(desk, Slab.Type.TOP)
+                            : leg(desk, turn(u == 3 ? BlockFace.WEST : BlockFace.EAST, rot)));
                     if (u == 5 && pick(ch, 0, 100) < 25) c.data.setBlock(x, Y0 + 1, z, Material.POTTED_DEAD_BUSH);
                 } else if ((v == 3 || second && v == 6) && u == 4 && pick(ch, 0, 100) < 90) {
                     c.data.setBlock(x, Y0, z, stairs(Material.SPRUCE_STAIRS,
@@ -266,7 +270,9 @@ final class Level0Zones {
             }
             case MEETING -> {
                 if (u == 4 && v >= 2 && v <= 6) {
-                    c.data.setBlock(x, Y0, z, slab(Material.DARK_OAK_SLAB, Slab.Type.TOP));
+                    c.data.setBlock(x, Y0, z, v == 2 ? leg(Material.DARK_OAK_SLAB, turn(BlockFace.NORTH, rot))
+                            : v == 6 ? leg(Material.DARK_OAK_SLAB, turn(BlockFace.SOUTH, rot))
+                            : slab(Material.DARK_OAK_SLAB, Slab.Type.TOP));
                 } else if ((u == 3 || u == 5) && v >= 2 && v <= 6 && pick(ch, 0, 100) < 80) {
                     c.data.setBlock(x, Y0, z, stairs(Material.SPRUCE_STAIRS,
                             turn(u == 3 ? BlockFace.WEST : BlockFace.EAST, rot), Stairs.Half.BOTTOM));
@@ -275,7 +281,9 @@ final class Level0Zones {
             case CONFERENCE -> {
                 // A long table, chairs both sides, a lectern and the projector screen at the far end.
                 if (v == 4 && u >= 2 && u <= 5) {
-                    c.data.setBlock(x, Y0, z, slab(Material.DARK_OAK_SLAB, Slab.Type.TOP));
+                    c.data.setBlock(x, Y0, z, u == 2 ? leg(Material.DARK_OAK_SLAB, turn(BlockFace.WEST, rot))
+                            : u == 5 ? leg(Material.DARK_OAK_SLAB, turn(BlockFace.EAST, rot))
+                            : slab(Material.DARK_OAK_SLAB, Slab.Type.TOP));
                 } else if ((v == 3 || v == 5) && u >= 2 && u <= 5 && pick(ch, 0, 100) < 85) {
                     c.data.setBlock(x, Y0, z, stairs(Material.SPRUCE_STAIRS,
                             turn(v == 3 ? BlockFace.NORTH : BlockFace.SOUTH, rot), Stairs.Half.BOTTOM));
@@ -301,7 +309,7 @@ final class Level0Zones {
             }
             case BREAK -> {
                 if (u == 1 && v >= 2 && v <= 5) {
-                    c.data.setBlock(x, Y0, z, slab(Material.SMOOTH_STONE_SLAB, Slab.Type.TOP));
+                    c.data.setBlock(x, Y0, z, Material.SMOOTH_STONE);   // the counter's cupboards
                 } else if (u == 1 && v == 6) {
                     c.data.setBlock(x, Y0, z, Material.IRON_BLOCK);       // the fridge
                     c.data.setBlock(x, Y0 + 1, z, Material.IRON_BLOCK);
@@ -323,7 +331,7 @@ final class Level0Zones {
                     c.data.setBlock(x, Y0, z, Material.SMOOTH_QUARTZ);   // stall partitions
                     c.data.setBlock(x, Y0 + 1, z, Material.SMOOTH_QUARTZ);
                 } else if (v == 7 && (u == 2 || u == 4 || u == 6)) {
-                    c.data.setBlock(x, Y0, z, slab(Material.POLISHED_DIORITE_SLAB, Slab.Type.TOP));   // sinks
+                    c.data.setBlock(x, Y0, z, leg(Material.POLISHED_DIORITE_SLAB, turn(BlockFace.SOUTH, rot)));   // sinks, on the wall
                 }
             }
             case EMPTY -> {
@@ -419,6 +427,14 @@ final class Level0Zones {
             c.data.setBlock(x, Y0, z, stairs(Material.SPRUCE_STAIRS,
                     pick(ch, 16, 100) < 10 ? CW[pick(ch, 24, 4)] : back, Stairs.Half.BOTTOM));
         }
+    }
+
+    /**
+     * A table or desk end: the slab's upside-down stair, its lower half (the leg)
+     * on the {@code out} side, so the top doesn't hang in the air.
+     */
+    static BlockData leg(Material slab, BlockFace out) {
+        return stairs(Material.valueOf(slab.name().replace("_SLAB", "_STAIRS")), out, Stairs.Half.TOP);
     }
 
     private static BlockFace turn(BlockFace f, int rot) {

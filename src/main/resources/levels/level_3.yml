@@ -96,6 +96,15 @@ generator_config:
         - "§7> ping sponge.local\n§8  Reply from every coordinate.\n§7// The structure is one block.\n// It is also all of them."
         - "§7> drain --all\n§8[ERR] Nothing to drain.\n§7// The sponge is dry by definition.\n// One block does not agree."
         - "§7> lim volume(n), n → ∞\n§8  = 0\n§7// You are standing in the limit."
+    - weight: 1
+      target: level_95
+      messages:
+        - "§7> cat aether.cfg\n§8  grass_color=#5FCFA8\n§8  ground=none\n§7// Who set the floor to none?"
+        - "§7> load dimension 4\n§8[ERR] dimension id 4 not found\n§7// It was here in 1.7.3.\n// It was a mod. It was never here."
+        - "§7/* The portal frame was glowstone.\n   We filled it with water.\n   Nothing happened. Something did. */"
+        - "§7> render clouds --solid\n§8[WARN] clouds are not blocks\n§7// Using stained glass.\n// Do not fall through the gaps."
+        - "§7> ping skylands.local\n§8  Reply from above.\n§8  Reply from further above.\n§7// There is no below."
+        - "§7> getBlock(0, -64, 0)\n§8  minecraft:air\n§7// All the way down."
 
 events:
   - ambient_sound
@@ -229,3 +238,12 @@ exit_triggers:
       blindness_ticks: 80
       delay_ticks: 20
       message: "// LOADING menger_sponge.obj ..."
+  - type: powered_command_block
+    target_level: level_95
+    power_count: 1
+    window_ticks: 80
+    radius: 20
+    transition:
+      blindness_ticks: 80
+      delay_ticks: 20
+      message: "// LOADING dimension 4 ..."

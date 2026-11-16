@@ -1126,9 +1126,9 @@ final class MuseumExhibits {
         m.c().set(x, y, z, b);
     }
 
-    /** A bookcase block: a chiseled shelf facing {@code f}, its slots filled with chance {@code full}; now and then a plain one. */
+    /** A bookcase block: mostly a plain bookshelf; one in five a chiseled shelf facing {@code f}, its slots filled with chance {@code full}. */
     static void books(MuseumCanvas c, Random r, int x, int y, int z, BlockFace f, double full, Subject s) {
-        if (r.nextInt(10) == 0) c.set(x, y, z, BOOKSHELF);
+        if (r.nextInt(5) != 0) c.set(x, y, z, BOOKSHELF);
         else c.shelf(x, y, z, f, full, r, s);
     }
 

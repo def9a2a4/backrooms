@@ -27,7 +27,7 @@ public class AdvancementManager {
     private static final Set<String> ALL_LEVEL_IDS = Set.of(
             "level_0", "level_1", "level_2", "level_3", "level_4",
             "level_5", "level_7", "level_37", "level_56", "level_64637",
-            "level_84", "level_94", "level_101", "level_418", "level_590", "level_974",
+            "level_84", "level_94", "level_95", "level_101", "level_418", "level_590", "level_974",
             "level_1881", "level_9500", "level_1967", "level_1973"
     );
 
@@ -57,6 +57,7 @@ public class AdvancementManager {
             Map.entry("level_1967", key("level/level_1967")),
             Map.entry("level_1973", key("level/level_1973")),
             Map.entry("level_94", key("level/level_94")),
+            Map.entry("level_95", key("level/level_95")),
             Map.entry("level_84", key("level/level_84")),
             Map.entry("level_101", key("level/level_101")),
             Map.entry("level_590", key("level/level_590")),
@@ -78,6 +79,7 @@ public class AdvancementManager {
             Map.entry("level_3:level_1881", key("hint/hint_3")),
             Map.entry("level_3:level_1967", key("hint/hint_3")),
             Map.entry("level_3:level_418", key("hint/hint_3")),
+            Map.entry("level_3:level_95", key("hint/hint_3")),
             Map.entry("level_4:level_3", key("hint/hint_4")),
             Map.entry("level_7:overworld", key("hint/hint_7")),
             Map.entry("level_37:level_3", key("hint/hint_37")),

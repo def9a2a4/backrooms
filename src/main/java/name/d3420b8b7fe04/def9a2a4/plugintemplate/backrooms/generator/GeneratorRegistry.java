@@ -51,6 +51,7 @@ public class GeneratorRegistry {
         register("level_37", Level37ChunkGenerator::new);
         register("level_56", Level56ChunkGenerator::new);
         register("level_94", Level94ChunkGenerator::new);
+        register("level_95", Level95ChunkGenerator::new);
         register("level_101", Level101ChunkGenerator::new);
         register("level_418", Level418ChunkGenerator::new);
         register("level_590", Level590ChunkGenerator::new);

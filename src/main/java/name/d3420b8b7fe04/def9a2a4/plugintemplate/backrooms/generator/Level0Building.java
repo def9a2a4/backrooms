@@ -357,6 +357,21 @@ final class Level0Building {
         });
     }
 
+    /**
+     * A desk or table end: the slab's upside-down stair, its leg on the {@code out}
+     * side (smooth stone has no stair, so a solid block).
+     */
+    private short leg(Material slab, BlockFace out) {
+        Material m = Material.getMaterial(slab.name().replace("_SLAB", "_STAIRS"));
+        if (m == null) return block(Material.getMaterial(slab.name().replace("_SLAB", "")));
+        return id(m + ":leg:" + out, () -> {
+            Stairs s = (Stairs) m.createBlockData();
+            s.setFacing(out);
+            s.setHalf(Bisected.Half.TOP);
+            return s;
+        });
+    }
+
     private short log(Material m, Axis axis) {
         return id(m + ":" + axis, () -> {
             Orientable o = (Orientable) m.createBlockData();
@@ -715,7 +730,7 @@ final class Level0Building {
         int mid = w / 2;
         switch (kind) {
             case OFFICE -> {
-                put(r, mid, 1, y, topSlab(desk));
+                put(r, mid, 1, y, leg(desk, r.face(0, -1)));
                 put(r, mid, 2, y, stairs(chair, r.face(0, 1)));
                 if (d > 3) {
                     put(r, 0, 3, y, block(Material.BARREL));
@@ -724,7 +739,7 @@ final class Level0Building {
             }
             case MEETING -> {
                 for (int b = 1; b <= d - 2; b++) {
-                    put(r, mid, b, y, topSlab(table));
+                    put(r, mid, b, y, b == 1 ? leg(table, r.face(0, -1)) : b == d - 2 ? leg(table, r.face(0, 1)) : topSlab(table));
                     if (mid - 1 >= 0) put(r, mid - 1, b, y, stairs(chair, r.face(-1, 0)));
                     if (mid + 1 < w) put(r, mid + 1, b, y, stairs(chair, r.face(1, 0)));
                 }
@@ -740,14 +755,14 @@ final class Level0Building {
                 }
             }
             case BREAK -> {
-                for (int b = 0; b <= d - 2; b++) put(r, 0, b, y, topSlab(Material.SMOOTH_STONE_SLAB));
+                for (int b = 0; b <= d - 2; b++) put(r, 0, b, y, block(Material.SMOOTH_STONE));   // counter cupboards
                 put(r, 0, d - 1, y, block(Material.IRON_BLOCK));
                 put(r, 0, d - 1, y + 1, block(Material.IRON_BLOCK));
                 table(r, Math.max(1, mid), d / 2, y);
             }
             case TOILETS -> {
                 for (int x = 0; x < w; x++) put(r, x, 0, y, block(Material.CAULDRON));
-                for (int x = 0; x < w; x += 2) put(r, x, d - 1, y, topSlab(Material.POLISHED_DIORITE_SLAB));
+                for (int x = 0; x < w; x += 2) put(r, x, d - 1, y, leg(Material.POLISHED_DIORITE_SLAB, r.face(0, 1)));
             }
             case CONFERENCE -> {
                 if (w < 6) {
@@ -756,7 +771,7 @@ final class Level0Building {
                 }
                 int bm = d / 2;
                 for (int x = 1; x <= w - 4; x++) {
-                    put(r, x, bm, y, topSlab(table));
+                    put(r, x, bm, y, x == 1 ? leg(table, r.face(-1, 0)) : x == w - 4 ? leg(table, r.face(1, 0)) : topSlab(table));
                     put(r, x, bm - 1, y, stairs(chair, r.face(0, -1)));
                     if (bm + 1 < d) put(r, x, bm + 1, y, stairs(chair, r.face(0, 1)));
                 }
@@ -766,7 +781,7 @@ final class Level0Building {
                 }
             }
             case CAFETERIA -> {
-                for (int b = 0; b <= d - 2; b++) put(r, w - 1, b, y, topSlab(Material.SMOOTH_STONE_SLAB));
+                for (int b = 0; b <= d - 2; b++) put(r, w - 1, b, y, block(Material.SMOOTH_STONE));   // the serving counter
                 cafe(r, 0, w - 2, 0, d - 1, y);
             }
         }
@@ -799,7 +814,7 @@ final class Level0Building {
             for (int b = b0 + 1; b < b1; b++) {
                 if (skip != null && a >= skip[0] - 1 && a <= skip[1] + 1 && b >= skip[2] - 1 && b <= skip[3] + 1) continue;
                 int da = (a - a0 - 1) % 3, db = (b - b0 - 1) % 3;
-                if (da == 0 && db == 0) put(f, a, b, y, topSlab(desk));
+                if (da == 0 && db == 0) put(f, a, b, y, leg(desk, f.face(0, -1)));
                 else if (da == 0 && db == 1) put(f, a, b, y, stairs(chair, f.face(0, 1)));
             }
         }
@@ -971,7 +986,7 @@ final class Level0Building {
             int mu = (u0 + u1) / 2, mv = (v0 + v1) / 2;
             boolean frontRow = v0 == 1;
             int toWindow = frontRow ? -1 : 1;
-            put(mf, mu, mv + toWindow, y0 + 1, topSlab(desk));
+            put(mf, mu, mv + toWindow, y0 + 1, leg(desk, frontRow ? BlockFace.NORTH : BlockFace.SOUTH));
             put(mf, mu, mv, y0 + 1, stairs(chair, frontRow ? BlockFace.SOUTH : BlockFace.NORTH));
             put(mf, u0 == 1 ? u0 : u1, mv - toWindow, y0 + 1, block(Material.POTTED_FERN));
             lights.add(new int[]{ mf.u(mu, mv), mf.v(mu, mv), y0 + ROOM + 1 });

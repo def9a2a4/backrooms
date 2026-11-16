@@ -1,9 +1,14 @@
 package name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.listener;
 
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.book.ShelfBooks;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.Level1882ChunkGenerator;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -28,5 +33,19 @@ public class Level1882Listener implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (chunk.isLoaded()) gen.applyBlockEntities(chunk);
         });
+    }
+
+    /** Before a book comes off a library shelf, the shelf's stand-ins become real books. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onShelfUse(PlayerInteractEvent event) {
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null
+                && event.useInteractedBlock() != org.bukkit.event.Event.Result.DENY) {
+            ShelfBooks.shelve(event.getClickedBlock());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onShelfBreak(BlockBreakEvent event) {
+        ShelfBooks.shelve(event.getBlock());
     }
 }

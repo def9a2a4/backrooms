@@ -1,0 +1,19 @@
+id: level_95
+display_name: "Skylands"
+generator: level_95
+environment: NORMAL
+dimension_type: day
+biome: "backrooms:skylands"
+fixed_time: 6000
+spawn_radius: 0
+enter_message: "§b§oThe ground ends. The sky does not."
+events: []
+exit_triggers:
+  # Falling off an island returns you to the spawn island. No way out yet.
+  - type: below_y
+    y_threshold: -40
+    target_level: level_95
+    transition:
+      blindness_ticks: 40
+      delay_ticks: 10
+      message: "§7§oThe sky catches you."
