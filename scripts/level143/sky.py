@@ -121,6 +121,11 @@ def prune(b, y0=None):
             b.set(x, y, z, "air")
 
 
+def axis(state, a):
+    """{axis: a} for a block that has one (logs, basalt, pillars)."""
+    return {"axis": a} if state.endswith(("_log", "_basalt", "basalt", "_pillar", "_wood", "hay_block")) else {}
+
+
 def put(b, x, y, z, state, **props):
     """Sets a block only where it's empty."""
     if b.empty(x, y, z):
@@ -403,7 +408,7 @@ def boat(b, k, cx, z0, z1, deck, half, depth, *, bow=0.38, stern=0.2, transom=0.
         for z in range(z0 + 1, z1 + 1):
             ys = [y for (x, y, zz) in cells if x == cx and zz == z]
             if ys and drop(z) >= depth - 0.6 and keep(cx, min(ys) - 1, z):
-                b.set(cx, min(ys) - 1, z, k.keel, axis="z")
+                b.set(cx, min(ys) - 1, z, k.keel, **axis(k.keel, "z"))
     # the rail along the deck's edge
     if rail:
         for (x, y, z) in cells:
@@ -528,10 +533,6 @@ def hot_air(b, k, rng, cx, base, cz, R, colours=None, pattern=None, big=False, b
                     b.set(x, base + 1, z, k.trapdoor if k.key != "ashen" else "iron_trapdoor",
                           facing="north" if z == cz - half else "south" if z == cz + half else
                           "west" if x == cx - half else "east", half="bottom", open="true", powered="false", **NOWATER)
-    if big:   # the basket's floor rim
-        for x in range(cx - half, cx + half + 1):
-            for z in (cz - half, cz + half):
-                pass
     # the lines up from the corners to the skirt
     for x, z in ((cx - half, cz - half), (cx + half, cz - half), (cx - half, cz + half), (cx + half, cz + half)):
         rig(b, x, base + 2, z)
@@ -577,8 +578,6 @@ def gondola(b, k, rng, cx, z0, z1, y, h=3, half=2, door="south", nose=True, lect
     b.fill(cx - 1, y, zd + dz, cx + 1, y, zd + dz, k.slab, type="top", **NOWATER)
     for x in (cx - 1, cx + 1):
         railing(b, k, x, y + 1, zd + dz)
-    railing(b, k, cx, y + 1, zd + 2 * dz) if False else None
-    b.set(cx, y, zd + 2 * dz, k.slab, type="top", **NOWATER) if False else None
     if lectern:
         b.set(cx, y + 1, z0 + 1, "lectern", facing="north", has_book="false", powered="false")
         stair(b, cx - 1, y + 1, z0 + 2, f"{k.wood}_stairs", "south")
@@ -650,8 +649,7 @@ def crows_nest(b, k, x, y, z):
         for dz in (-1, 0, 1):
             if dx or dz:
                 b.set(x + dx, y, z + dz, k.trapdoor, facing="north", half="top", open="false", powered="false", **NOWATER)
-                if abs(dx) + abs(dz) == 2 or True:
-                    put(b, x + dx, y + 1, z + dz, k.fence, **NOWATER)
+                put(b, x + dx, y + 1, z + dz, k.fence, **NOWATER)
 
 
 @gen("galleon", kind="sky_feature", freq="very common", n=3)
@@ -691,7 +689,6 @@ def galleon(rng, st):
     for x in (cx - 1, cx + 1):   # ladders up either side of the door
         b.set(x, deck + 1, c0 - 1, "ladder", facing="north", **NOWATER)
         b.set(x, deck + 2, c0 - 1, "ladder", facing="north", **NOWATER)
-        b.set(x, deck + 3, c0 - 1, "ladder", facing="north", **NOWATER) if False else None
     for x in (cx - 1, cx + 1):
         b.set(x, deck + 4, c0, "air")
     if rng.random() < 0.5:
@@ -831,7 +828,6 @@ def scout_blimp(rng, st):
         for z in (g0, g1):
             rig(b, x, gy + 4, z)
     # the pusher on the roof's tail, behind the door
-    engine(b, cx, gy + 3, g1 + 1, k) if False else None
     b.set(cx, gy + 3, g1 + 1, k.engine, **({"facing": "south", "lit": "true"} if k.engine == "blast_furnace" else {}))
     propeller(b, cx, gy + 3, g1 + 2, k)
     return done(b)
@@ -971,7 +967,6 @@ def liner(rng, st):
             for xx in range(cx + s * 3, x, s):
                 if not inside(xx, ey, ez):
                     put(b, xx, ey, ez, k.post, **NOWATER)
-    flag(b, cx, gy + 5, g0 + 1, k.flag, length=2, height=2, pole=k.fence) if False else None
     return done(b)
 
 
@@ -999,8 +994,8 @@ def observation_dirigible(rng, st):
                 b.set(x, dy, z, k.deckplank if ell(x, z, 0.82) else k.plank)
             for f, inner, y in ((0.86, 0.55, dy - 1), (0.58, 0.2, dy - 2)):
                 if ell(x, z, f) and not ell(x, z, inner):
-                    b.set(x, y, z, k.plank if y == dy - 1 else k.wale if not k.wale.endswith("_log") else k.plank,
-                          **({"axis": "z"} if (k.plank if y == dy - 1 else k.wale).endswith("_log") else {}))
+                    s_ = k.plank if y == dy - 1 or k.wale.endswith("_log") else k.wale
+                    b.set(x, y, z, s_, **axis(s_, "z"))
             if ell(x, z, 0.3):
                 b.set(x, dy - 3, z, "glass" if ell(x, z, 0.17) else k.plank)
     # stairs round the bowl's edges, smoothing it
@@ -1029,7 +1024,7 @@ def observation_dirigible(rng, st):
         stair(b, cx - 3, dy + 1, z, f"{k.deck}_stairs", "west")
         stair(b, cx + 3, dy + 1, z, f"{k.deck}_stairs", "east")
     b.set(cx, dy + 1, cz - 4, k.fence, **NOWATER)
-    b.set(cx, dy + 2, cz - 4, "spyglass" if False else "lightning_rod", facing="north", powered="false", **NOWATER)
+    b.set(cx, dy + 2, cz - 4, "lightning_rod", facing="north", powered="false", **NOWATER)
     if k.key == "ashen":
         b.set(cx, dy + 1, cz + 3, "lectern", facing="north", has_book="false", powered="false")
     else:
@@ -1037,15 +1032,12 @@ def observation_dirigible(rng, st):
     top = underside(inside, cx, cy, cz) - 1
     chain(b, cx, dy + 3, top, cz)
     hanging(b, cx, dy + 2, cz, k.light)
-    ez = L - 3
-    if not inside(cx, cy - 2, ez):
-        engine(b, cx, cy - 2, ez - 1, k) if False else None
     return done(b)
 
 
 # ── Derelict ──────────────────────────────────────────────────────────────
 
-@gen("derelict_airship", kind="sky_feature", freq="rare", n=3)
+@gen("derelict_airship", kind="sky_feature", freq="very rare", n=3)
 def derelict(rng, st):
     """An abandoned ship still aloft: holed planking, the rail half gone, one mast snapped and
     lying across the deck, the other in rags, the envelope torn and sagging towards the tail."""
@@ -1115,7 +1107,6 @@ def derelict(rng, st):
     b.set(cx, deck - 1, hz + 1, "air")
     b.set(cx + 1, deck + 1, z1 - 1, k.fence, **NOWATER)
     b.set(cx + 1, deck + 2, z1 - 1, k.fence, **NOWATER)
-    hanging(b, cx + 1, deck + 3, z1 - 2, "soul_lantern") if False else None
     b.set(cx + 1, deck + 3, z1 - 1, "soul_lantern", hanging="false", **NOWATER)
     prune(b, deck + 4)
     return done(b)
@@ -1172,7 +1163,7 @@ def balloon_cluster(rng, st):
 
 # ── Floating island ───────────────────────────────────────────────────────
 
-@gen("sky_island", kind="sky_feature", freq="rare", n=3)
+@gen("sky_island", kind="sky_feature", freq="very rare", n=3)
 def sky_island(rng, st):
     S = 21
     c = S // 2
@@ -1301,7 +1292,6 @@ def glider(rng, st):
     for s in (-1, 1):
         b.set(cx + s * 2, SKY + 2, mz, k.fence, **NOWATER)
         b.set(cx + s, SKY + 3, mz, k.fence, **NOWATER)
-        b.set(cx + s, SKY + 2, mz, k.fence, **NOWATER) if False else None
     b.set(cx, SKY + 1, mz, k.fence, **NOWATER)
     b.set(cx, SKY, mz, k.slab, type="bottom", **NOWATER)
     b.set(cx, SKY, mz + 1, k.stairs, facing="south", half="bottom", **NOWATER)
@@ -1388,7 +1378,6 @@ def black_airship(rng, st):
         x = cx + s * 6
         engine(b, x, cy - 2, L - 8, k)
         strut(b, k, cx + s * 3, x - s, cy - 2, L - 8)
-    flag(b, cx, deck + 6, z1 - 2, ("black_wool", WOOL), length=2, height=2, pole="polished_blackstone_wall") if False else None
     return done(b)
 
 
@@ -1419,7 +1408,7 @@ def canvas_barge(rng, st):
     for z in range(a0, a1 + 1):   # the scalloped valance
         if z % 2 == 0:
             for x in (cx - 3, cx + 3):
-                put(b, x, deck + 3, z, f"{stripe[:-5]}_carpet" if False else k.trapdoor, facing="east" if x < cx else "west",
+                put(b, x, deck + 3, z, k.trapdoor, facing="east" if x < cx else "west",
                     half="top", open="true", powered="false", **NOWATER)
     rugs = ("red_carpet", "orange_carpet", "yellow_carpet")
     for z in range(a0 + 1, a1):
@@ -1452,8 +1441,6 @@ def canvas_barge(rng, st):
     for z in (a0, a1):
         for x in (cx - 3, cx + 3):
             rig(b, x, deck + 5, z)
-    propeller(b, cx, deck - 1, z1 + 3, k) if False else None
-    flag(b, cx, deck + 1, z1, k.flag, length=2, height=1, pole=k.fence) if False else None
     return done(b)
 
 
@@ -1721,7 +1708,7 @@ def mail_dirigible(rng, st):
 
 # ── A wreck tangled in a balloon ──────────────────────────────────────────
 
-@gen("tangled_wreck", kind="sky_feature", freq="rare", n=3)
+@gen("tangled_wreck", kind="sky_feature", freq="very rare", n=3)
 def tangled_wreck(rng, st):
     """The bow of a broken ship hanging nose down from a stray hot-air balloon that caught it,
     rigging wound round the lot, the envelope sagging and torn."""
@@ -1805,7 +1792,7 @@ def sky_lantern(b, x, y, z, colour, glow):
     b.set(x, y, z, f"{colour}_stained_glass")
 
 
-@gen("lantern_festival", kind="sky_feature", freq="average", n=3)
+@gen("lantern_festival", kind="sky_feature", freq="very rare", n=3)
 def lantern_festival(rng, st):
     """A cloud of paper lanterns let go from a little raft, drifting up at every height."""
     S = 21
@@ -1843,7 +1830,7 @@ def lantern_festival(rng, st):
 
 # ── A lighthouse on a floating rock ───────────────────────────────────────
 
-@gen("sky_lighthouse", kind="sky_feature", freq="rare", n=3)
+@gen("sky_lighthouse", kind="sky_feature", freq="very rare", n=3)
 def sky_lighthouse(rng, st):
     """A banded lighthouse on a crag adrift in the sky: a gallery round its lamp, a keeper's door."""
     S = 15
@@ -1981,7 +1968,7 @@ def spiral(b, x0, z0, x1, z1, floor_y, block, stairs, entry, torch=None):
             b.set(x, h - 1, z, stairs, facing=OPPOSITE[face], half="top", **NOWATER)   # the soffit
         top[(x, z)] = h
         n += 1
-        if torch and n % 5 == 3:
+        if torch and n % 5 == 3 and h + 2 < floor_y - 2:
             cx_, cz_ = (x0 + x1) // 2, (z0 + z1) // 2
             out = "west" if x == x0 else "east" if x == x1 else "north" if z == z0 else "south"
             if (x == x0 or x == x1) != (z == z0 or z == z1):
@@ -2025,16 +2012,15 @@ def airship_dock(rng, st):
         for z in range(tz0, tz1 + 1):
             stair(b, tx0 - 1, y, z, stairs_for(found), "east", "top")
             stair(b, tx1 + 1, y, z, stairs_for(found), "west", "top")
-    top, exit_ = spiral(b, tx0 + 1, tz0 + 1, tx1 - 1, tz1 - 1, F, f"{wood}_planks", f"{wood}_stairs", (tx0 + 1, tcz),
-                        torch=st.wall_torch)
     # the platform, its floor on corbels, railed all round but for the gangway
     px0, pz0, px1, pz1 = tx0 - 1, tz0 - 1, tx1 + 1, tz1 + 1
     plank = f"{wood}_planks" if st.key != "ashen" else pick(rng, ("polished_blackstone", "dark_oak_planks"))
     b.fill(px0, F, pz0, px1, F, pz1, plank)
+    top, exit_ = spiral(b, tx0 + 1, tz0 + 1, tx1 - 1, tz1 - 1, F, f"{wood}_planks", f"{wood}_stairs", (tx0 + 1, tcz),
+                        torch=st.wall_torch)
     for (x, z), h in top.items():   # the stairwell's opening
         if F - 3 <= h < F:
             b.set(x, F, z, "air")
-    b.set(*exit_[:1], F, exit_[1], plank) if False else None
     for x in range(px0, px1 + 1):
         for z in range(pz0, pz1 + 1):
             if x in (px0, px1) or z in (pz0, pz1):
@@ -2078,18 +2064,16 @@ def airship_dock(rng, st):
     b.fill(tcx - 1, M + 1, tcz - 1, tcx - 1, M + 2, tcz - 1, k.fence, **NOWATER)
     sock = ("orange_wool", "white_wool", "orange_wool") if st.key != "ashen" else ("red_wool", "white_wool", "red_wool")
     for i, c in enumerate(sock):
-        b.set(tcx - 2 - i, M + 2 - (i == 2), tcz - 1, c)
+        b.set(tcx - 2 - i, M + 2, tcz - 1, c)
     flag(b, tcx + 1, M + 1, tcz - 1, k.flag, length=3, height=2, along="x", pole=k.fence)
     # the moored ship (most days), its nose chained to the head, a gangway down to its deck
-    moored = rng.random() < 0.7
+    moored = rng.random() > 0.2   # most days
     sz0 = tcz + 3
     if moored:
         deck = F
         widths, inside = moored_ship(b, k, rng, tcx, sz0, S - 2, deck, M, pz1 + 2)
         for z in range(tcz + 2, sz0):
             b.set(tcx, M, z, "iron_chain", axis="z", **NOWATER)
-        for s in (-1, 1):   # and two lines from the platform corners to the bow
-            pass
         b.set(tcx, F, pz1 + 1, k.slab, type="top", **NOWATER)
         for x in (tcx - 1, tcx + 1):
             railing(b, k, x, F + 1, pz1 + 1)
@@ -2106,43 +2090,34 @@ def airship_dock(rng, st):
     for x, z in ((wx0, wz0), (wx1, wz0), (wx0, wz1), (wx1, wz1)):
         b.fill(x, 1, z, x, 4, z, found)
     b.clear(wx0 + 1, 1, wz0 + 1, wx1 - 1, 4, wz1 - 1)
-    gable(b, wx0, wz0, wx1, wz1, 5, m, along="z", fill=wall)
+    gable(b, wx0, wz0, wx1, wz1, 5, m, along="x", fill=wall, end_over=0)
     dx = (wx0 + wx1) // 2
     b.door(dx, 1, wz0, "south", wood)
     b.path(dx, 0, dx, 0)
     b.set(dx, 0, wz0, found)
-    for x in (wx0 + 2, wx1 - 2):
-        b.set(x, 2, wz0, k.pane if k.pane else "glass_pane", **NOWATER)
-        b.set(x, 3, wz0, k.pane if k.pane else "glass_pane", **NOWATER)
+    for x in (wx0 + 1, wx1 - 1):
+        b.set(x, 2, wz0, "glass_pane", **NOWATER)
+        b.set(x, 3, wz0, "glass_pane", **NOWATER)
     for z in (3, 5):
         b.set(wx0, 2, z, "glass_pane", **NOWATER)
         b.set(wx0, 3, z, "glass_pane", **NOWATER)
-    b.sign(dx + 1, 3, wz0 - 1, "north", ["Air~Station", "", "", ""], wood)
+    b.sign(dx + 1, 3, wz0 - 1, "north", ["", "Air", "Station", ""], wood)
     b.sign(dx - 1, 3, wz0 - 1, "north", "[departures]", wood)
     # the doorway through to the tower's stair
     b.clear(wx1, 1, tcz, wx1, 2, tcz)
     b.clear(tx0, 1, tcz, tx0, 2, tcz)
     b.set(tx0, 0, tcz, found)
-    # inside: the ticket counter, benches facing the board, a lamp
-    for z in range(wz0 + 1, wz1):
-        if z not in (tcz,):
-            pass
-    for x in range(wx0 + 1, wx1):
-        if x != wx0 + 3:
-            stair(b, x, 1, wz1 - 2, f"{wood}_stairs", "north", "top") if x > wx0 + 3 else None
-    b.fill(wx0 + 4, 1, wz1 - 2, wx1 - 1, 1, wz1 - 2, f"{wood}_slab", type="top", **NOWATER)
-    b.set(wx1 - 1, 2, wz1 - 2, "bell", attachment="floor", facing="north", powered="false")
-    b.set(wx0 + 5, 1, wz1 - 1, f"{wood}_stairs", facing="north", half="bottom", **NOWATER)
-    b.set(wx0 + 4, 1, wz1 - 1, "chest" if False else "air")
-    b.chest(wx1 - 1, 1, wz1 - 1, "west")
-    b.sign(wx0 + 4, 3, wz1 - 1, "north", "[destinations]", wood)
-    b.sign(wx0 + 5, 3, wz1 - 1, "north", "[departures]", wood)
-    for z in (wz0 + 2, wz0 + 3):
+    # inside: the ticket window by the door, benches facing the board, lamps
+    b.fill(wx1 - 2, 1, wz0 + 2, wx1 - 1, 1, wz0 + 2, f"{wood}_slab", type="top", **NOWATER)
+    b.set(wx1 - 1, 2, wz0 + 2, "bell", attachment="floor", facing="west", powered="false")
+    b.chest(wx1 - 1, 1, wz0 + 1, "west")
+    for z in range(wz0 + 3, wz1):
         stair(b, wx0 + 1, 1, z, f"{wood}_stairs", "west")
-    for z in (wz1 - 2, wz1 - 1):
-        stair(b, wx0 + 1, 1, z, f"{wood}_stairs", "west") if z != wz1 - 2 else None
-    hang(b, wx0 + 3, (wz0 + wz1) // 2, 1, st)
-    hang(b, wx0 + 5, wz0 + 2, 1, st)
+    b.sign(wx0 + 2, 3, wz1 - 1, "north", "[destinations]", wood)
+    b.sign(wx0 + 3, 3, wz1 - 1, "north", "[departures]", wood)
+    b.set(wx0 + 4, 1, wz1 - 1, "potted_fern" if st.key != "ochre" else "potted_cactus")
+    hang(b, wx0 + 2, wz0 + 3, 1, st)
+    hang(b, wx1 - 2, wz0 + 4, 1, st)
     # the yard east of the tower: a lamp, a bench, luggage, and the path round to the door
     lamp_post(b, 18, 2, st, wood)
     bench(b, 19, 4, "north", wood, 2)
@@ -2193,7 +2168,6 @@ def mooring_mast(rng, st):
     b.fill(c, 2, mz, c, M - 1, mz, core, axis="y")
     b.set(c, 1, mz - 1, "air")
     b.set(c, 1, mz - 1, "ladder", facing="north", **NOWATER)
-    stair(b, c, 0, mz - 2, stairs_for(found), "north")
     b.fill(c, 2, mz - 1, c, F, mz - 1, "ladder", facing="north", **NOWATER)
     post = k.post if k.post != "polished_blackstone_wall" else "iron_bars"
     for x in (c - 1, c + 1):
@@ -2224,13 +2198,11 @@ def mooring_mast(rng, st):
         b.set(x, F + 2, z, post, **NOWATER)
         standing(b, x, F + 3, z, st.light)
     # the blimp
-    if rng.random() < 0.7:
+    if rng.random() < 0.8:
         cy = M
         z0, z1 = mz + 2, S - 2
         R = 3.0
 
-        def inside_(x, y, z):
-            return False
         inside = envelope(b, c, cy, z0, z1, R + 0.3, R, livery(k, c, cy, z0, z1, pick(rng, ("bands", "belly")), every=3),
                           nose=0.4, pf=2.2, pb=1.8)
         fins(b, inside, c, cy, z1, 3, 2, k.fin, trim=k.trim, tail=False)
@@ -2255,6 +2227,5 @@ def mooring_mast(rng, st):
     b.path(c, 0, c, mz - 3)
     lamp_post(b, c + 3, 1, st, wood)
     bench(b, c - 4, 2, "north", wood, 2)
-    b.set(c - 2, 1, 1, f"{wood}_sign", rotation=8, **NOWATER) if False else None
     b.sign(c - 2, 1, 1, "north", "[departures]", wood, wall=False)
     return b
