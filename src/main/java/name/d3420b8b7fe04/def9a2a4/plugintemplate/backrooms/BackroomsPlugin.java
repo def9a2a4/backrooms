@@ -28,6 +28,7 @@ import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitEventListen
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.ExitTriggerRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.TransitionManager;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.exit.impl.*;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.book.ShelfBooks;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.mesh.MeshStore;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.GeneratorRegistry;
 import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.generator.ScanChunkGenerator;
@@ -339,6 +340,14 @@ public class BackroomsPlugin {
 
     /** Fetch (and decode) each mesh level's meshes in the background, then create its world. */
     private void loadMeshLevels() {
+        // Level 1882's library books ride along; they're optional (shelves keep plain books without them)
+        if (levelRegistry.get("level_1882") != null && meshStore.usable(ShelfBooks.FILE)) {
+            meshStore.fetch(List.of(ShelfBooks.FILE), null, null).exceptionally(err -> {
+                Throwable cause = err.getCause() != null ? err.getCause() : err;
+                plugin.getLogger().warning("Level 1882's library books unavailable: " + cause.getMessage());
+                return null;
+            });
+        }
         if (pendingLevels.isEmpty()) return;
         meshStore.warnDiskSpace(pendingLevels.stream().flatMap(p -> p.meshes().stream()).distinct().toList());
         for (PendingLevel p : pendingLevels) {

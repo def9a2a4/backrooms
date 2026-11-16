@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import name.d3420b8b7fe04.def9a2a4.plugintemplate.backrooms.mesh.MeshStore;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
@@ -16,6 +17,8 @@ import org.bukkit.persistence.PersistentDataType;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -23,8 +26,9 @@ import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Chapters of public-domain books (books/shelf_books.json.gz, built by scripts/books/gutenberg.py)
- * for the chiseled shelves in Level 1882's libraries.
+ * Chapters of public-domain books for the chiseled shelves in Level 1882's libraries. Built by
+ * scripts/books/gutenberg.py and downloaded like the level meshes ({@link MeshStore}, "shelf_books"),
+ * not shipped in the jar; until the file is here, shelves keep their plain books.
  *
  * <p>A shelf is generated holding plain books and tagged with its gallery's theme; the first time
  * anyone takes a book from it or breaks it, {@link #shelve} swaps the plain books for chapters on
@@ -37,6 +41,8 @@ public final class ShelfBooks {
     public static final NamespacedKey SHELVED = new NamespacedKey("backrooms", "shelved");
     /** The theme of a shelf that takes any book. */
     public static final String ANY = "ANY";
+    /** The download's name in meshes.json. */
+    public static final String FILE = "shelf_books";
 
     private record Work(String title, String author, List<String> themes, List<List<String>> excerpts) {}
 
@@ -44,20 +50,20 @@ public final class ShelfBooks {
 
     private ShelfBooks() {}
 
+    /** The books, once the download is here; empty before that. */
     private static synchronized List<Work> works() {
         if (works != null) return works;
+        Path file = MeshStore.file(FILE);
+        if (file == null) return List.of();
         List<Work> out = new ArrayList<>();
-        try (InputStream in = ShelfBooks.class.getResourceAsStream("/books/shelf_books.json.gz")) {
-            if (in != null) {
-                JsonObject root = JsonParser.parseReader(new InputStreamReader(new GZIPInputStream(in), StandardCharsets.UTF_8))
-                        .getAsJsonObject();
-                for (JsonElement e : root.getAsJsonArray("works")) {
-                    JsonObject w = e.getAsJsonObject();
-                    List<List<String>> excerpts = new ArrayList<>();
-                    for (JsonElement x : w.getAsJsonArray("excerpts")) excerpts.add(strings(x.getAsJsonArray()));
-                    out.add(new Work(w.get("title").getAsString(), w.get("author").getAsString(),
-                            strings(w.getAsJsonArray("themes")), excerpts));
-                }
+        try (InputStream in = new GZIPInputStream(Files.newInputStream(file))) {
+            JsonObject root = JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject();
+            for (JsonElement e : root.getAsJsonArray("works")) {
+                JsonObject w = e.getAsJsonObject();
+                List<List<String>> excerpts = new ArrayList<>();
+                for (JsonElement x : w.getAsJsonArray("excerpts")) excerpts.add(strings(x.getAsJsonArray()));
+                out.add(new Work(w.get("title").getAsString(), w.get("author").getAsString(),
+                        strings(w.getAsJsonArray("themes")), excerpts));
             }
         } catch (Exception e) {
             Logger.getLogger("Backrooms").warning("Couldn't read the library's books: " + e);
@@ -93,7 +99,7 @@ public final class ShelfBooks {
     public static void shelve(Block b) {
         if (b.getType() != Material.CHISELED_BOOKSHELF || !(b.getState() instanceof ChiseledBookshelf shelf)) return;
         String theme = shelf.getPersistentDataContainer().get(SHELVED, PersistentDataType.STRING);
-        if (theme == null) return;
+        if (theme == null || works().isEmpty()) return;
         Random r = new Random(b.getWorld().getSeed() ^ b.getX() * 0x9E3779B97F4A7C15L ^ b.getY() * 0xC2B2AE3D27D4EB4FL
                 ^ b.getZ() * 0x165667B19E3779F9L);
         Inventory inv = shelf.getSnapshotInventory();

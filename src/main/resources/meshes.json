@@ -60,6 +60,11 @@
       "file": "level143-cbb4bb1bb8a4.zip",
       "sha256": "cbb4bb1bb8a4f835c531aa38bb1959073ff0bc106c9a09254aac0891d79c0f10",
       "bytes": 1697670
+    },
+    "shelf_books": {
+      "file": "shelf_books-1dc7f6d6de36.json.gz",
+      "sha256": "1dc7f6d6de36a3d31914c0270b8c2fd6438d61420f84a948c8fcb27a3893e3ff",
+      "bytes": 573066
     }
   }
 }

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Builds src/main/resources/books/shelf_books.json.gz: chapters of public-domain books for the
+"""Builds .temp/books/shelf_books.json.gz: chapters of public-domain books for the
 chiseled bookshelves in Level 1882's libraries, laid out as Minecraft book pages.
 
 Texts are downloaded once from Project Gutenberg into .temp/gutenberg/. Each work gets a few
 excerpts, each starting at a chapter heading and running for up to PAGES pages. The licence
 header and footer are stripped, so the pages carry only the public-domain text.
 
-    python3 scripts/books/gutenberg.py
+    python3 scripts/books/gutenberg.py && python3 scripts/scans/publish.py
+
+The file isn't shipped in the jar: publish.py adds it to meshes/ and the manifest, and servers
+download it like the level meshes.
 """
 
 import gzip
@@ -19,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CACHE = ROOT / ".temp" / "gutenberg"
-OUT = ROOT / "src" / "main" / "resources" / "books" / "shelf_books.json.gz"
+OUT = ROOT / ".temp" / "books" / "shelf_books.json.gz"
 
 PAGES = 20          # pages per excerpt
 EXCERPTS = 3        # excerpts per subject work
@@ -326,6 +329,7 @@ def main():
         print(f"{gid:>6} {title:<34} {len(ex)} excerpts, {sum(map(len, ex))} pages", file=sys.stderr)
         if ex:
             works.append({"title": title, "author": author, "themes": themes, "excerpts": ex})
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     data = json.dumps({"works": works}, ensure_ascii=False, separators=(",", ":")).encode()
     OUT.write_bytes(gzip.compress(data, 9, mtime=0))
     print(f"{len(works)} works, {len(data) // 1024} KB, {OUT.stat().st_size // 1024} KB gzipped -> {OUT.relative_to(ROOT)}",
